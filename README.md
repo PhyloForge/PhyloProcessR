@@ -60,3 +60,5 @@ library(PHYLOCAP)
 
 6) Concatenate alignments 
 
+
+7) Remove columns consisting of only gaps
