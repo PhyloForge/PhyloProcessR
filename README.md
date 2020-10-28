@@ -8,16 +8,12 @@ Coming Soon!
 
 # Installation
 
-The major dependency for AstralPlane is of course the program ASTRAL-III. This program is Java-based and can be run on any machine that can run Java. 
-
-ASTRAL-III is available on GitHub here: https://github.com/smirarab/ASTRAL
-
-Instructions for installation and testing ASTRAL-III are included therein, and once it is up and running AstralPlane should be functional! 
+PHYLOCAP is an R package that has been tested on R version 3.5 or greater. 
 
 PHYLOCAP depends on one R package currently:
   1) data.table (>=1.12)
 
-PHYLOCAP has two additional R package dependencies, which are treated as imports (i.e. you need them installed, but library(ape) and library(stringr) not needed: 
+PHYLOCAP has two additional R package imports (i.e. you need them installed, but not loaded  with library(): 
   ape (>= 5.0)
   stringr (>= 1.4)
   
