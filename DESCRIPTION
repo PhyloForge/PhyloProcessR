@@ -16,7 +16,7 @@ Description: This R package can process high-throughput sequence data from raw r
   and analyses (alignment conversion, concatenation, alignment statistics, trimming).
 Depends: 
         R (>= 3.5.1),
-        data.table (>= 1.12)
+        data.table (>= 1.10)
 License: `use_gpl3_license()`
 Encoding: UTF-8
 LazyData: true
