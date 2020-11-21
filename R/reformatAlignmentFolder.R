@@ -1,4 +1,4 @@
-#' @title formatAlignmentFolder
+#' @title reformatAlignmentFolder
 #'
 #' @description Function for easily converting alignments between different R alignment classes
 #'
@@ -25,11 +25,11 @@
 #' @export
 
 #function
-formatAlignmentFolder = function(alignment.path = NULL,
-                                 out.dir = NULL,
-                                 overwrite = FALSE,
-                                 from.format = "nexus",
-                                 to.format = "phylip") {
+reformatAlignmentFolder = function(alignment.path = NULL,
+                                   out.dir = NULL,
+                                   overwrite = FALSE,
+                                   from.format = "nexus",
+                                   to.format = "phylip") {
 
   #Gets list of alignments from path
   if (overwrite == TRUE){

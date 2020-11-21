@@ -20,7 +20,7 @@
 
 #Converts alignments to various different formats to be used with a variety of functions
 alignmentConversion = function(input.alignment = NULL,
-                                end.format = NULL) {
+                               end.format = NULL) {
 
   #Parameter checks
   if(is.null(input.alignment) == TRUE){ stop("Error: an input alignment is needed.") }
@@ -46,9 +46,14 @@ alignmentConversion = function(input.alignment = NULL,
     # align.out = Biostrings::DNAStringSet(unlist(temp.align2))
     # write.loci = as.list(as.character(temp.loci))
 
-    temp.align = as.list(data.frame(t(input.alignment)))
+    temp.align = as.character(as.list(input.alignment))
     temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
-    align.out = DNAStringSet(unlist(temp.align2))
+    align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+
+
+    # temp.align = as.list(data.frame(t(input.alignment)))
+    # temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+    # align.out = DNAStringSet(unlist(temp.align2))
     return(align.out)
   }# end if
 
