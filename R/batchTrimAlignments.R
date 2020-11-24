@@ -4,7 +4,11 @@
 #'
 #' @param alignment.dir path to a folder of sequence alignments in phylip format.
 #'
+#' @param alignment.format available input alignment formats: fasta or phylip
+#'
 #' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#'
+#' @param output.format available output formats: phylip
 #'
 #' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
