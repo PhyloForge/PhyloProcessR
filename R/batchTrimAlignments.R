@@ -55,7 +55,9 @@
 #' @export
 
 batchTrimAlignments = function(alignment.dir = NULL,
+                               alignment.format = "phylip",
                                output.dir = NULL,
+                               output.format = "phylip",
                                PreQual = TRUE,
                                PreQual.path = "prequal",
                                HmmCleaner = FALSE,
@@ -77,8 +79,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                mem = 8,
                                overwrite = TRUE){
 
-  # alignment.dir = paste0(save.dir, "/10kb-regions")
-  # output.dir = paste0(save.dir, "/10kb-regions-trimmed2")
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # align.dir = "/home/c111h652/scratch/Rodents/Trimming/01_emily-subset-mafft"
+  # setwd(work.dir)
+  # alignment.dir = align.dir
+  # alignment.format = "fasta"
+  # output.format = "phylip"
+  # output.dir = paste0(work.dir, "/01_emily-subset-mafft_trimmed")
   # TrimAl = TRUE
   # PreQual = TRUE
   # HmmCleaner = FALSE
@@ -129,16 +136,26 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
- # cl = parallel::makeCluster(threads)
-#  doParallel::registerDoParallel(cl)
- # mem.cl = floor(mem/threads)
+  cl = parallel::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(mem/threads)
 
   #Loops through each locus and does operations on them
-#  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(align.files)){
     #Load in alignments
-    align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-    align = Biostrings::DNAStringSet(align)
+    if (alignment.format == "phylip"){
+      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+      align = Biostrings::DNAStringSet(align)
+      save.name = gsub(".phy$", "", align.files[i])
+      save.name = gsub(".phylip$", "", save.name)
+    }#end phylip
+
+    if (alignment.format == "fasta"){
+      align = Rsamtools::scanFa(Rsamtools::FaFile(paste0(alignment.dir, "/", align.files[i])))   # loads up fasta file
+      save.name = gsub(".fa$", "", align.files[i])
+      save.name = gsub(".fasta$", "", save.name)
+    }#end phylip
 
     temp.data = save.data[1,]
 
@@ -150,7 +167,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                           char.replace = "-")
 
     #Summarize all this, no functoin
-    data.table::set(temp.data, i = as.integer(1), j = match("Alignment", header.data), value = align.files[i])
+    data.table::set(temp.data, i = as.integer(1), j = match("Alignment", header.data), value = save.name)
     data.table::set(temp.data, i = as.integer(1), j = match("startSamples", header.data), value = length(non.align))
     data.table::set(temp.data, i = as.integer(1), j = match("startLength", header.data), value = Biostrings::width(non.align)[1] )
     gap.count = countAlignmentGaps(non.align)
@@ -209,7 +226,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       gap.count = countAlignmentGaps(non.align)
       data.table::set(temp.data, i = as.integer(1), j = match("trimalBasepairs", header.data), value = gap.count[2] - gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("trimalGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalPerGaps", header.data), value = gap.count[3])    }#end if
+      data.table::set(temp.data, i = as.integer(1), j = match("trimalPerGaps", header.data), value = gap.count[3])
+    }#end if
 
     # Step 4. Edge trimming
     if (trim.external == TRUE){
@@ -224,7 +242,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       gap.count = countAlignmentGaps(non.align)
       data.table::set(temp.data, i = as.integer(1), j = match("edgeBasepairs", header.data), value = gap.count[2] - gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("edgeGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("edgePerGaps", header.data), value = gap.count[3])    }#end trim external
+      data.table::set(temp.data, i = as.integer(1), j = match("edgePerGaps", header.data), value = gap.count[3])
+    }#end trim external
 
     #Step 5. Evaluate and cut out each sample
     if (trim.coverage == TRUE){
@@ -239,7 +258,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       gap.count = countAlignmentGaps(non.align)
       data.table::set(temp.data, i = as.integer(1), j = match("covBasepairs", header.data), value = gap.count[2] - gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("covGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])    }#end trim.external
+      data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
+    }#end trim.external
 
     if (trim.column == TRUE){
       #Trim alignment colums
@@ -252,7 +272,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       gap.count = countAlignmentGaps(non.align)
       data.table::set(temp.data, i = as.integer(1), j = match("columnBasepairs", header.data), value = gap.count[2] - gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("columnGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("columnPerGaps", header.data), value = gap.count[3])    }#end trim column.
+      data.table::set(temp.data, i = as.integer(1), j = match("columnPerGaps", header.data), value = gap.count[3])
+    }#end trim column.
 
     if (alignment.assess == TRUE) {
       #Assesses the alignment returning TRUE for pass and FALSE for fail
@@ -272,13 +293,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
     aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
     #readies for saving
-    writePhylip(aligned.set, file= paste0(output.dir, "/", align.files[i]), interleave = F)
+    writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
 
     data.frame(temp.data)
 
   }#end i loop
 
-  #parallel::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   #Print and save summary table
   write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)
