@@ -124,7 +124,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.dir))
       dir.create(output.dir)
-    } else { stop("overwrite = FALSE and directory exists") }
+     }
   }#end dir exists
 
   #Gathers alignments
