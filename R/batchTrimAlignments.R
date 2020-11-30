@@ -81,7 +81,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                min.gap.percent = 0,
                                threads = 1,
                                mem = 8,
-                               overwrite = TRUE){
+                               overwrite = FALSE,
+                               resume = TRUE) {
 
   # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   # align.dir = "/home/c111h652/scratch/Rodents/Trimming/01_emily-subset-mafft"
