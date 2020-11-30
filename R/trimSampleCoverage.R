@@ -8,7 +8,7 @@
 #'
 #' @param min.sample.bp minimum number of base pairs a sample needs to be kept
 #'
-#' @return returns sample coverage trimmed alignment
+#' @return returns sample coverage trimmed alignment. Alignment will be returned unmodified if the min.sample.bp is less than the alignment length.
 #'
 #' @examples
 #'
@@ -29,6 +29,10 @@ trimSampleCoverage = function(alignment = NULL,
   #alignment = edge.align
   #min.coverage.bp = 300
   #min.coverage.percent = 50
+
+  if (length(alignment) <= 2){ return(alignment) }
+
+  if (min.sample.bp >= width(alignment)[1]){ return(alignment) }
 
   #Remove gap only alignments
   c.align = strsplit(as.character(alignment), "")

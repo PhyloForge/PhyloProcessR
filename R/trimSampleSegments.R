@@ -26,12 +26,13 @@ trimSampleSegments = function(alignment = NULL,
 
   #makes consensus sequence for comparison
   #input.align<-align
+
+  if (length(alignment) <= 2){ return(alignment) }
+
   input.con = makeConsensus(alignment = alignment,
                             method = "majority")
 
   names(input.con) = "Reference_Locus"
-
-
 
   # #B Slice up alignment [combine with prev]
   # if (max(width(trimal.align)) >= 100){

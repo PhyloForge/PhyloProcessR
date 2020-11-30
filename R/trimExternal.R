@@ -29,6 +29,9 @@ trimExternal = function(alignment = NULL,
   #Converts DNAStringSet to something usable
   #alignment<-m.align
   #min.n.seq<-50
+
+  if (length(alignment) <= 2){ return(alignment) }
+
   new.align<-strsplit(as.character(alignment), "")
   mat.align<-lapply(new.align, tolower)
   x<-as.matrix(ape::as.DNAbin(mat.align))

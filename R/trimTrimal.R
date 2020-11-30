@@ -31,6 +31,8 @@ trimTrimal = function(alignment = NULL,
   # quiet = FALSE
   # trimal.path = "trimal"
 
+  if (length(alignment) <= 2){ return(alignment) }
+
   #Finds probes that match to two or more contigs
   save.rownames = names(alignment)
   write.align = as.list(as.character(alignment))
@@ -44,14 +46,13 @@ trimTrimal = function(alignment = NULL,
              as.string = T)
 
   #Runs trimal command with input file
-  system(paste0(trimal.path, " -in ", input.file, " -out ", input.file, "-tm -automated1"),
+  system(paste0(trimal.path, " -in ", input.file, " -out tm-", input.file, " -automated1"),
          ignore.stdout = quiet, ignore.stderr = quiet)
 
-  if (file.exists(paste0(input.file, "-tm")) == F) {
+  if (file.exists(paste0("tm-", input.file)) == F) {
     system(paste0("rm ", input.file))
-    print(paste0("deleted. Not enough overlapping data in alignment.") )
-    return(DNAStringSet())
-  } else { system(paste0("mv ", input.file, "-tm ", input.file)) }
+    return(alignment)
+  } else { system(paste0("mv tm-", input.file, " ", input.file)) }
 
   out.align = Rsamtools::scanFa(Rsamtools::FaFile(input.file))
 

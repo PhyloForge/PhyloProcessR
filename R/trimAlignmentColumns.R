@@ -23,6 +23,8 @@ trimAlignmentColumns = function(alignment = NULL,
   #alignment = sample.align
   #min.gap.percent = 25
 
+  if (length(alignment) <= 2){ return(alignment) }
+
   #Convert alignment to easier to work with matrix
   temp.align = strsplit(as.character(alignment), "")
   mat.align = lapply(temp.align, tolower)

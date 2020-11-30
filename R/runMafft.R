@@ -42,6 +42,7 @@ runMafft = function(sequence.data = NULL,
   #save.name<-locus.save.name
   #algorithm = "localpair"
   # unaligned.contigs<-intron.align
+
   save.contigs = as.list(as.character(sequence.data))
   if (is.null(save.name) == T) { save.name = paste(sample(LETTERS, 5, replace = T), collapse = "")}
   if (adjust.direction == T){ adjust.direction = "--adjustdirection" } else { adjust.direction = "" }

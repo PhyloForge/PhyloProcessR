@@ -92,7 +92,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # output.dir = paste0(work.dir, "/01_emily-subset-mafft_trimmed")
   # TrimAl = TRUE
   # PreQual = TRUE
-  # HmmCleaner = FALSE
+  # HmmCleaner = TRUE
   # trim.column = TRUE
   # alignment.assess = TRUE
   # trim.external = TRUE
@@ -100,27 +100,39 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # min.coverage.percent = 30
   # min.external.percent = 50
   # min.column.gap.percent = 100
-  # overwrite = TRUE
-  # min.align.length = 100
+  # overwrite = FALSE
+  # min.align.length = 60
   # min.taxa.count = 3
   # min.gap.percent = 50
-  # min.sample.bp = 60
+  # min.sample.bp = 40
   # threads = 8
   # mem = 8
+  # resume = TRUE
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
   if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
 
+  #So I don't accidentally delete everything while testing resume
+  if (resume == TRUE & overwrite == TRUE){
+    overwrite = FALSE
+    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
+  }
+
   if (dir.exists(output.dir) == TRUE) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.dir))
       dir.create(output.dir)
-    }#end overwrite if
+    } else { stop("overwrite = FALSE and directory exists") }
   }#end dir exists
 
   #Gathers alignments
   align.files = list.files(alignment.dir)
+  #Skips files done already if resume = TRUE
+  if (resume == TRUE){
+    done.files = list.files(output.dir)
+    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+  }
 
   #Data to collect
   header.data = c("Alignment", "Pass", "startSamples", "hmmSamples", "trimalSamples",
@@ -140,13 +152,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  cl = parallel::makeCluster(threads)
-  doParallel::registerDoParallel(cl)
-  mem.cl = floor(mem/threads)
+  #cl = parallel::makeCluster(threads)
+  #doParallel::registerDoParallel(cl)
+  #mem.cl = floor(mem/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
+ # out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  for (i in 1:length(align.files)){
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
@@ -303,7 +315,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   }#end i loop
 
-  parallel::stopCluster(cl)
+ # parallel::stopCluster(cl)
 
   #Print and save summary table
   write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)
@@ -314,7 +326,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   writeLines(paste0("Log file for ", output.dir), fileConn)
   writeLines(paste0("\n"), fileConn)
   writeLines(paste0("Overall trimming summary:"), fileConn)
-  writeLines(paste0("================================================================"), fileConn)
+  writeLines(paste0("------------------------------------------------------------------"), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Starting alignments: ", length(align.files)), fileConn)
   writeLines(paste0("Trimmed alignments: ", length(out.data$Pass[out.data$Pass == TRUE])), fileConn)
@@ -333,7 +345,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   writeLines(paste0(""), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Individual trimming step summary:"), fileConn)
-  writeLines(paste0("================================================================"), fileConn)
+  writeLines(paste0("------------------------------------------------------------------"), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Starting alignments:"), fileConn)
   writeLines(paste0("Mean samples: ",
