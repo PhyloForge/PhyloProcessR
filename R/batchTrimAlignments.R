@@ -153,13 +153,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  #cl = parallel::makeCluster(threads)
-  #doParallel::registerDoParallel(cl)
-  #mem.cl = floor(mem/threads)
+  cl = parallel::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(mem/threads)
 
   #Loops through each locus and does operations on them
- # out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(align.files)){
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
@@ -316,7 +316,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   }#end i loop
 
- # parallel::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   #Print and save summary table
   write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)
