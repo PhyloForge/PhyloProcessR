@@ -91,7 +91,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # alignment.dir = align.dir
   # alignment.format = "fasta"
   # output.format = "phylip"
-  # output.dir = paste0(work.dir, "/01_full_trimmed")
+  # output.dir = paste0(work.dir, "/01_emily_trimmed")
   # TrimAl = TRUE
   # PreQual = TRUE
   # HmmCleaner = TRUE
@@ -313,12 +313,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
       #If no alignment assessing is done, saves
       write.temp = strsplit(as.character(non.align), "")
       aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-
       #readies for saving
       writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
     }#end else
 
     data.frame(temp.data)
+    print(paste0(align.files[i], " Completed."))
 
   }#end i loop
 
