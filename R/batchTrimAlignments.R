@@ -87,7 +87,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   # work.dir = "/Volumes/Rodents/Murinae/Trimming"
   # align.dir = "/Volumes/Rodents/Murinae/Trimming/01_full-mafft"
-  #
   # setwd(work.dir)
   # alignment.dir = align.dir
   # alignment.format = "fasta"
@@ -108,7 +107,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # min.taxa.count = 3
   # min.gap.percent = 50
   # min.sample.bp = 40
-  # threads = 8
+  # threads = 4
   # mem = 8
   # resume = TRUE
 
@@ -149,19 +148,18 @@ batchTrimAlignments = function(alignment.dir = NULL,
                   "startPerGaps", "hmmPerGaps", "trimalPerGaps",
                   "edgePerGaps", "covPerGaps", "columnPerGaps")
 
-  save.data = data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))
-  setnames(save.data, header.data)
+  save.data = data.table::data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))
+  data.table::setnames(save.data, header.data)
   save.data[, Alignment:=as.character(Alignment)]
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  cl = parallel::makeCluster(threads)
+  cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
   mem.cl = floor(mem/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings", "Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files),.combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
