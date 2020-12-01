@@ -38,7 +38,7 @@ trimTrimal = function(alignment = NULL,
   write.align = as.list(as.character(alignment))
 
   #Creates random name and saves it
-  input.file = paste0("temp", sample(1:10000, 1), ".fa")
+  input.file = paste0("temp_", sample(1:1000000, 1), ".fa")
   writeFasta(sequences = write.align,
              names = names(write.align),
              file.out = input.file,

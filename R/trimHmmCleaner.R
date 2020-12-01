@@ -45,7 +45,7 @@ trimHmmCleaner = function(alignment = NULL,
 
   #Creates random name and saves it
   write.align = as.list(as.character(alignment))
-  input.file = paste0("temp", sample(1:10000, 1), ".fa")
+  input.file = paste0("temp", sample(1:1000000, 1), ".fa")
   writeFasta(sequences = write.align,
              names = names(write.align),
              file.out = input.file,

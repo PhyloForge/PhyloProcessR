@@ -84,13 +84,15 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                overwrite = FALSE,
                                resume = TRUE) {
 
-  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # align.dir = "/home/c111h652/scratch/Rodents/Trimming/01_emily-subset-mafft"
+
+  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # align.dir = "/Volumes/Rodents/Murinae/Trimming/01_full-mafft"
+  #
   # setwd(work.dir)
   # alignment.dir = align.dir
   # alignment.format = "fasta"
   # output.format = "phylip"
-  # output.dir = paste0(work.dir, "/01_emily-subset-mafft_trimmed")
+  # output.dir = paste0(work.dir, "/01_full_trimmed")
   # TrimAl = TRUE
   # PreQual = TRUE
   # HmmCleaner = TRUE
@@ -303,14 +305,20 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
       if (test.result == FALSE){
         print(paste0(align.files[i], " Failed and was discarded."))
-        next }
-    }
+      } else {
+        write.temp = strsplit(as.character(non.align), "")
+        aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+        #readies for saving
+        writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+      }#end else test result
+    } else {
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(non.align), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
-    write.temp = strsplit(as.character(non.align), "")
-    aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-
-    #readies for saving
-    writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+    }#end else
 
     data.frame(temp.data)
 
