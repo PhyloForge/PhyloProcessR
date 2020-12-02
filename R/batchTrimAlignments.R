@@ -161,7 +161,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #Loops through each locus and does operations on them
   #out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   for (i in 1:length(align.files)){
-    print(paste0(align.files[i], " Started..."))
+    print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
     if (alignment.format == "phylip"){

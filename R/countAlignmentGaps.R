@@ -17,6 +17,7 @@
 
 countAlignmentGaps = function(alignment = NULL){
 
+  #alignment = non.align
   #Count gaps
   len.temp = lapply(alignment, function (x) as.character(x))
   gap.temp = lapply(strsplit(as.character(len.temp), split = ""), function (x) length(which(x == "-")) )

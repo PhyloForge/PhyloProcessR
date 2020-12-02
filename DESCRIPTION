@@ -5,7 +5,7 @@ Authors@R:
     person(given = "Carl",
            family = "Hutter",
            role = c("aut", "cre"),
-           email = "car.hutter@gmail.com",
+           email = "carl.hutter@gmail.com",
            comment = c(ORCID = "0000-0001-6381-6339"))
 Description: This R package can process high-throughput sequence data from raw reads to alignments 
   ready for analysis in popular phylogenetics software. The package acts as a wrapper around other
