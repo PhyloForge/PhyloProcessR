@@ -86,7 +86,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
 
   # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir = "/Volumes/Rodents/Murinae/Trimming/01_full-mafft"
+  # align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-mafft"
   # setwd(work.dir)
   # alignment.dir = align.dir
   # alignment.format = "fasta"
@@ -160,7 +160,10 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   #Loops through each locus and does operations on them
   out.data = foreach(i=1:length(align.files),.combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-    #Load in alignments
+
+    print(paste0(align.files[i], " Started..."))
+
+     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
       align = Biostrings::DNAStringSet(align)
