@@ -85,9 +85,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                resume = TRUE) {
 
 
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-mafft"
-  # setwd(work.dir)
+  #work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  #align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-mafft"
+  #setwd(work.dir)
   # alignment.dir = align.dir
   # alignment.format = "fasta"
   # output.format = "phylip"
@@ -214,25 +214,25 @@ batchTrimAlignments = function(alignment.dir = NULL,
     #   data.table::set(temp.data, i = as.integer(1), j = match("hmmPerGaps", header.data), value = gap.count[3])
     # }#end if
 
-
-    #Step 2. Runs hmmCleaner
-    if (HmmCleaner == TRUE){
-
-      hmmcl.align = trimHmmCleaner(alignment = non.align,
-                                   specificity = TRUE,
-                                   large = FALSE,
-                                   hmmcleaner.path = "HmmCleaner.pl",
-                                   quiet = T,
-                                   delete.temp = T)
-      non.align = hmmcl.align
-      #Saves the data
-      data.table::set(temp.data, i = as.integer(1), j = match("hmmSamples", header.data), value = length(hmmcl.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("hmmLength", header.data), value = Biostrings::width(hmmcl.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("hmmBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("hmmGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("hmmPerGaps", header.data), value = gap.count[3])
-    }#end if
+#
+#     #Step 2. Runs hmmCleaner
+#     if (HmmCleaner == TRUE){
+#
+#       hmmcl.align = trimHmmCleaner(alignment = non.align,
+#                                    specificity = TRUE,
+#                                    large = FALSE,
+#                                    hmmcleaner.path = "HmmCleaner.pl",
+#                                    quiet = T,
+#                                    delete.temp = T)
+#       non.align = hmmcl.align
+#       #Saves the data
+#       data.table::set(temp.data, i = as.integer(1), j = match("hmmSamples", header.data), value = length(hmmcl.align))
+#       data.table::set(temp.data, i = as.integer(1), j = match("hmmLength", header.data), value = Biostrings::width(hmmcl.align)[1])
+#       gap.count = countAlignmentGaps(non.align)
+#       data.table::set(temp.data, i = as.integer(1), j = match("hmmBasepairs", header.data), value = gap.count[2] - gap.count[1])
+#       data.table::set(temp.data, i = as.integer(1), j = match("hmmGaps", header.data), value = gap.count[1])
+#       data.table::set(temp.data, i = as.integer(1), j = match("hmmPerGaps", header.data), value = gap.count[3])
+#     }#end if
 
     #Step 3. Trimal trimming
     if (TrimAl == TRUE){

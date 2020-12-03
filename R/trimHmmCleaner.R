@@ -61,7 +61,7 @@ trimHmmCleaner = function(alignment = NULL,
   #Specificity function
   if (specificity == TRUE & large == FALSE){
     system(paste0("HmmCleaner.pl ", input.file, " --specificity"),
-           ignore.stdout = quiet, ignore.stderr = quiet)
+           ignore.stdout = quiet, ignore.stderr = F)
   }#end if
 
   #Specificity function
