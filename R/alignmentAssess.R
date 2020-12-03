@@ -30,7 +30,6 @@ alignmentAssess = function(alignment = NULL,
   #Count gaps
   #alignment = non.align
   gap.data = countAlignmentGaps(alignment)
-
   #if (length(gap.data) != 3){ return(FALSE) }
 
   #RECORD DATA
