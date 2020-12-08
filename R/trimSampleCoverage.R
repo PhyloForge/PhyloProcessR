@@ -32,7 +32,7 @@ trimSampleCoverage = function(alignment = NULL,
 
   if (length(alignment) <= 2){ return(alignment) }
 
-  if (min.sample.bp >= width(alignment)[1]){ return(alignment) }
+  if (min.sample.bp >= Biostrings::width(alignment)[1]){ return(alignment) }
 
   #Remove gap only alignments
   c.align = strsplit(as.character(alignment), "")
