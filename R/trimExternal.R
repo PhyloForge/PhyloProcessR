@@ -95,12 +95,12 @@ trimExternal = function(alignment = NULL,
 
   #Removes N end gaps
   x3<-as.list(data.frame(t(as.character(x2))))
-  for (y in 1:length(x3)){
-    #Starts from the beginning and end to fill in end gaps
-    for (q in 1:length(x3[[y]])){ if (x3[[y]][q] == "n"){ x3[[y]][q]<-"-" } else { break } }
-    for (q in length(x3[[y]]):1){ if (x3[[y]][q] == "n"){ x3[[y]][q]<-"-" } else { break } }
-  }#end x loop
-  #Saves final stuff
+  # for (y in 1:length(x3)){
+  #   #Starts from the beginning and end to fill in end gaps
+  #   for (q in 1:length(x3[[y]])){ if (x3[[y]][q] == "n"){ x3[[y]][q]<-"-" } else { break } }
+  #   for (q in length(x3[[y]]):1){ if (x3[[y]][q] == "n"){ x3[[y]][q]<-"-" } else { break } }
+  # }#end x loop
+  # #Saves final stuff
   temp.align<-lapply(x3, FUN = function(x) paste(x, collapse = ""))
   align.out<-Biostrings::DNAStringSet(unlist(temp.align))
   names(align.out)<-save.names
