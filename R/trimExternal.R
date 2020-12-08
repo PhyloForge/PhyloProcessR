@@ -30,6 +30,10 @@ trimExternal = function(alignment = NULL,
   #alignment<-m.align
   #min.n.seq<-50
 
+  # alignment = non.align
+  # min.n.seq = ceiling(length(non.align) * (min.external.percent/100))
+  # codon.trim = F
+
   if (length(alignment) <= 2){ return(alignment) }
 
   new.align<-strsplit(as.character(alignment), "")
