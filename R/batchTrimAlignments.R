@@ -42,7 +42,7 @@
 #'
 #' @param threads path to a folder of sequence alignments in phylip format.
 #'
-#' @param mem give a save name if you wnat to save the summary to file.
+#' @param memory give a save name if you wnat to save the summary to file.
 #'
 #' @param overwrite TRUE to supress mafft screen output
 #'
@@ -62,11 +62,11 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                alignment.format = "phylip",
                                output.dir = NULL,
                                output.format = "phylip",
-                               PreQual = TRUE,
+                               PreQual = FALSE,
                                PreQual.path = "prequal",
                                HmmCleaner = FALSE,
                                HmmCleaner.path = "HmmCleaner.pl",
-                               TrimAl = TRUE,
+                               TrimAl = FALSE,
                                TrimAl.path = "trimal",
                                trim.external = TRUE,
                                min.external.percent = 50,
@@ -80,33 +80,33 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                min.taxa.count = 0,
                                min.gap.percent = 0,
                                threads = 1,
-                               mem = 8,
+                               memory = 1,
                                overwrite = FALSE,
                                resume = TRUE) {
 
 
-  #work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  #align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-mafft"
-  #setwd(work.dir)
+  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # align.dir = paste0(out.name, "_genes-untrimmed")
+  # setwd(work.dir)
   # alignment.dir = align.dir
-  # alignment.format = "fasta"
+  # alignment.format = "phylip"
   # output.format = "phylip"
-  # output.dir = paste0(work.dir, "/01_emily_trimmed")
+  # output.dir = paste0(out.name, "_genes-trimmed")
   # TrimAl = TRUE
-  # PreQual = TRUE
-  # HmmCleaner = TRUE
+  # PreQual = FALSE
+  # HmmCleaner = FALSE
   # trim.column = TRUE
   # alignment.assess = TRUE
   # trim.external = TRUE
   # trim.coverage = TRUE
-  # min.coverage.percent = 30
+  # min.coverage.percent = 35
   # min.external.percent = 50
-  # min.column.gap.percent = 100
-  # overwrite = FALSE
-  # min.align.length = 60
-  # min.taxa.count = 3
+  # min.column.gap.percent = 50
+  # overwrite = TRUE
+  # min.align.length = 100
+  # min.taxa.count = 5
   # min.gap.percent = 50
-  # min.sample.bp = 40
+  # min.sample.bp = 60
   # threads = 4
   # mem = 8
   # resume = TRUE
@@ -154,13 +154,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  #cl = parallel::makeCluster(threads, outfile = "")
-  #doParallel::registerDoParallel(cl)
-  #mem.cl = floor(mem/threads)
+  cl = parallel::makeCluster(threads, outfile = "")
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  #out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
@@ -172,7 +172,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end phylip
 
     if (alignment.format == "fasta"){
-      align = Rsamtools::scanFa(Rsamtools::FaFile(paste0(alignment.dir, "/", align.files[i])))   # loads up fasta file
+      exon.align = Biostrings::readDNAStringSet(paste0(alignment.dir, "/", align.files[i]) )
       save.name = gsub(".fa$", "", align.files[i])
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
@@ -325,7 +325,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   }#end i loop
 
-  #parallel::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   #Print and save summary table
   write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)

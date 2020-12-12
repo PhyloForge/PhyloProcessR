@@ -32,7 +32,7 @@ alignmentConversion = function(input.alignment = NULL,
   if (align.class == "DNAStringSet" && end.format == "DNAbin"){
     new.align = strsplit(as.character(input.alignment), "")
     mat.align = lapply(new.align, tolower)
-    align.out = as.matrix(as.DNAbin(mat.align))
+    align.out = as.matrix(ape::as.DNAbin(mat.align))
     return(align.out)
   }# end if
 
@@ -60,7 +60,7 @@ alignmentConversion = function(input.alignment = NULL,
   #Converts from DNABin to DNAStringSet Objects
   if (align.class == "DNAStringSet" && end.format == "matrix"){
     temp.align = strsplit(as.character(input.alignment), "")
-    align.out = as.matrix(as.DNAbin(temp.align) )
+    align.out = as.matrix(ape::as.DNAbin(temp.align) )
     return(align.out)
   }# end if
 

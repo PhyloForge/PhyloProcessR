@@ -54,6 +54,65 @@ dropboxDownload(sample.spreadsheet = sample.spread,
 
 
 
+################################################################################################
+### Part 2. Trimming example
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+
+options(stringsAsFactors = FALSE)
+
+#devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
+#library(PHYLOCAP)
+
+#Save directory
+#save.dir = "/Volumes/Rodents/Shrew_Project/Alignments"
+work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+align.dir = "/home/c111h652/scratch/Rodents/Trimming/01_full-mafft"
+out.name = "01_full-mafft"
+
+work.dir = "/Volumes/Rodents/Murinae/Trimming"
+align.dir = "/Volumes/Rodents/Murinae/Trimming/01_full-mafft"
+#align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-mafft"
+exon.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_best_cds_metadata.csv"
+
+
+setwd(work.dir)
+
+#Concatenates exons from the same gene when given a guide file
+concatenateGenes(alignment.folder = align.dir,
+                 output.folder = paste0(out.name, "_genes-untrimmed"),
+                 exon.gene.names = exon.gene.names,
+                 input.format = "fasta",
+                 output.format = "phylip",
+                 remove.reverse = TRUE,
+                 overwrite = TRUE,
+                 threads = 6,
+                 memory = 6)
+
+#Trimms all the alignments
+batchTrimAlignments(alignment.dir = align.dir,
+                    alignment.format = "phylip",
+                    output.dir = paste0(out.name, "_genes-trimmed"),
+                    output.format = "phylip",
+                    overwrite = TRUE,
+                    resume = TRUE,
+                    TrimAl = TRUE,
+                    HmmCleaner = FALSE,
+                    trim.column = TRUE,
+                    alignment.assess = TRUE,
+                    trim.external = TRUE,
+                    trim.coverage = TRUE,
+                    min.coverage.percent = 35,
+                    min.external.percent = 50,
+                    min.column.gap.percent = 50,
+                    min.align.length = 100,
+                    min.taxa.count = 5,
+                    min.gap.percent = 50,
+                    min.sample.bp = 60,
+                    threads = 8,
+                    mem = 8)
 
 
 
@@ -62,317 +121,6 @@ dropboxDownload(sample.spreadsheet = sample.spread,
 ######################           FUNCTIONS            #########################
 ###############################################################################
 ###############################################################################
-
-#Consensus function
-make.consensus =  function (input.alignment, method = c("majority", "threshold", "IUPAC",
-                                                        "profile"), threshold = 0.6, warn.non.IUPAC = FALSE, type = c("DNA", "RNA")) {
-
-  #input.alignment<-trimmed
-  #Converts alignment to matrix of characters to be used
-  new.align<-strsplit(as.character(input.alignment), "")
-  align.in<-matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
-
-  #Does based on method
-  method <- match.arg(method)
-
-  if (method == "IUPAC") {
-    type <- match.arg(type)
-    res <- apply(align.in, 2, bma, warn.non.IUPAC = warn.non.IUPAC,
-                 type = type)
-    names(res) <- NULL
-  }
-  if (method == "majority") {
-    majority <- function(x) names(which.max(table(x)))
-    res <- apply(align.in, 2, majority)
-    names(res) <- NULL
-  }
-  if (method == "profile") {
-    obsvalue <- levels(factor(align.in))
-    nrow <- length(obsvalue)
-    row.names(align.in) <- NULL
-    res <- apply(matali, 2, function(x) table(factor(x, levels = obsvalue)))
-  }
-  if (method == "threshold") {
-    profile <- consensus(align.in, method = "profile")
-    profile.rf <- apply(profile, 2, function(x) x/sum(x))
-    res <- rownames(profile.rf)[apply(profile.rf, 2, which.max)]
-    res <- ifelse(apply(profile.rf, 2, max) >= threshold,
-                  res, NA)
-    names(res) <- NULL
-  }
-
-  out.consensus<-DNAStringSet(paste0(res, collapse = ""))
-  names(out.consensus)<-"Consensus_Sequence"
-  return(out.consensus)
-}
-#Slice function
-slice.trim = function(input.align, slice.size.bp = 100, threshold = 0.45){
-
-  #makes consensus sequence for comparison
-  #input.align<-align
-  input.con<-make.consensus(input.align, method = "majority")
-  names(input.con)<-"Reference_Locus"
-
-  comb.align<-append(input.align, input.con)
-
-  #Gets slice information ready
-  slice.no<-ceiling(max(width(input.align))/slice.size.bp)
-  slice.start<-1
-  slice.end<-slice.size.bp
-
-  #checks to see if its out of bounds
-  if (slice.end > max(width(input.align))){
-    slice.end<-max(width(input.align))
-  }#end if check
-  output.align<-DNAStringSet()
-  for (x in 1:slice.no){
-
-    #Slice alignment into number of slices
-    sliced.align<-subseq(comb.align, start = slice.start, end = slice.end)
-    #Checks for badly aligned sequences
-    bad.align<-pairwise.inf.sites(sliced.align, "Reference_Locus")
-    #Remove bad sequence chunks
-    rem.seqs<-bad.align[bad.align >= threshold]
-    good.align<-sliced.align[!names(sliced.align) %in% names(rem.seqs)]
-    #Makes replacement gap seqs for the bad ones
-    blank.align<-DNAStringSet()
-    if (length(rem.seqs) != 0){
-      for (y in 1:length(rem.seqs)){
-        blank.align<-append(blank.align, DNAStringSet(paste0(rep("-", slice.end-slice.start+1), collapse = "")) )
-      }
-      names(blank.align)<-names(rem.seqs)
-    }#end rem seqs if
-
-    #Saves the slices and cats
-    save.slice<-append(good.align, blank.align)
-    save.slice<-save.slice[order(names(save.slice))]
-    save.names<-names(save.slice)
-    output.align<-DNAStringSet(paste0(as.character(output.align), as.character(save.slice)))
-    names(output.align)<-save.names
-
-    #Gets new start and stop
-    slice.start<-slice.start+100
-    slice.end<-slice.end+100
-    #checks to see if its out of bounds
-    if (slice.end > max(width(input.align))){
-      slice.end<-max(width(input.align))
-      if (slice.end-slice.start <= 25){ break } else {
-        save.slice<-subseq(comb.align, start = slice.start, end = slice.end)
-        save.slice<-save.slice[order(names(save.slice))]
-        save.names<-names(save.slice)
-        output.align<-DNAStringSet(paste0(as.character(output.align), as.character(save.slice)))
-        names(output.align)<-save.names
-        break
-      }
-    }#end if
-  }#end x loop
-
-  #Removes reference
-  output.align<-output.align[names(output.align) != "Reference_Locus"]
-  #removes gap only taxa
-  str.splitted<-strsplit(as.character(output.align), "")
-  x.align<-as.matrix(as.DNAbin(str.splitted) )
-  len.temp<-as.character(as.list(x.align))
-  len.loci<-lapply(len.temp, function (x) x[x != "-"])
-  spp.len<-unlist(lapply(len.loci, function (x) length(x)))
-  spp.rem<-spp.len[spp.len <= 20]
-  return.align<-output.align[!names(output.align) %in% names(spp.rem)]
-  return(return.align)
-}#end FUNCTION
-
-pairwise.inf.sites2 = function(x, y) {
-  #Sets up data, puts ref seq first
-  new.align<-x
-  new.align[new.align == "n"]<-"-"
-  new.align[is.na(new.align) == T]<-"-"
-  ref<-new.align[rownames(new.align) == y,]
-  summary.data<-c()
-  all.pars<-c()
-  all.over<-c()
-  for (z in 1:nrow(new.align)) {
-    #Site counter
-    pars<-0
-    overlap<-0
-    tar<-new.align[z,]
-    combined<-matrix(NA_character_, ncol = max(length(ref), length(tar)), nrow =2)
-    combined[1,]<-ref
-    combined[2,]<-tar
-    for (k in 1:ncol(combined)) {
-      #Pulls out column of data
-      seq.col<-vector("character", length = nrow(combined))
-      seq.col<-combined[,k]
-      #not equal to -
-      f.char<-seq.col[seq.col != '-']
-      #don't count missing seq
-      if (length(f.char) <= 1) { next }
-
-      if (length(f.char) >= 2){
-        overlap<-overlap+1
-        if (f.char[1] != f.char [2]) { pars<-pars+1 }
-      }#end if
-    }#ends informative sites loop
-    all.pars<-append(all.pars, pars)
-    all.over<-append(all.over, overlap)
-  }# ends seq loop
-  #Summarizes and returns data
-  summary.data<-all.pars/all.over
-  summary.data[is.nan(summary.data)]<-0
-  names(summary.data)<-rownames(new.align)
-  return(summary.data)
-}
-
-pairwise.inf.sites = function(x, y) {
-  #Alignment should be DNAStringSet
-  # x<-m.align
-  # y<-"Reference_Locus"
-  temp.align<-strsplit(as.character(x), "")
-  mat.align<-lapply(temp.align, tolower)
-  m.align<-as.matrix(as.DNAbin(mat.align))
-
-  #Filters out weirdly divergent sequences
-  new.align<-as.character(m.align)
-  new.align[new.align == "n"]<-"-"
-  new.align[is.na(new.align) == T]<-"-"
-  ref<-new.align[rownames(new.align) == y,]
-  summary.data<-c()
-  all.pars<-c()
-  all.over<-c()
-  for (z in 1:nrow(new.align)) {
-    #Site counter
-    pars<-0
-    overlap<-0
-    tar<-new.align[z,]
-    combined<-matrix(NA_character_, ncol = max(length(ref), length(tar)), nrow =2)
-    combined[1,]<-ref
-    combined[2,]<-tar
-    for (k in 1:ncol(combined)) {
-      #Pulls out column of data
-      seq.col<-vector("character", length = nrow(combined))
-      seq.col<-combined[,k]
-      #not equal to -
-      f.char<-seq.col[seq.col != '-']
-      #don't count missing seq
-      if (length(f.char) <= 1) { next }
-
-      if (length(f.char) >= 2){
-        overlap<-overlap+1
-        if (f.char[1] != f.char [2]) { pars<-pars+1 }
-      }#end if
-    }#ends informative sites loop
-    all.pars<-append(all.pars, pars)
-    all.over<-append(all.over, overlap)
-  }# ends seq loop
-  #Summarizes and returns data
-  summary.data<-all.pars/all.over
-  summary.data[is.nan(summary.data)]<-0
-  names(summary.data)<-rownames(new.align)
-  return(summary.data)
-}
-
-write.phy = function (x, file = "", interleave = FALSE, strict = FALSE){
-  str2cha <- function(x) {
-    unlist(strsplit(x, ""))
-  }
-  datatype <- ifelse(is.numeric(x[1, 1]), "continuous", "nc")
-  ntax <- nrow(x)
-  nchar <- ncol(x)
-  taxnames <- rownames(x)
-  if (strict) {
-    taxnames <- substring(taxnames, 1, truncate)
-    missing <- 10 - unlist(lapply(strsplit(taxnames, ""),
-                                  length))
-    for (i in seq(along = taxnames)) taxnames[i] <- paste(taxnames[i],
-                                                          paste(rep("*", missing[i]), collapse = ""), sep = "")
-    if (any(duplicated(taxnames)))
-      cat("WARNING: Truncation of taxon names created",
-          "identical strings.")
-  }
-  else {
-    xx <- nchar(taxnames)
-    diff <- max(xx) - xx + 3
-    for (i in 1:ntax) taxnames[i] <- paste(taxnames[i], paste(rep(" ",
-                                                                  diff[i]), collapse = ""), sep = "")
-  }
-  if (!interleave)
-    interleave <- nchar
-  nbpart <- ceiling(nchar/interleave)
-  pt <- matrix(nrow = nbpart, ncol = 2)
-  pt[1, ] <- c(1, interleave)
-  if (nbpart > 1)
-    for (i in 2:(dim(pt)[1])) {
-      pt[i, ] <- c(pt[i - 1, 2] + 1, pt[i - 1, 2] + interleave)
-      pt[nbpart, 2] <- nchar
-    }
-  phy <- paste(ntax, nchar)
-  for (i in seq(along = pt[, 1])) {
-    sm <- as.character(x[, pt[i, 1]:pt[i, 2]])
-    if (is.null(dim(sm)))
-      sm <- as.matrix(sm, ncol = 1)
-    sm <- apply(sm, 1, paste, collapse = "")
-    if (i == 1)
-      sm <- paste(taxnames, sm)
-    if (i < max(seq(along = pt[, 1])))
-      sm <- c(sm, "")
-    phy <- c(phy, sm)
-  }
-  if (file == "") {
-    cat(phy, sep = "\n")
-  }
-  else {
-    write(phy, file = file)
-  }
-}
-
-run.mafft = function(unaligned.contigs, add.contigs = NULL, algorithm = "localpair", rev.dir = T, save.name = NULL, threads = 6, delete.files = T){
-
-  #save.name<-locus.save.name
-  #algorithm = "localpair"
-  # unaligned.contigs<-intron.align
-  save.contigs<-as.list(as.character(unaligned.contigs))
-  if (is.null(save.name) == T) { save.name<-paste(sample(LETTERS, 5, replace = T), collapse = "")}
-  if (rev.dir == T){ adjust.direction<-"--adjustdirection" } else { adjust.direction<-"" }
-
-  #Adds a sequence into the alignment. Saves much computation.
-  if (algorithm == "add"){
-    #Saves to folder to run with mafft
-    write.fasta(sequences = save.contigs, names = names(save.contigs),
-                paste0(save.name, ".fa"), nbchar = 1000000, as.string = T)
-
-    #Saves to folder to run with mafft
-    add.save<-as.list(as.character(add.contigs))
-    write.fasta(sequences = add.save, names = names(add.save),
-                "add_sequences.fa", nbchar = 1000000, as.string = T)
-
-    #Runs MAFFT to align
-    system(paste0(mafft.path, " --",algorithm, " add_sequences.fa --maxiterate 1000 ", adjust.direction,
-                  " ", save.name, ".fa > ", save.name, "_align.fa"), ignore.stderr = T)
-
-    alignment<-scanFa(FaFile(paste(save.name, "_align.fa", sep = "")))   # loads up fasta file
-    unlink(paste(save.name, ".fa", sep = ""))
-    unlink("add_sequences.fa")
-
-  }#end -add
-
-  #Does Regular MAFFT Local Pair
-  if (algorithm == "localpair"){
-    #Saves to folder to run with mafft
-    write.fasta(sequences = save.contigs, names = names(save.contigs),
-                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)
-
-    #Runs MAFFT to align
-    system(paste0(mafft.path, " --",algorithm, " --maxiterate 1000 ", adjust.direction, " --quiet --op 3 --ep 0.123",
-                  " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"), ignore.stderr = T)
-
-    alignment<-scanFa(FaFile(paste(save.name, "_align.fa", sep = "")))   # loads up fasta file
-    unlink(paste(save.name, ".fa", sep = ""))
-  }#end local pair
-
-  if (delete.files == T){
-    unlink(paste(save.name, "_align.fa", sep = ""))
-    return(alignment)
-  } else { return(alignment) }
-}#function end
-
 
 find.codon = function(input.seq, genetic.code = "nuclear", reverse = T){
   #Sets up data

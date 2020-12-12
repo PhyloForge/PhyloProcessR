@@ -6,9 +6,13 @@
 #'
 #' @param output.name output file name
 #'
-#' @param output.dir directory to save file to
+#' @param partition.file TRUE to save a partition file
 #'
-#' @param partition.format partition file format. Can select both.
+#' @param output.format output file format. "all" to save all three types phylip, nexus, and fasta
+#'
+#' @param partition.format partition file format. "all" to save both raxml and table format
+#'
+#' @param overwrite TRUE to overwrite file. Default FALSE.
 #'
 #' @return saves to file concatenated alignments and partition files delimiting the coordinates of each indidividual marker
 #'
@@ -21,13 +25,12 @@
 #'
 #' @export
 
-
 concatenateAlignments = function(alignment.folder = NULL,
                                  output.name = NULL,
-                                 overwrite = FALSE,
                                  partition.file = TRUE,
                                  output.format = c("phylip", "nexus", "fasta", "all"),
-                                 partition.format = c("raxml", "table", "all")) {
+                                 partition.format = c("raxml", "table", "all"),
+                                 overwrite = FALSE) {
 
   #Debug
  # setwd("/Volumes/Rodents/Shrew_Project/Alignments")

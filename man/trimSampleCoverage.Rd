@@ -18,7 +18,7 @@ trimSampleCoverage(
 \item{min.sample.bp}{minimum number of base pairs a sample needs to be kept}
 }
 \value{
-returns sample coverage trimmed alignment
+returns sample coverage trimmed alignment. Alignment will be returned unmodified if the min.sample.bp is less than the alignment length.
 }
 \description{
 Function for trimming out low coverage (i.e. high gap) samples from alignment

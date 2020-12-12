@@ -6,12 +6,14 @@
 \usage{
 batchTrimAlignments(
   alignment.dir = NULL,
+  alignment.format = "phylip",
   output.dir = NULL,
-  PreQual = TRUE,
+  output.format = "phylip",
+  PreQual = FALSE,
   PreQual.path = "prequal",
   HmmCleaner = FALSE,
   HmmCleaner.path = "HmmCleaner.pl",
-  TrimAl = TRUE,
+  TrimAl = FALSE,
   TrimAl.path = "trimal",
   trim.external = TRUE,
   min.external.percent = 50,
@@ -25,14 +27,19 @@ batchTrimAlignments(
   min.taxa.count = 0,
   min.gap.percent = 0,
   threads = 1,
-  mem = 8,
-  overwrite = TRUE
+  memory = 1,
+  overwrite = FALSE,
+  resume = TRUE
 )
 }
 \arguments{
 \item{alignment.dir}{path to a folder of sequence alignments in phylip format.}
 
+\item{alignment.format}{available input alignment formats: fasta or phylip}
+
 \item{output.dir}{contigs are added into existing alignment if algorithm is "add"}
+
+\item{output.format}{available output formats: phylip}
 
 \item{HmmCleaner}{algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available}
 
@@ -66,7 +73,7 @@ batchTrimAlignments(
 
 \item{threads}{path to a folder of sequence alignments in phylip format.}
 
-\item{mem}{give a save name if you wnat to save the summary to file.}
+\item{memory}{give a save name if you wnat to save the summary to file.}
 
 \item{overwrite}{TRUE to supress mafft screen output}
 }
