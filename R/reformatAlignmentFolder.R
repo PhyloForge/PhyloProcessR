@@ -67,6 +67,8 @@ reformatAlignmentFolder = function(alignment.path = NULL,
     }
 
     if (to.format == "phylip"){
+      align = as.matrix(align)
+      rownames(align) = labels(align)
       writePhylip(align, file = paste0(out.dir, "/",  save.name, ".phy"))
     }
 
