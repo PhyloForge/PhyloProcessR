@@ -67,8 +67,7 @@ reformatAlignmentFolder = function(alignment.path = NULL,
     }
 
     if (to.format == "phylip"){
-      write.temp = strsplit(as.character(align), "")
-      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      aligned.set = as.matrix(ape::as.DNAbin(align) )
       writePhylip(aligned.set, file = paste0(out.dir, "/",  save.name, ".phy"))
     }
 
