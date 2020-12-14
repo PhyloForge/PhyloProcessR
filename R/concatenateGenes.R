@@ -116,7 +116,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #Load in alignments
       if (input.format == "phylip"){
-        exon.align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", temp.exon), format = "phylip")
+        exon.align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.folder, "/", temp.exon), format = "phylip")
         exon.align = Biostrings::DNAStringSet(exon.align)
       }#end phylip
 
