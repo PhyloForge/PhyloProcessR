@@ -132,7 +132,7 @@ concatenateGenes = function(alignment.folder = NULL,
       #Saves alignment as phylip
       write.align = alignmentConversion(input.alignment = exon.align, end.format = "matrix")
       writePhylip(write.align, file = exon.save, interleave = F )
-      save.length = save.length + width(exon.align)[1]
+      save.length = save.length + Biostrings::width(exon.align)[1]
     }#end y loop
 
     if (is.null(save.names) == FALSE) {
