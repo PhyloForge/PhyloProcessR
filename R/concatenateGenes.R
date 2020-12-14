@@ -44,7 +44,7 @@ concatenateGenes = function(alignment.folder = NULL,
   #Debug
   # library(foreach)
   # setwd("/Volumes/Rodents/Murinae/Trimming")
-  # alignment.folder = "/Volumes/Rodents/Murinae/Trimming/01_full-mafft"
+  # alignment.folder = "/Volumes/Rodents/Murinae/Trimming"
   # output.folder = "01_emily-subset-genes"
   # overwrite = TRUE
   # input.format = "fasta"
@@ -75,7 +75,7 @@ concatenateGenes = function(alignment.folder = NULL,
   }#end overwrite if
 
   #Gets list of alignments
-  align.files = list.files(alignment.folder, full.names = T)
+  align.files = list.files(alignment.folder, full.names = T, recursive = T)
   exon.data = data.table::fread(file = feature.gene.names, header = T)
   gene.names = unique(exon.data$gene_id)
 
