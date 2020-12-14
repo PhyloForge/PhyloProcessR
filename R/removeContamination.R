@@ -4,8 +4,6 @@
 #'
 #' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
 #'
-#' @param file.rename a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
-#'
 #' @param output.dir the new directory to save the adaptor trimmed sequences
 #'
 #' @param decontamination.path directory of genomes contaminants to scan samples
@@ -41,7 +39,6 @@
 #' @export
 
 removeContamination = function(input.reads = "adaptor-removed-reads",
-                               file.rename = NULL,
                                output.dir = "decontaminated-reads",
                                decontamination.path = NULL,
                                mode = c("sample", "directory"),
@@ -90,8 +87,10 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   if (dir.exists("logs") == F){ dir.create("logs") }
 
   #Read in sample data
-  sample.data = read.csv(file.rename, stringsAsFactors = F)
   reads = list.files(input.reads, recursive = T, full.names = T)
+  sample.names = gsub(".*/", "", reads)
+  sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
+  sample.data = data.frame(File = sample.names, Sample = sample.names)
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
@@ -129,11 +128,11 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
     ### Part C: Runs fastp
     #################################################
     #sets up output reads
-    inread.1 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ1.fastq.gz")
-    inread.2 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ2.fastq.gz")
+    inread.1 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ1_LANE1.fastq.gz")
+    inread.2 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ2_LANE1.fastq.gz")
 
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2.fastq.gz")
+    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_LANE1.fastq.gz")
+    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_LANE1.fastq.gz")
 
     if (read.mapper == "bbsplit"){
       #Next runs bbsplit to remove other sources of contamination from other organisms

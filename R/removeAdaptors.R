@@ -4,8 +4,6 @@
 #'
 #' @param raw.reads path to a folder of raw reads in fastq format.
 #'
-#' @param file.rename a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
-#'
 #' @param output.dir the new directory to save the adaptor trimmed sequences
 #'
 #' @param mode "Sample" to run on a single sample or "Directory" to run on a directory of samples
@@ -35,7 +33,6 @@
 #' @export
 
 removeAdaptors = function(raw.reads = NULL,
-                          file.rename = NULL,
                           output.dir = NULL,
                           mode = c("sample", "directory"),
                           fastp.path = "fastp",
@@ -46,9 +43,8 @@ removeAdaptors = function(raw.reads = NULL,
                           quiet = TRUE) {
 
   #Debegging
+  # raw.reads = "/Users/chutter/Dropbox/Mammals/Philippine_Shrews_Raw_Data"
   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  # raw.reads = raw.dir
-  # file.rename = "file_rename.csv"
   # output.dir = "adaptor-removed-reads"
   # mode = "directory"
   # threads = 4
@@ -74,8 +70,10 @@ removeAdaptors = function(raw.reads = NULL,
   if (dir.exists("logs") == F){ dir.create("logs") }
 
   #Read in sample data
-  sample.data = read.csv(file.rename, stringsAsFactors = F)
   reads = list.files(raw.reads, recursive = T, full.names = T)
+  sample.names = gsub(".*/", "", reads)
+  sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
+  sample.data = data.frame(File = sample.names, Sample = sample.names)
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
@@ -113,8 +111,8 @@ removeAdaptors = function(raw.reads = NULL,
     ### Part C: Runs fastp
     #################################################
     #sets up output reads
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2.fastq.gz")
+    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_LANE1.fastq.gz")
+    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_LANE1.fastq.gz")
 
     #Runs fastp: only does adapter trimming, no quality stuff
     system(paste0(fastp.path, " --in1 ",sample.reads[1], " --in2 ", sample.reads[2],
