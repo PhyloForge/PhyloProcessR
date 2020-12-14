@@ -75,7 +75,7 @@ concatenateGenes = function(alignment.folder = NULL,
   }#end overwrite if
 
   #Gets list of alignments
-  align.files = list.files(alignment.folder, full.names = T, recursive = T)
+  align.files = list.files(alignment.folder, full.names = F, recursive = T)
   exon.data = data.table::fread(file = feature.gene.names, header = T)
   gene.names = unique(exon.data$gene_id)
 
