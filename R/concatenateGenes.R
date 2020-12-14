@@ -84,13 +84,13 @@ concatenateGenes = function(alignment.folder = NULL,
   #   done.files = list.files(output.folder)
   #   align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   # }
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  mem.cl = floor(memory/threads)
-
-  foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(gene.names)){
+  # #Sets up multiprocessing
+  # cl = parallel::makeCluster(threads, outfile = "")
+  # doParallel::registerDoParallel(cl)
+  # mem.cl = floor(memory/threads)
+  #
+  # foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  for (i in 1:length(gene.names)){
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
     #Match to the files to obtain
@@ -330,7 +330,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
    }#end i loop
 
-  parallel::stopCluster(cl)
+  #parallel::stopCluster(cl)
 
   system(paste0("rm -r ", output.folder, "/temp*"))
 
