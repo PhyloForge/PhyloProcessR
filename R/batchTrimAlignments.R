@@ -333,8 +333,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
     }#end else
 
-    data.frame(temp.data)
-    print(paste0(align.files[i], " Completed."))
+    print(data.frame(temp.data))
+    #print(paste0(align.files[i], " Completed."))
 
   }#end i loop
 
