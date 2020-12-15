@@ -32,13 +32,13 @@ countAlignmentGaps = function(alignment = NULL){
   n.temp = lapply(strsplit(as.character(len.temp), split = ""), function (x) length(which(x == "N")) )
   q.temp = lapply(strsplit(as.character(len.temp), split = ""), function (x) length(which(x == "?")) )
   gap.count = gap.count + unlist(n.temp) + unlist(q.temp)
-  gap.per = sum(gap.count)/sum(total.temp)
+  gap.per = (sum(gap.count)/sum(total.temp)) * 100
 
   if (is.nan(gap.per) == T){ gap.per = 0 }
   if (is.null(gap.per) == T){ gap.per = 0 }
   if (is.na(gap.per) == T){ gap.per = 0 }
 
-  gap.data = c(sum(gap.count), sum(total.temp), gap.per * 100)
+  gap.data = c(sum(gap.count), sum(total.temp), gap.per)
   names(gap.data) = c("gaps", "alignment", "percent_gaps")
   return(gap.data)
 
