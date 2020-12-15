@@ -10,6 +10,8 @@
 #'
 #' @param out.directory the directory to save the files you are downloading
 #'
+#' @param skip.not.found the directory to save the files you are downloading
+#'
 #' @param overwrite whether to overwrite or not
 #'
 #' @return saves dropbox files to output directory
@@ -27,6 +29,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                            dropbox.directory = NULL,
                            dropbox.token = NULL,
                            out.directory = NULL,
+                           skip.not.found = FALSE,
                            overwrite = TRUE){
 
   # ### Example usage
@@ -55,12 +58,16 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     sample.reads = all.reads[grep(as.character(sample.data$File_Name[i]), all.reads)]
 
     if (length(sample.reads) == 0) {
-      stop(paste0("Error: sample reads for ", sample.data$Final_Name[i], " not found!"))
-    }
+      if (skip.not.found == FALSE){
+        stop(paste0("Error: sample reads for ", sample.data$Final_Name[i], " not found!"))
+      } else { next }
+    }#end if
 
     if (length(sample.reads) != 2) {
-      stop(paste0("Error: too many sample reads for ", sample.data$Final_Name[i], " found!"))
-    }
+      if (skip.not.found == FALSE){
+        stop(paste0("Error: too many sample reads for ", sample.data$Final_Name[i], " found!"))
+      } else { next }
+    }#end if
 
     #Save the read files with the new names in the new directory
     rdrop2::drop_download(path = sample.reads[1],
