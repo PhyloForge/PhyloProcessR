@@ -39,6 +39,10 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   # dropbox.token = "/home/c111h652/dropbox-token.RDS"
   # overwrite = TRUE
 
+  if (dir.exists(out.directory) == T & overwrite == FALSE){
+    return("directory exists and overwrite = FALSE. exiting. ")
+  }
+
   if (dir.exists(out.directory) == T & overwrite == TRUE){
     system(paste("rm -r ", out.directory))
     dir.create(out.directory)
