@@ -32,7 +32,10 @@ alignmentAssess = function(alignment = NULL,
   gap.data = countAlignmentGaps(alignment)
   #if (length(gap.data) != 3){ return(FALSE) }
 
-  #RECORD DATA
+  #Checks for enough data
+  if (length(gap.data) <= 2){ return(FALSE) }
+
+  #Checks for min percentage
   if (gap.data[3] >= min.gap.percent) {
     return(FALSE)
   }
