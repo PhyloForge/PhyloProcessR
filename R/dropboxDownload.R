@@ -29,11 +29,14 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                            out.directory = NULL,
                            overwrite = TRUE){
 
-  ### Example usage
-  # sample.spreadsheet = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Mitogenome_study.csv"
-  # out.directory = "/Volumes/Armored/test"
+  # ### Example usage
+  # sample.spreadsheet = "/home/c111h652/scratch/MitoGenomes/Mitogenome_study.csv"
+  # out.directory = "/home/c111h652/scratch/MitoGenomes/raw-reads-frogs"
   # dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
+  # dropbox.token = "/home/c111h652/dropbox-token.RDS"
   # overwrite = TRUE
+
+  options(stringsAsFactors = FALSE)
 
   if (dir.exists(out.directory) == T & overwrite == TRUE){
     system(paste("rm -r ", out.directory))
