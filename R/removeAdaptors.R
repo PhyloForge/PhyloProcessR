@@ -111,8 +111,8 @@ removeAdaptors = function(raw.reads = NULL,
     ### Part C: Runs fastp
     #################################################
     #sets up output reads
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_LANE1.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_LANE1.fastq.gz")
+    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
+    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
 
     #Runs fastp: only does adapter trimming, no quality stuff
     system(paste0(fastp.path, " --in1 ",sample.reads[1], " --in2 ", sample.reads[2],
