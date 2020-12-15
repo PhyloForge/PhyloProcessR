@@ -34,6 +34,10 @@ countAlignmentGaps = function(alignment = NULL){
   gap.count = gap.count + unlist(n.temp) + unlist(q.temp)
   gap.per = sum(gap.count)/sum(total.temp)
 
+  if (is.nan(gap.per) == T){ gap.per = 0 }
+  if (is.null(gap.per) == T){ gap.per = 0 }
+  if (is.na(gap.per) == T){ gap.per = 0 }
+
   gap.data = c(sum(gap.count), sum(total.temp), gap.per * 100)
   names(gap.data) = c("gaps", "alignment", "percent_gaps")
   return(gap.data)
