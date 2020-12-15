@@ -36,8 +36,6 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   # dropbox.token = "/home/c111h652/dropbox-token.RDS"
   # overwrite = TRUE
 
-  options(stringsAsFactors = FALSE)
-
   if (dir.exists(out.directory) == T & overwrite == TRUE){
     system(paste("rm -r ", out.directory))
     dir.create(out.directory)
@@ -67,13 +65,11 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     #Save the read files with the new names in the new directory
     rdrop2::drop_download(path = sample.reads[1],
                           local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_READ1_L001.fastq.gz"),
-                          overwrite = TRUE,
-                          dtoken = dropbox.token)
+                          overwrite = TRUE)
 
     rdrop2::drop_download(path = sample.reads[2],
                           local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_READ2_L001.fastq.gz"),
-                          overwrite = TRUE,
-                          dtoken = dropbox.token)
+                          overwrite = TRUE)
   }#end i loop
 
 }#end function
