@@ -28,7 +28,7 @@ trimSampleSimilarity = function(alignment = NULL,
   #similarity.threshold = 0.003
   #realign.mafft = TRUE
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   #Make a consensus sequence
   con.seq = makeConsensus(alignment = alignment,

@@ -85,13 +85,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                resume = TRUE) {
 
 
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir = paste0(out.name, "_genes-untrimmed")
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   # setwd(work.dir)
-  # alignment.dir = align.dir
+  # alignment.dir = paste0("Emily-Dataset/genes-untrimmed")
+  # output.dir = paste0("Emily-Dataset/genes-trimmed")
   # alignment.format = "phylip"
   # output.format = "phylip"
-  # output.dir = paste0(out.name, "_genes-trimmed")
   # TrimAl = TRUE
   # PreQual = FALSE
   # HmmCleaner = FALSE
@@ -154,13 +153,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  #cl = parallel::makeCluster(threads, outfile = "")
-  #doParallel::registerDoParallel(cl)
-  #mem.cl = floor(memory/threads)
+  cl = parallel::makeCluster(threads, outfile = "")
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  #out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
@@ -320,12 +319,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
       writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
     }#end else
 
-   # data.frame(temp.data)
+    data.frame(temp.data)
     print(paste0(align.files[i], " Completed."))
 
   }#end i loop
 
- # parallel::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   #Print and save summary table
   write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)

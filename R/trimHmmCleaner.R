@@ -41,7 +41,7 @@ trimHmmCleaner = function(alignment = NULL,
   # quiet = FALSE
   # delete.temp = TRUE
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   #Creates random name and saves it
   write.align = as.list(as.character(alignment))

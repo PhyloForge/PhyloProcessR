@@ -30,7 +30,7 @@ trimSampleCoverage = function(alignment = NULL,
   #min.coverage.bp = 300
   #min.coverage.percent = 50
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   if (min.sample.bp >= Biostrings::width(alignment)[1]){ return(alignment) }
 

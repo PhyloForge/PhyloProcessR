@@ -27,7 +27,7 @@ trimSampleSegments = function(alignment = NULL,
   #makes consensus sequence for comparison
   #input.align<-align
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   input.con = makeConsensus(alignment = alignment,
                             method = "majority")

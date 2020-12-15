@@ -31,7 +31,7 @@ trimTrimal = function(alignment = NULL,
   # quiet = FALSE
   # trimal.path = "trimal"
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   #Finds probes that match to two or more contigs
   save.rownames = names(alignment)

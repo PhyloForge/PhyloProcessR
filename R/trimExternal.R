@@ -34,7 +34,7 @@ trimExternal = function(alignment = NULL,
   # min.n.seq = ceiling(length(non.align) * (min.external.percent/100))
   # codon.trim = F
 
-  if (length(alignment) <= 2){ return(alignment) }
+  if (length(alignment) <= 3){ return(alignment) }
 
   new.align<-strsplit(as.character(alignment), "")
   mat.align<-lapply(new.align, tolower)
@@ -108,6 +108,7 @@ trimExternal = function(alignment = NULL,
   temp.align<-lapply(x3, FUN = function(x) paste(x, collapse = ""))
   align.out<-Biostrings::DNAStringSet(unlist(temp.align))
   names(align.out)<-save.names
+
   return(align.out)
 }
 

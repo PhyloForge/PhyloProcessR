@@ -6,7 +6,6 @@
 \usage{
 mergePairedEndReads(
   input.reads = NULL,
-  file.rename = NULL,
   output.dir = NULL,
   mode = c("sample", "directory"),
   fastp.path = "fastp",
@@ -19,8 +18,6 @@ mergePairedEndReads(
 }
 \arguments{
 \item{input.reads}{path to a folder of processed reads in fastq format.}
-
-\item{file.rename}{a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file}
 
 \item{output.dir}{the new directory to save the adaptor trimmed sequences}
 
