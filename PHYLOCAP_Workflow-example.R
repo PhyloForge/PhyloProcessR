@@ -20,9 +20,95 @@ dropboxDownload(sample.spreadsheet = sample.spread,
                 overwrite = TRUE)
 
 
+
+
+options(stringsAsFactors = FALSE)
+library(rdrop2)
+
+#install.packages("devtools")
+devtools::install_github("chutter/PHYLOCAP")
+library(PHYLOCAP)
+
+#devtools::install_github("chutter/MitoCap")
+library(MitoCap)
+
+threads = 8
+memory = 80
+
+##########################################################################################################
+#Step 1: Preprocess
+##########################################################################################################
+
+### Example usage
+work.dir = "/home/c111h652/scratch/MitoGenomes/Lizards"
+decontamination.path = "/home/c111h652/scratch/Contamination_Genomes"
+sample.file = "/home/c111h652/scratch/MitoGenomes/Lizard_samples.csv"
+dropbox.dir = "/Research/3_Sequence-Database/Raw-Reads"
+dropbox.tok = "/home/c111h652/dropbox-token.RDS"
+gb.file = "/home/c111h652/scratch/MitoGenomes/Lizards/Iguana.gb"
+trnascan.path = "tRNAscan-SE"
+
+rdrop2::drop_auth(rdstoken = dropbox.tok)
+
+#Sets working directory (where all the stuff will be saved)
+dir.create(work.dir)
+setwd(work.dir)
+
+dir.create("read-processing")
+
+#Run download function
+dropboxDownload(sample.spreadsheet = sample.file,
+                dropbox.directory = dropbox.dir,
+                out.directory = paste0("read-processing/raw-reads"),
+                overwrite = TRUE)
+
+
+### Make file rename function, otherwise use read names
+## FILE RENAME
+
 #################################################
 ## Step 1: Preprocess reads with read processing function
 ##################
+
+removeAdaptors(raw.reads = read.dir,
+               output.dir = "read-processing/adaptor-removed-reads",
+               mode = "directory",
+               fastp.path = "fastp",
+               threads = threads,
+               mem = memory,
+               resume = FALSE,
+               overwrite = TRUE,
+               quiet = TRUE)
+
+## remove external contamination
+removeContamination(input.reads = "read-processing/adaptor-removed-reads",
+                    output.dir = "read-processing/decontaminated-reads",
+                    decontamination.path = decontamination.path,
+                    mode = "directory",
+                    map.match = 0.99,
+                    read.mapper = "bwa",
+                    mapper.path = NULL,
+                    bbmap.path = "/usr/local/bin/bbsplit.sh",
+                    samtools.path = "/usr/local/bin/samtools",
+                    bwa.path = "/usr/local/bin/bwa",
+                    threads = threads,
+                    mem = memory,
+                    resume = FALSE,
+                    overwrite = TRUE,
+                    quiet = TRUE)
+
+#merge paired end reads
+mergePairedEndReads(input.reads = "read-processing/decontaminated-reads",
+                    output.dir = "read-processing/pe-merged-reads",
+                    mode = "directory",
+                    fastp.path = "fastp",
+                    threads = threads,
+                    mem = memory,
+                    resume = FALSE,
+                    overwrite = TRUE,
+                    quiet = TRUE)
+
+
 
 
 
