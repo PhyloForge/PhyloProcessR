@@ -84,45 +84,44 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                overwrite = FALSE,
                                resume = TRUE) {
 #
-#   options(stringsAsFactors = FALSE)
-#   devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
-#   library(PHYLOCAP)
-#   library(foreach)
-#
-#   #Save directory
-#   matched.targets.file = "/home/c111h652/scratch/Rodents/Data_Processing/alignment-fastas/Emily-Data_iupac-no-trim-noncoding_contigs.fa"
-#   work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-#   align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily-Dataset"
-#   feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
-#   out.name = "Emily"
-#   threads = 8
-#   memory = 60
-#
-#   setwd(work.dir)
-#   work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-#   setwd(work.dir)
-#   alignment.dir = paste0("Emily-Dataset/genes-untrimmed")
-#   output.dir = paste0("Emily-Dataset/genes-trimmed")
-#   alignment.format = "phylip"
-#   output.format = "phylip"
-#   TrimAl = TRUE
-#   PreQual = FALSE
-#   HmmCleaner = FALSE
-#   trim.column = TRUE
-#   alignment.assess = TRUE
-#   trim.external = TRUE
-#   trim.coverage = TRUE
-#   min.coverage.percent = 35
-#   min.external.percent = 50
-#   min.column.gap.percent = 50
-#   overwrite = TRUE
-#   min.align.length = 100
-#   min.taxa.count = 5
-#   min.gap.percent = 50
-#   min.sample.bp = 60
-#   threads = 4
-#   mem = 8
-#   resume = TRUE
+  options(stringsAsFactors = FALSE)
+  devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
+  library(PHYLOCAP)
+  library(foreach)
+
+  #Save directory
+  work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-genes"
+  feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
+
+  #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  #align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily-Dataset"
+  #feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
+  out.name = "Emily"
+
+  setwd(work.dir)
+  alignment.dir = align.dir
+  output.dir = paste0("01_emily-genes_trimmed")
+  alignment.format = "phylip"
+  output.format = "phylip"
+  TrimAl = TRUE
+  PreQual = FALSE
+  HmmCleaner = FALSE
+  trim.column = TRUE
+  alignment.assess = TRUE
+  trim.external = TRUE
+  trim.coverage = TRUE
+  min.coverage.percent = 35
+  min.external.percent = 50
+  min.column.gap.percent = 50
+  overwrite = TRUE
+  min.align.length = 100
+  min.taxa.count = 5
+  min.gap.percent = 50
+  min.sample.bp = 60
+  threads = 4
+  mem = 8
+  resume = TRUE
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 

@@ -37,6 +37,8 @@ plotOccupancy = function(species.tree = NULL,
                          type = c("alignment", "tree"),
                          out.name = "species-occupancy",
                          sample.order = c("value", "alphabetical", "custom"),
+                         save.width = 10,
+                         save.height = 8,
                          custom.order = NULL,
                          exclude.taxa = NULL,
                          proportion = TRUE,
@@ -108,7 +110,7 @@ plotOccupancy = function(species.tree = NULL,
   sample.total$Sample = factor(sample.total$Sample, levels=unique(sample.total$Sample))
 
   #Sets up PDF to save plot
-  pdf(paste0(out.name, "_occupancy-plot.pdf"), width=10, height=8, compress=F)
+  pdf(paste0(out.name, "_occupancy-plot.pdf"), width=save.width, height=save.height, compress=F)
 
   #Does the GGplot stuff
   p1 = ggplot(sample.total, aes(x = Sample, y = Value, fill = Sample)) +
