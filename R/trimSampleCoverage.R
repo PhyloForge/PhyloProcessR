@@ -23,12 +23,16 @@
 #Function trims for sample coverage
 trimSampleCoverage = function(alignment = NULL,
                               min.coverage.percent = 50,
-                              min.sample.bp = 60) {
+                              min.sample.bp = 60,
+                              relative.width = c("alignment", "sample")) {
 
   #Debug
-  #alignment = edge.align
-  #min.coverage.bp = 300
-  #min.coverage.percent = 50
+  # alignment = non.align
+  # min.coverage.bp = 300
+  # min.coverage.percent = 50
+  # relative.width = "sample"
+
+  if (length(relative.width) == 2){ stop("please choose a relative width.") }
 
   if (length(alignment) <= 3){ return(alignment) }
 
@@ -37,14 +41,22 @@ trimSampleCoverage = function(alignment = NULL,
   #Remove gap only alignments
   c.align = strsplit(as.character(alignment), "")
   gap.align = lapply(c.align, function(x) gsub("N|n", "-", x) )
-  gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
-  gap.rem = gap.count[gap.count <= as.numeric(min.sample.bp)]
+  base.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
+  base.rem = base.count[base.count <= as.numeric(min.sample.bp)]
 
-  gap.count = gap.count/Biostrings::width(alignment)
-  gap.rem = append(gap.rem, gap.count[gap.count * 100 <= as.numeric(min.coverage.percent)])
+  if (relative.width == "alignment"){
+    r.width = Biostrings::width(alignment)[1]
+  }
+
+  if (relative.width == "sample"){
+    r.width = max(base.count)
+  }
+
+  base.per = base.count/r.width
+  base.rem = append(base.rem, base.per[base.per * 100 <= as.numeric(min.coverage.percent)])
 
   #Removes the bad stuff
-  align.out = alignment[!names(alignment) %in% unique(names(gap.rem))]
+  align.out = alignment[!names(alignment) %in% unique(names(base.rem))]
   return(align.out)
 
 }#end function

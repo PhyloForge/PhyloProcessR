@@ -62,8 +62,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                alignment.format = "phylip",
                                output.dir = NULL,
                                output.format = "phylip",
-                               PreQual = FALSE,
-                               PreQual.path = "prequal",
+                               TAPER = FALSE,
+                               TAPER.path = "correction.jl",
+                               julia.path = "julia",
                                HmmCleaner = FALSE,
                                HmmCleaner.path = "HmmCleaner.pl",
                                TrimAl = FALSE,
@@ -74,6 +75,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                min.coverage.percent = 50,
                                trim.column = TRUE,
                                min.column.gap.percent = 100,
+                               convert.ambiguous.sites = FALSE,
                                alignment.assess = TRUE,
                                min.sample.bp = 0,
                                min.align.length = 0,
@@ -83,45 +85,48 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                memory = 1,
                                overwrite = FALSE,
                                resume = TRUE) {
-#
-  options(stringsAsFactors = FALSE)
-  devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
-  library(PHYLOCAP)
-  library(foreach)
 
-  #Save directory
-  work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  align.dir = "/Volumes/Rodents/Murinae/Trimming/01_emily-subset-genes"
-  feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
-
-  #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  #align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily-Dataset"
-  #feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
-  out.name = "Emily"
-
-  setwd(work.dir)
-  alignment.dir = align.dir
-  output.dir = paste0("01_emily-genes_trimmed")
-  alignment.format = "phylip"
-  output.format = "phylip"
-  TrimAl = TRUE
-  PreQual = FALSE
-  HmmCleaner = FALSE
-  trim.column = TRUE
-  alignment.assess = TRUE
-  trim.external = TRUE
-  trim.coverage = TRUE
-  min.coverage.percent = 35
-  min.external.percent = 50
-  min.column.gap.percent = 50
-  overwrite = TRUE
-  min.align.length = 100
-  min.taxa.count = 5
-  min.gap.percent = 50
-  min.sample.bp = 60
-  threads = 4
-  mem = 8
-  resume = TRUE
+  # options(stringsAsFactors = FALSE)
+  # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
+  # library(PHYLOCAP)
+  # library(foreach)
+  #
+  # #Save directory
+  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
+  # feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
+  #
+  # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # #align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily-Dataset"
+  # #feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
+  # out.name = "Emily"
+  #
+  # setwd(work.dir)
+  # alignment.dir = align.dir
+  # output.dir = paste0("01_emily-mafft_trimmed")
+  # alignment.format = "phylip"
+  # output.format = "phylip"
+  # TrimAl = FALSE
+  # TAPER = TRUE
+  # TAPER.path = "/usr/local/bin/correction.jl"
+  # julia.path = "/Applications/Julia-1.5.app/Contents/Resources/julia/bin/julia"
+  # HmmCleaner = FALSE
+  # trim.column = TRUE
+  # convert.ambiguous.sites = TRUE
+  # alignment.assess = TRUE
+  # trim.external = TRUE
+  # trim.coverage = TRUE
+  # min.coverage.percent = 35
+  # min.external.percent = 50
+  # min.column.gap.percent = 50
+  # overwrite = FALSE
+  # min.align.length = 100
+  # min.taxa.count = 5
+  # min.gap.percent = 50
+  # min.sample.bp = 60
+  # threads = 4
+  # mem = 8
+  # resume = TRUE
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
@@ -149,16 +154,16 @@ batchTrimAlignments = function(alignment.dir = NULL,
   }
 
   #Data to collect
-  header.data = c("Alignment", "Pass", "startSamples", "hmmSamples", "trimalSamples",
-                  "edgeSamples", "covSamples", "columnSamples",
-                  "startLength", "hmmLength", "trimalLength",
-                  "edgeLength", "covLength", "columnLength",
-                  "startBasepairs", "hmmBasepairs", "trimalBasepairs",
-                  "edgeBasepairs", "covBasepairs", "columnBasepairs",
-                  "startGaps", "hmmGaps", "trimalGaps",
-                  "edgeGaps", "covGaps", "columnGaps",
-                  "startPerGaps", "hmmPerGaps", "trimalPerGaps",
-                  "edgePerGaps", "covPerGaps", "columnPerGaps")
+  header.data = c("Alignment", "Pass", "startSamples", "tapirSamples", "trimalSamples",
+                  "edgeSamples", "columnSamples", "covSamples",
+                  "startLength", "tapirLength", "trimalLength",
+                  "edgeLength", "columnLength", "covLength",
+                  "startBasepairs", "tapirBasepairs", "trimalBasepairs",
+                  "edgeBasepairs", "columnBasepairs", "covBasepairs",
+                  "startGaps", "tapirGaps", "trimalGaps",
+                  "edgeGaps", "columnGaps", "covGaps",
+                  "startPerGaps", "tapirPerGaps", "trimalPerGaps",
+                  "edgePerGaps", "columnPerGaps", "covPerGaps")
 
   save.data = data.table::data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))
   data.table::setnames(save.data, header.data)
@@ -198,6 +203,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                           char.find = "N",
                                           char.replace = "-")
 
+    #Convert ambiguous sites
+    if (convert.ambiguous.sites == TRUE){
+      non.align = convertAmbiguousConsensus(alignment = non.align)
+    }#end phylip
+
+
     #Summarize all this, no functoin
     data.table::set(temp.data, i = as.integer(1), j = match("Alignment", header.data), value = save.name)
     data.table::set(temp.data, i = as.integer(1), j = match("startSamples", header.data), value = length(non.align))
@@ -207,24 +218,24 @@ batchTrimAlignments = function(alignment.dir = NULL,
     data.table::set(temp.data, i = as.integer(1), j = match("startGaps", header.data), value = gap.count[1])
     data.table::set(temp.data, i = as.integer(1), j = match("startPerGaps", header.data), value = gap.count[3])
 
-    #Step 2. Runs hmmCleaner
-    # if (PreQual == TRUE){
-    #
-    #   preql.align = trimPreQual(alignment = non.align,
-    #                             specificity = TRUE,
-    #                             large = FALSE,
-    #                             hmmcleaner.path = "HmmCleaner.pl",
-    #                             quiet = T,
-    #                             delete.temp = T)
-    #   non.align = preql.align
-    #   #Saves the data
-    #   data.table::set(temp.data, i = as.integer(1), j = match("hmmSamples", header.data), value = length(hmmcl.align))
-    #   data.table::set(temp.data, i = as.integer(1), j = match("hmmLength", header.data), value = Biostrings::width(hmmcl.align)[1])
-    #   gap.count = countAlignmentGaps(non.align)
-    #   data.table::set(temp.data, i = as.integer(1), j = match("hmmBasepairs", header.data), value = gap.count[2] - gap.count[1])
-    #   data.table::set(temp.data, i = as.integer(1), j = match("hmmGaps", header.data), value = gap.count[1])
-    #   data.table::set(temp.data, i = as.integer(1), j = match("hmmPerGaps", header.data), value = gap.count[3])
-    # }#end if
+    # Run the TAPER
+    if (TAPER == TRUE){
+      #Runs the TAPER
+      taper.align = trimTAPER(alignment = non.align,
+                              TAPER.path = TAPER.path,
+                              julia.path = julia.path,
+                              quiet = T,
+                              delete.temp = T)
+      non.align = taper.align
+      #Saves the data
+      data.table::set(temp.data, i = as.integer(1), j = match("tapirSamples", header.data), value = length(taper.align))
+      data.table::set(temp.data, i = as.integer(1), j = match("tapirLength", header.data), value = Biostrings::width(taper.align)[1])
+      gap.count = countAlignmentGaps(non.align)
+      data.table::set(temp.data, i = as.integer(1), j = match("tapirBasepairs", header.data), value = gap.count[2] - gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("tapirGaps", header.data), value = gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("tapirPerGaps", header.data), value = gap.count[3])
+    }#end if
+
 
 #
 #     #Step 2. Runs hmmCleaner
@@ -277,22 +288,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("edgePerGaps", header.data), value = gap.count[3])
     }#end trim external
 
-    #Step 5. Evaluate and cut out each sample
-    if (trim.coverage == TRUE){
-      #sample coverage function
-      cov.align = trimSampleCoverage(alignment = non.align,
-                                     min.coverage.percent = min.coverage.percent,
-                                     min.sample.bp = min.sample.bp)
-      non.align = cov.align
-      #Saves stat data
-      data.table::set(temp.data, i = as.integer(1), j = match("covSamples", header.data), value = length(cov.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("covLength", header.data), value = Biostrings::width(cov.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("covBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("covGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
-    }#end trim.external
-
     if (trim.column == TRUE){
       #Trim alignment colums
       col.align = trimAlignmentColumns(alignment = non.align,
@@ -307,6 +302,25 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("columnPerGaps", header.data), value = gap.count[3])
     }#end trim column.
 
+    #Step 5. Evaluate and cut out each sample
+    if (trim.coverage == TRUE){
+      #sample coverage function
+      cov.align = trimSampleCoverage(alignment = non.align,
+                                     min.coverage.percent = min.coverage.percent,
+                                     min.sample.bp = min.sample.bp,
+                                     relative.width = "sample")
+
+      non.align = cov.align
+      #Saves stat data
+      data.table::set(temp.data, i = as.integer(1), j = match("covSamples", header.data), value = length(cov.align))
+      data.table::set(temp.data, i = as.integer(1), j = match("covLength", header.data), value = Biostrings::width(cov.align)[1])
+      gap.count = countAlignmentGaps(non.align)
+      data.table::set(temp.data, i = as.integer(1), j = match("covBasepairs", header.data), value = gap.count[2] - gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("covGaps", header.data), value = gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
+    }#end trim.external
+
+    #Step 6
     if (alignment.assess == TRUE) {
       #Assesses the alignment returning TRUE for pass and FALSE for fail
       test.result = alignmentAssess(alignment = non.align,
