@@ -43,10 +43,6 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
   options(stringsAsFactors = FALSE)
 
-  if (dir.exists(out.directory) == T & overwrite == FALSE){
-    return("directory exists and overwrite = FALSE. exiting. ")
-  }
-
   if (resume == TRUE & overwrite == TRUE){
     return("Both resume and overwrite cannot be TRUE. exiting. ")
   }
