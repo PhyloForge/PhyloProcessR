@@ -30,17 +30,25 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                            dropbox.token = NULL,
                            out.directory = NULL,
                            skip.not.found = FALSE,
-                           overwrite = TRUE){
+                           overwrite = FALSE,
+                           resume = TRUE){
 
   # ### Example usage
-  # sample.spreadsheet = "/home/c111h652/scratch/MitoGenomes/Mitogenome_study.csv"
-  # out.directory = "/home/c111h652/scratch/MitoGenomes/raw-reads-frogs"
+  # sample.spreadsheet = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Mitogenome_study.csv"
+  # out.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Hutter_Esselstyn_2021/raw-reads-frogs"
   # dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
   # dropbox.token = "/home/c111h652/dropbox-token.RDS"
-  # overwrite = TRUE
+  # overwrite = FALSE
+  # resume = TRUE
+
+  options(stringsAsFactors = FALSE)
 
   if (dir.exists(out.directory) == T & overwrite == FALSE){
     return("directory exists and overwrite = FALSE. exiting. ")
+  }
+
+  if (resume == TRUE & overwrite == TRUE){
+    return("Both resume and overwrite cannot be TRUE. exiting. ")
   }
 
   if (dir.exists(out.directory) == T & overwrite == TRUE){
@@ -56,6 +64,14 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]
 
   sample.data = read.csv(sample.spreadsheet)
+
+  #Resumes file download
+  if (resume == TRUE){
+    done.files = list.files(out.directory)
+    done.files = gsub("_READ.*", "", done.files)
+    done.files = done.files[duplicated(done.files) == TRUE]
+    sample.data = sample.data[!sample.data$Final_Name %in% done.files,]
+  }
 
   for (i in 1:nrow(sample.data)){
 
