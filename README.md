@@ -69,8 +69,8 @@ conda activate phylocap
 
 ```
 conda config --add channels defaults
-conda config --add channels conda-forge
 conda config --add channels bioconda
+conda config --add channels conda-forge
 conda config --set channel_priority flexible
 ```
 
@@ -80,7 +80,7 @@ conda config --set channel_priority flexible
 ```
 conda install -c conda-forge r-base=3.5 r-devtools r-ape r-stringr r-data.table r-seqinr r-foreach r-doparallel r-rdrop2
 
-conda install -c bioconda bioconductor-rsamtools bioconductor-genomicranges bioconductor-biostrings fastp spades mafft bwa samtools gatk4 trimal iqtree
+conda install -c bioconda bioconductor-rsamtools bioconductor-genomicranges bioconductor-biostrings fastp spades mafft bwa samtools=1.1.0 gatk4 trimal iqtree
 ```
 
 All the functions for PhyloCap should be ready to go! 
