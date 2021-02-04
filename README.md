@@ -8,16 +8,7 @@ Coming Soon!
 
 # Installation of R package
 
-PHYLOCAP is an R package that has been tested on R version 3.5 or greater. 
-
-PHYLOCAP depends on one R package currently:
-  - data.table (>=1.12)
-
-PHYLOCAP has two additional R package imports (i.e. you need them installed, but not loaded  with library(): 
-  - ape (>= 5.0)
-  - stringr (>= 1.4)
-  
-And to install PHYLOCAP, you can use the R package devtools. Here are step-by-step instructions for installation:
+PHYLOCAP is an R package that has been tested on R version 3.5 or greater. To install PHYLOCAP, you can use the R package devtools. Here are step-by-step instructions for installation:
 
 1) Install devtools by typing in your R console: install.packages("devtools")
 
