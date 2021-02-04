@@ -77,12 +77,11 @@ conda config --set channel_priority flexible
 
 3. Finally, the required programs can be installed in two commands. The programs should be installed together so that the correct package dependency versions can be sorted out. 
 
-``
+```
 conda install -c conda-forge r-base=3.5 r-devtools r-ape r-stringr r-data.table r-seqinr r-foreach r-doparallel r-rdrop2
 
 conda install -c bioconda bioconductor-rsamtools bioconductor-genomicranges bioconductor-biostrings fastp spades mafft bwa samtools gatk4 trimal iqtree
-
-``
+```
 
 All the functions for PhyloCap should be ready to go! 
 
