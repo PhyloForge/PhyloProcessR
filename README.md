@@ -90,10 +90,13 @@ All the functions for PhyloCap should be ready to go!
 
 # PhyloCap pipeline tutorials 
 
-1. Preprocessing raw reads and assembly 
-2. Assembly contig matching 
-3. Alignment and trimming 
+[Tutorial 1: Data preprocessing (cleaning raw reads, decontamination, assembly)](https://github.com/chutter/PhyloCap/wiki/Tutorial-2---Data-Processing)
 
+[Tutorial 2: Data alignment (target marker matching, alignment, alignment filtering)](https://github.com/chutter/PhyloCap/wiki/Tutorial-3---Marker-Matching-and-Alignment)
+
+Tutorial 3: Tree estimation (gene trees, concatenation, species trees) COMING SOON
+
+[Troubleshooting: random issues that arise](https://github.com/chutter/PhyloCap/wiki/Troubleshooting)
 
 
 
