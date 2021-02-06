@@ -168,7 +168,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
       system(paste0(bwa.path, " mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
-                    inread.1, " ", inread.2, " | ", samtools.path ," sort --threads ", threads,
+                    inread.1, " ", inread.2, " | ", samtools.path ," sort -@ ", threads,
                     " -o ", out.path, "/decontam-all.bam"))
 
       #Need to figure out how to export reads back to normal
@@ -177,7 +177,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
       system(paste0(samtools.path, " view -b -F 4 ", out.path, "/decontam-all.bam > ",
                     out.path, "/decontam-mapped.bam"))
 
-      system(paste0(samtools.path, " fastq --threads ", threads, " ",
+      system(paste0(samtools.path, " fastq -@ ", threads, " ",
                     out.path, "/decontam-unmapped.bam -1 ", outread.1, " -2 ", outread.2))
 
       #Gets match statistics

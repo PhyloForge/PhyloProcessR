@@ -61,16 +61,22 @@ conda activate /panfs/pfs.local/work/bi/c111h652/conda/phylocap
 
 2. add channels
 
-conda config --add channels bioconda
-conda config --add channels conda-forge
 conda config --add channels defaults
+conda config --add channels conda-forge
+conda config --add channels bioconda
 conda config --set channel_priority flexible
 
 2. Install packages
  
-conda install -c conda-forge r-base=3.5 r-devtools r-ape r-stringr r-data.table r-seqinr r-foreach r-doparallel
+conda install -c conda-forge r-base=3.5 r-devtools r-ape r-stringr r-data.table r-seqinr r-foreach r-doparallel r-rdrop2
 
 conda install -c bioconda bioconductor-rsamtools bioconductor-genomicranges bioconductor-biostrings fastp spades bbmap mafft trnascan-se bwa samtools gatk4 trimal cap3 iqtree
+
+
+
+
+
+
 
 
 
