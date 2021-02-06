@@ -39,7 +39,7 @@ removeAdaptors = function(raw.reads = NULL,
                           threads = 1,
                           mem = 8,
                           resume = TRUE,
-                          overwrite = TRUE,
+                          overwrite = FALSE,
                           quiet = TRUE) {
 
   #Debegging
@@ -74,6 +74,16 @@ removeAdaptors = function(raw.reads = NULL,
   sample.names = gsub(".*/", "", reads)
   sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
   sample.data = data.frame(File = sample.names, Sample = sample.names)
+
+  #Resumes file download
+  if (resume == TRUE){
+    done.files = list.files(output.dir)
+    done.files = gsub("_READ.*", "", done.files)
+    done.files = done.files[duplicated(done.files) == TRUE]
+    sample.data = sample.data[!sample.data$Sample %in% done.files,]
+  }
+
+  if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
