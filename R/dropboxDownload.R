@@ -69,6 +69,8 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     sample.data = sample.data[!sample.data$Final_Name %in% done.files,]
   }
 
+  if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }
+
   for (i in 1:nrow(sample.data)){
 
     sample.reads = all.reads[grep(as.character(sample.data$File_Name[i]), all.reads)]
