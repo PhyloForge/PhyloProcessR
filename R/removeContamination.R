@@ -53,7 +53,9 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                                overwrite = FALSE,
                                quiet = TRUE) {
 
+
   #Debegging
+  # setwd("/Volumes/Rodents/Mitogenomes/Lizards")
   # decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
   # bbmap.path = "/usr/local/bin"
   # samtools.path = "/usr/local/bin/samtools"
@@ -64,8 +66,8 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   # mode = "directory"
   # threads = 4
   # mem = 8
-  # resume = FALSE
-  # overwrite = TRUE
+  # resume = TRUE
+  # overwrite = FALSE
   # quiet = TRUE
   # map.match = 0.99
   # read.mapper = "bwa"
@@ -89,7 +91,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   #Read in sample data
   reads = list.files(input.reads, recursive = T, full.names = T)
   sample.names = gsub(".*/", "", reads)
-  sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
+  sample.names = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names))
   sample.data = data.frame(File = sample.names, Sample = sample.names)
 
   #Creates the summary log

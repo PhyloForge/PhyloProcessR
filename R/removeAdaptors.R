@@ -69,10 +69,10 @@ removeAdaptors = function(raw.reads = NULL,
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
 
-  #Read in sample data
+  #Read in sample data **** sample is run twice?!
   reads = list.files(raw.reads, recursive = T, full.names = T)
   sample.names = gsub(".*/", "", reads)
-  sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
+  sample.names = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names))
   sample.data = data.frame(File = sample.names, Sample = sample.names)
 
   #Resumes file download
