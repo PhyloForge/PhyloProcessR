@@ -36,7 +36,7 @@ From BioConductor
 - GATK4: variant calling functions
 - SamTools: variant calling and read mapping tools
 
-The R packages and outside programs can be installed manually. The easiest and quickest way is to use the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once a version of Anaconda is installed or loaded, a new clean environment should be created for PhyloCap. Anaconda can be set up and configured through the following steps: 
+The R packages and outside programs can be installed manually or more easily through a bash script provided. To use the bash script, the easiest and quickest way is to use the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once a version of Anaconda is installed or loaded, a new clean environment should be created for PhyloCap and its dependencies. 
 
 The program dependencies can be installed using the provided bash script ("bash_install_phylocap.sh") or PBS cluster script ("qsub_install_phylocap.sh"). More detailed manual installation directions are provided in the <b>Installation</b> tutorial below if those scripts do not work. Note that for the PBS script, usernames and file paths need to be modified to match yours. 
 
