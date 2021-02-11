@@ -49,13 +49,25 @@ All the functions for PhyloCap should be ready to go!
 
 The main functions of PhyloCap are contained in an R package that has been tested on R version 3.5 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools. Here are step-by-step instructions for installation:
 
-1) Install devtools by typing in your R console: install.packages("devtools", dependencies = TRUE)
+1) Install devtools by typing in your R console: 
 
-2) Install PHYLOCAP by typing in your R console: devtools::install_github("chutter/PHYLOCAP", update = "never", dependencies = FALSE)
+```R
+install.packages("devtools", dependencies = TRUE)
+```
+
+2) Install PHYLOCAP by typing in your R console: 
+
+```R
+devtools::install_github("chutter/PHYLOCAP", update = "never", dependencies = FALSE)
+```
 
 3) If Devtools asks you to install the package dependencies, select "No", because the dependencies are installed above. If devtools asks you to update packages, you may choose to do so. I would recommend not to install packages from source if devtools asks you and to include the update parameter set to "never" in install_github. 
 
-4) Devtools should finish and say the package loaded properly. Load the package with library(PHYLOCAP) in your R script. 
+4) Devtools should finish and say the package loaded properly. Load the package in your R script with:
+
+```R
+library(PhyloCap)
+```
 
 And installation should be done! 
 
