@@ -1,4 +1,4 @@
-# PHYLOCAP
+# PhyloCap
 
 R package For processing high-throughput sequencing data from targeted sequence capture.
 
@@ -55,10 +55,10 @@ The main functions of PhyloCap are contained in an R package that has been teste
 install.packages("devtools", dependencies = TRUE)
 ```
 
-2) Install PHYLOCAP by typing in your R console: 
+2) Install PhyloCap by typing in your R console: 
 
 ```R
-devtools::install_github("chutter/PHYLOCAP", update = "never", dependencies = FALSE)
+devtools::install_github("chutter/PhyloCap", update = "never", dependencies = FALSE)
 ```
 
 3) If Devtools asks you to install the package dependencies, select "No", because the dependencies are installed above. If devtools asks you to update packages, you may choose to do so. I would recommend not to install packages from source if devtools asks you and to include the update parameter set to "never" in install_github. 
