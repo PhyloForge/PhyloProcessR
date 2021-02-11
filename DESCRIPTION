@@ -1,4 +1,4 @@
-Package: PHYLOCAP
+Package: PhyloCap
 Title: Package For processing high-throughput sequencing data from targeted sequence capture 
 Version: 0.1.0
 Authors@R: 

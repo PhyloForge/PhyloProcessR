@@ -4,9 +4,9 @@ mkdir conda
 
 eval "$(conda shell.bash hook)"
 
-conda create --prefix /work/chutter/Programs/conda/phylocap
+conda create phylocap
 
-conda activate /work/chutter/Programs/conda/phylocap
+conda activate phylocap
 
 conda config --add channels defaults
 conda config --add channels conda-forge
