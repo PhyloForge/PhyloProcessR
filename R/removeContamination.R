@@ -75,8 +75,6 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))
       dir.create(output.directory)
-    } else {
-      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 

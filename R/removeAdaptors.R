@@ -66,8 +66,6 @@ removeAdaptors = function(input.reads = NULL,
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))
       dir.create(output.directory)
-    } else {
-      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 
