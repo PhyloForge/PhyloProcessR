@@ -77,8 +77,6 @@ assembleRNASpades = function(input.reads = NULL,
     if (overwrite == TRUE){
       system(paste0("rm -r ", assembly.directory))
       dir.create(assembly.directory)
-    } else {
-      stop("Contig directory exists and overwrite = FALSE.")
     }
   }#end else
 
