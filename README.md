@@ -1,4 +1,4 @@
-# PHYLOCAP
+# PhyloCap
 
 R package For processing high-throughput sequencing data from targeted sequence capture.
 
@@ -36,13 +36,13 @@ From BioConductor
 - GATK4: variant calling functions
 - SamTools: variant calling and read mapping tools
 
-The R packages and outside programs can be installed manually or more easily through a bash script provided. To use the bash script, the easiest and quickest way is to use the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once a version of Anaconda is installed or loaded, a new clean environment should be created for PhyloCap and its dependencies. 
+The R packages and outside programs can be installed manually or more easily through a bash script provided. To use the bash script, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once a version of Anaconda is installed or loaded, a new clean environment should be created for PhyloCap and its dependencies. 
 
 The program dependencies can be installed using the provided bash script ("bash_install_phylocap.sh") or PBS cluster script ("qsub_install_phylocap.sh"). More detailed manual installation directions are provided in the <b>Installation</b> tutorial below if those scripts do not work. Note that for the PBS script, usernames and file paths need to be modified to match yours. 
 
-All the functions for PhyloCap should be ready to go! 
-
-< coming soon a function to test if they can found >
+```
+$ bash bash_install_phylocap.sh
+```
 
 
 # Installation of R package
@@ -55,10 +55,10 @@ The main functions of PhyloCap are contained in an R package that has been teste
 install.packages("devtools", dependencies = TRUE)
 ```
 
-2) Install PHYLOCAP by typing in your R console: 
+2) Install PhyloCap by typing in your R console: 
 
 ```R
-devtools::install_github("chutter/PHYLOCAP", update = "never", dependencies = FALSE)
+devtools::install_github("chutter/PhyloCap", update = "never", dependencies = FALSE)
 ```
 
 3) If Devtools asks you to install the package dependencies, select "No", because the dependencies are installed above. If devtools asks you to update packages, you may choose to do so. I would recommend not to install packages from source if devtools asks you and to include the update parameter set to "never" in install_github. 
@@ -69,7 +69,9 @@ devtools::install_github("chutter/PHYLOCAP", update = "never", dependencies = FA
 library(PhyloCap)
 ```
 
-And installation should be done! 
+And installation should be done! All the functions for PhyloCap should be ready to go! 
+
+< coming soon a function to test if they can found >
 
 
 # PhyloCap pipeline tutorials 
