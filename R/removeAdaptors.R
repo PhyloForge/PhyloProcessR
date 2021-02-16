@@ -107,7 +107,7 @@ removeAdaptors = function(input.reads = NULL,
     sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
 
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads))] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads)] }
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
       stop(sample.names[i], " does not have any reads present for files ")
