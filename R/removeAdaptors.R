@@ -43,17 +43,17 @@ removeAdaptors = function(input.reads = NULL,
                           quiet = TRUE) {
 
   # #Debegging
-  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # dir.create('read-processing')
-  # read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/organized-reads"
-  # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  # output.dir = "read-processing/adaptor-removed-reads"
-  # mode = "directory"
-  # threads = 4
-  # mem = 8
-  # resume = FALSE
-  # overwrite = FALSE
-  # quiet = TRUE
+  setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  dir.create('read-processing')
+  read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/organized-reads"
+  fastp.path = "/Users/chutter/miniconda3/bin/fastp"
+  output.dir = "read-processing/adaptor-removed-reads"
+  mode = "directory"
+  threads = 4
+  mem = 8
+  resume = FALSE
+  overwrite = FALSE
+  quiet = TRUE
 
   #Quick checks
   options(stringsAsFactors = FALSE)
@@ -76,7 +76,12 @@ removeAdaptors = function(input.reads = NULL,
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
-  sample.names = list.files(input.reads, recursive = F, full.names = F)
+  sample.names = list.dirs(input.reads, recursive = F, full.names = F)
+
+  if (length(sample.names) == 0){
+    sample.names = list.files(input.reads, recursive = F, full.names = F)
+    sample.names = unique(gsub("_L00.*", "", sample.names))
+    }
 
   #Resumes file download
   if (resume == TRUE){
@@ -102,7 +107,7 @@ removeAdaptors = function(input.reads = NULL,
     sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
 
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads))] }
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
       stop(sample.names[i], " does not have any reads present for files ")
