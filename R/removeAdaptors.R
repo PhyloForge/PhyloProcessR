@@ -43,17 +43,17 @@ removeAdaptors = function(input.reads = NULL,
                           quiet = TRUE) {
 
   # #Debegging
-  setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  dir.create('read-processing')
-  read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/organized-reads"
-  fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  output.dir = "read-processing/adaptor-removed-reads"
-  mode = "directory"
-  threads = 4
-  mem = 8
-  resume = FALSE
-  overwrite = FALSE
-  quiet = TRUE
+  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  # dir.create('read-processing')
+  # read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/organized-reads"
+  # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
+  # output.dir = "read-processing/adaptor-removed-reads"
+  # mode = "directory"
+  # threads = 4
+  # mem = 8
+  # resume = FALSE
+  # overwrite = FALSE
+  # quiet = TRUE
 
   #Quick checks
   options(stringsAsFactors = FALSE)
