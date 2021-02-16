@@ -1,4 +1,5 @@
 #Libraries
+options(stringsAsFactors = FALSE)
 library(rdrop2)
 
 
@@ -12,6 +13,8 @@ out.dir = "/home/c111h652/scratch/MitoGenomes/raw-reads-frogs"
 dropbox.dir = "/Research/3_Sequence-Database/Raw-Reads"
 dropbox.tok = "/home/c111h652/dropbox-token.RDS"
 
+rdrop2::drop_auth(rdstoken = dropbox.tok)
+
 #Run download function
 dropboxDownload(sample.spreadsheet = sample.spread,
                 dropbox.directory = dropbox.dir,
@@ -20,60 +23,51 @@ dropboxDownload(sample.spreadsheet = sample.spread,
                 overwrite = TRUE)
 
 
-
-
-options(stringsAsFactors = FALSE)
-library(rdrop2)
-
-#install.packages("devtools")
-devtools::install_github("chutter/PHYLOCAP")
-library(PHYLOCAP)
-
-#devtools::install_github("chutter/MitoCap")
-library(MitoCap)
-
-threads = 8
-memory = 80
-
-##########################################################################################################
-#Step 1: Preprocess
-##########################################################################################################
-
-### Example usage
-work.dir = "/home/c111h652/scratch/MitoGenomes/Lizards"
-decontamination.path = "/home/c111h652/scratch/Contamination_Genomes"
-sample.file = "/home/c111h652/scratch/MitoGenomes/Lizard_samples.csv"
-dropbox.dir = "/Research/3_Sequence-Database/Raw-Reads"
-dropbox.tok = "/home/c111h652/dropbox-token.RDS"
-gb.file = "/home/c111h652/scratch/MitoGenomes/Lizards/Iguana.gb"
-trnascan.path = "tRNAscan-SE"
-
-rdrop2::drop_auth(rdstoken = dropbox.tok)
-
-#Sets working directory (where all the stuff will be saved)
-dir.create(work.dir)
-setwd(work.dir)
-
-dir.create("read-processing")
-
-#Run download function
-dropboxDownload(sample.spreadsheet = sample.file,
-                dropbox.directory = dropbox.dir,
-                out.directory = paste0("read-processing/raw-reads"),
-                overwrite = TRUE)
-
-
 ### Make file rename function, otherwise use read names
 ## FILE RENAME
+#################################################
+#################################################
+#################################################
+#################################################
+
+#install.packages("devtools")
+devtools::install_github("chutter/PhyloCap")
+library(PhyloCap)
+
+threads = 1
+memory = 4
 
 #################################################
 ## Step 1: Preprocess reads with read processing function
 ##################
 
-removeAdaptors(raw.reads = read.dir,
-               output.dir = "read-processing/adaptor-removed-reads",
+setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+read.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads"
+decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
+file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
+
+#Program paths
+fastp.path = "/Users/chutter/miniconda3/bin/fastp"
+samtools.path = "/Users/chutter/miniconda3/bin/samtools"
+bwa.path = "/usr/local/bin/bwa"
+spades.path = "/Users/chutter/miniconda3/bin/spades.py"
+
+
+organizeReads(read.directory = read.dir,
+              output.dir = "organized-reads",
+              rename.file = file.rename,
+              overwrite = FALSE)
+
+#################################################
+## Step 2: Clean out contamination
+##################
+
+dir.create("processed-reads")
+
+removeAdaptors(input.reads = "organized-reads",
+               output.directory = "processed-reads/adaptor-removed-reads",
                mode = "directory",
-               fastp.path = "fastp",
+               fastp.path = fastp.path,
                threads = threads,
                mem = memory,
                resume = FALSE,
@@ -81,27 +75,25 @@ removeAdaptors(raw.reads = read.dir,
                quiet = TRUE)
 
 ## remove external contamination
-removeContamination(input.reads = "read-processing/adaptor-removed-reads",
-                    output.dir = "read-processing/decontaminated-reads",
+removeContamination(input.reads = "processed-reads/adaptor-removed-reads",
+                    output.directory = "processed-reads/decontaminated-reads",
                     decontamination.path = decontamination.path,
                     mode = "directory",
                     map.match = 0.99,
-                    read.mapper = "bwa",
-                    mapper.path = NULL,
-                    bbmap.path = "/usr/local/bin/bbsplit.sh",
-                    samtools.path = "/usr/local/bin/samtools",
-                    bwa.path = "/usr/local/bin/bwa",
+                    samtools.path = samtools.path,
+                    bwa.path = bwa.path,
                     threads = threads,
                     mem = memory,
                     resume = FALSE,
                     overwrite = TRUE,
                     quiet = TRUE)
+
 
 #merge paired end reads
-mergePairedEndReads(input.reads = "read-processing/decontaminated-reads",
-                    output.dir = "read-processing/pe-merged-reads",
+mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
+                    output.directory = "processed-reads/pe-merged-reads",
                     mode = "directory",
-                    fastp.path = "fastp",
+                    fastp.path = fastp.path,
                     threads = threads,
                     mem = memory,
                     resume = FALSE,
@@ -109,34 +101,43 @@ mergePairedEndReads(input.reads = "read-processing/decontaminated-reads",
                     quiet = TRUE)
 
 
-
-
-
-
-
-
 #################################################
-## Step 2: Clean out contamination
+## Step 3:  assemble reads
 ##################
 
-
-
-
-
-
-#################################################
-## Step 3: iteratively assemble mt-genomes
-##################
-
-
-
-
-
+#Assembles merged paired end reads with spades
+assembleSpades(input.reads = "processed-reads/pe-merged-reads",
+               output.directory = "processed-reads/spades-assembly",
+               assembly.directory = "draft-assemblies",
+               spades.path = spades.path,
+               mismatch.corrector = FALSE,
+               kmer.values = c(21,33,55,77,99,127),
+               threads = 1,
+               memory = 4,
+               overwrite = FALSE,
+               resume = TRUE,
+               save.corrected.reads = FALSE,
+               quiet = TRUE)
 
 
 #################################################
 ## Step 4: do all the alignment stuff
 ##################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

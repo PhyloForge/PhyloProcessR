@@ -4,13 +4,11 @@
 #'
 #' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.directory the new directory to save the adaptor trimmed sequences
 #'
 #' @param decontamination.path directory of genomes contaminants to scan samples
 #'
 #' @param mode "Sample" to run on a single sample or "Directory" to run on a directory of samples
-#'
-#' @param bbmap.path system path to bbmap in case it can't be found
 #'
 #' @param samtools.path system path to samtools in case it can't be found
 #'
@@ -39,12 +37,10 @@
 #' @export
 
 removeContamination = function(input.reads = "adaptor-removed-reads",
-                               output.dir = "decontaminated-reads",
+                               output.directory = "decontaminated-reads",
                                decontamination.path = NULL,
                                mode = c("sample", "directory"),
                                map.match = 1,
-                               read.mapper = "bwa",
-                               bbmap.path = "bbsplit.sh",
                                samtools.path = "samtools",
                                bwa.path = "bwa",
                                threads = 1,
@@ -53,16 +49,13 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                                overwrite = FALSE,
                                quiet = TRUE) {
 
-
-  #Debegging
-  # setwd("/Volumes/Rodents/Mitogenomes/Lizards")
+  #Debug
+  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  # read.directory = "read-processing/adaptor-removed-reads"
+  # output.directory = "read-processing/decontaminated-reads"
   # decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
-  # bbmap.path = "/usr/local/bin"
-  # samtools.path = "/usr/local/bin/samtools"
+  # samtools.path = "/Users/chutter/miniconda3/bin/samtools"
   # bwa.path = "/usr/local/bin/bwa"
-  # input.reads = "adaptor-removed-reads"
-  # file.rename = "file_rename.csv"
-  # output.dir = "decontaminated-reads"
   # mode = "directory"
   # threads = 4
   # mem = 8
@@ -70,81 +63,87 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   # overwrite = FALSE
   # quiet = TRUE
   # map.match = 0.99
-  # read.mapper = "bwa"
 
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
+  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(decontamination.path) == TRUE){ stop("Please provide decontamination genomes / sequences.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.dir) == F){ dir.create(output.dir) } else {
+  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.dir))
-      dir.create(output.dir)
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    } else {
+      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
 
-  #Read in sample data
+  #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
-  sample.names = gsub(".*/", "", reads)
-  sample.names = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names))
-  sample.data = data.frame(File = sample.names, Sample = sample.names)
+  sample.names = list.files(input.reads, recursive = F, full.names = F)
+
+  #Resumes file download
+  if (resume == TRUE){
+    done.files = list.files(output.directory)
+    sample.names = sample.names[!sample.names %in% done.files]
+  }
+
+  if (length(sample.names) == 0){ stop("no samples remain to analyze.") }
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
-                             rawReads =as.character(),
+                             Lane = as.character(),
                              Task = as.character(),
                              Program = as.character(),
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
-  for (i in 1:nrow(sample.data)) {
+  #Runs through each sample
+  for (i in 1:length(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
-    #Finds all files for this given sample and turns into a cat string
-    sample.reads = reads[grep(pattern = paste0(sample.data$File[i], "_"), x = reads)]
+    sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
+    sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
+
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.data$Sample[i], "_"), x = reads)] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.data$Sample[i], " does not have any reads present for files ",
-           sample.data$File[i], " from the input spreadsheet. ")
+      stop(sample.names[i], " does not have any reads present for files ")
     } #end if statement
 
-    #################################################
-    ### Part B: Create directories and move files
-    #################################################
-    #Create sample directory
-    out.path = paste0(output.dir, "/", sample.data$Sample[i])
-    dir.create(out.path)
-    #Creates sample report directory
-    report.path = paste0("logs/", sample.data$Sample[i])
-    if (dir.exists(report.path) == FALSE) { dir.create(report.path) }
+    #CReates new directory
+    out.path = paste0(output.directory, "/", sample.names[i])
+    report.path = paste0("logs/", sample.names[i])
+    if (file.exists(out.path) == FALSE) { dir.create(out.path) }
+    if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
-    #################################################
-    ### Part C: Runs fastp
-    #################################################
-    #sets up output reads
-    inread.1 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
-    inread.2 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
+    for (j in 1:length(sample.reads)){
 
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
+      lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
-    if (read.mapper == "bbsplit"){
-      #Next runs bbsplit to remove other sources of contamination from other organisms
-      system(paste0(bbmap.path, "/bbsplit.sh -Xmx", mem,"g in1=", inread.1, " in2=", inread.2,
-                    " ref=", decontamination.path, " minid=", map.match,
-                    " outu1=", outread.1, " outu2=", outread.2), ignore.stderr = T)
-      system(paste0("rm -r ref"))
-    }#end if
+      #Checks the Sample column in case already renamed
+      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = paste0(sample.reads[j], x = reads))] }
+      #Returns an error if reads are not found
+      if (length(lane.reads) == 0 ){
+        stop(sample.reads[j], " does not have any reads present for files ")
+      } #end if statement
 
-    if (read.mapper == "bwa"){
+      lane.save = gsub(".*/", "", lane.reads)
+      lane.name = gsub(".*/", "", sample.reads[j])
+
+      #################################################
+      ### Part C: Runs fastp
+      #################################################
+      #sets up output reads
+      outreads = paste0(out.path, "/", lane.save)
+
       #Create combined and indexed reference
       if (dir.exists("ref-index") == FALSE){
         #Create combined reference
@@ -165,12 +164,12 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
         #To do: check if already exists
         #Indexes the reference
-        system(paste0("bwa index -p ref-index/reference ref-index/reference.fa"))
+        system(paste0(bwa.path, " index -p ref-index/reference ref-index/reference.fa"))
       }#end dir ecists
 
       system(paste0(bwa.path, " mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
-                    inread.1, " ", inread.2, " | ", samtools.path ," sort -@ ", threads,
+                    lane.reads[1], " ", lane.reads[2], " | ", samtools.path ," sort -@ ", threads,
                     " -o ", out.path, "/decontam-all.bam"))
 
       #Need to figure out how to export reads back to normal
@@ -180,7 +179,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                     out.path, "/decontam-mapped.bam"))
 
       system(paste0(samtools.path, " fastq -@ ", threads, " ",
-                    out.path, "/decontam-unmapped.bam -1 ", outread.1, " -2 ", outread.2))
+                    out.path, "/decontam-unmapped.bam -1 ", outreads[1], " -2 ", outreads[2]))
 
       #Gets match statistics
       system(paste0(samtools.path, " index ", out.path, "/decontam-mapped.bam"))
@@ -197,28 +196,30 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
       system(paste0("rm ", out.path, "/decontam-*"))
 
-      write.csv(contam.data, file = paste0("logs/", sample.data$Sample[i], "/contamination_summary.csv"), row.names = FALSE)
+      #Gathers stats on initial data
+      start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
+      end.reads = as.numeric(system(paste0("zcat < ", outreads[1], " | echo $((`wc -l`/4))"), intern = T))
 
-    }#end if
+      temp.remove = data.frame(Sample = sample.names[i],
+                               Lane = gsub(".*_", "", lane.name),
+                               Task = "decontamination",
+                               Program = "bwa",
+                               startPairs = start.reads,
+                               removePairs = start.reads-end.reads,
+                               endPairs = end.reads)
 
-    #Gathers stats on initial data
-    start.reads = as.numeric(system(paste0("zcat < ", inread.1, " | echo $((`wc -l`/4))"), intern = T))
-    end.reads = as.numeric(system(paste0("zcat < ", outread.1, " | echo $((`wc -l`/4))"), intern = T))
+      summary.data = rbind(summary.data, temp.remove)
+      write.csv(contam.data, file = paste0("logs/", sample.names[i], "/contamination-read-counts.csv"), row.names = FALSE)
 
-    temp.remove = data.frame(Sample = sample.data$Sample[i],
-                             rawReads = sample.data$File[i],
-                             Task = "decontamination",
-                             Program = read.mapper,
-                             startPairs = start.reads,
-                             removePairs = start.reads-end.reads,
-                             endPairs = end.reads)
+      print(paste0(lane.name, " Completed decontamination removal!"))
 
-    summary.data = rbind(summary.data, temp.remove)
+    }#end sample j loop
 
-    print(paste0(sample.data$Sample[i], " Completed decontamination removal!"))
+    print(paste0(sample.names[i], " Completed decontamination removal!"))
+
   }#end sample i loop
 
-  write.csv(summary.data, file = paste0("logs/decontamination_summary.csv"), row.names = FALSE)
+  write.csv(summary.data, file = paste0("logs/removeContamination_summary.csv"), row.names = FALSE)
 
-}#end function
+}
 

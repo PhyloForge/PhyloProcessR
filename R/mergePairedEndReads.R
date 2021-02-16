@@ -33,7 +33,7 @@
 #' @export
 
 mergePairedEndReads = function(input.reads = NULL,
-                               output.dir = NULL,
+                               output.directory = "read-processing/pe-merged-reads",
                                mode = c("sample", "directory"),
                                fastp.path = "fastp",
                                threads = 1,
@@ -43,114 +43,130 @@ mergePairedEndReads = function(input.reads = NULL,
                                quiet = TRUE) {
 
   #Debegging
+  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  # input.reads = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/read-processing/decontaminated-reads"
   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  # raw.reads = "adaptor-removed-reads"
-  # file.rename = "file_rename.csv"
-  # output.dir = "pe-merged-reads"
+  # output.directory = "read-processing/pe-merged-reads"
   # mode = "directory"
   # threads = 4
   # mem = 8
   # resume = FALSE
-  # overwrite = TRUE
-  # quiet = FALSE
+  # overwrite = FALSE
+  # quiet = TRUE
 
   #Quick checks
   options(stringsAsFactors = FALSE)
-  if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
-  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
+  if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
+  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
+  if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.dir) == F){ dir.create(output.dir) } else {
+  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.dir))
-      dir.create(output.dir)
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    } else {
+      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
 
-  #Read in sample data
+  #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
-  sample.names = gsub(".*/", "", reads)
-  sample.names = gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names)
-  sample.data = data.frame(File = sample.names, Sample = sample.names)
+  sample.names = list.files(input.reads, recursive = F, full.names = F)
+
+  #Resumes file download
+  if (resume == TRUE){
+    done.files = list.files(output.directory)
+    sample.names = sample.names[!sample.names %in% done.files]
+  }
+
+  if (length(sample.names) == 0){ stop("no samples remain to analyze.") }
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
-                             rawReads =as.character(),
+                             Lane = as.character(),
                              Task = as.character(),
                              Program = as.character(),
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
-
-  for (i in 1:nrow(sample.data)) {
+  for (i in 1:length(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
-    #Finds all files for this given sample and turns into a cat string
-    sample.reads = reads[grep(pattern = paste0(sample.data$File[i], "_"), x = reads)]
+    sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
+    sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
+
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.data$Sample[i], "_"), x = reads)] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.data$Sample[i], " does not have any reads present for files ",
-           sample.data$File[i], " from the input spreadsheet. ")
+      stop(sample.names[i], " does not have any reads present for files ")
     } #end if statement
 
-    #################################################
-    ### Part B: Create directories and move files
-    #################################################
-    #Create sample directory
-    out.path = paste0(output.dir, "/", sample.data$Sample[i])
-    dir.create(out.path)
-    #Creates sample report directory
-    report.path = paste0("logs/", sample.data$Sample[i])
-    if (dir.exists(report.path) == FALSE) { dir.create(report.path) }
+    #CReates new directory
+    out.path = paste0(output.directory, "/", sample.names[i])
+    report.path = paste0("logs/", sample.names[i])
+    if (file.exists(out.path) == FALSE) { dir.create(out.path) }
+    if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
-    #################################################
-    ### Part C: Runs fastp
-    #################################################
-    #sets up output reads
-    inread.1 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
-    inread.2 = paste0(input.reads, "/", sample.data$Sample[i], "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
+    for (j in 1:length(sample.reads)){
 
-    #sets up output reads
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
-    outread.m = paste0(out.path, "/", sample.data$Sample[i], "_MERGED_L001.fastq.gz")
+      lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
-    #Runs fastp: only does adapter trimming, no quality stuff
-    system(paste0(fastp.path, " --merge --disable_adapter_trimming --disable_quality_filtering ",
-                  " --in1 ", sample.reads[1], " --in2 ", sample.reads[2],
-                  " --out1 ", outread.1, " --out2 ", outread.2, " --merged_out ", outread.m,
-                  " --html pe-merged_fastp.html --json pe-merged_fastp.json",
-                  " --report_title ", sample.data$Sample[i]," --thread ", threads),
-           ignore.stderr = quiet, ignore.stdout = quiet)
+      #Checks the Sample column in case already renamed
+      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = paste0(sample.reads[j], x = reads))] }
+      #Returns an error if reads are not found
+      if (length(lane.reads) == 0 ){
+        stop(sample.reads[j], " does not have any reads present for files ")
+      } #end if statement
 
-    system(paste0("cp pe-merged_fastp.html ",
-                  report.path, "/pe-merged_fastp.html"))
-    system(paste0("rm pe-merged_fastp*"))
+      lane.save = gsub(".*/", "", lane.reads)
+      lane.name = gsub(".*/", "", sample.reads[j])
 
-    #Gathers stats on initial data
-    start.reads = as.numeric(system(paste0("zcat < ", sample.reads[1], " | echo $((`wc -l`/4))"), intern = T))
-    end.reads = as.numeric(system(paste0("zcat < ", outread.1, " | echo $((`wc -l`/4))"), intern = T))
-    m.reads = as.numeric(system(paste0("zcat < ", outread.m, " | echo $((`wc -l`/4))"), intern = T))
+      #################################################
+      ### Part C: Runs fastp
+      #################################################
+      #sets up output reads
+      outreads = paste0(out.path, "/", lane.save)
+      outread.m = paste0(out.path, "/", lane.name, "_READ3.fastq.gz")
 
-    temp.remove = data.frame(Sample = sample.data$Sample[i],
-                             rawReads = sample.data$File[i],
-                             Task = "pe-read-merging",
-                             Program = "fastp",
-                             startPairs = start.reads,
-                             mergePairs = m.reads,
-                             endPairs = end.reads)
+      #Runs fastp: only does adapter trimming, no quality stuff
+      system(paste0(fastp.path, " --merge --disable_adapter_trimming --disable_quality_filtering",
+                    " --in1 ", lane.reads[1], " --in2 ", lane.reads[2],
+                    " --out1 ", outreads[1], " --out2 ", outreads[2], " --merged_out ", outread.m,
+                    " --html pe-merged_fastp.html --json pe-merged_fastp.json",
+                    " --report_title ", sample.reads[j]," --thread ", threads),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
-    summary.data = rbind(summary.data, temp.remove)
+      system(paste0("cp pe-merged_fastp.html ",
+                    report.path, "/", lane.name, "_pe-merged_fastp.html"))
+      system(paste0("rm pe-merged_fastp*"))
 
-    print(paste0(sample.data$Sample[i], " Completed paired-end read merging!"))
-  }#end sample i loop
+      #Gathers stats on initial data
+      start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
+      end.reads = as.numeric(system(paste0("zcat < ", outreads[1], " | echo $((`wc -l`/4))"), intern = T))
 
-  write.csv(summary.data, file = paste0("logs/pe-merge-fastp_summary.csv"), row.names = FALSE)
+      temp.remove = data.frame(Sample = sample.names[i],
+                               Lane = gsub(".*_", "", lane.name),
+                               Task = "merge-pe-reads",
+                               Program = "fastp",
+                               startPairs = start.reads,
+                               removePairs = start.reads-end.reads,
+                               endPairs = end.reads)
+
+      summary.data = rbind(summary.data, temp.remove)
+
+      print(paste0(lane.name, " Completed paired-end read merging!"))
+    }#end sample j loop
+
+    print(paste0(sample.names[i], " Completed paired-end read merging!"))
+  }#end i loop
+
+  write.csv(summary.data, file = paste0("logs/mergePairedEndReads_summary.csv"), row.names = FALSE)
 
 }#end function
+

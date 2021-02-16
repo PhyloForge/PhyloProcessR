@@ -2,9 +2,9 @@
 #'
 #' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
 #'
-#' @param raw.reads path to a folder of raw reads in fastq format.
+#' @param input.reads path to a folder of raw reads in fastq format.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.directory the new directory to save the adaptor trimmed sequences
 #'
 #' @param mode "Sample" to run on a single sample or "Directory" to run on a directory of samples
 #'
@@ -32,8 +32,8 @@
 #'
 #' @export
 
-removeAdaptors = function(raw.reads = NULL,
-                          output.dir = NULL,
+removeAdaptors = function(input.reads = NULL,
+                          output.directory = NULL,
                           mode = c("sample", "directory"),
                           fastp.path = "fastp",
                           threads = 1,
@@ -42,27 +42,32 @@ removeAdaptors = function(raw.reads = NULL,
                           overwrite = FALSE,
                           quiet = TRUE) {
 
-  #Debegging
-  # raw.reads = "/Users/chutter/Dropbox/Mammals/Philippine_Shrews_Raw_Data"
+  # #Debegging
+  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  # dir.create('read-processing')
+  # read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/organized-reads"
   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  # output.dir = "adaptor-removed-reads"
+  # output.dir = "read-processing/adaptor-removed-reads"
   # mode = "directory"
   # threads = 4
   # mem = 8
   # resume = FALSE
-  # overwrite = TRUE
+  # overwrite = FALSE
   # quiet = TRUE
 
   #Quick checks
   options(stringsAsFactors = FALSE)
-  if (is.null(raw.reads) == TRUE){ stop("Please provide raw reads.") }
+  if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
+  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.dir) == F){ dir.create(output.dir) } else {
+  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.dir))
-      dir.create(output.dir)
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    } else {
+      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 
@@ -70,89 +75,97 @@ removeAdaptors = function(raw.reads = NULL,
   if (dir.exists("logs") == F){ dir.create("logs") }
 
   #Read in sample data **** sample is run twice?!
-  reads = list.files(raw.reads, recursive = T, full.names = T)
-  sample.names = gsub(".*/", "", reads)
-  sample.names = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*", "", sample.names))
-  sample.data = data.frame(File = sample.names, Sample = sample.names)
+  reads = list.files(input.reads, recursive = T, full.names = T)
+  sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
   if (resume == TRUE){
-    done.files = list.files(output.dir)
-    done.files = gsub("_READ.*", "", done.files)
-    done.files = done.files[duplicated(done.files) == TRUE]
-    sample.data = sample.data[!sample.data$Sample %in% done.files,]
+    done.files = list.files(output.directory)
+    sample.names = sample.names[!sample.names %in% done.files]
   }
 
-  if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }
+  if (length(sample.names) == 0){ stop("no samples remain to analyze.") }
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
-                             rawReads =as.character(),
+                             Lane = as.character(),
                              Task = as.character(),
                              Program = as.character(),
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
-  for (i in 1:nrow(sample.data)) {
+  for (i in 1:length(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
-    #Finds all files for this given sample and turns into a cat string
-    sample.reads = reads[grep(pattern = paste0(sample.data$File[i], "_"), x = reads)]
+    sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
+    sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
+
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.data$Sample[i], "_"), x = reads)] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.data$Sample[i], " does not have any reads present for files ",
-           sample.data$File[i], " from the input spreadsheet. ")
+      stop(sample.names[i], " does not have any reads present for files ")
     } #end if statement
 
-    #################################################
-    ### Part B: Create directories and move files
-    #################################################
-    #Create sample directory
-    out.path = paste0(output.dir, "/", sample.data$Sample[i])
-    dir.create(out.path)
-    #Creates sample report directory
-    report.path = paste0("logs/", sample.data$Sample[i])
-    dir.create(report.path)
+    #CReates new directory
+    out.path = paste0(output.directory, "/", sample.names[i])
+    report.path = paste0("logs/", sample.names[i])
+    if (file.exists(out.path) == FALSE) { dir.create(out.path) }
+    if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
-    #################################################
-    ### Part C: Runs fastp
-    #################################################
-    #sets up output reads
-    outread.1 = paste0(out.path, "/", sample.data$Sample[i], "_READ1_L001.fastq.gz")
-    outread.2 = paste0(out.path, "/", sample.data$Sample[i], "_READ2_L001.fastq.gz")
+    for (j in 1:length(sample.reads)){
 
-    #Runs fastp: only does adapter trimming, no quality stuff
-    system(paste0(fastp.path, " --in1 ",sample.reads[1], " --in2 ", sample.reads[2],
-                  " --out1 ", outread.1, " --out2 ", outread.2,
-                  " --length_required 30 --low_complexity_filter --complexity_threshold 30",
-                  " --html adapter-trim_fastp.html --json adapter-trim_fastp.json",
-                  " --report_title ", sample.data$Sample[i]," --thread ", threads),
-           ignore.stderr = quiet, ignore.stdout = quiet)
+      lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
-    system(paste0("cp adapter-trim_fastp.html ",
-                  report.path, "/adapter-trim_fastp.html"))
-    system(paste0("rm adapter-trim_fastp*"))
+      #Checks the Sample column in case already renamed
+      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = paste0(sample.reads[j], x = reads))] }
+      #Returns an error if reads are not found
+      if (length(lane.reads) == 0 ){
+        stop(sample.reads[j], " does not have any reads present for files ")
+      } #end if statement
 
-    #Gathers stats on initial data
-    start.reads = as.numeric(system(paste0("zcat < ", sample.reads[1], " | echo $((`wc -l`/4))"), intern = T))
-    end.reads = as.numeric(system(paste0("zcat < ", outread.1, " | echo $((`wc -l`/4))"), intern = T))
+      lane.save = gsub(".*/", "", lane.reads)
+      lane.name = gsub(".*/", "", sample.reads[j])
 
-    temp.remove = data.frame(Sample = sample.data$Sample[i],
-                             rawReads = sample.data$File[i],
-                             Task = "trim-adaptors+filter-complex",
-                             Program = "fastp",
-                             startPairs = start.reads,
-                             removePairs = start.reads-end.reads,
-                             endPairs = end.reads)
+      #################################################
+      ### Part C: Runs fastp
+      #################################################
+      #sets up output reads
+      outreads = paste0(out.path, "/", lane.save)
 
-    summary.data = rbind(summary.data, temp.remove)
+      #Runs fastp: only does adapter trimming, no quality stuff
+      system(paste0(fastp.path, " --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
+                    " --out1 ", outreads[1], " --out2 ", outreads[2],
+                    " --length_required 30 --low_complexity_filter --complexity_threshold 30",
+                    " --html adapter-trim_fastp.html --json adapter-trim_fastp.json",
+                    " --report_title ", sample.reads[j]," --thread ", threads),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
-    print(paste0(sample.data$Sample[i], " Completed adaptor removal!"))
-  }#end sample i loop
+      system(paste0("cp ", "adapter-trim_fastp.html ",
+                    report.path, "/", lane.name, "_adapter-trim_fastp.html"))
+      system(paste0("rm adapter-trim_fastp*"))
 
-  write.csv(summary.data, file = paste0("logs/fastp_summary.csv"), row.names = FALSE)
+      #Gathers stats on initial data
+      start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
+      end.reads = as.numeric(system(paste0("zcat < ", outreads[1], " | echo $((`wc -l`/4))"), intern = T))
+
+      temp.remove = data.frame(Sample = sample.names[i],
+                               Lane = gsub(".*_", "", lane.name),
+                               Task = "trim-adaptors+filter-complex",
+                               Program = "fastp",
+                               startPairs = start.reads,
+                               removePairs = start.reads-end.reads,
+                               endPairs = end.reads)
+
+      summary.data = rbind(summary.data, temp.remove)
+
+      print(paste0(lane.name, " Completed adaptor removal!"))
+    }#end sample j loop
+
+    print(paste0(sample.names[i], " Completed adaptor removal!"))
+  }#end i loop
+
+  write.csv(summary.data, file = paste0("logs/removeAdaptors_summary.csv"), row.names = FALSE)
 
 }#end function
