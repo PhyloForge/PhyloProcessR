@@ -136,7 +136,7 @@ assembleRNASpades = function(input.reads = NULL,
     if (file.exists(paste0(save.assem, "/transcripts.fasta")) == TRUE ){
       system(paste0("cp ", save.assem, "/transcripts.fasta ",  assembly.directory,
                     "/", samples[i], ".fa"))
-    } else { stop(paste0("spades error for ", samples[i], ", check spades.log file in rnaspades-assembly folder.")) }
+    } else { print(paste0("spades error for ", samples[i], ", check spades.log file in rnaspades-assembly folder.")) }
 
     if (save.corrected.reads == FALSE) {
       #copies to contigs folder
