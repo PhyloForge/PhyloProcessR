@@ -196,8 +196,13 @@ chunkAssembleSpades = function(input.reads = NULL,
                       assembly.directory, "/temp_all-chunks_temp-contigs.fa"))
         system(paste0("rm ", assembly.directory, "/", chunk.names[i], "_temp-contigs.fa ",
                       assembly.directory, "/all-chunks_temp-contigs.fa"))
-        system(paste0("mv ", assembly.directory, "/temp_all-chunks_temp-contigs.fa ",
-                      assembly.directory, "/all-chunks_temp-contigs.fa"))
+
+        #Trys to combine the contigs
+        input.contigs = paste0(assembly.directory, "/temp_all-chunks_temp-contigs.fa")
+        runCap3(contigs = input.contigs,
+                output.name = paste0(assembly.directory, "/all-chunks_temp-contigs.fa"),
+                read.R = FALSE)
+
       } else {
         system(paste0("mv ", assembly.directory, "/", chunk.names[i], "_temp-contigs.fa ",
                       assembly.directory, "/all-chunks_temp-contigs.fa"))

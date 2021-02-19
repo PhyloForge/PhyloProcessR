@@ -120,6 +120,24 @@ assembleSpades(input.reads = "processed-reads/pe-merged-reads",
                quiet = TRUE)
 
 
+#For a single sample
+chunkAssembleSpades(input.reads = NULL,
+                    output.directory = "processed-reads/spades-assembly",
+                    assembly.directory = "draft-assemblies",
+                    spades.path = "spades.py",
+                    fastqsplitter.path = "fastqsplitter",
+                    number.chunks = 1,
+                    mismatch.corrector = TRUE,
+                    kmer.values = c(21,33,55,77,99,127),
+                    threads = 1,
+                    memory = 4,
+                    overwrite = FALSE,
+                    resume = TRUE,
+                    save.corrected.reads = FALSE,
+                    quiet = TRUE)
+
+
+
 #################################################
 ## Step 4: do all the alignment stuff
 ##################
