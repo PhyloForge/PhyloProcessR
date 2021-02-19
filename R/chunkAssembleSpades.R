@@ -55,7 +55,7 @@ chunkAssembleSpades = function(input.reads = NULL,
                                memory = 4,
                                overwrite = FALSE,
                                resume = TRUE,
-                               save.corrected.reads = FALSE,
+                               save.all.files = FALSE,
                                quiet = TRUE) {
 
   # #debug
