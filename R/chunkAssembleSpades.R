@@ -47,6 +47,7 @@ chunkAssembleSpades = function(input.reads = NULL,
                                assembly.directory = "draft-assemblies",
                                spades.path = "spades.py",
                                fastqsplitter.path = "fastqsplitter",
+                               cap3.path = "cap3",
                                number.chunks = 1,
                                mismatch.corrector = FALSE,
                                kmer.values = c(21,33,55,77,99,127),
@@ -209,7 +210,8 @@ chunkAssembleSpades = function(input.reads = NULL,
         input.contigs = paste0(assembly.directory, "/temp_all-chunks_temp-contigs.fa")
         runCap3(contigs = input.contigs,
                 output.name = paste0(assembly.directory, "/all-chunks_temp-contigs.fa"),
-                read.R = FALSE)
+                read.R = FALSE,
+                cap3.path = cap3.path)
 
       } else {
         system(paste0("mv ", assembly.directory, "/", chunk.names[i], "_temp-contigs.fa ",
