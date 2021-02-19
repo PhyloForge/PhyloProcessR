@@ -1,12 +1,18 @@
-#' @title assembleSpades
+#' @title chunkAssembleSpades
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
-#' @param read.directory directory of processed reads
+#' @param input.reads directory of processed reads
 #'
 #' @param output.directory save name for the output directory
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param assembly.directory save name for the output directory
+#'
+#' @param spades.path contigs are added into existing alignment if algorithm is "add"
+#'
+#' @param fastqsplitter.path contigs are added into existing alignment if algorithm is "add"
+#'
+#' @param number.chunks contigs are added into existing alignment if algorithm is "add"
 #'
 #' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
@@ -14,11 +20,13 @@
 #'
 #' @param threads number of computation processing threads
 #'
-#' @param mem amount of system memory to use
+#' @param memory amount of system memory to use
+#'
+#' @param overwrite TRUE to overwrite a folder of samples with output.dir
 #'
 #' @param resume TRUE to skip samples already completed
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param save.corrected.reads TRUE to overwrite a folder of samples with output.dir
 #'
 #' @param quiet TRUE to supress screen output
 
@@ -40,7 +48,7 @@ chunkAssembleSpades = function(input.reads = NULL,
                                spades.path = "spades.py",
                                fastqsplitter.path = "fastqsplitter",
                                number.chunks = 1,
-                               mismatch.corrector = TRUE,
+                               mismatch.corrector = FALSE,
                                kmer.values = c(21,33,55,77,99,127),
                                threads = 1,
                                memory = 4,
