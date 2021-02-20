@@ -79,18 +79,23 @@ concatenateGenes = function(alignment.folder = NULL,
   exon.data = data.table::fread(file = feature.gene.names, header = T)
   gene.names = unique(exon.data$gene_id)
 
-  #Skips files done already if resume = TRUE
-  # if (resume == TRUE){
-  #   done.files = list.files(output.folder)
-  #   align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
-  # }
-  # #Sets up multiprocessing
-   cl = parallel::makeCluster(threads, outfile = "")
-   doParallel::registerDoParallel(cl)
-   mem.cl = floor(memory/threads)
+  length(align.files)
 
-   foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(gene.names)){
+  #Skips files done already if resume = TRUE
+  if (resume == TRUE){
+    done.files = list.files(output.folder)
+    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+  }
+
+  length(done.files)
+  length(align.files)
+  # #Sets up multiprocessing
+   #cl = parallel::makeCluster(threads, outfile = "")
+   #doParallel::registerDoParallel(cl)
+   #mem.cl = floor(memory/threads)
+
+  # foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  for (i in 1:length(gene.names)){
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
     #Match to the files to obtain
