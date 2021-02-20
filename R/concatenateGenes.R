@@ -38,6 +38,7 @@ concatenateGenes = function(alignment.folder = NULL,
                             output.format = c("phylip", "nexus", "fasta"),
                             remove.reverse = FALSE,
                             overwrite = FALSE,
+                            resume = TRUE,
                             threads = 1,
                             memory = 1) {
 
