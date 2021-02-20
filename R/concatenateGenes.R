@@ -71,7 +71,6 @@ concatenateGenes = function(alignment.folder = NULL,
     if (file.exists(paste0(output.folder)) == TRUE){ system(paste0("rm -r ", output.folder)) }
     dir.create(output.folder)
   } else {
-    if (file.exists(paste0(output.folder)) == TRUE){ return("FIle exists and overwrite == FALSE") }
     dir.create(output.folder)
   }#end overwrite if
 
