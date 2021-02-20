@@ -328,10 +328,9 @@ concatenateGenes = function(alignment.folder = NULL,
         close(fileConn)
         print(paste0(output.name, ".phy concatenated alignment written in phylip format."))
       }#End phylip if
-
-      system(paste0("rm -r ", temp.dir))
-
     }#end if way above
+
+    system(paste0("rm -r ", temp.dir))
 
    }#end i loop
 
