@@ -89,11 +89,11 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
     #Save the read files with the new names in the new directory
     rdrop2::drop_download(path = sample.reads[1],
-                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_READ1_L001.fastq.gz"),
+                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_L001_READ1.fastq.gz"),
                           overwrite = TRUE)
 
     rdrop2::drop_download(path = sample.reads[2],
-                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_READ2_L001.fastq.gz"),
+                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_L001_READ2.fastq.gz"),
                           overwrite = TRUE)
   }#end i loop
 
