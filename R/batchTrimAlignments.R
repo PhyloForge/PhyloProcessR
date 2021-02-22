@@ -88,7 +88,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   # options(stringsAsFactors = FALSE)
   # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
-  # library(PHYLOCAP)
+  # library(PhyloCap)
   # library(foreach)
   #
   # #Save directory
@@ -96,9 +96,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
   # feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
   #
-  # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # #align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily-Dataset"
-  # #feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily/genes-untrimmed"
+  # feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   # out.name = "Emily"
   #
   # setwd(work.dir)

@@ -165,6 +165,8 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
         system(paste0(bwa.path, " index -p ref-index/reference ref-index/reference.fa"))
       }#end dir ecists
 
+      #### REMOVE BOTH READ PAIRS
+
       system(paste0(bwa.path, " mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
                     lane.reads[1], " ", lane.reads[2], " | ", samtools.path ," sort -@ ", threads,
