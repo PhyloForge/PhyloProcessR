@@ -97,13 +97,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
   #
   # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily/genes-untrimmed"
+  # align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily/genes_untrimmed"
   # feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   # out.name = "Emily"
   #
   # setwd(work.dir)
   # alignment.dir = align.dir
-  # output.dir = paste0(out.name, "/genes-trimmed")
+  # output.dir = paste0(out.name, "/genes_trimmed")
   # alignment.format = "phylip"
   # output.format = "phylip"
   # TrimAl = FALSE
@@ -124,8 +124,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # min.taxa.count = 5
   # min.gap.percent = 50
   # min.sample.bp = 60
-  # threads = 4
-  # mem = 8
+  # threads = 1
+  # mem = 10
   # resume = TRUE
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
@@ -171,12 +171,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
   save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  mem.cl = floor(memory/threads)
+#  cl = parallel::makeCluster(threads, outfile = "")
+#  doParallel::registerDoParallel(cl)
+#  mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
