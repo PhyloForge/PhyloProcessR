@@ -92,9 +92,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # library(foreach)
   #
   # #Save directory
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
-  # feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
+  # #work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # #align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
+  # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
   #
   # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   # align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily/genes-untrimmed"
@@ -103,13 +103,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #
   # setwd(work.dir)
   # alignment.dir = align.dir
-  # output.dir = paste0("01_emily-mafft_trimmed")
+  # output.dir = paste0(out.name, "/genes-trimmed")
   # alignment.format = "phylip"
   # output.format = "phylip"
   # TrimAl = FALSE
   # TAPER = TRUE
-  # TAPER.path = "/usr/local/bin/correction.jl"
-  # julia.path = "/Applications/Julia-1.5.app/Contents/Resources/julia/bin/julia"
+  # TAPER.path = "/home/c111h652/programs/correction.jl"
+  # julia.path = "julia"
   # HmmCleaner = FALSE
   # trim.column = TRUE
   # convert.ambiguous.sites = TRUE
@@ -177,7 +177,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   #Loops through each locus and does operations on them
   out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
+  for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments

@@ -44,16 +44,19 @@ concatenateGenes = function(alignment.folder = NULL,
 
   #Debug
   # library(foreach)
-  # setwd("/Volumes/Rodents/Murinae/Trimming")
-  # alignment.folder = "/Volumes/Rodents/Murinae/Trimming"
-  # output.folder = "01_emily-subset-genes"
-  # overwrite = TRUE
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # setwd(work.dir)
+  # out.name = "Full"
+  # align.dir =  "/home/c111h652/scratch/Rodents/Alignments/Full"
+  # feature.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
+  #
+  # alignment.folder = align.dir
+  # output.folder = paste0(out.name, "/genes-untrimmed")
   # input.format = "fasta"
   # output.format = "phylip"
-  # feature.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
   # remove.reverse = TRUE
-  # threads = 6
-  # memory = 6
+  # overwrite = FALSE
+  # resume = TRUE
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -306,7 +309,7 @@ concatenateGenes = function(alignment.folder = NULL,
         #Now have to reformat
         ntax = nrow(concat.data)
         nchar = save.length
-        phy.header = paste(ntax, nchar)
+        phy.header = paste0(" ", ntax, " ", nchar)
 
         #Prep sample names to all have the same length padded with spaces
         name.length = max(nchar(sample.names)) + 4
