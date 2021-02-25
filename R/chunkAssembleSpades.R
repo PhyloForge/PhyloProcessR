@@ -177,7 +177,8 @@ chunkAssembleSpades = function(input.reads = NULL,
     #Creates assembly reads folder if not present
     if (dir.exists(save.assem) == TRUE) {
       #Run spades
-      system(paste0(spades.path, " --continue"),
+      system(paste0(spades.path, " -o ", save.assem,
+                    " --continue"),
              ignore.stdout = quiet)
     } else {
 
@@ -217,8 +218,7 @@ chunkAssembleSpades = function(input.reads = NULL,
         system(paste0("cat ", assembly.directory, "/all-chunks_temp-contigs.fa ",
                       assembly.directory, "/", chunk.names[i], "_temp-contigs.fa > ",
                       assembly.directory, "/temp_all-chunks_temp-contigs.fa"))
-        system(paste0("rm ", assembly.directory, "/", chunk.names[i], "_temp-contigs.fa ",
-                      assembly.directory, "/all-chunks_temp-contigs.fa"))
+        system(paste0("rm ", assembly.directory, "/all-chunks_temp-contigs.fa"))
 
         #Trys to combine the contigs
         input.contigs = paste0(assembly.directory, "/temp_all-chunks_temp-contigs.fa")
@@ -226,7 +226,6 @@ chunkAssembleSpades = function(input.reads = NULL,
                 output.name = paste0(assembly.directory, "/all-chunks_temp-contigs.fa"),
                 read.R = FALSE,
                 cap3.path = cap3.path)
-
       } else {
         system(paste0("mv ", assembly.directory, "/", chunk.names[i], "_temp-contigs.fa ",
                       assembly.directory, "/all-chunks_temp-contigs.fa"))
