@@ -115,7 +115,6 @@ chunkAssembleSpades = function(input.reads = NULL,
   #Creates temp directory
   dir.create(paste0(output.directory, "/chunked-reads/"))
   sample.chunk = paste0(output.directory, "/chunked-reads/", sample.name)
-  dir.create(sample.chunk)
 
   # #Skips samples already finished
   # if (resume == TRUE){
@@ -125,38 +124,44 @@ chunkAssembleSpades = function(input.reads = NULL,
 
   if (length(samples) == 0){ stop("No samples to run or incorrect directory.") }
 
-  #Concatenate together
-  read1.reads = reads[grep("_READ1", reads)]
-  read2.reads = reads[grep("_READ2", reads)]
-  read3.reads = reads[grep("_READ3", reads)]
+  if (dir.exists(sample.chunk) == FALSE) {
 
-  system(paste0("cat ", paste0(read1.reads, collapse = " "), " > ", sample.chunk,
-                "/", sample.name, "_ALL_READ1.fastq.gz"))
-  system(paste0("cat ", paste0(read2.reads, collapse = " "), " > ", sample.chunk,
-                "/", sample.name, "_ALL_READ2.fastq.gz"))
-  system(paste0("cat ", paste0(read3.reads, collapse = " "), " > ", sample.chunk,
-                "/", sample.name, "_ALL_READ3.fastq.gz"))
+    #Concatenate together
+    dir.create(sample.chunk)
+    read1.reads = reads[grep("_READ1", reads)]
+    read2.reads = reads[grep("_READ2", reads)]
+    read3.reads = reads[grep("_READ3", reads)]
 
-  ### Create chunks
-  chunk.no = sprintf("%03d", rep(1:number.chunks))
-  chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ1.fastq.gz")
-  chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
-  system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ1.fastq.gz",
-                " ", chunk.strings, " -c 4"))
+    system(paste0("cat ", paste0(read1.reads, collapse = " "), " > ", sample.chunk,
+                  "/", sample.name, "_ALL_READ1.fastq.gz"))
+    system(paste0("cat ", paste0(read2.reads, collapse = " "), " > ", sample.chunk,
+                  "/", sample.name, "_ALL_READ2.fastq.gz"))
+    system(paste0("cat ", paste0(read3.reads, collapse = " "), " > ", sample.chunk,
+                  "/", sample.name, "_ALL_READ3.fastq.gz"))
 
-  chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ2.fastq.gz")
-  chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
-  system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ2.fastq.gz",
-                " ", chunk.strings, " -c 4"))
+    ### Create chunks
+    chunk.no = sprintf("%03d", rep(1:number.chunks))
+    chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ1.fastq.gz")
+    chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
+    system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ1.fastq.gz",
+                  " ", chunk.strings, " -c 4"))
 
-  chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ3.fastq.gz")
-  chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
-  system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ3.fastq.gz",
-                " ", chunk.strings, " -c 4"))
+    chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ2.fastq.gz")
+    chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
+    system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ2.fastq.gz",
+                  " ", chunk.strings, " -c 4"))
 
-  system(paste0("rm ", sample.chunk, "/", sample.name, "_ALL_*"))
+    chunk.strings = paste0(sample.chunk, "/", sample.name, "_CHNK", chunk.no, "_READ3.fastq.gz")
+    chunk.strings = paste0("-o ", chunk.strings, collapse = " ")
+    system(paste0(fastqsplitter.path, " -i ", sample.chunk, "/", sample.name, "_ALL_READ3.fastq.gz",
+                  " ", chunk.strings, " -c 4"))
+
+    system(paste0("rm ", sample.chunk, "/", sample.name, "_ALL_*"))
+
+  } #end if
 
   #Loops through each chunk
+  chunk.no = sprintf("%03d", rep(1:number.chunks))
   chunk.names = paste0("CHNK", chunk.no)
   chunk.reads = list.files(sample.chunk, full.names = T)
 
@@ -167,31 +172,40 @@ chunkAssembleSpades = function(input.reads = NULL,
 
     #Run SPADES on sample
     k.val = paste(kmer.values, collapse = ",")
+    save.assem = paste0(sample.chunk, "/", chunk.names[i])
 
     #Creates assembly reads folder if not present
-    save.assem = paste0(sample.chunk, "/", chunk.names[i])
-    dir.create(save.assem)
+    if (dir.exists(save.assem) == TRUE) {
+      #Run spades
+      system(paste0(spades.path, " --continue"),
+             ignore.stdout = quiet)
+    } else {
 
-    #Sorts reads
-    sample.names = unique(gsub("_READ.*", "", sample.reads))
+      #Create new directory
+      dir.create(save.assem)
 
-    #Creates a spades character string to run different reads and library configurations
-    read.string = c()
-    #Checks for different read lengths
-    if (length(sample.reads) == 1){ read.string = paste0("--s1 ", sample.reads[1], " ") }
-    if (length(sample.reads) >= 2){ read.string = paste0("--pe1-1 ", sample.reads[1],
-                                                      " --pe1-2 ", sample.reads[2], " ") }
-    if (length(sample.reads) == 3){ read.string = paste0(read.string, "--pe1-m ", sample.reads[3], " ") }
+      #Sorts reads
+      sample.names = unique(gsub("_READ.*", "", sample.reads))
 
-    if (file.exists(paste0(assembly.directory, "/", chunk.names[i-1], "_temp-contigs.fa")) == TRUE) {
-     untrust.string = paste0("--untrusted-contigs ", assembly.directory, "/", chunk.names[i-1], "_temp-contigs.fa")
-    } else { untrust.string = "" }
+      #Creates a spades character string to run different reads and library configurations
+      read.string = c()
+      #Checks for different read lengths
+      if (length(sample.reads) == 1){ read.string = paste0("--s1 ", sample.reads[1], " ") }
+      if (length(sample.reads) >= 2){ read.string = paste0("--pe1-1 ", sample.reads[1],
+                                                           " --pe1-2 ", sample.reads[2], " ") }
+      if (length(sample.reads) == 3){ read.string = paste0(read.string, "--pe1-m ", sample.reads[3], " ") }
 
-    #Run spades
-    system(paste0(spades.path, " ", read.string,
-                  "-o ", save.assem, " -k ", k.val,  mismatch.string, untrust.string,
-                  " -t ", threads, " -m ", memory),
-           ignore.stdout = quiet)
+      if (file.exists(paste0(assembly.directory, "/", chunk.names[i-1], "_temp-contigs.fa")) == TRUE) {
+        untrust.string = paste0("--untrusted-contigs ", assembly.directory, "/", chunk.names[i-1], "_temp-contigs.fa")
+      } else { untrust.string = "" }
+
+      #Run spades
+      system(paste0(spades.path, " ", read.string,
+                    "-o ", save.assem, " -k ", k.val,  mismatch.string, untrust.string,
+                    " -t ", threads, " -m ", memory),
+             ignore.stdout = quiet)
+
+    }#end else
 
     #Crashes function if spades failed, also copies new assemblies to assembly.directory
     if (file.exists(paste0(save.assem, "/contigs.fasta")) == TRUE ){
