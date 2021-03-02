@@ -44,14 +44,20 @@ concatenateGenes = function(alignment.folder = NULL,
 
   #Debug
   # library(foreach)
-  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # setwd(work.dir)
-  # out.name = "Full"
-  # align.dir =  "/home/c111h652/scratch/Rodents/Alignments/Full"
-  # feature.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   #
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # align.dir =  "/home/c111h652/scratch/Rodents/Alignments/Emily"
+  # feature.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
+  # out.name = "Emily"
+  #
+  # # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
+  # # feature.gene.names = "/Volumes/Rodents/Murinae/Trimming/Mus_gene_metadata.csv"
+  # # out.name = "Emily"
+  #
+  # setwd(work.dir)
   # alignment.folder = align.dir
-  # output.folder = paste0(out.name, "/genes-untrimmed")
+  # output.folder = paste0(out.name, "/genes_untrimmed")
   # input.format = "fasta"
   # output.format = "phylip"
   # remove.reverse = TRUE
@@ -82,23 +88,20 @@ concatenateGenes = function(alignment.folder = NULL,
   exon.data = data.table::fread(file = feature.gene.names, header = T)
   gene.names = unique(exon.data$gene_id)
 
-  length(align.files)
-
   #Skips files done already if resume = TRUE
   if (resume == TRUE){
     done.files = list.files(output.folder)
-    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+    done.genes = gsub(".phy$", "", done.files)
+    gene.names = gene.names[!gene.names %in% done.genes]
   }
 
-  length(done.files)
-  length(align.files)
   # #Sets up multiprocessing
-   #cl = parallel::makeCluster(threads, outfile = "")
-   #doParallel::registerDoParallel(cl)
-   #mem.cl = floor(memory/threads)
+   cl = parallel::makeCluster(threads, outfile = "")
+   doParallel::registerDoParallel(cl)
+   mem.cl = floor(memory/threads)
 
-  # foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PHYLOCAP", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(gene.names)){
+  foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(gene.names)){
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
     #Match to the files to obtain

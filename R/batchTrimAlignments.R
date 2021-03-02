@@ -95,9 +95,10 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # #work.dir = "/Volumes/Rodents/Murinae/Trimming"
   # #align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
   # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
+  # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   #
-  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # align.dir =  "/home/c111h652/scratch/Rodents/Trimming/Emily/genes_untrimmed"
+  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
   # feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   # out.name = "Emily"
   #
@@ -176,13 +177,20 @@ batchTrimAlignments = function(alignment.dir = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
- # out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(align.files)){
+  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+
+      align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+
+      align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
+      align = gsub(".*\\ ", "", align)
+      char.count = nchar(align)
+
       align = Biostrings::DNAStringSet(align)
       save.name = gsub(".phy$", "", align.files[i])
       save.name = gsub(".phylip$", "", save.name)
