@@ -185,11 +185,10 @@ batchTrimAlignments = function(alignment.dir = NULL,
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
 
-      align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-
-      align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
-      align = gsub(".*\\ ", "", align)
-      char.count = nchar(align)
+    #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+    #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
+    #  align = gsub(".*\\ ", "", align)
+    #  char.count = nchar(align)
 
       align = Biostrings::DNAStringSet(align)
       save.name = gsub(".phy$", "", align.files[i])
