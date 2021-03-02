@@ -28,10 +28,15 @@ organizeReads = function(read.directory = NULL,
                          overwrite = FALSE) {
 
   #Debegging
-  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads"
   # output.dir = "organized-reads"
   # rename.file = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
+  # overwrite = FALSE
+
+  # setwd("/Volumes/Rodents/Murinae")
+  # read.directory = "/Volumes/Rodents/Murinae/Exome"
+  # dir.create("processed-reads")
+  # output.dir = "processed-reads/organized-reads"
+  # rename.file = "file_rename.csv"
   # overwrite = FALSE
 
   #Quick checks
@@ -53,10 +58,10 @@ organizeReads = function(read.directory = NULL,
   #Read in sample data and finds reads
   reads = list.files(read.directory, recursive = T, full.names = T)
   sample.data = read.csv(rename.file)
-  if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }
+  if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
   sample.count = 1
-  for (i in 1:nrow(sample.data)) {
+  for (i in 362:nrow(sample.data)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
