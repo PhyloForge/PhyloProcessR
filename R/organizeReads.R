@@ -61,7 +61,7 @@ organizeReads = function(read.directory = NULL,
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
   sample.count = 1
-  for (i in 362:nrow(sample.data)) {
+  for (i in 1:nrow(sample.data)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
