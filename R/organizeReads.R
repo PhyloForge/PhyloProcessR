@@ -50,8 +50,6 @@ organizeReads = function(read.directory = NULL,
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.dir))
       dir.create(output.dir)
-    } else {
-      stop("Directory exists and overwrite = FALSE.")
     }
   }#end else
 
