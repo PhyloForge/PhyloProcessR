@@ -46,10 +46,8 @@ makeFileRename = function(read.directory = NULL,
   if (file.exists(output.name) == T) {
     if (overwrite == TRUE){
       system(paste0("rm ", output.name))
-    } else {
-      stop("File exists and overwrite = FALSE.")
-    }
-  }#end else
+    }#end else
+  }
 
   reads = list.files(read.directory, recursive = T, full.names = F, )
   reads = reads[grep("fastq.gz$|fq.gz$|fastq$|fq$", reads)]
