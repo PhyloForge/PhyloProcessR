@@ -58,6 +58,15 @@ organizeReads = function(read.directory = NULL,
   sample.data = read.csv(rename.file)
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
+  #Skips samples already finished
+  if (resume == TRUE){
+    done.names = list.files(output.dir)
+    sample.data = sample.data[!sample.data$Sample %in% done.names,]
+  } else { sample.data = sample.data }
+
+  if (nrow(sample.data) == 0){ return("no samples available to organize.") }
+
+
   sample.count = 1
   for (i in 1:nrow(sample.data)) {
     #################################################
