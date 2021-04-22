@@ -43,13 +43,13 @@ trimSampleSegments = function(alignment = NULL,
   comb.align = append(input.align, input.con)
 
   #Gets slice information ready
-  slice.no = ceiling(max(width(input.align))/slice.size.bp)
+  slice.no = ceiling(max(Biostrings::width(input.align))/slice.size.bp)
   slice.start = 1
   slice.end = slice.size.bp
 
   #checks to see if its out of bounds
-  if (slice.end > max(width(input.align))){
-    slice.end<-max(width(input.align))
+  if (slice.end > max(Biostrings::width(input.align))){
+    slice.end<-max(Biostrings::width(input.align))
   }#end if check
   output.align = DNAStringSet()
   for (x in 1:slice.no){
@@ -81,8 +81,8 @@ trimSampleSegments = function(alignment = NULL,
     slice.start = slice.start+100
     slice.end = slice.end+100
     #checks to see if its out of bounds
-    if (slice.end > max(width(input.align))){
-      slice.end<-max(width(input.align))
+    if (slice.end > max(Biostrings::width(input.align))){
+      slice.end<-max(Biostrings::width(input.align))
       if (slice.end-slice.start <= 25){ break } else {
         save.slice<-subseq(comb.align, start = slice.start, end = slice.end)
         save.slice<-save.slice[order(names(save.slice))]
