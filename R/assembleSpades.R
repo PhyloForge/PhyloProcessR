@@ -109,7 +109,17 @@ assembleSpades = function(input.reads = NULL,
   #Header data for features and whatnot
   for (i in 1:length(samples)){
 
-    sample.reads = reads[grep(samples[i], reads)]
+    sample.reads = reads[grep(pattern = paste0(samples[i], "_"), x = reads)]
+
+    #Checks the Sample column in case already renamed
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = samples[i], x = reads)] }
+
+    #sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.fast.*|_R2.fast.*|_R3.fast.*|_READ1.fast.*|_READ2.fast.*|_READ3.fast.*", "", sample.reads))
+
+    #Returns an error if reads are not found
+    if (length(sample.reads) == 0 ){
+      stop(sample.names[i], " does not have any reads present for files ")
+    } #end if statement
 
     #Run SPADES on sample
     k.val = paste(kmer.values, collapse = ",")
@@ -119,18 +129,23 @@ assembleSpades = function(input.reads = NULL,
     dir.create(save.assem)
 
     #Sorts reads
-    sample.names = unique(gsub("_READ.*", "", sample.reads))
+    sample.lanes = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
 
     #Creates a spades character string to run different reads and library configurations
     final.read.string = c()
-    for (j in 1:length(sample.names)) {
+    for (j in 1:length(sample.lanes)) {
       #Gets the sample reads
-      lib.reads = sample.reads[grep(paste0(sample.names[j], "_"), sample.reads)]
+      lib.reads = sample.reads[grep(paste0(sample.lanes[j]), sample.reads)]
+
+      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|_READ1_.*|_R1.fast.*|-R1.fast.*|_READ1.fast.*|-READ1.fast.*", sample.reads)]
+      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|_READ2_.*|_R2.fast.*|-R2.fast.*|_READ2.fast.*|-READ2.fast.*", sample.reads)]
+      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|_READ3_.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", sample.reads)]
+
       #Checks for different read lengths
-      if (length(lib.reads) == 1){ read.string = paste0("--s1 ", lib.reads[1], " ") }
-      if (length(lib.reads) >= 2){ read.string = paste0("--pe", j,"-1 ", lib.reads[1],
-                                                        " --pe", j, "-2 ", lib.reads[2], " ") }
-      if (length(lib.reads) == 3){ read.string = paste0(read.string, "--pe", j , "-m ", lib.reads[3], " ") }
+      if (length(lib.read1) == 1){ read.string = paste0("--s1 ", lib.read1, " ") }
+      if (length(lib.read2) == 1){ read.string = paste0("--pe", j,"-1 ", lib.read1,
+                                                        " --pe", j, "-2 ", lib.read2, " ") }
+      if (length(lib.read3) == 1){ read.string = paste0(read.string, "--pe", j , "-m ", lib.read3, " ") }
       final.read.string = paste0(final.read.string, read.string)
     }#end j loop
 

@@ -6,8 +6,6 @@
 #'
 #' @param output.dir the new directory to save the adaptor trimmed sequences
 #'
-#' @param mode "Sample" to run on a single sample or "Directory" to run on a directory of samples
-#'
 #' @param fastp.path system path to fastp in case it can't be found
 #'
 #' @param threads number of computation processing threads
@@ -34,7 +32,6 @@
 
 mergePairedEndReads = function(input.reads = NULL,
                                output.directory = "read-processing/pe-merged-reads",
-                               mode = c("sample", "directory"),
                                fastp.path = "fastp",
                                threads = 1,
                                mem = 8,
@@ -96,10 +93,12 @@ mergePairedEndReads = function(input.reads = NULL,
     ### Part A: prepare for loading and checks
     #################################################
     sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
-    sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
 
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads)] }
+
+    sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
       stop(sample.names[i], " does not have any reads present for files ")
@@ -129,7 +128,9 @@ mergePairedEndReads = function(input.reads = NULL,
       ### Part C: Runs fastp
       #################################################
       #sets up output reads
-      outreads = paste0(out.path, "/", lane.save)
+      outreads = paste0(out.path, "/", lane.name)
+      outreads[1] = paste0(out.path, "/", lane.name, "_READ1.fastq.gz")
+      outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
       outread.m = paste0(out.path, "/", lane.name, "_READ3.fastq.gz")
 
       #Runs fastp: only does adapter trimming, no quality stuff

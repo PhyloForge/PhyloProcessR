@@ -8,8 +8,6 @@
 #'
 #' @param decontamination.path directory of genomes contaminants to scan samples
 #'
-#' @param mode "Sample" to run on a single sample or "Directory" to run on a directory of samples
-#'
 #' @param samtools.path system path to samtools in case it can't be found
 #'
 #' @param bwa.path system path to bwa in case it can't be found
@@ -39,7 +37,6 @@
 removeContamination = function(input.reads = "adaptor-removed-reads",
                                output.directory = "decontaminated-reads",
                                decontamination.path = NULL,
-                               mode = c("sample", "directory"),
                                map.match = 1,
                                samtools.path = "samtools",
                                bwa.path = "bwa",
@@ -107,10 +104,12 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
     ### Part A: prepare for loading and checks
     #################################################
     sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
-    sample.reads = unique(gsub("_R1_.*|_R2_.*|_READ1_.*|_READ2_.*|_R1.fast.*|_R2.fast.*|_READ1.fast.*|_READ2.fast.*", "", sample.reads))
 
     #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.names[i], x = reads))] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads)] }
+
+    sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
       stop(sample.names[i], " does not have any reads present for files ")
@@ -127,7 +126,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
       lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
       #Checks the Sample column in case already renamed
-      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = paste0(sample.reads[j], x = reads))] }
+      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = sample.reads[j], x = reads)] }
       #Returns an error if reads are not found
       if (length(lane.reads) == 0 ){
         stop(sample.reads[j], " does not have any reads present for files ")
@@ -140,7 +139,9 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
       ### Part C: Runs fastp
       #################################################
       #sets up output reads
-      outreads = paste0(out.path, "/", lane.save)
+      outreads = paste0(out.path, "/", lane.name)
+      outreads[1] = paste0(out.path, "/", lane.name, "_READ1.fastq.gz")
+      outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
 
       #Create combined and indexed reference
       if (dir.exists("ref-index") == FALSE){
@@ -165,27 +166,55 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
         system(paste0(bwa.path, " index -p ref-index/reference ref-index/reference.fa"))
       }#end dir ecists
 
-      #### REMOVE BOTH READ PAIRS
-
+      #BWA mapping
       system(paste0(bwa.path, " mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
                     lane.reads[1], " ", lane.reads[2], " | ", samtools.path ," sort -@ ", threads,
                     " -o ", out.path, "/decontam-all.bam"))
 
-      #Need to figure out how to export reads back to normal
-      system(paste0(samtools.path, " view -b -f 4 ", out.path, "/decontam-all.bam > ",
-                    out.path, "/decontam-unmapped.bam"))
-      system(paste0(samtools.path, " view -b -F 4 ", out.path, "/decontam-all.bam > ",
-                    out.path, "/decontam-mapped.bam"))
+      system(paste0(samtools.path, " index ", out.path, "/decontam-all.bam"))
 
+      #Extract mapped reads (contam reads), extracts both mapped
+      system(paste0(samtools.path, " view -b -f 1 -F 12 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-1.bam"))
+
+      #Extracts R2 mapped
+      system(paste0(samtools.path, " view -b -f 4 -F 264 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-2.bam"))
+
+      #Extracts R3 mapped
+      system(paste0(samtools.path, " view -b -f 8 -F 260 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-3.bam"))
+
+      system(paste0(samtools.path, " merge -f ",
+                    out.path, "/decontam-mapped-sort.bam ",
+                    out.path, "/decontam-mapped-sort-1.bam ",
+                    out.path, "/decontam-mapped-sort-2.bam ",
+                    out.path, "/decontam-mapped-sort-3.bam"))
+
+      system(paste0(samtools.path, " index ", out.path, "/decontam-mapped-sort.bam"))
+
+      #Extract unmapped reads (good reads): extracts unmapped for R2 and R1
+      system(paste0(samtools.path, " view -b -f 12 -F 256 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, " sort -@ ", threads, " -n -o ", out.path, "/decontam-unmapped-sort.bam"))
+
+      #Saves as fastq
       system(paste0(samtools.path, " fastq -@ ", threads, " ",
-                    out.path, "/decontam-unmapped.bam -1 ", outreads[1], " -2 ", outreads[2]))
+                    out.path, "/decontam-unmapped-sort.bam -1 ", outreads[1], " -2 ", outreads[2]))
+
+      #Checks stats
+      #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-all.bam"))
+      system(paste0(samtools.path, " view -c ", out.path, "/decontam-all.bam"))
+
+      #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-unmapped-sort.bam"))
+      system(paste0(samtools.path, " view -c ", out.path, "/decontam-unmapped-sort.bam"))
+
+      #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-mapped-sort.bam"))
+      system(paste0(samtools.path, " view -c ", out.path, "/decontam-mapped-sort.bam"))
 
       #Gets match statistics
-      system(paste0(samtools.path, " index ", out.path, "/decontam-mapped.bam"))
-
       table.dat = (system(paste0(samtools.path, " idxstats ",
-                                 out.path, "/decontam-mapped.bam | cut -f 1,3"), intern = T))
+                                 out.path, "/decontam-mapped-sort.bam | cut -f 1,3"), intern = T))
       table.dat = data.frame(Organism = gsub("\t.*", "", table.dat),
                              Count = as.numeric(gsub(".*\t", "", table.dat)) )
       table.dat$Organism = gsub("_.*", "", table.dat$Organism)
@@ -210,8 +239,6 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
       summary.data = rbind(summary.data, temp.remove)
       write.csv(contam.data, file = paste0("logs/", sample.names[i], "/contamination-read-counts.csv"), row.names = FALSE)
-
-      print(paste0(lane.name, " Completed decontamination removal!"))
 
     }#end sample j loop
 
