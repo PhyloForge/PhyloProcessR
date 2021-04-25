@@ -80,7 +80,7 @@ alignTargets = function(targets.to.align = NULL,
     if (b.string[length(b.string)] != "/") {
       mafft.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { mafft.path = "" }
+  } else { mafft.path = NULL }
 
   #Initial checks
   if (is.null(targets.to.align) == T){ stop("A fasta file of targets is needed for alignment.") }
