@@ -37,11 +37,20 @@ runMafft = function(sequence.data = NULL,
                     save.name = NULL,
                     threads = 1,
                     cleanup.files = TRUE,
+                    mafft.path = NULL,
                     quiet = TRUE){
 
   #save.name<-locus.save.name
   #algorithm = "localpair"
   # unaligned.contigs<-intron.align
+
+  #Same adds to bbmap path
+  if (is.null(mafft.path) == FALSE){
+    b.string = unlist(strsplit(mafft.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      mafft.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { mafft.path = "" }
 
   save.contigs = as.list(as.character(sequence.data))
   if (is.null(save.name) == T) { save.name = paste(sample(LETTERS, 5, replace = T), collapse = "")}
@@ -59,10 +68,10 @@ runMafft = function(sequence.data = NULL,
                "add_sequences.fa", nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0("mafft --",algorithm, " add_sequences.fa --maxiterate 1000 ", save.name, ".fa > ",
+    system(paste0(mafft.path, "mafft --",algorithm, " add_sequences.fa --maxiterate 1000 ", save.name, ".fa > ",
                   save.name, "_align.fa"), ignore.stderr = T)
 
-    alignment = Rsamtools::scanFa(Rsamtools::FaFile(paste(save.name, "_align.fa")))   # loads up fasta file
+    alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
     unlink(paste0(save.name, ".fa"))
     unlink("add_sequences.fa")
 
@@ -75,10 +84,10 @@ runMafft = function(sequence.data = NULL,
                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0("mafft --",algorithm, " --maxiterate 1000 ", adjust.direction, " --quiet --op 3 --ep 0.123",
+    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 ", adjust.direction, " --quiet --op 3 --ep 0.123",
                   " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"), ignore.stderr = T)
 
-    alignment = Rsamtools::scanFa(Rsamtools::FaFile(paste0(save.name, "_align.fa")))   # loads up fasta file
+    alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
     unlink(paste0(save.name, ".fa"))
   }#end local pair
 

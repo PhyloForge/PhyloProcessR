@@ -131,7 +131,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
-  if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
+ # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
 
   #So I don't accidentally delete everything while testing resume
   if (resume == TRUE & overwrite == TRUE){
@@ -144,7 +144,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
       system(paste0("rm -r ", output.dir))
       dir.create(output.dir)
      }
-  }#end dir exists
+  } else { dir.create(output.dir) }
 
   #Gathers alignments
   align.files = list.files(alignment.dir)
