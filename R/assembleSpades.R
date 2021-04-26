@@ -137,9 +137,10 @@ assembleSpades = function(input.reads = NULL,
       #Gets the sample reads
       lib.reads = sample.reads[grep(paste0(sample.lanes[j]), sample.reads)]
 
-      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|_READ1_.*|_R1.fast.*|-R1.fast.*|_READ1.fast.*|-READ1.fast.*", sample.reads)]
-      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|_READ2_.*|_R2.fast.*|-R2.fast.*|_READ2.fast.*|-READ2.fast.*", sample.reads)]
-      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|_READ3_.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", sample.reads)]
+      #Concatenate together
+      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", sample.reads)]
+      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", sample.reads)]
+      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", sample.reads)]
 
       #Checks for different read lengths
       if (length(lib.read1) == 1){ read.string = paste0("--s1 ", lib.read1, " ") }
