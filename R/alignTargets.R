@@ -2,25 +2,19 @@
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
-#' @param assembly.directory path to a folder of sequence alignments in phylip format.
+#' @param targets.to.align path to a folder of sequence alignments in phylip format.
 #'
-#' @param target.file available input alignment formats: fasta or phylip
+#' @param output.directory available input alignment formats: fasta or phylip
 #'
-#' @param alignment.contig.name contigs are added into existing alignment if algorithm is "add"
+#' @param min.taxa contigs are added into existing alignment if algorithm is "add"
 #'
-#' @param output.directory available output formats: phylip
+#' @param subset.start available output formats: phylip
 #'
-#' @param min.percent.id algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param min.match.coverage if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param subset.end algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
 #' @param threads path to a folder of sequence alignments in phylip format.
 #'
 #' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param trim.target TRUE to supress mafft screen output
 #'
 #' @param overwrite path to a folder of sequence alignments in phylip format.
 #'
@@ -28,9 +22,7 @@
 #'
 #' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
-#' @param blast.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param bbmap.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param mafft.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
 #' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
 #'
@@ -107,6 +99,7 @@ alignTargets = function(targets.to.align = NULL,
     done = list.files(output.directory)
     locus.names = locus.names[!locus.names %in% gsub(".phy$", "", done)]
   }
+  if (length(locus.names) == 0){ quit() }
 
   #Figures out start and end of subset
   sub.start = floor(subset.start * length(locus.names))
