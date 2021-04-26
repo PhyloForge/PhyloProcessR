@@ -120,6 +120,9 @@ estimateGeneTrees = function(alignment.directory = NULL,
   #Loops through each locus and writes each species to end of file
   for (i in sub.start:sub.end) {
 
+    #Checks if the tree file exists
+    if (file.exists(paste0(output.directory, "/", locus.names[i], ".treefile")) == T){ next }
+
     #create output place
     system(paste0("cp ", alignment.directory, "/", locus.names[i], " ",
                   output.directory, "/", locus.names[i]))
