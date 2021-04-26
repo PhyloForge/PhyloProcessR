@@ -125,14 +125,14 @@ estimateGeneTrees = function(alignment.directory = NULL,
                   output.directory, "/", locus.names[i]))
 
     #Run IQ tree on tree
-    system(paste0(iqtree.path, "/iqtree2 -s ", output.directory,"/", locus.names[i],
+    system(paste0(iqtree.path, "iqtree2 -s ", output.directory,"/", locus.names[i],
                   " -bb 1000 -nt ", threads, " -m MFP+MERGE -rcluster 20 -msub nuclear"), ignore.stdout = quiet)
 
     #Delete extra files
     if (file.exists(paste0(output.directory, "/", locus.names[i], ".treefile")) == F){
       print(paste0(locus.names[i], " tree failed, will retry with AUTO threads."))
       #Run IQ tree on tree
-      system(paste0(iqtree.path, "/iqtree2 -s ", output.directory,"/", locus.names[i],
+      system(paste0(iqtree.path, "iqtree2 -s ", output.directory,"/", locus.names[i],
                     " -bb 1000 -nt AUTO -m MFP+MERGE -rcluster 20 -msub nuclear"), ignore.stdout = quiet)
     }#end if
 
