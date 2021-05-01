@@ -57,6 +57,14 @@ The program dependencies can be installed using the provided bash script ("bash_
 bash bash_install_phylocap.sh
 ```
 
+OR
+
+```bash
+bash qsub_install_phylocap.sh
+```
+
+And finally, you may delete the cloned directory after installing the prerequisites through the bash script that manually installs the anaconda environment.   
+
 
 # Installation of R package
 
