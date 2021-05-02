@@ -49,26 +49,24 @@ Second, change your working directory in the terminal to the downloaded reposito
 cd /Download/Location/PhyloCap
 ```
 
-The R packages and outside programs can be installed manually or more easily through a bash script provided. To use the bash script, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once a version of Anaconda is installed or loaded, a new clean environment should be created for PhyloCap and its dependencies. 
-
-The program dependencies can be installed using the provided bash script ("bash_install_phylocap.sh") or PBS cluster script ("qsub_install_phylocap.sh"). More detailed manual installation directions are provided in the <b>Installation</b> tutorial below if those scripts do not work. Note that for the PBS script, usernames and file paths need to be modified to match yours. 
+The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file if manual installation is desired). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once installed, you can create a new environment for PhyloCap by: 
 
 ```bash
-bash bash_install_phylocap.sh
+conda env create -f phylocap.yml -n phylocap
 ```
 
-OR
+OR if a specific location for the environment directory is needed:
 
 ```bash
-bash qsub_install_phylocap.sh
+conda env create -f phylocap.yml -p /PLACE/YOUR/DIRECTORY/HERE/phylocap
 ```
 
-And finally, you may delete the cloned directory after installing the prerequisites through the bash script that manually installs the anaconda environment.   
+And finally, you may delete the cloned GitHub directory after installing the prerequisites through the conda env file that manually installs the anaconda environment. There are some useful examples (also in the tutorial here), which could be saved.   
 
 
 # Installation of R package
 
-The main functions of PhyloCap are contained in an R package that has been tested on R version 3.5 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools. Here are step-by-step instructions for installation:
+The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools. Here are step-by-step instructions for installation:
 
 1) Install devtools by typing in your R console: 
 
@@ -90,7 +88,7 @@ devtools::install_github("chutter/PhyloCap", update = "never", dependencies = FA
 library(PhyloCap)
 ```
 
-And installation should be done! All the functions for PhyloCap should be ready to go! 
+And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
 
 < coming soon a function to test if they can found >
 
