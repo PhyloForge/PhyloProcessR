@@ -6,12 +6,8 @@ channels:
   - defaults
 dependencies:
   - bbmap=38.90
-  - bioconductor-biocgenerics=0.36.0
-  - bioconductor-biocparallel=1.24.1
   - bioconductor-biostrings=2.58.0
-  - bioconductor-genomeinfodb=1.26.4
   - bioconductor-genomicranges=1.42.0
-  - bioconductor-iranges=2.24.1
   - bioconductor-rsamtools=2.6.0
   - blast=2.11.0
   - bwa=0.7.17
@@ -24,7 +20,6 @@ dependencies:
   - mafft=7.475
   - pip=20.2.4
   - python=3.8.5
-  - r-ade4=1.7_16
   - r-ape=5.4_1
   - r-base=4.0.2
   - r-data.table=1.13.2

@@ -1,4 +1,25 @@
 
+
+#Manual installation
+install.packages(c("devtools", "ape", "data.table", "doparallel", "foreach", "iterators", "rdrop2", "seqinr", "stringr"),
+                 dependencies = T, repos = "http://cran.us.r-project.org", upgrade = "never", force = TRUE)
+
+
+#devtools::install_version("ape", version = "5.4.1", repos = "http://cran.us.r-project.org",
+#                          upgrade = "never", force = TRUE)
+#devtools::install_version("data.table", version = "1.13", repos = "http://cran.us.r-project.org")
+#devtools::install_version("doparallel", version = "1.0.16", repos = "http://cran.us.r-project.org")
+#devtools::install_version("foreach", version = "1.5.1", repos = "http://cran.us.r-project.org")
+#devtools::install_version("iterators", version = "1.0.13", repos = "http://cran.us.r-project.org")
+#devtools::install_version("rdrop2", version = "0.8.2.1", repos = "http://cran.us.r-project.org")
+#devtools::install_version("seqinr", version = "4.2", repos = "http://cran.us.r-project.org")
+#devtools::install_version("stringr", version = "1.4.0", repos = "http://cran.us.r-project.org")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install(version = "3.12")
+BiocManager::install(c("biostrings", "genomicranges", "rsamtools"))
+
 #Installs updated package version
 devtools::install_github("chutter/PhyloCap", upgrade = "never")
 library(PhyloCap)
@@ -20,11 +41,17 @@ target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configura
 dataset.name = "Test"
 
 #Pre-processing settings
-
+decontamination = TRUE
+decontamination.match = 0.99 #
+spades.kmer.values = c(21,33,55,77,99,127)
+spades.mismatch.corrector = TRUE
 
 
 #Target matching and alignment settings
-min.taxa = 4 #minimum taxa for an alignment
+min.percent.id = 0.5
+min.match.length = 40
+min.match.coverage = 0.5
+min.taxa.alignment = 4 #minimum taxa for an alignment
 
 
 #Program paths
@@ -74,14 +101,15 @@ removeAdaptors(input.reads = "processed-reads/organized-reads",
 removeContamination(input.reads = "processed-reads/adaptor-removed-reads",
                     output.directory = "processed-reads/decontaminated-reads",
                     decontamination.path = decontamination.path,
-                    map.match = 0.99,
+                    map.match = decontamination.match,
                     samtools.path = samtools.path,
                     bwa.path = bwa.path,
                     threads = threads,
                     mem = memory,
                     resume = FALSE,
                     overwrite = TRUE,
-                    quiet = TRUE)
+                    overwrite.reference = FALSE,
+                    quiet = FALSE)
 
 #merge paired end reads
 mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
@@ -97,8 +125,8 @@ mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
 assembleSpades(input.reads = "processed-reads/pe-merged-reads",
                output.directory = "processed-reads/spades-assembly",
                assembly.directory = "draft-assemblies",
-               mismatch.corrector = FALSE,
-               kmer.values = c(21,33,55,77,99,127),
+               mismatch.corrector = spades.mismatch.corrector,
+               kmer.values = spades.kmer.values,
                threads = threads,
                memory = memory,
                overwrite = FALSE,
@@ -127,7 +155,7 @@ matchTargets(assembly.directory = "draft-assemblies",
 #align targets
 alignTargets(targets.to.align = paste0(dataset.name, "_match-targets_to-align.fa"),
              output.directory = "alignments",
-             min.taxa = min.taxa,
+             min.taxa = min.taxa.alignment,
              subset.start = 0,
              subset.end = 1,
              threads = threads,

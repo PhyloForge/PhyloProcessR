@@ -1,6 +1,6 @@
 Package: PhyloCap
 Title: Package For processing high-throughput sequencing data from targeted sequence capture 
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: 
     person(given = "Carl",
            family = "Hutter",
@@ -15,7 +15,7 @@ Description: This R package can process high-throughput sequence data from raw r
   for each locus. The package can trim and further process alignments for different types of programs
   and analyses (alignment conversion, concatenation, alignment statistics, trimming).
 Depends: 
-        R (>= 3.5.1),
+        R (>= 4.0.0),
         data.table (>= 1.10)
 License: `use_gpl3_license()`
 Encoding: UTF-8
