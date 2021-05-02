@@ -7,7 +7,7 @@ R package For processing high-throughput sequencing data from targeted sequence 
 
 PhyloCap uses several R packages and other outside programs for certain functions. 
 
-1. R packages
+1. R version 4.0.2 (and above likely work)
 
 From CRAN
 - devtools
