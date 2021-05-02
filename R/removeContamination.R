@@ -179,54 +179,65 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
         #To do: check if already exists
         #Indexes the reference
-        system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"))
+        system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"),
+               ignore.stderr = quiet, ignore.stdout = quiet)
       }#end dir ecists
 
       #BWA mapping
       system(paste0(bwa.path, "bwa mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
                     lane.reads[1], " ", lane.reads[2], " | ", samtools.path ,"samtools sort -@ ", threads,
-                    " -o ", out.path, "/decontam-all.bam"))
+                    " -o ", out.path, "/decontam-all.bam"),  ignore.stderr = quiet, ignore.stdout = quiet)
 
-      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-all.bam"))
+      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-all.bam"),  ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Extract mapped reads (contam reads), extracts both mapped
       system(paste0(samtools.path, "samtools view -b -f 1 -F 12 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-1.bam"))
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-1.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Extracts R2 mapped
       system(paste0(samtools.path, "samtools view -b -f 4 -F 264 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-2.bam"))
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-2.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Extracts R3 mapped
       system(paste0(samtools.path, "samtools view -b -f 8 -F 260 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-3.bam"))
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-3.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       system(paste0(samtools.path, "samtools merge -f ",
                     out.path, "/decontam-mapped-sort.bam ",
                     out.path, "/decontam-mapped-sort-1.bam ",
                     out.path, "/decontam-mapped-sort-2.bam ",
-                    out.path, "/decontam-mapped-sort-3.bam"))
+                    out.path, "/decontam-mapped-sort-3.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
-      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-mapped-sort.bam"))
+      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-mapped-sort.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Extract unmapped reads (good reads): extracts unmapped for R2 and R1
       system(paste0(samtools.path, "samtools view -b -f 12 -F 256 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, "samtools sort -@ ", threads, " -n -o ", out.path, "/decontam-unmapped-sort.bam"))
+                    samtools.path, "samtools sort -@ ", threads, " -n -o ", out.path, "/decontam-unmapped-sort.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Saves as fastq
       system(paste0(samtools.path, "samtools fastq -@ ", threads, " ",
-                    out.path, "/decontam-unmapped-sort.bam -1 ", outreads[1], " -2 ", outreads[2]))
+                    out.path, "/decontam-unmapped-sort.bam -1 ", outreads[1], " -2 ", outreads[2]),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Checks stats
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-all.bam"))
-      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-all.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-all.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-unmapped-sort.bam"))
-      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-unmapped-sort.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-unmapped-sort.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-mapped-sort.bam"))
-      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-mapped-sort.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-mapped-sort.bam"),
+             ignore.stderr = quiet, ignore.stdout = quiet)
 
       #Gets match statistics
       table.dat = (system(paste0(samtools.path, "samtools idxstats ",
