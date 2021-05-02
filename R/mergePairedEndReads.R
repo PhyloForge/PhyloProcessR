@@ -32,7 +32,7 @@
 
 mergePairedEndReads = function(input.reads = NULL,
                                output.directory = "read-processing/pe-merged-reads",
-                               fastp.path = "fastp",
+                               fastp.path = NULL,
                                threads = 1,
                                mem = 8,
                                resume = TRUE,
@@ -50,6 +50,15 @@ mergePairedEndReads = function(input.reads = NULL,
   # resume = FALSE
   # overwrite = FALSE
   # quiet = TRUE
+
+  #Same adds to bbmap path
+  if (is.null(fastp.path) == FALSE){
+    b.string = unlist(strsplit(fastp.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      fastp.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { fastp.path = "" }
+
 
   #Quick checks
   options(stringsAsFactors = FALSE)
@@ -134,7 +143,7 @@ mergePairedEndReads = function(input.reads = NULL,
       outread.m = paste0(out.path, "/", lane.name, "_READ3.fastq.gz")
 
       #Runs fastp: only does adapter trimming, no quality stuff
-      system(paste0(fastp.path, " --merge --disable_adapter_trimming --disable_quality_filtering",
+      system(paste0(fastp.path, "fastp --merge --disable_adapter_trimming --disable_quality_filtering",
                     " --in1 ", lane.reads[1], " --in2 ", lane.reads[2],
                     " --out1 ", outreads[1], " --out2 ", outreads[2], " --merged_out ", outread.m,
                     " --html pe-merged_fastp.html --json pe-merged_fastp.json",

@@ -32,7 +32,7 @@
 
 removeAdaptors = function(input.reads = NULL,
                           output.directory = NULL,
-                          fastp.path = "fastp",
+                          fastp.path = NULL,
                           threads = 1,
                           mem = 8,
                           resume = TRUE,
@@ -51,6 +51,15 @@ removeAdaptors = function(input.reads = NULL,
    # resume = FALSE
    # overwrite = FALSE
    # quiet = TRUE
+
+  #Same adds to bbmap path
+  if (is.null(fastp.path) == FALSE){
+    b.string = unlist(strsplit(fastp.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      fastp.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { fastp.path = "" }
+
 
   #Quick checks
   options(stringsAsFactors = FALSE)
@@ -139,7 +148,7 @@ removeAdaptors = function(input.reads = NULL,
       outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
 
       #Runs fastp: only does adapter trimming, no quality stuff
-      system(paste0(fastp.path, " --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
+      system(paste0(fastp.path, "fastp --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
                     " --out1 ", outreads[1], " --out2 ", outreads[2],
                     " --length_required 30 --low_complexity_filter --complexity_threshold 30",
                     " --html adapter-trim_fastp.html --json adapter-trim_fastp.json",

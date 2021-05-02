@@ -32,7 +32,7 @@
 
 runCap3 = function(contigs = input.contigs,
                    output.name = NULL,
-                   cap3.path = "cap3",
+                   cap3.path = NULL,
                    read.R = FALSE,
                    a = 20,
                    b = 20,
@@ -88,6 +88,15 @@ runCap3 = function(contigs = input.contigs,
 
   #Writes contigs for cap3
 
+  #Same adds to bbmap path
+  if (is.null(cap3.path) == FALSE){
+    b.string = unlist(strsplit(cap3.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      cap3.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { cap3.path = "" }
+
+
   if (class(contigs) != "character") {
     write.loci = as.list(as.character(contigs))
     writeFasta(sequences = write.loci, names = names(write.loci),
@@ -96,7 +105,7 @@ runCap3 = function(contigs = input.contigs,
   } else { contig.file = contigs }
 
   #runs cap3 to merge similar contigs (pull only clustered contigs out?)
-  system(paste0(cap3.path, " ", contig.file, " -z ", z, " -o ", o, " -e ", e, " -s ", s, " > ",
+  system(paste0(cap3.path, "cap3 ", contig.file, " -z ", z, " -o ", o, " -e ", e, " -s ", s, " > ",
                 "input_contigs.fa.cap.txt"))
 
   #Get cap3 files and deletes

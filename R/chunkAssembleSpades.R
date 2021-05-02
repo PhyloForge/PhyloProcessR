@@ -75,6 +75,30 @@ chunkAssembleSpades = function(input.reads = NULL,
   # resume = TRUE
   # save.all.files = FALSE
 
+  #Same adds to bbmap path
+  if (is.null(spades.path) == FALSE){
+    b.string = unlist(strsplit(spades.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      spades.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { spades.path = NULL }
+
+  #Same adds to bbmap path
+  if (is.null(fastqsplitter.path) == FALSE){
+    b.string = unlist(strsplit(fastqsplitter.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      fastqsplitter.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { fastqsplitter.path = NULL }
+
+  #Same adds to bbmap path
+  if (is.null(cap3.path) == FALSE){
+    b.string = unlist(strsplit(cap3.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      cap3.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { cap3.path = NULL }
+
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
@@ -201,7 +225,7 @@ chunkAssembleSpades = function(input.reads = NULL,
       } else { untrust.string = "" }
 
       #Run spades
-      system(paste0(spades.path, " ", read.string,
+      system(paste0(spades.path, "spades.py ", read.string,
                     "-o ", save.assem, " -k ", k.val,  mismatch.string, untrust.string,
                     " -t ", threads, " -m ", memory),
              ignore.stdout = quiet)

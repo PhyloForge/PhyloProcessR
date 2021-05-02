@@ -23,13 +23,21 @@
 #' @export
 
 trimTrimal = function(alignment = NULL,
-                      trimal.path = "trimal",
+                      trimal.path = NULL,
                       method = "auto",
                       quiet = TRUE) {
   #Debug
   # alignment = non.align
   # quiet = FALSE
   # trimal.path = "trimal"
+
+  #Same adds to bbmap path
+  if (is.null(trimal.path) == FALSE){
+    b.string = unlist(strsplit(trimal.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      trimal.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { trimal.path = "" }
 
   if (length(alignment) <= 3){ return(alignment) }
 
@@ -46,7 +54,7 @@ trimTrimal = function(alignment = NULL,
              as.string = T)
 
   #Runs trimal command with input file
-  system(paste0(trimal.path, " -in ", input.file, " -out tm-", input.file, " -automated1"),
+  system(paste0(trimal.path, "trimal -in ", input.file, " -out tm-", input.file, " -automated1"),
          ignore.stdout = quiet, ignore.stderr = quiet)
 
   if (file.exists(paste0("tm-", input.file)) == F) {

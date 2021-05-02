@@ -46,6 +46,7 @@ alignMatchingTargets = function(matched.targets.file = NULL,
                                 adjust.direction = TRUE,
                                 remove.reverse.tag = TRUE,
                                 threads = 1,
+                                mafft.path = NULL,
                                 overwrite = FALSE,
                                 resume = TRUE,
                                 quiet = TRUE) {
@@ -62,6 +63,13 @@ alignMatchingTargets = function(matched.targets.file = NULL,
   # quiet = TRUE
   # adjust.direction = TRUE
   # algorithm = "localpair"
+
+  if (is.null(mafft.path) == FALSE){
+    b.string = unlist(strsplit(mafft.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      mafft.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { mafft.path = NULL }
 
   #Checks and creates output directory
   if (dir.exists(output.dir) == TRUE) {
@@ -119,7 +127,9 @@ alignMatchingTargets = function(matched.targets.file = NULL,
                          threads = threads,
                          algorithm = algorithm,
                          adjust.direction = adjust.direction,
-                         cleanup.files = FALSE)
+                         cleanup.files = FALSE,
+                         quiet = TRUE,
+                         mafft.path = mafft.path)
 
     #Checks for failed mafft run
     if (length(alignment) == 0){

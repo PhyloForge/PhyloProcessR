@@ -63,12 +63,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                output.dir = NULL,
                                output.format = "phylip",
                                TAPER = FALSE,
-                               TAPER.path = "correction.jl",
-                               julia.path = "julia",
+                               TAPER.path = NULL,
+                               julia.path = NULL,
                                HmmCleaner = FALSE,
-                               HmmCleaner.path = "HmmCleaner.pl",
+                               HmmCleaner.path = NULL,
                                TrimAl = FALSE,
-                               TrimAl.path = "trimal",
+                               TrimAl.path = NULL,
                                trim.external = TRUE,
                                min.external.percent = 50,
                                trim.coverage = TRUE,
@@ -128,6 +128,35 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # threads = 1
   # mem = 10
   # resume = TRUE
+  #Same adds to bbmap path
+
+  if (is.null(TAPER.path) == FALSE){
+    b.string = unlist(strsplit(TAPER.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      TAPER.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { TAPER.path = NULL }
+
+  if (is.null(julia.path) == FALSE){
+    b.string = unlist(strsplit(julia.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      julia.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { julia.path = NULL }
+
+  if (is.null(HmmCleaner.path) == FALSE){
+    b.string = unlist(strsplit(HmmCleaner.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      HmmCleaner.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { HmmCleaner.path = NULL }
+
+  if (is.null(TrimAl.path) == FALSE){
+    b.string = unlist(strsplit(TrimAl.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      TrimAl.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { TrimAl.path = NULL }
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
@@ -268,6 +297,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     if (TrimAl == TRUE){
 
       trimal.align = trimTrimal(alignment = non.align,
+                                trimal.path = TrimAl.path,
                                 quiet = TRUE)
       non.align = trimal.align
       #Saves stat data

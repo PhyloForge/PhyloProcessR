@@ -42,6 +42,7 @@
 #'
 #' @export
 
+#### NOT DONE
 concatenateReads = function(input.reads = NULL,
                             output.directory = "processed-reads/spades-assembly",
                             assembly.directory = "draft-assemblies",

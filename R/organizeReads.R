@@ -10,6 +10,8 @@
 #'
 #' @param overwrite TRUE to overwrite a folder of samples with output.dir
 #'
+#' @param resume TRUE to overwrite a folder of samples with output.dir
+#'
 #' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
 #'
 #' @examples
@@ -25,7 +27,8 @@
 organizeReads = function(read.directory = NULL,
                          output.dir = "organized-reads",
                          rename.file = NULL,
-                         overwrite = FALSE) {
+                         overwrite = FALSE,
+                         resume = TRUE) {
 
   #Debegging
   # output.dir = "organized-reads"
@@ -55,6 +58,8 @@ organizeReads = function(read.directory = NULL,
 
   #Read in sample data and finds reads
   reads = list.files(read.directory, recursive = T, full.names = T)
+  reads = reads[grep("fastq.gz$|fastq$|fq.gz$|fq$", reads)]
+
   sample.data = read.csv(rename.file)
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
@@ -66,7 +71,6 @@ organizeReads = function(read.directory = NULL,
 
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
-
   sample.count = 1
   for (i in 1:nrow(sample.data)) {
     #################################################
@@ -77,6 +81,7 @@ organizeReads = function(read.directory = NULL,
     #Checks the Sample column in case already renamed
     if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = paste0(sample.data$Sample[i], "_"), x = reads)] }
     if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.data$File[i], x = reads)] }
+    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.data$Sample[i], x = reads)] }
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){

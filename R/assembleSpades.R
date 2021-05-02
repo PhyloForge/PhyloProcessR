@@ -37,7 +37,7 @@
 assembleSpades = function(input.reads = NULL,
                           output.directory = "processed-reads/spades-assembly",
                           assembly.directory = "draft-assemblies",
-                          spades.path = "spades.py",
+                          spades.path = NULL,
                           mismatch.corrector = TRUE,
                           kmer.values = c(21,33,55,77,99,127),
                           threads = 1,
@@ -60,6 +60,14 @@ assembleSpades = function(input.reads = NULL,
   # overwrite = FALSE
   # quiet = TRUE
   # resume = TRUE
+
+  #Same adds to bbmap path
+  if (is.null(spades.path) == FALSE){
+    b.string = unlist(strsplit(spades.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      spades.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { spades.path = "" }
 
   #Quick checks
   options(stringsAsFactors = FALSE)
@@ -158,7 +166,7 @@ assembleSpades = function(input.reads = NULL,
 #     if (length(mg.read3) != 0){ mg.read3.string = paste0("--pe", rep(1:length(mg.read3)), "-m ", mg.read3, collapse = " ") }
 
     #Runs spades command
-    system(paste0(spades.path, " ", final.read.string,
+    system(paste0(spades.path, "spades.py ", final.read.string,
                   "-o ", save.assem, " -k ", k.val, " ", mismatch.string,
                   "-t ", threads, " -m ", memory),
            ignore.stdout = quiet)

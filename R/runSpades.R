@@ -37,8 +37,9 @@
 #' @export
 
 runSpades = function(read.paths = NULL,
-                     full.path.spades = "spades.py",
+                     full.path.spades = NULL,
                      mismatch.corrector = FALSE,
+                     kmer.values = c(9,13,21,33,55,77,99,127),
                      read.contigs = T,
                      save.file = T,
                      save.name = NULL,
@@ -56,6 +57,14 @@ runSpades = function(read.paths = NULL,
   # mismatch.corrector = F
   # overwrite = T
 
+  #Same adds to bbmap path
+  if (is.null(full.path.spades) == FALSE){
+    b.string = unlist(strsplit(full.path.spades, ""))
+    if (b.string[length(b.string)] != "/") {
+      full.path.spades = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { full.path.spades = "" }
+
   if (file.exists(read.paths[1]) == FALSE){ stop("Read files not found.") }
   if (overwrite == T){
     if (dir.exists("spades") == TRUE){ system(paste0("rm -r spades")) }
@@ -65,7 +74,7 @@ runSpades = function(read.paths = NULL,
   if (mismatch.corrector == FALSE){ mismatch.string = "" }
 
   #Run SPADES on sample
-  k = c(9,13,21,33,55,77,99,127)
+  k = kmer.values
   k.val = paste(k, collapse = ",")
 
   #Checks to see if one kmer failed or not
@@ -75,19 +84,19 @@ runSpades = function(read.paths = NULL,
 
     #Single end reads
     if (length(read.paths) == 1){
-      system(paste0(full.path.spades, " --s1 ", read.paths[1],
+      system(paste0(full.path.spades, "spades.py --s1 ", read.paths[1],
                     " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
              ignore.stdout = quiet)
     }#end 2 reads
 
     if (length(read.paths)  == 2){
-      system(paste0(full.path.spades, " --pe1-1 ", read.paths[1], " --pe1-2 ", read.paths[2],
+      system(paste0(full.path.spades, "spades.py --pe1-1 ", read.paths[1], " --pe1-2 ", read.paths[2],
                     " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
              ignore.stdout = quiet)
     }#end 2 reads
 
     if (length(read.paths)  == 3){
-      system(paste0(full.path.spades, " --pe1-1 ", read.paths[1],
+      system(paste0(full.path.spades, "spades.py --pe1-1 ", read.paths[1],
                     " --pe1-2 ", read.paths[2], " --merged ", read.paths[3],
                     " -o spades -k ",k.val, " ", mismatch.string, "-t ", threads, " -m ", memory),
              ignore.stdout = quiet)
@@ -108,9 +117,9 @@ runSpades = function(read.paths = NULL,
 
   if (read.contigs == T){
     if (file.exists("spades/contigs.fasta") == TRUE){
-      contigs = Rsamtools::scanFa(Rsamtools::FaFile("spades/contigs.fasta"))
+      contigs = Biostrings::readDNAStringSet("spades/contigs.fasta")
     } else {
-      contigs = Rsamtools::scanFa(Rsamtools::FaFile("spades/scaffolds.fasta"))
+      contigs = Biostrings::readDNAStringSet("spades/scaffolds.fasta")
     }#end else
   } #end if
 

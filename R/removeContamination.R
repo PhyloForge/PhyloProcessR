@@ -38,8 +38,8 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                                output.directory = "decontaminated-reads",
                                decontamination.path = NULL,
                                map.match = 1,
-                               samtools.path = "samtools",
-                               bwa.path = "bwa",
+                               samtools.path = NULL,
+                               bwa.path = NULL,
                                threads = 1,
                                mem = 1,
                                resume = TRUE,
@@ -60,6 +60,22 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   # overwrite = FALSE
   # quiet = TRUE
   # map.match = 0.99
+
+  #Same adds to bbmap path
+  if (is.null(samtools.path) == FALSE){
+    b.string = unlist(strsplit(samtools.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      samtools.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { samtools.path = "" }
+
+  #Same adds to bbmap path
+  if (is.null(bwa.path) == FALSE){
+    b.string = unlist(strsplit(bwa.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      bwa.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { bwa.path = "" }
 
   #Quick checks
   options(stringsAsFactors = FALSE)
@@ -163,57 +179,57 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
 
         #To do: check if already exists
         #Indexes the reference
-        system(paste0(bwa.path, " index -p ref-index/reference ref-index/reference.fa"))
+        system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"))
       }#end dir ecists
 
       #BWA mapping
-      system(paste0(bwa.path, " mem -M -E -0 -k 100 -w 4 -L 100",
+      system(paste0(bwa.path, "bwa mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",
-                    lane.reads[1], " ", lane.reads[2], " | ", samtools.path ," sort -@ ", threads,
+                    lane.reads[1], " ", lane.reads[2], " | ", samtools.path ,"samtools sort -@ ", threads,
                     " -o ", out.path, "/decontam-all.bam"))
 
-      system(paste0(samtools.path, " index ", out.path, "/decontam-all.bam"))
+      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-all.bam"))
 
       #Extract mapped reads (contam reads), extracts both mapped
-      system(paste0(samtools.path, " view -b -f 1 -F 12 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-1.bam"))
+      system(paste0(samtools.path, "samtools view -b -f 1 -F 12 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-1.bam"))
 
       #Extracts R2 mapped
-      system(paste0(samtools.path, " view -b -f 4 -F 264 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-2.bam"))
+      system(paste0(samtools.path, "samtools view -b -f 4 -F 264 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-2.bam"))
 
       #Extracts R3 mapped
-      system(paste0(samtools.path, " view -b -f 8 -F 260 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, " sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-3.bam"))
+      system(paste0(samtools.path, "samtools view -b -f 8 -F 260 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, "samtools sort -@ ", threads, " -o ", out.path, "/decontam-mapped-sort-3.bam"))
 
-      system(paste0(samtools.path, " merge -f ",
+      system(paste0(samtools.path, "samtools merge -f ",
                     out.path, "/decontam-mapped-sort.bam ",
                     out.path, "/decontam-mapped-sort-1.bam ",
                     out.path, "/decontam-mapped-sort-2.bam ",
                     out.path, "/decontam-mapped-sort-3.bam"))
 
-      system(paste0(samtools.path, " index ", out.path, "/decontam-mapped-sort.bam"))
+      system(paste0(samtools.path, "samtools index ", out.path, "/decontam-mapped-sort.bam"))
 
       #Extract unmapped reads (good reads): extracts unmapped for R2 and R1
-      system(paste0(samtools.path, " view -b -f 12 -F 256 ", out.path, "/decontam-all.bam | ",
-                    samtools.path, " sort -@ ", threads, " -n -o ", out.path, "/decontam-unmapped-sort.bam"))
+      system(paste0(samtools.path, "samtools view -b -f 12 -F 256 ", out.path, "/decontam-all.bam | ",
+                    samtools.path, "samtools sort -@ ", threads, " -n -o ", out.path, "/decontam-unmapped-sort.bam"))
 
       #Saves as fastq
-      system(paste0(samtools.path, " fastq -@ ", threads, " ",
+      system(paste0(samtools.path, "samtools fastq -@ ", threads, " ",
                     out.path, "/decontam-unmapped-sort.bam -1 ", outreads[1], " -2 ", outreads[2]))
 
       #Checks stats
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-all.bam"))
-      system(paste0(samtools.path, " view -c ", out.path, "/decontam-all.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-all.bam"))
 
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-unmapped-sort.bam"))
-      system(paste0(samtools.path, " view -c ", out.path, "/decontam-unmapped-sort.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-unmapped-sort.bam"))
 
       #system(paste0(samtools.path, " flagstat ", out.path, "/decontam-mapped-sort.bam"))
-      system(paste0(samtools.path, " view -c ", out.path, "/decontam-mapped-sort.bam"))
+      system(paste0(samtools.path, "samtools view -c ", out.path, "/decontam-mapped-sort.bam"))
 
       #Gets match statistics
-      table.dat = (system(paste0(samtools.path, " idxstats ",
+      table.dat = (system(paste0(samtools.path, "samtools idxstats ",
                                  out.path, "/decontam-mapped-sort.bam | cut -f 1,3"), intern = T))
       table.dat = data.frame(Organism = gsub("\t.*", "", table.dat),
                              Count = as.numeric(gsub(".*\t", "", table.dat)) )
