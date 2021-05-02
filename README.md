@@ -69,6 +69,8 @@ To use the environment, it must first be activated in your current terminal sess
 conda activate PhyloCap
 ```
 
+OR if a specific location for the environment directory is needed:
+
 ```bash
 conda activate /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 ```
