@@ -70,7 +70,6 @@ assembleSpades = function(input.reads = NULL,
   } else { spades.path = "" }
 
   #Quick checks
-  options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
   if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(output.directory) == TRUE){ stop("Please provide an output directory.") }
@@ -126,7 +125,7 @@ assembleSpades = function(input.reads = NULL,
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.names[i], " does not have any reads present for files ")
+      stop(sample.names[i], " does not have any reads present. Sample folder may be empty. ")
     } #end if statement
 
     #Run SPADES on sample
@@ -146,9 +145,9 @@ assembleSpades = function(input.reads = NULL,
       lib.reads = sample.reads[grep(paste0(sample.lanes[j]), sample.reads)]
 
       #Concatenate together
-      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", sample.reads)]
-      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", sample.reads)]
-      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", sample.reads)]
+      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", lib.reads)]
+      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", lib.reads)]
+      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", lib.reads)]
 
       #Checks for different read lengths
       if (length(lib.read1) == 1){ read.string = paste0("--s1 ", lib.read1, " ") }

@@ -72,7 +72,6 @@ removeContamination(input.reads = "processed-reads/adaptor-removed-reads",
                     overwrite = TRUE,
                     quiet = TRUE)
 
-
 #merge paired end reads
 mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
                     output.directory = "processed-reads/pe-merged-reads",
