@@ -52,17 +52,26 @@ cd /Download/Location/PhyloCap
 The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file if manual installation is desired). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once installed, you can create a new environment for PhyloCap by: 
 
 ```bash
-conda env create -f phylocap.yml -n phylocap
+conda env create -f PhyloCap.yml -n PhyloCap
 ```
 
 OR if a specific location for the environment directory is needed:
 
 ```bash
-conda env create -f phylocap.yml -p /PLACE/YOUR/DIRECTORY/HERE/phylocap
+conda env create -f PhyloCap.yml -p /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 ```
 
 And finally, you may delete the cloned GitHub directory after installing the prerequisites through the conda env file that manually installs the anaconda environment. There are some useful examples (also in the tutorial here), which could be saved.   
 
+To use the environment, it must first be activated in your current terminal session or placed in your cluster job script. 
+
+```bash
+conda activate PhyloCap
+```
+
+```bash
+conda activate /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
+```
 
 # Installation of R package
 
