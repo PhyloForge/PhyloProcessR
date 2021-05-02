@@ -11,21 +11,32 @@ memory = 8
 ## Configuration file
 ##################
 
+#Directories
 setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
 read.dir = "raw-reads"
 decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
 file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
+target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/Ranoidea_All-Markers_Apr21-2019.fa"
+dataset.name = "Test"
+
+#Pre-processing settings
+
+
+
+#Target matching and alignment settings
+min.taxa = 4 #minimum taxa for an alignment
+
 
 #Program paths
-
 #conda.bin.path = "/Users/chutter/conda/PhyloCap/bin"
-
 fastp.path = "/Users/chutter/conda/PhyloCap/bin"
 samtools.path = "/Users/chutter/conda/PhyloCap/bin"
 bwa.path = "/Users/chutter/conda/PhyloCap/bin"
 spades.path = "/Users/chutter/conda/PhyloCap/bin"
 bbmap.path = "/Users/chutter/conda/PhyloCap/bin"
 blast.path = "/Users/chutter/conda/PhyloCap/bin"
+mafft.path = "/Users/chutter/conda/PhyloCap/bin"
+iqtree.path = "/Users/chutter/conda/PhyloCap/bin"
 
 ### Example usage
 #setwd("/home/c111h652/scratch/Shrew_UCE")
@@ -43,14 +54,14 @@ blast.path = "/Users/chutter/conda/PhyloCap/bin"
 ## Step 2: Clean out contamination
 ##################
 
+dir.create("processed-reads")
+
 organizeReads(read.directory = read.dir,
-              output.dir = "organized-reads",
+              output.dir = "processed-reads/organized-reads",
               rename.file = file.rename,
               overwrite = FALSE)
 
-dir.create("processed-reads")
-
-removeAdaptors(input.reads = "organized-reads",
+removeAdaptors(input.reads = "processed-reads/organized-reads",
                output.directory = "processed-reads/adaptor-removed-reads",
                fastp.path = fastp.path,
                threads = threads,
@@ -86,20 +97,20 @@ mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
 assembleSpades(input.reads = "processed-reads/pe-merged-reads",
                output.directory = "processed-reads/spades-assembly",
                assembly.directory = "draft-assemblies",
-               spades.path = spades.path,
                mismatch.corrector = FALSE,
                kmer.values = c(21,33,55,77,99,127),
-               threads = 1,
-               memory = 4,
+               threads = threads,
+               memory = memory,
                overwrite = FALSE,
                resume = TRUE,
                save.corrected.reads = FALSE,
-               quiet = TRUE)
+               quiet = TRUE,
+               spades.path = spades.path)
 
 #match targets
 matchTargets(assembly.directory = "draft-assemblies",
-             target.file = "Hutter_uce5k_loci.fa",
-             alignment.contig.name = "Shrew",
+             target.file = target.file,
+             alignment.contig.name = dataset.name,
              output.directory = "match-targets",
              min.percent.id = 0.5,
              min.match.length = 40,
@@ -110,14 +121,13 @@ matchTargets(assembly.directory = "draft-assemblies",
              overwrite = TRUE,
              resume = FALSE,
              quiet = TRUE,
-             blast.path = NULL,
-             bbmap.path = NULL)
-
+             blast.path = blast.path,
+             bbmap.path = bbmap.path)
 
 #align targets
-alignTargets(targets.to.align = "shrews_match-targets_to-align.fa",
+alignTargets(targets.to.align = paste0(dataset.name, "_match-targets_to-align.fa"),
              output.directory = "alignments",
-             min.taxa = 4,
+             min.taxa = min.taxa,
              subset.start = 0,
              subset.end = 1,
              threads = threads,
@@ -125,8 +135,11 @@ alignTargets(targets.to.align = "shrews_match-targets_to-align.fa",
              overwrite = FALSE,
              resume = TRUE,
              quiet = TRUE,
-             mafft.path = NULL)
+             mafft.path = mafft.path)
 
+
+
+#Fix the installs for this
 batchTrimAlignments(alignment.dir = paste0("alignments"),
                     alignment.format = "phylip",
                     output.dir = paste0("alignments-trimmed"),
