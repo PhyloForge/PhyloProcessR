@@ -46,7 +46,7 @@ git clone https://github.com/chutter/PhyloCap.git
 Second, change your working directory in the terminal to the downloaded repository. The key file here is the "PhyloCap.yml" anaconda environment file, which must be present in the working directory being used. 
 
 ```bash
-cd /Download/Location/PhyloCap
+cd /YOUR/DOWNLOAD/LOCATION/PhyloCap
 ```
 
 The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file if manual installation is desired). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once installed, you can create a new environment for PhyloCap by: 
@@ -69,29 +69,26 @@ To use the environment, it must first be activated in your current terminal sess
 conda activate PhyloCap
 ```
 
+OR if a specific location for the environment directory is needed:
+
 ```bash
 conda activate /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 ```
 
 # Installation of R package
 
-The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools. Here are step-by-step instructions for installation:
+The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. Here are step-by-step instructions for installation:
 
-1) Install devtools by typing in your R console: 
-
-```R
-install.packages("devtools", dependencies = TRUE)
-```
-
-2) Install PhyloCap by typing in your R console: 
+1) Install PhyloCap by typing in your R console: 
 
 ```R
 devtools::install_github("chutter/PhyloCap", update = "never", dependencies = FALSE)
 ```
 
-3) If Devtools asks you to install the package dependencies, select "No", because the dependencies are installed above. If devtools asks you to update packages, you may choose to do so. I would recommend not to install packages from source if devtools asks you and to include the update parameter set to "never" in install_github. 
+The update = "never" flag ensures that packages already installed via the anaconda environment are not changed, which will often break things. Additionally, dependencies = FALSE is set for the same reason. 
 
-4) Devtools should finish and say the package loaded properly. Load the package in your R script with:
+
+2) Devtools should finish and say the package loaded properly with no errors. Load the package in your R script with:
 
 ```R
 library(PhyloCap)
