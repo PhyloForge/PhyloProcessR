@@ -43,7 +43,7 @@ First, you will want to clone this repository to your computer to obtain the set
 git clone https://github.com/chutter/PhyloCap.git
 ```
 
-Second, change your working directory in the terminal to the downloaded repository. 
+Second, change your working directory in the terminal to the downloaded repository. The key file here is the "PhyloCap.yml" anaconda environment file, which must be present in the working directory being used. 
 
 ```bash
 cd /Download/Location/PhyloCap
