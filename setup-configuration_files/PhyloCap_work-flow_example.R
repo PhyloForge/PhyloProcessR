@@ -18,7 +18,7 @@ install.packages(c("devtools", "ape", "data.table", "doparallel", "foreach", "it
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install(version = "3.12")
-BiocManager::install(c("biostrings", "genomicranges", "rsamtools"))
+BiocManager::install(c("Biostrings", "GenomicRanges", "Rsamtools"))
 
 #Installs updated package version
 devtools::install_github("chutter/PhyloCap", upgrade = "never")
