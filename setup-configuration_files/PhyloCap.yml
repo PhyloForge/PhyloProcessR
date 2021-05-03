@@ -17,6 +17,7 @@ dependencies:
   - gatk4=4.2.0.0
   - git=2.23.0
   - iqtree=2.1.2
+  - julia=1.1.1
   - mafft=7.475
   - pip=20.2.4
   - python=3.8.5

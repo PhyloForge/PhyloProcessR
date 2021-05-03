@@ -65,8 +65,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                TAPER = FALSE,
                                TAPER.path = NULL,
                                julia.path = NULL,
-                               HmmCleaner = FALSE,
-                               HmmCleaner.path = NULL,
                                TrimAl = FALSE,
                                TrimAl.path = NULL,
                                trim.external = TRUE,
@@ -271,27 +269,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("tapirGaps", header.data), value = gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("tapirPerGaps", header.data), value = gap.count[3])
     }#end if
-
-
-#
-#     #Step 2. Runs hmmCleaner
-#     if (HmmCleaner == TRUE){
-#
-#       hmmcl.align = trimHmmCleaner(alignment = non.align,
-#                                    specificity = TRUE,
-#                                    large = FALSE,
-#                                    hmmcleaner.path = "HmmCleaner.pl",
-#                                    quiet = T,
-#                                    delete.temp = T)
-#       non.align = hmmcl.align
-#       #Saves the data
-#       data.table::set(temp.data, i = as.integer(1), j = match("hmmSamples", header.data), value = length(hmmcl.align))
-#       data.table::set(temp.data, i = as.integer(1), j = match("hmmLength", header.data), value = Biostrings::width(hmmcl.align)[1])
-#       gap.count = countAlignmentGaps(non.align)
-#       data.table::set(temp.data, i = as.integer(1), j = match("hmmBasepairs", header.data), value = gap.count[2] - gap.count[1])
-#       data.table::set(temp.data, i = as.integer(1), j = match("hmmGaps", header.data), value = gap.count[1])
-#       data.table::set(temp.data, i = as.integer(1), j = match("hmmPerGaps", header.data), value = gap.count[3])
-#     }#end if
 
     #Step 3. Trimal trimming
     if (TrimAl == TRUE){
