@@ -1,7 +1,17 @@
 # PhyloCap
 
-R package For processing high-throughput sequencing data from targeted sequence capture.
+R package For processing high-throughput sequencing data for many samples from targeted sequence capture. The R package and pipeline does the following:
 
+1) Organize raw read data
+2) Remove adaptor contamination and merge paired-end reads
+3) Decontaminate reads from other organisms
+4) Assemble cleaned reads into contigs 
+5) Use a sample-based iterative mapping approach to call SNPs and export for popular programs
+6) Match contigs to design targets for sequence capture
+7) Align and trim contigs from samples
+8) Concatenate all targets or only targets from the same gene
+9) Estimate gene trees for each target
+10) Gene Jackknifing concatenation tree building
 
 # Installation of prerequisites 
 
