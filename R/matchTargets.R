@@ -61,28 +61,29 @@ matchTargets = function(assembly.directory = NULL,
                         bbmap.path = NULL) {
 
   # #Debug setup
-  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Shrew_Genome")
-  # assembly.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Shrew_Genome/draft-assemblies"
-  # output.directory = "match-targets"
-  # target.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa"
-  # alignment.contig.name = "shrews"
-  #
-  # #Main settings
-  # threads = 4
-  # memory = 8
-  # trim.target = FALSE
-  # overwrite = TRUE
-  # resume = FALSE
-  # quiet = TRUE
-  #
-  # #tweak settings (make some statements to check these)
-  # min.percent.id = 0.5
-  # min.match.length = 40
-  # min.match.coverage = 0.50
-  #
-  # #program paths
-  # blast.path = "/Users/chutter/miniconda3/bin"
-  # bbmap.path = "/usr/local/bin"
+  work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
+  assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
+  target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+  output.directory = "match-targets"
+  alignment.contig.name = "test"
+  setwd(work.dir)
+
+  #Main settings
+  threads = 4
+  memory = 8
+  trim.target = FALSE
+  overwrite = TRUE
+  resume = FALSE
+  quiet = TRUE
+
+  #tweak settings (make some statements to check these)
+  min.percent.id = 0.5
+  min.match.length = 40
+  min.match.coverage = 0.50
+
+  #program paths
+  blast.path = "/Users/chutter/miniconda3/bin"
+  bbmap.path = "/usr/local/bin"
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -210,13 +211,118 @@ matchTargets = function(assembly.directory = NULL,
     good.data = filt.data[!filt.data$qName %in% contig.names,]
 
     #Only runs if there are duplicates
+    fix.seq = Biostrings::DNAStringSet()
     if (length(contig.names) != 0){
       new.data = c()
       for (j in 1:length(contig.names)) {
         #Subsets data
         sub.match = filt.data[filt.data$qName %in% contig.names[j],]
-        #Skips if 1 row
-        if (nrow(sub.match) == 1){ next }
+
+        ########
+        #Saves if they are on the same contig and same locus and fragmented for some reason
+        ####################
+        if (length(unique(sub.match$qName)) == 1 && length(unique(sub.match$tName)) == 1){
+          new.qstart = min(sub.match$qStart, sub.match$qEnd)[1]
+          new.qend = max(sub.match$qStart, sub.match$qEnd)[1]
+          new.tstart = min(sub.match$tStart, sub.match$tEnd)[1]
+          new.tend = max(sub.match$tStart, sub.match$tEnd)[1]
+          sub.match$qStart = new.qstart
+          sub.match$qEnd = new.qend
+          sub.match$tStart = new.tstart
+          sub.match$tEnd = new.tend
+          sub.match$bitscore = sum(sub.match$bitscore)
+          sub.match$matches = sum(sub.match$matches)
+          new.data = rbind(new.data, sub.match[1,])
+          next
+        } #end if
+
+        #One match/
+        if (nrow(sub.match) == 1){
+          stop("herrr")
+        }
+
+        #Duplicate tName
+        if (length(unique(sub.match$tName)) == 1){ stop("herrr 1")  }
+
+
+        ########
+        #Saves if they are two separate contigs but non-overlapping on the same locus; N repair
+        ####################
+        #Keep if they match to same contig, then not a paralog
+        if (length(unique(sub.match$qName)) == 1){
+
+          #Finds out if they are overlapping
+          for (k in 1:nrow(sub.match)){
+            new.start = min(sub.match$tStart[k], sub.match$tEnd[k])
+            new.end = max(sub.match$tStart[k], sub.match$tEnd[k])
+            sub.match$tStart[k] = new.start
+            sub.match$tEnd[k] = new.end
+          }#end k loop
+
+          #If the number is negative then problem!
+          hit.para = 0
+          for (k in 1:(nrow(sub.match)-1)){
+            if (sub.match$qStart[k+1]-sub.match$qEnd[k] < -30){ hit.para = 1 }
+          }
+
+          #If there are overlaps
+          if (hit.para == 1){
+            save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
+            new.data = rbind(new.data, save.match)
+            next
+          }#end if
+
+          #Adjacent and barely overlapping
+          if (hit.para == 0){
+            #Cuts the node apart and saves separately
+            sub.match$qStart[1] = as.numeric(1)
+            sub.match$tStart[1] = as.numeric(1)
+            sub.match$qEnd[nrow(sub.match)] = sub.match$qLen[nrow(sub.match)]
+            sub.match$tEnd[nrow(sub.match)] = sub.match$tLen[nrow(sub.match)]
+
+            #Collects new sequence fragments
+            spp.seq = contigs[names(contigs) %in% sub.match$tName]
+            spp.seq = spp.seq[pmatch(sub.match$tName, names(spp.seq))]
+
+            new.seq = Biostrings::DNAStringSet()
+            for (k in 1:length(spp.seq)){
+              n.pad = sub.match$qStart[k+1]-sub.match$qEnd[k]
+              new.seq = append(new.seq, Biostrings::subseq(x = spp.seq[k], start = sub.match$tStart[k], end = sub.match$tEnd[k]) )
+              if (is.na(n.pad) != T){ if (n.pad > 1){ new.seq = append(new.seq, Biostrings::DNAStringSet(paste0(rep("N", n.pad), collapse = "")) ) } }
+            }#end kloop
+
+            #Combine new sequence
+            save.contig = Biostrings::DNAStringSet(paste0(as.character(new.seq), collapse = "") )
+            names(save.contig) = paste0(sub.match$qName[1], "_:_", sub.match$tName[1], "_|_", sample)
+            fix.seq = append(fix.seq, save.contig)
+            next
+          }#end if
+
+          stop("herrr 2")
+
+          #Sets up the new contig location
+          #Cuts the node apart and saves separately
+          sub.match$tEnd = sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
+          sub.contigs = contigs[names(contigs) %in% sub.match$qName]
+
+          join.contigs<-DNAStringSet()
+          for (k in 1:(nrow(sub.match)-1)){
+            join.contigs<-append(join.contigs, sub.contigs[k])
+            n.pad<-sub.match$tStart[k+1]-sub.match$tEnd[k]
+            join.contigs<-append(join.contigs, DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
+          }
+          join.contigs<-append(join.contigs, sub.contigs[length(sub.contigs)])
+          save.contig<-DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
+
+          #Saves final sequence
+          names(save.contig)<-paste(loci.names[j], "_|_", sample, sep = "")
+          fix.seq<-append(fix.seq, save.contig)
+
+
+        }#end this if
+
+        stop("herrr 3")
+
         #Saves highest bitscore
         save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
         #Saves longest if equal bitscores
@@ -226,6 +332,7 @@ matchTargets = function(assembly.directory = NULL,
         #Saves data
         new.data = rbind(new.data, save.match)
       } #end j
+
       #Saves final dataset
       save.data = rbind(good.data, new.data)
     } else { save.data = good.data }
@@ -241,7 +348,6 @@ matchTargets = function(assembly.directory = NULL,
 
     #Loops through each potential duplicate
     dup.loci = unique(dup.data$tName)
-    fix.seq = Biostrings::DNAStringSet()
 
     if (length(dup.loci) != 0){
       for (j in 1:length(dup.loci)){
@@ -335,7 +441,7 @@ matchTargets = function(assembly.directory = NULL,
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(fin.loci))
     writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(species.dir, "/", sample, "_", alignment.contig.name, "_matching-contigs.fa"), nbchar = 1000000, as.string = T)
+               paste0(species.dir, "/", sample, "_matching-contigs.fa"), nbchar = 1000000, as.string = T)
 
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
@@ -366,7 +472,7 @@ matchTargets = function(assembly.directory = NULL,
     dd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_dedupe.fa"))
 
     #Gets the saved matching targets
-    cd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_", alignment.contig.name, "_matching-contigs.fa"))
+    cd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_matching-contigs.fa"))
     set(save.data, i =  match(samples[i], samples), j = match("Sample", header.data), value = samples[i] )
     set(save.data, i = match(samples[i], samples), j = match("noContigs", header.data), value = length(og.contigs) )
     set(save.data, i = match(samples[i], samples), j = match("dedupeContigs", header.data), value = length(dd.contigs) )
@@ -386,10 +492,10 @@ matchTargets = function(assembly.directory = NULL,
   #Finds probes that match to two or more contigs
   final.loci = as.list(as.character(save.contigs))
   writeFasta(sequences = final.loci, names = names(final.loci),
-             paste0(alignment.contig.name, "_", output.directory, "_to-align.fa"), nbchar = 1000000, as.string = T)
+             paste0(alignment.contig.name, "_to-align.fa"), nbchar = 1000000, as.string = T)
 
   #Saves combined, final dataset
-  write.csv(save.data, file = paste0(alignment.contig.name, "_", output.directory, "_assessment.csv"), row.names = F)
+  write.csv(save.data, file = paste0(alignment.contig.name, "_sample-assessment.csv"), row.names = F)
 
 } #End function
 

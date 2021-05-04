@@ -142,13 +142,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end if
   } else { julia.path = NULL }
 
-  if (is.null(HmmCleaner.path) == FALSE){
-    b.string = unlist(strsplit(HmmCleaner.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      HmmCleaner.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { HmmCleaner.path = NULL }
-
   if (is.null(TrimAl.path) == FALSE){
     b.string = unlist(strsplit(TrimAl.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -175,11 +168,16 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   #Gathers alignments
   align.files = list.files(alignment.dir)
+
+  if (length(align.files) == 0) { stop("alignment files could not be found.") }
+
   #Skips files done already if resume = TRUE
   if (resume == TRUE){
     done.files = list.files(output.dir)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
+
+  if (length(align.files) == 0) { stop("All alignments have already been completed and overwrite = FALSE.") }
 
   #Data to collect
   header.data = c("Alignment", "Pass", "startSamples", "tapirSamples", "trimalSamples",

@@ -10,7 +10,6 @@ library(foreach)
 #Directories
 work.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset"
 read.dir = "raw-reads"
-decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
 file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
 target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/Ranoidea_All-Markers_Apr21-2019.fa"
 dataset.name = "Test"
@@ -24,6 +23,11 @@ quiet = TRUE
 
 #Pre-processing settings
 decontamination = TRUE
+download.contaminant.genomes = TRUE
+contaminant.genome.list = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/decontamination_database.csv"
+decontamination.path = NULL
+include.human = TRUE  #Include human genome, unless human is study organism or UCEs in mammals are used
+include.mouse = TRUE  #Include human genome, unless human is study organism or UCEs in mammals are used
 decontamination.match = 0.99 #
 spades.kmer.values = c(21,33,55,77,99,127)
 spades.mismatch.corrector = TRUE
@@ -67,20 +71,11 @@ trimAl.path = "/Users/chutter/conda/PhyloCap/bin"
 taper.path = "/Users/chutter/conda/PhyloCap/bin"
 julia.path = "/Users/chutter/conda/PhyloCap/bin"
 
-### Example usage
-#setwd("/home/c111h652/scratch/Shrew_UCE")
-#read.dir = "/home/c111h652/scratch/Shrew_UCE"
-#decontamination.path = "/home/c111h652/scratch/Contamination_Genomes"
 
-#fastp.path = "/panfs/pfs.local/work/bi/c111h652/conda/phylocap/bin/fastp"
-#samtools.path = "/panfs/pfs.local/work/bi/c111h652/conda/phylocap/bin/samtools"
-#bwa.path = "/panfs/pfs.local/work/bi/c111h652/conda/phylocap/bin/bwa"
-#spades.path = "/panfs/pfs.local/work/bi/c111h652/conda/phylocap/bin/spades.py"
-#bbmap.path = "/panfs/pfs.local/work/bi/c111h652/conda/phylocap/bin"
-#iqtree.path = "/home/c111h652/programs"
-
+##################################################################################################
+##################################################################################################
 #################################################
-## Step 2: Clean out contamination
+## Step 1: Preprocess reads
 ##################
 
 setwd(work.dir)
@@ -100,10 +95,17 @@ removeAdaptors(input.reads = "processed-reads/organized-reads",
                overwrite = overwrite,
                quiet = quiet)
 
+#Creates the database by downloading
+createContaminantDB(decontamination.list = contaminant.genome.list,
+                    output.directory = "contaminant-references",
+                    include.human = TRUE,
+                    include.univec = TRUE,
+                    overwrite = overwrite)
+
 ## remove external contamination
 removeContamination(input.reads = "processed-reads/adaptor-removed-reads",
                     output.directory = "processed-reads/decontaminated-reads",
-                    decontamination.path = decontamination.path,
+                    decontamination.path = "contaminant-references",
                     map.match = decontamination.match,
                     samtools.path = samtools.path,
                     bwa.path = bwa.path,
@@ -124,6 +126,8 @@ mergePairedEndReads(input.reads = "processed-reads/decontaminated-reads",
                     overwrite = overwrite,
                     quiet = quiet)
 
+dir.create("data-analysis")
+
 #Assembles merged paired end reads with spades
 assembleSpades(input.reads = "processed-reads/pe-merged-reads",
                output.directory = "processed-reads/spades-assembly",
@@ -138,13 +142,15 @@ assembleSpades(input.reads = "processed-reads/pe-merged-reads",
                quiet = quiet,
                spades.path = spades.path)
 
-dir.create("data-analysis")
+#################################################
+## Step 2: Match targets and annotate contigs
+##################
 
 #match targets
 matchTargets(assembly.directory = "data-analysis/draft-assemblies",
              target.file = target.file,
-             alignment.contig.name = dataset.name,
-             output.directory = "match-targets",
+             alignment.contig.name = paste0("data-analysis/", dataset.name),
+             output.directory = "data-analysis/match-targets",
              min.percent.id = min.percent.id,
              min.match.length = min.match.length,
              min.match.coverage = min.match.coverage,
@@ -157,8 +163,12 @@ matchTargets(assembly.directory = "data-analysis/draft-assemblies",
              blast.path = blast.path,
              bbmap.path = bbmap.path)
 
+#################################################
+## Step 3: Align targets and trim
+##################
+
 #align targets
-alignTargets(targets.to.align = paste0("data-analysis/", dataset.name, "_match-targets_to-align.fa"),
+alignTargets(targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
              output.directory = "data-analysis/alignments",
              min.taxa = min.taxa.alignment,
              subset.start = 0,
@@ -169,8 +179,6 @@ alignTargets(targets.to.align = paste0("data-analysis/", dataset.name, "_match-t
              resume = resume,
              quiet = quiet,
              mafft.path = mafft.path)
-
-
 
 #Fix the installs for this
 batchTrimAlignments(alignment.dir = "data-analysis/alignments",
@@ -199,6 +207,9 @@ batchTrimAlignments(alignment.dir = "data-analysis/alignments",
                     threads = threads,
                     memory = memory)
 
+#################################################
+## Step 4: Tree stuff
+##################
 
 estimateGeneTrees(alignment.directory = "data-analysis/alignments-trimmed",
                   output.directory = "data-analysis/gene-trees",
