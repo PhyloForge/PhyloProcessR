@@ -87,7 +87,7 @@ conda activate /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 
 # Installation of R package
 
-The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. Here are step-by-step instructions for installation:
+The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloCap functions. Here are step-by-step instructions for installation:
 
 1) Install PhyloCap by typing in your R console: 
 
