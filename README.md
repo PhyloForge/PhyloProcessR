@@ -117,11 +117,11 @@ And installation should be done! All the functions for PhyloCap should be ready 
 
 [Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation)
 
-[Tutorial 1: Data preprocessing (cleaning raw reads, decontamination, assembly)](https://github.com/chutter/PhyloCap/wiki/Tutorial-1)
+[Tutorial 1: PhyloCap configuration](https://github.com/chutter/PhyloCap/wiki/Tutorial-1)
 
-[Tutorial 2: Data alignment (target marker matching, alignment, alignment filtering)](https://github.com/chutter/PhyloCap/wiki/Tutorial-2)
+[Tutorial 2: PhyloCap quick start pipeline](https://github.com/chutter/PhyloCap/wiki/Tutorial-2)
 
-Tutorial 3: Tree estimation (gene trees, concatenation, species trees) COMING SOON
+[Tutorial 3: Advanced function use](https://github.com/chutter/PhyloCap/wiki/Tutorial-3)
 
 [Troubleshooting: random issues that arise](https://github.com/chutter/PhyloCap/wiki/Troubleshooting)
 
