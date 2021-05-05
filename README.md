@@ -19,20 +19,20 @@ PhyloCap uses several R packages and other outside programs for certain function
 
 1. R version 4.0.2 (and above likely work)
 
-From CRAN
+Requires:
 - devtools
 - ape
 - stringr
 - data.table
 - seqinr
+- biostrings (Bioconductor)
+- genomicranges (Bioconductor)
+
+Imports:
 - foreach
 - doparallel
 - rdrop2
 
-From BioConductor
-- rsamtools
-- genomicranges
-- biostrings
 
 2. Outside programs
 
