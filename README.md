@@ -115,7 +115,7 @@ And installation should be done! All the functions for PhyloCap should be ready 
 
 # PhyloCap pipeline tutorials 
 
-[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation)
+[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
 [Tutorial 1: PhyloCap configuration](https://github.com/chutter/PhyloCap/wiki/Tutorial-1:-PhyloCap-configuration)
 
