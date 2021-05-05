@@ -3,74 +3,7 @@ devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
 library(PhyloCap)
 library(foreach)
 
-#################################################
-## Configuration file
-##################
-
-#Directories
-work.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset"
-read.dir = "raw-reads"
-file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
-target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/Ranoidea_All-Markers_Apr21-2019.fa"
-dataset.name = "Test"
-
-#Basic settings
-threads = 4
-memory = 8
-overwrite = FALSE
-resume = TRUE
-quiet = TRUE
-
-#Pre-processing settings
-decontamination = TRUE
-download.contaminant.genomes = TRUE
-contaminant.genome.list = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/decontamination_database.csv"
-decontamination.path = NULL
-include.human = TRUE  #Include human genome, unless human is study organism or UCEs in mammals are used
-include.mouse = TRUE  #Include human genome, unless human is study organism or UCEs in mammals are used
-decontamination.match = 0.99 #
-spades.kmer.values = c(21,33,55,77,99,127)
-spades.mismatch.corrector = TRUE
-save.corrected.reads = FALSE
-
-#Target matching and alignment settings
-trim.to.targets = FALSE #whether to trim to the targets or keep the entire contig
-min.percent.id = 0.5
-min.match.length = 40
-min.match.coverage = 0.5
-min.taxa.alignment = 4 #minimum taxa for an alignment
-min.taxa.tree = 4 #minimum taxa for an alignment
-
-#Alignement trimming parameters
-run.TAPER = TRUE
-run.TrimAl = TRUE
-trim.column = TRUE
-convert.ambiguous.sites = TRUE
-alignment.assess = TRUE
-trim.external = TRUE
-trim.coverage = TRUE
-min.coverage.percent = 35
-min.external.percent = 50
-min.column.gap.percent = 50
-min.align.length = 100
-min.taxa.count = 5
-min.gap.percent = 50
-min.sample.bp = 60
-cleanup.genetrees = TRUE #Only saves the ML tree; FALSE saves all IQTree files for each gene tree
-
-#Program paths
-fastp.path = "/Users/chutter/conda/PhyloCap/bin"
-samtools.path = "/Users/chutter/conda/PhyloCap/bin"
-bwa.path = "/Users/chutter/conda/PhyloCap/bin"
-spades.path = "/Users/chutter/conda/PhyloCap/bin"
-bbmap.path = "/Users/chutter/conda/PhyloCap/bin"
-blast.path = "/Users/chutter/conda/PhyloCap/bin"
-mafft.path = "/Users/chutter/conda/PhyloCap/bin"
-iqtree.path = "/Users/chutter/conda/PhyloCap/bin"
-trimAl.path = "/Users/chutter/conda/PhyloCap/bin"
-taper.path = "/Users/chutter/conda/PhyloCap/bin"
-julia.path = "/Users/chutter/conda/PhyloCap/bin"
-
+source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/configuration-file.R")
 
 ##################################################################################################
 ##################################################################################################
@@ -151,7 +84,7 @@ matchTargets(assembly.directory = "data-analysis/draft-assemblies",
              target.file = target.file,
              alignment.contig.name = paste0("data-analysis/", dataset.name),
              output.directory = "data-analysis/match-targets",
-             min.percent.id = min.percent.id,
+             min.match.percent = min.match.percent,
              min.match.length = min.match.length,
              min.match.coverage = min.match.coverage,
              threads = threads,
@@ -200,10 +133,10 @@ batchTrimAlignments(alignment.dir = "data-analysis/alignments",
                     min.coverage.percent = min.coverage.percent,
                     min.external.percent = min.external.percent,
                     min.column.gap.percent = min.column.gap.percent,
-                    min.align.length = min.align.length,
-                    min.taxa.count = min.taxa.count,
-                    min.gap.percent = min.gap.percent,
-                    min.sample.bp = min.sample.bp,
+                    min.alignment.length = min.alignment.length,
+                    min.taxa.alignment = min.taxa.alignment.trim,
+                    min.alignment.gap.percent = min.alignment.gap.percent,
+                    min.coverage.bp = min.coverage.bp,
                     threads = threads,
                     memory = memory)
 

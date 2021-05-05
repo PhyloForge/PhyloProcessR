@@ -10,7 +10,7 @@
 #'
 #' @param output.directory available output formats: phylip
 #'
-#' @param min.percent.id algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.match.percent algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
 #' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
 #'
@@ -48,9 +48,9 @@ matchTargets = function(assembly.directory = NULL,
                         target.file = NULL,
                         alignment.contig.name = NULL,
                         output.directory = "match-targets",
-                        min.percent.id = 0.5,
+                        min.match.percent = 50,
                         min.match.length = 40,
-                        min.match.coverage = 0.5,
+                        min.match.coverage = 50,
                         threads = 1,
                         memory = 1,
                         trim.target = FALSE,
@@ -77,9 +77,9 @@ matchTargets = function(assembly.directory = NULL,
   quiet = TRUE
 
   #tweak settings (make some statements to check these)
-  min.percent.id = 0.5
-  min.match.length = 40
-  min.match.coverage = 0.50
+  min.match.percent = 60
+  min.match.length = 50
+  min.match.coverage = 50
 
   #program paths
   blast.path = "/Users/chutter/miniconda3/bin"
@@ -185,7 +185,7 @@ matchTargets = function(assembly.directory = NULL,
     #Matches need to be greater than 12
     filt.data = match.data[match.data$matches > min.match.length,]
     #Percent identitiy must match 50% or greater
-    filt.data = filt.data[filt.data$pident >= min.percent.id,]
+    filt.data = filt.data[filt.data$pident >= min.match.percent,]
 
     if (nrow(filt.data) == 0) {
       print(paste0(sample, " had no matches. Skipping"))
@@ -195,7 +195,7 @@ matchTargets = function(assembly.directory = NULL,
     data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
 
     #Make sure the hit is greater than 50% of the reference length
-    filt.data = filt.data[filt.data$matches >= (min.match.coverage * filt.data$qLen),]
+    filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
     #Reads in contigs
     contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", sample, "_dedupe.fa"), format = "fasta")

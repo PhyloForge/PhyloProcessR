@@ -34,9 +34,9 @@
 #'
 #' @param min.sample.bp path to a folder of sequence alignments in phylip format.
 #'
-#' @param min.align.length give a save name if you wnat to save the summary to file.
+#' @param min.alignment.length give a save name if you wnat to save the summary to file.
 #'
-#' @param min.taxa.count TRUE to supress mafft screen output
+#' @param min.taxa.alignment TRUE to supress mafft screen output
 #'
 #' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
 #'
@@ -75,10 +75,10 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                min.column.gap.percent = 100,
                                convert.ambiguous.sites = FALSE,
                                alignment.assess = TRUE,
-                               min.sample.bp = 0,
-                               min.align.length = 0,
-                               min.taxa.count = 0,
-                               min.gap.percent = 0,
+                               min.coverage.bp = 0,
+                               min.alignment.length = 0,
+                               min.taxa.alignment = 0,
+                               max.alignment.gap.percent = 0,
                                threads = 1,
                                memory = 1,
                                overwrite = FALSE,
@@ -119,7 +119,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # min.external.percent = 50
   # min.column.gap.percent = 50
   # overwrite = FALSE
-  # min.align.length = 100
+  # min.alignment.length = 100
   # min.taxa.count = 5
   # min.gap.percent = 50
   # min.sample.bp = 60
@@ -336,9 +336,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
     if (alignment.assess == TRUE) {
       #Assesses the alignment returning TRUE for pass and FALSE for fail
       test.result = alignmentAssess(alignment = non.align,
-                                    min.gap.percent = min.gap.percent,
-                                    min.taxa.count = min.taxa.count,
-                                    min.align.length = min.align.length)
+                                    max.alignment.gap.percent = max.alignment.gap.percent,
+                                    min.taxa.alignment = min.taxa.alignment,
+                                    min.alignment.length = min.alignment.length)
 
       data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
 

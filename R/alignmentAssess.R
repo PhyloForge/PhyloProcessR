@@ -4,7 +4,7 @@
 #'
 #' @param alignment alignment in DNAStringSet Format
 #'
-#' @param min.gap.percent minimum percentage of gaps allowed for an alignment to pass
+#' @param max.alignment.gap.percent minimum percentage of gaps allowed for an alignment to pass
 #'
 #' @param min.taxa.count minimum number of taxa allowed for an alignment to pass
 #'
@@ -24,9 +24,9 @@
 
 #Assesses the alignment returning TRUE for pass and FALSE for fail
 alignmentAssess = function(alignment = NULL,
-                           min.gap.percent = 0,
-                           min.taxa.count = 0,
-                           min.align.length = 0){
+                           max.alignment.gap.percent = 0,
+                           min.taxa.alignment = 0,
+                           min.alignment.length = 0){
   #Count gaps
   #alignment = non.align
   gap.data = countAlignmentGaps(alignment)
@@ -36,16 +36,16 @@ alignmentAssess = function(alignment = NULL,
   if (length(gap.data) <= 2){ return(FALSE) }
 
   #Checks for min percentage
-  if (gap.data[3] >= min.gap.percent) {
+  if (gap.data[3] >= max.alignment.gap.percent) {
     return(FALSE)
   }
 
   #Make a summary table thing
-  if (length(alignment) <= min.taxa.count){
+  if (length(alignment) <= min.taxa.alignment){
     return(FALSE)
   }
 
-  if (max(Biostrings::width(alignment)) <= min.align.length){
+  if (max(Biostrings::width(alignment)) <= min.alignment.length){
     return(FALSE)
   }
 
