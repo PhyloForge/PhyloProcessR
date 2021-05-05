@@ -34,6 +34,7 @@ Imports:
 - rdrop2
 
 
+
 2. Outside programs
 
 - fastp: adaptor trimming and paired-end read merging
@@ -104,7 +105,10 @@ The update = "never" flag ensures that packages already installed via the anacon
 library(PhyloCap)
 ```
 
-And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
+And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. In the future when there is a stable release, the R package will be available through Anaconda. 
+
+
+3) You can run the following function to see if PhyloCap can find the dependencies: 
 
 < coming soon a function to test if they can found >
 
