@@ -19,20 +19,21 @@ PhyloCap uses several R packages and other outside programs for certain function
 
 1. R version 4.0.2 (and above likely work)
 
-From CRAN
+Requires:
 - devtools
 - ape
 - stringr
 - data.table
 - seqinr
+- biostrings (Bioconductor)
+- genomicranges (Bioconductor)
+
+Imports:
 - foreach
 - doparallel
 - rdrop2
 
-From BioConductor
-- rsamtools
-- genomicranges
-- biostrings
+
 
 2. Outside programs
 
@@ -87,7 +88,7 @@ conda activate /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 
 # Installation of R package
 
-The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. Here are step-by-step instructions for installation:
+The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloCap functions. Here are step-by-step instructions for installation:
 
 1) Install PhyloCap by typing in your R console: 
 
@@ -104,22 +105,23 @@ The update = "never" flag ensures that packages already installed via the anacon
 library(PhyloCap)
 ```
 
-And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
+And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. In the future when there is a stable release, the R package will be available through Anaconda. 
+
+
+3) You can run the following function to see if PhyloCap can find the dependencies: 
 
 < coming soon a function to test if they can found >
 
 
 # PhyloCap pipeline tutorials 
 
-[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation)
+[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
-[Tutorial 1: Data preprocessing (cleaning raw reads, decontamination, assembly)](https://github.com/chutter/PhyloCap/wiki/Tutorial-1)
+[Tutorial 1: PhyloCap configuration](https://github.com/chutter/PhyloCap/wiki/Tutorial-1:-PhyloCap-configuration)
 
-[Tutorial 2: Data alignment (target marker matching, alignment, alignment filtering)](https://github.com/chutter/PhyloCap/wiki/Tutorial-2)
+[Tutorial 2: PhyloCap quick start pipeline](https://github.com/chutter/PhyloCap/wiki/Tutorial-2:-PhyloCap-quick-start-pipeline)
 
-Tutorial 3: Tree estimation (gene trees, concatenation, species trees) COMING SOON
-
-[Troubleshooting: random issues that arise](https://github.com/chutter/PhyloCap/wiki/Troubleshooting)
+[Tutorial 3: Advanced function use](https://github.com/chutter/PhyloCap/wiki/Tutorial-3:-Advanced-function-use)
 
 
 
