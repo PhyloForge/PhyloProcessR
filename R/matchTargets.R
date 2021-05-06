@@ -61,29 +61,29 @@ matchTargets = function(assembly.directory = NULL,
                         bbmap.path = NULL) {
 
   # #Debug setup
-  work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
-  assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
-  target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
-  output.directory = "match-targets"
-  alignment.contig.name = "test"
-  setwd(work.dir)
-
-  #Main settings
-  threads = 4
-  memory = 8
-  trim.target = FALSE
-  overwrite = TRUE
-  resume = FALSE
-  quiet = TRUE
-
-  #tweak settings (make some statements to check these)
-  min.match.percent = 60
-  min.match.length = 50
-  min.match.coverage = 50
-
-  #program paths
-  blast.path = "/Users/chutter/miniconda3/bin"
-  bbmap.path = "/usr/local/bin"
+  # work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
+  # assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
+  # target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+  # output.directory = "match-targets"
+  # alignment.contig.name = "test"
+  # setwd(work.dir)
+  #
+  # #Main settings
+  # threads = 4
+  # memory = 8
+  # trim.target = FALSE
+  # overwrite = TRUE
+  # resume = FALSE
+  # quiet = TRUE
+  #
+  # #tweak settings (make some statements to check these)
+  # min.match.percent = 60
+  # min.match.length = 50
+  # min.match.coverage = 50
+  #
+  # #program paths
+  # blast.path = "/Users/chutter/miniconda3/bin"
+  # bbmap.path = "/usr/local/bin"
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){

@@ -31,8 +31,8 @@ removeAdaptors(input.reads = "processed-reads/organized-reads",
 #Creates the database by downloading
 createContaminantDB(decontamination.list = contaminant.genome.list,
                     output.directory = "contaminant-references",
-                    include.human = TRUE,
-                    include.univec = TRUE,
+                    include.human = include.human,
+                    include.univec = include.univec,
                     overwrite = overwrite)
 
 ## remove external contamination

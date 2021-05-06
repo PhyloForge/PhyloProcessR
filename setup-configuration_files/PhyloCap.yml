@@ -1,4 +1,4 @@
-name: phylocap
+name: PhyloCap
 channels:
   - anaconda
   - bioconda
@@ -6,8 +6,12 @@ channels:
   - defaults
 dependencies:
   - bbmap=38.90
+  - bioconductor-biomart=2.46.3
   - bioconductor-biostrings=2.58.0
+  - bioconductor-genomeinfodb=1.26.4
+  - bioconductor-genomeinfodbdata=1.2.4
   - bioconductor-genomicranges=1.42.0
+  - bioconductor-iranges=2.24.1
   - bioconductor-rsamtools=2.6.0
   - blast=2.11.0
   - bwa=0.7.17
@@ -17,7 +21,6 @@ dependencies:
   - gatk4=4.2.0.0
   - git=2.23.0
   - iqtree=2.1.2
-  - julia=1.1.1
   - mafft=7.475
   - pip=20.2.4
   - python=3.8.5
@@ -28,7 +31,6 @@ dependencies:
   - r-devtools=2.4.0
   - r-doparallel=1.0.16
   - r-foreach=1.5.1
-  - r-iterators=1.0.13
   - r-rdrop2=0.8.2.1
   - r-seqinr=4.2_4
   - r-stringr=1.4.0
