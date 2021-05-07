@@ -2,7 +2,7 @@
 #'
 #' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
 #'
-#' @param anaconda.bin path to a folder of adaptor trimmed reads in fastq format.
+#' @param anaconda.environment path to a folder of adaptor trimmed reads in fastq format.
 #'
 #' @param fastp.path the new directory to save the adaptor trimmed sequences
 #'
@@ -36,7 +36,7 @@
 #'
 #' @export
 
-setupCheck = function(anaconda.bin = "PhyloCap/bin",
+setupCheck = function(anaconda.environment = "conda/PhyloCap",
                       fastp.path = NULL,
                       samtools.path = NULL,
                       bwa.path = NULL,
@@ -49,35 +49,109 @@ setupCheck = function(anaconda.bin = "PhyloCap/bin",
                       julia.path = NULL,
                       taper.path = NULL) {
 
-  fastp.path = "/Users/chutter/conda/PhyloCap/bin"
-  samtools.path = "/Users/chutter/conda/PhyloCap/bin"
-  bwa.path = "/Users/chutter/conda/PhyloCap/bin"
-  spades.path = "/Users/chutter/conda/PhyloCap/bin"
-  bbmap.path = "/Users/chutter/conda/PhyloCap/bin"
-  blast.path = "/Users/chutter/conda/PhyloCap/bin"
-  mafft.path = "/Users/chutter/conda/PhyloCap/bin"
-  iqtree.path = "/Users/chutter/conda/PhyloCap/bin"
-  trimAl.path = "/Users/chutter/conda/PhyloCap/bin"
-  taper.path = "/Users/chutter/conda/PhyloCap/bin"
-  julia.path = "/Users/chutter/conda/PhyloCap/bin"
+  #anaconda.environment = "/Users/chutter/conda/PhyloCap"
 
-  #Same adds to bbmap path
-  if (is.null(samtools.path) == FALSE){
-    b.string = unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { samtools.path = "" }
+  if (is.null(anaconda.environment) == FALSE) {
+    fastp.path = paste0(anaconda.environment, "/bin")
+    samtools.path = paste0(anaconda.environment, "/bin")
+    bwa.path = paste0(anaconda.environment, "/bin")
+    spades.path = paste0(anaconda.environment, "/bin")
+    bbmap.path = paste0(anaconda.environment, "/bin")
+    blast.path = paste0(anaconda.environment, "/bin")
+    mafft.path = paste0(anaconda.environment, "/bin")
+    iqtree.path = paste0(anaconda.environment, "/bin")
+    trimAl.path = paste0(anaconda.environment, "/bin")
+    taper.path = paste0(anaconda.environment, "/bin")
+    julia.path = paste0(anaconda.environment, "/bin")
+  }
 
-  #Same adds to bbmap path
-  if (is.null(bwa.path) == FALSE){
-    b.string = unlist(strsplit(bwa.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bwa.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { bwa.path = "" }
+  #Check paths from above
+  pass = TRUE
+  if (file.exists(paste0(fastp.path, "/fastp")) == TRUE){
+    print("Fastp was found.")
+  } else {
+    pass = FALSE
+    print("Fastp could not be found.")
+  } #end else
 
+  if (file.exists(paste0(samtools.path, "/samtools")) == TRUE){
+    print("Samtools was found.")
+  } else {
+    pass = FALSE
+    print("Samtools could not be found.")
+  } #end else
 
+  if (file.exists(paste0(bwa.path, "/bwa")) == TRUE){
+    print("BWA was found.")
+  } else {
+    pass = FALSE
+    print("BWA could not be found.")
+  } #end else
+
+  if (file.exists(paste0(spades.path, "/spades.py")) == TRUE){
+    print("Spades was found.")
+  } else {
+    pass = FALSE
+    print("Spades could not be found.")
+  } #end else
+
+  if (file.exists(paste0(bbmap.path, "/bbmap.sh")) == TRUE){
+    print("BBMap was found.")
+  } else {
+    pass = FALSE
+    print("BBMap could not be found.")
+  } #end else
+
+  if (file.exists(paste0(blast.path, "/blastn")) == TRUE){
+    print("blastn was found.")
+  } else {
+    pass = FALSE
+    print("blastn could not be found.")
+  } #end else
+
+  if (file.exists(paste0(blast.path, "/makeblastdb")) == TRUE){
+    print("makeblastdb was found.")
+  } else {
+    pass = FALSE
+    print("makeblastdb could not be found.")
+  } #end else
+
+  if (file.exists(paste0(mafft.path, "/mafft")) == TRUE){
+    print("mafft was found.")
+  } else {
+    pass = FALSE
+    print("mafft could not be found.")
+  } #end else
+
+  if (file.exists(paste0(iqtree.path, "/iqtree2")) == TRUE){
+    print("iqtree was found.")
+  } else {
+    pass = FALSE
+    print("iqtree could not be found.")
+  } #end else
+
+  if (file.exists(paste0(trimAl.path, "/trimal")) == TRUE){
+    print("trimal was found.")
+  } else {
+    pass = FALSE
+    print("trimal could not be found.")
+  } #end else
+#
+#   if (file.exists(paste0(taper.path, "/taper")) == TRUE){
+#     print("TAPER was found.")
+#   } else {
+#     pass = FALSE
+#     print("TAPER could not be found.")
+#   } #end else
+#
+#   if (file.exists(paste0(julia.path, "/julia")) == TRUE){
+#     print("Julia was found.")
+#   } else {
+#     pass = FALSE
+#     print("Julia could not be found.")
+#   } #end else
+
+  return(pass)
 
 }#end function
 

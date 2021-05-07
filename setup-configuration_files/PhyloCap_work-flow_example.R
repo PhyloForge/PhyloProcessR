@@ -11,6 +11,24 @@ source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_fi
 ## Step 1: Preprocess reads
 ##################
 
+#Checks if everything is installed
+pass.fail = setupCheck(anaconda.environment = "/Users/chutter/conda/PhyloCap",
+                       fastp.path = fastp.path,
+                       samtools.path = samtools.path,
+                       bwa.path = bwa.path,
+                       spades.path = spades.path,
+                       bbmap.path = bbmap.path,
+                       blast.path = blast.path,
+                       mafft.path = mafft.path,
+                       iqtree.path = iqtree.path,
+                       trimAl.path = trimAl.path,
+                       julia.path = julia.path,
+                       taper.path = taper.path)
+
+if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
+  print("all required programs are found, PhyloCap pipeline continuing...")
+}
+
 setwd(work.dir)
 dir.create("processed-reads")
 
