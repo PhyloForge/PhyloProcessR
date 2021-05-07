@@ -72,7 +72,7 @@ createContaminantDB = function(decontamination.list = NULL,
   for (i in 1:nrow(sample.data)){
     biomartr::getGenome(db = "genbank",
                         organism = sample.data$GenBank_Accession[i],
-                        path = output.directory,
+                        file = output.directory,
                         reference = FALSE)
 
     new.name = paste0(sample.data$Genome[i], "-", sample.data$GenBank_Accession[i], ".fna.gz")

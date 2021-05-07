@@ -36,7 +36,7 @@ quiet = TRUE
 #TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
 organize.reads = TRUE
 #TRUE = to run adaptor removal on reads
-adaptor.removal = TRUE
+remove.adaptors = TRUE
 #Merge paired end reads
 merge.pe.reads = TRUE
 #Remove contamination
