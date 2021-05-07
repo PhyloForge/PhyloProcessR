@@ -9,6 +9,8 @@
 work.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset"
 #The file rename (File, Sample columns) for organizing reads. Set to NULL if not needed
 file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
+#The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
+contaminant.genome.list = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/decontamination_database.csv"
 #The sequence capture target marker file for extraction from contigs
 target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/Ranoidea_All-Markers_Apr21-2019.fa"
 #The input raw read directory
@@ -31,6 +33,8 @@ quiet = TRUE
 
 #Pre-processing settings
 #########################
+#TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
+organize.reads = TRUE
 #TRUE = to run adaptor removal on reads
 adaptor.removal = TRUE
 #Merge paired end reads
@@ -39,8 +43,6 @@ merge.pe.reads = TRUE
 decontamination = TRUE
 #Download contaminat genomes from genbank if TRUE
 download.contaminant.genomes = TRUE
-#The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
-contaminant.genome.list = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/decontamination_database.csv"
 #Alternatively, a path can be set to a downloaded set of contaminant genomes if downloading does not work; NULL if downloading
 decontamination.path = NULL
 #include the human genome? Unless human is study organism or UCEs in mammals are used
@@ -49,6 +51,9 @@ include.human = TRUE
 include.univec = TRUE
 #The matching proportion of bases for a contaminant hit and removal
 decontamination.match = 0.99
+
+#Assembly settings
+#########################
 #Denovo assembly with spades
 denovo.assembly = TRUE
 #The selected k-mer values for spades
@@ -62,6 +67,8 @@ save.corrected.reads = FALSE
 #########################
 #TRUE = to run target matching on contigs
 match.targets = TRUE
+#Directory of assembled contigs to be used for target matching
+assembly.directory = "draft-assemblies"
 #whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
 trim.to.targets = FALSE
 #The directory of contigs to use for target matching
