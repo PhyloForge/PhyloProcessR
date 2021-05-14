@@ -1,4 +1,4 @@
-#' @title batchTrimAlignments
+#' @title makeExonAlignments
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -58,100 +58,47 @@
 #'
 #' @export
 
-batchTrimAlignments = function(alignment.dir = NULL,
-                               alignment.format = "phylip",
-                               output.dir = NULL,
-                               output.format = "phylip",
-                               TAPER = FALSE,
-                               TAPER.path = NULL,
-                               julia.path = NULL,
-                               TrimAl = FALSE,
-                               TrimAl.path = NULL,
-                               trim.external = TRUE,
-                               min.external.percent = 50,
-                               trim.coverage = TRUE,
-                               min.coverage.percent = 50,
-                               trim.column = TRUE,
-                               min.column.gap.percent = 100,
-                               convert.ambiguous.sites = FALSE,
-                               alignment.assess = TRUE,
-                               min.coverage.bp = 0,
-                               min.alignment.length = 0,
-                               min.taxa.alignment = 0,
-                               max.alignment.gap.percent = 0,
-                               threads = 1,
-                               memory = 1,
-                               overwrite = FALSE,
-                               resume = TRUE) {
+makeExonAlignments = function(alignment.directory = NULL,
+                              alignment.format = "phylip",
+                              output.directory = NULL,
+                              output.format = "phylip",
+                              reference.type = c("target", "alignment"),
+                              reference.path = NULL,
+                              target.direction = TRUE,
+                              concatenate.intron.flanks = TRUE,
+                              threads = 1,
+                              memory = 1,
+                              overwrite = FALSE,
+                              resume = TRUE,
+                              mafft.path = NULL) {
 
-  # options(stringsAsFactors = FALSE)
-  # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
-  # library(PhyloCap)
-  # library(foreach)
-  #
-  # #Save directory
-  # #work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # #align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
-  # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
-  # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  #
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
-  # feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
-  # out.name = "Emily"
-  #
-  # setwd(work.dir)
-  # alignment.dir = align.dir
-  # output.dir = paste0(out.name, "/genes_trimmed")
-  # alignment.format = "phylip"
-  # output.format = "phylip"
-  # TrimAl = FALSE
-  # TAPER = TRUE
-  # TAPER.path = "/home/c111h652/programs/correction.jl"
-  # julia.path = "julia"
-  # HmmCleaner = FALSE
-  # trim.column = TRUE
-  # convert.ambiguous.sites = TRUE
-  # alignment.assess = TRUE
-  # trim.external = TRUE
-  # trim.coverage = TRUE
-  # min.coverage.percent = 35
-  # min.external.percent = 50
-  # min.column.gap.percent = 50
-  # overwrite = FALSE
-  # min.alignment.length = 100
-  # min.taxa.count = 5
-  # min.gap.percent = 50
-  # min.sample.bp = 60
-  # threads = 1
-  # mem = 10
-  # resume = TRUE
+#
+#   alignment.directory = "alignments/untrimmed_all-markers"
+#   alignment.format = "phylip"
+#   output.directory = "alignments/untrimmed_introns"
+#   output.format = "phylip"
+#   reference.type = "target"
+#   reference.path = target.file
+#   target.direction = TRUE
+#   concatenate.intron.flanks = TRUE
+#   threads = threads
+#   memory = memory
+#   overwrite = overwrite
+#   resume = resume
+#   mafft.path = mafft.path
+
+
   #Same adds to bbmap path
-
-  if (is.null(TAPER.path) == FALSE){
-    b.string = unlist(strsplit(TAPER.path, ""))
+  if (is.null(mafft.path) == FALSE){
+    b.string = unlist(strsplit(mafft.path, ""))
     if (b.string[length(b.string)] != "/") {
-      TAPER.path = paste0(append(b.string, "/"), collapse = "")
+      mafft.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { TAPER.path = NULL }
+  } else { mafft.path = "" }
 
-  if (is.null(julia.path) == FALSE){
-    b.string = unlist(strsplit(julia.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      julia.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { julia.path = NULL }
+  if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
-  if (is.null(TrimAl.path) == FALSE){
-    b.string = unlist(strsplit(TrimAl.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      TrimAl.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { TrimAl.path = NULL }
-
-  if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
-
- # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
+  # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
 
   #So I don't accidentally delete everything while testing resume
   if (resume == TRUE & overwrite == TRUE){
@@ -159,42 +106,33 @@ batchTrimAlignments = function(alignment.dir = NULL,
     stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
   }
 
-  if (dir.exists(output.dir) == TRUE) {
+  if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.dir))
-      dir.create(output.dir)
-     }
-  } else { dir.create(output.dir) }
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    }
+  } else { dir.create(output.directory) }
 
   #Gathers alignments
-  align.files = list.files(alignment.dir)
+  align.files = list.files(alignment.directory)
+
+  if (reference.type == "target"){
+    target.loci = Biostrings::readDNAStringSet(file = reference.path, format = "fasta")
+  }#end if
+
+  if (reference.type == "alignment"){
+    ref.align = list.files(reference.path)
+  }#end if
 
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
   if (resume == TRUE){
-    done.files = list.files(output.dir)
+    done.files = list.files(output.directory)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
 
   if (length(align.files) == 0) { stop("All alignments have already been completed and overwrite = FALSE.") }
-
-  #Data to collect
-  header.data = c("Alignment", "Pass", "startSamples", "tapirSamples", "trimalSamples",
-                  "edgeSamples", "columnSamples", "covSamples",
-                  "startLength", "tapirLength", "trimalLength",
-                  "edgeLength", "columnLength", "covLength",
-                  "startBasepairs", "tapirBasepairs", "trimalBasepairs",
-                  "edgeBasepairs", "columnBasepairs", "covBasepairs",
-                  "startGaps", "tapirGaps", "trimalGaps",
-                  "edgeGaps", "columnGaps", "covGaps",
-                  "startPerGaps", "tapirPerGaps", "trimalPerGaps",
-                  "edgePerGaps", "columnPerGaps", "covPerGaps")
-
-  save.data = data.table::data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))
-  data.table::setnames(save.data, header.data)
-  save.data[, Alignment:=as.character(Alignment)]
-  save.data[, Pass:=as.logical(Pass)]
 
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
@@ -202,18 +140,17 @@ batchTrimAlignments = function(alignment.dir = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
-    print(paste0(align.files[i], " Starting..."))
-
-     #Load in alignments
+  foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
+  #Loops through each locus and does operations on them
+  #for (i in 1:length(align.files)) {
+    #Load in alignments
     if (alignment.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
 
-    #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-    #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
-    #  align = gsub(".*\\ ", "", align)
-    #  char.count = nchar(align)
+      #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
+      #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
+      #  align = gsub(".*\\ ", "", align)
+      #  char.count = nchar(align)
 
       align = Biostrings::DNAStringSet(align)
       save.name = gsub(".phy$", "", align.files[i])
@@ -221,250 +158,534 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end phylip
 
     if (alignment.format == "fasta"){
-      exon.align = Biostrings::readDNAStringSet(paste0(alignment.dir, "/", align.files[i]) )
+      align = Biostrings::readDNAStringSet(paste0(alignment.directory, "/", align.files[i]) )
       save.name = gsub(".fa$", "", align.files[i])
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
 
-    temp.data = save.data[1,]
+    #First steps here?
+    ##### *** START HERE
 
-    # Runs the functions
-    #######
-    #Step 1: Strip Ns
-    non.align = replaceAlignmentCharacter(alignment = align,
-                                          char.find = "N",
-                                          char.replace = "-")
+    trimmed = trim.ends(align, min.n.seq = ceiling(length(align) * 0.51), codon.trim = T)
+    if (length(trimmed) <= min.taxa){ next }
+    save.names = names(trimmed)
 
-    #Convert ambiguous sites
-    if (convert.ambiguous.sites == TRUE){
-      non.align = convertAmbiguousConsensus(alignment = non.align)
-    }#end phylip
+    #Gets consensus seq for trimming more
+    con.seq = make.consensus(trimmed, method = "majority")
 
+    #Removes the edge gaps
+    ref.aligned = as.character(con.seq)
+    not.gaps = str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
 
-    #Summarize all this, no functoin
-    data.table::set(temp.data, i = as.integer(1), j = match("Alignment", header.data), value = save.name)
-    data.table::set(temp.data, i = as.integer(1), j = match("startSamples", header.data), value = length(non.align))
-    data.table::set(temp.data, i = as.integer(1), j = match("startLength", header.data), value = Biostrings::width(non.align)[1] )
-    gap.count = countAlignmentGaps(non.align)
-    data.table::set(temp.data, i = as.integer(1), j = match("startBasepairs", header.data), value = gap.count[2] - gap.count[1])
-    data.table::set(temp.data, i = as.integer(1), j = match("startGaps", header.data), value = gap.count[1])
-    data.table::set(temp.data, i = as.integer(1), j = match("startPerGaps", header.data), value = gap.count[3])
+    #Finds weird gaps to fix
+    temp.gaps = as.numeric(1)
+    for (k in 1:length(not.gaps)-1){ temp.gaps = append(temp.gaps, not.gaps[k+1]-not.gaps[k]) }
+    temp.gaps = temp.gaps-1
+    names(temp.gaps) = not.gaps
+    gap.spots = temp.gaps[temp.gaps %% 3 != 0]
 
-    # Run the TAPER
-    if (TAPER == TRUE){
-      #Runs the TAPER
-      taper.align = trimTAPER(alignment = non.align,
-                              TAPER.path = TAPER.path,
-                              julia.path = julia.path,
-                              quiet = T,
-                              delete.temp = T)
-      non.align = taper.align
-      #Saves the data
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirSamples", header.data), value = length(taper.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirLength", header.data), value = Biostrings::width(taper.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirPerGaps", header.data), value = gap.count[3])
+    del.col<-c()
+    if (length(gap.spots) != 0){
+      #Loop through each potential bad thing and fix
+      for (k in 1:length(gap.spots)){
+        del.col = append(del.col, (as.numeric(names(gap.spots[k]))-gap.spots[k]):(as.numeric(names(gap.spots[k]))-1))
+      }
     }#end if
 
-    #Step 3. Trimal trimming
-    if (TrimAl == TRUE){
+    ##############
+    #STEP 3: Fixes large gaps at ends of alignment
+    ##############
+    #Looks for gaps that clearly wrong and not 3 BP
+    new.align = strsplit(as.character(trimmed), "")
+    x = as.matrix(as.DNAbin(new.align))
 
-      trimal.align = trimTrimal(alignment = non.align,
-                                trimal.path = TrimAl.path,
-                                quiet = TRUE)
-      non.align = trimal.align
-      #Saves stat data
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalSamples", header.data), value = length(trimal.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalLength", header.data), value = Biostrings::width(trimal.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("trimalPerGaps", header.data), value = gap.count[3])
+    rem.n<-c()
+    for (k in 1:ncol(x)){
+      gaps<-table(as.character(x[,k]))
+      per.gaps<-gaps[names(gaps) == "-"]/nrow(x)
+
+      if (length(per.gaps) == 0){ next }
+
+      #Records column when the gaps exceed this percentage
+      if (per.gaps >= 0.75){ del.col<-append(del.col, k) }
+
+      #Removes gap columns only consisting of Ns
+      n.gaps<-gaps[names(gaps) != "-"]
+      if (length(n.gaps) == 1){
+        if (names(n.gaps) == "n"){ rem.n<-append(rem.n, k)}
+      }
+
+    }#end k loop
+
+    #combines columns to be deleted
+    fin.del<-c(rem.n, del.col)
+    if (length(fin.del) != 0){
+      x<-x[,-fin.del] }
+    #Removes bad columsn and coverts alignment back to DNASTringSet
+    char.align<-as.list(data.frame(t(as.character(x))))
+    temp.align<-lapply(char.align, FUN = function(x) paste(x, collapse = ""))
+    trimmed<-DNAStringSet(unlist(temp.align))
+    names(trimmed)<-save.names
+
+    ##############
+    #STEP 4: Gathers table of best and longest stop codon free frames for each seq
+    ##############
+    #Checks to make sure the codon position is correct
+    save.frame = data.frame()
+    save.all = data.frame()
+    for (j in 1:length(trimmed)){
+      #Finds open reading frames
+      temp.codon = find.orf(trimmed[j], mitochondrial = F, min.size = 50 )
+      if(nrow(temp.codon) == 0){
+        samp.frame<-cbind(Sample = names(trimmed[j]), FrameStart = 0, FrameEnd = 0, Size = 0, sppSize = 0, Frame = "0")
+        save.frame<-rbind(save.frame, samp.frame)
+        next
+      }
+
+      all.frame<-temp.codon[temp.codon$Size >= max(temp.codon$Size) * .70,]
+      big.frame<-temp.codon[temp.codon$Size == max(temp.codon$Size),]
+
+      if (nrow(big.frame) >= 2){
+        #Picks the best from this order of things
+        temp.stop<-big.frame[big.frame$Frame == "F1",]
+        if (nrow(temp.stop) == 0){ temp.stop<-big.frame[big.frame$Frame == "R1",] }
+        if (nrow(temp.stop) == 0){ temp.stop<-big.frame[big.frame$Frame == "F2",] }
+        if (nrow(temp.stop) == 0){ temp.stop<-big.frame[big.frame$Frame == "R2",] }
+        if (nrow(temp.stop) == 0){ temp.stop<-big.frame[big.frame$Frame == "F3",] }
+        if (nrow(temp.stop) == 0){ temp.stop<-big.frame[big.frame$Frame == "R3",] }
+        big.frame<-temp.stop
+      }
+
+      # #Saves teh data
+      samp.frame<-cbind(Sample = names(trimmed[j]), big.frame)
+      temp.size<-unlist(strsplit(as.character(trimmed[j]), ""), use.names = F)
+
+      #Starts from the beginning and end to fill in end gaps
+      sub.size<-0
+      for (q in 1:length(temp.size)){ if (temp.size[q] == "-"){ sub.size<-sub.size+1 } else { break } }
+      for (q in length(temp.size):1){ if (temp.size[q] == "-"){ sub.size<-sub.size+1 } else { break } }
+
+      #Saves final data
+      samp.frame<-cbind(samp.frame, sppSize = length(temp.size)-sub.size)
+      save.frame<-rbind(save.frame, samp.frame)
+      all.frame<-cbind(Sample = names(trimmed[j]), all.frame)
+      all.frame<-cbind(all.frame, sppSize = length(temp.size)-sub.size)
+      save.all<-rbind(save.all, all.frame)
+    }#end j loop
+
+    #Moves on if there are no frames found. Saves to Anon folder?
+    if (unique(save.frame$Frame)[1] == "0"){
+      print(paste(locus.names[i], " sucked. No frames found.", sep = ""))
+      next
+    }
+
+    ##############
+    #STEP 5: Uses previous data to find a consistent frame
+    ##############
+    #Looks at the overall data rather than the best indiv data to find a consistent frame
+    temp.all = save.all
+    frame.names = unique(temp.all$Frame)
+    #Goes through the equally good frames and reduces to frames with the same range
+    very.best = data.frame()
+    for (k in 1:length(frame.names)){
+      temp.best<-temp.all[temp.all$Frame == frame.names[k],]
+      starts<-table(temp.best$FrameStart)[table(temp.best$FrameStart) == max(table(temp.best$FrameStart))]
+      ends<-table(temp.best$FrameEnd)[table(temp.best$FrameEnd) == max(table(temp.best$FrameEnd))]
+
+      #Removes duplicates
+      starts<-starts[as.numeric(names(starts)) == min(as.numeric(names(starts)))]
+      ends<-ends[as.numeric(names(ends)) == min(as.numeric(names(ends)))]
+
+      super.best<-temp.best[temp.best$FrameStart == as.numeric(names(starts)),]
+      super.best<-super.best[super.best$FrameEnd == as.numeric(names(ends)),]
+      very.best<-rbind(very.best, super.best)
+    }#end k loop
+
+    #Moves on if there are no frames found. Saves to Anon folder?
+    if (nrow(very.best) == 0){
+      print(paste(locus.names[i], " sucked. No frames found.", sep = ""))
+      next
+    }
+
+    ##############
+    #STEP 6: Selects the best frame
+    ##############
+    #Picks out the best frame
+    best.frame = table(very.best$Frame)[table(very.best$Frame) == max(table(very.best$Frame))]
+
+    #If there are multiple good frames pick the biggest
+    if (length(best.frame) != 1){
+      temp.fix<-very.best[very.best$Frame %in% names(best.frame),]
+      bigger<-temp.fix[temp.fix$Size == max(temp.fix$Size),]
+      best.frame<-table(bigger$Frame)[table(bigger$Frame) == max(table(bigger$Frame))]
     }#end if
 
-    # Step 4. Edge trimming
-    if (trim.external == TRUE){
-      #external trimming function
-      edge.align = trimExternal(alignment = non.align,
-                                min.n.seq = ceiling(length(non.align) * (min.external.percent/100)),
-                                codon.trim = F)
-      non.align = edge.align
-      #Saves stat data
-      data.table::set(temp.data, i = as.integer(1), j = match("edgeSamples", header.data), value = length(edge.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("edgeLength", header.data), value = Biostrings::width(edge.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("edgeBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("edgeGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("edgePerGaps", header.data), value = gap.count[3])
-    }#end trim external
+    #If they are same size just pick from this order
+    if (length(best.frame) != 1){
+      #Picks the best from this order of things
+      temp.stop<-best.frame[names(best.frame) == "F1"]
+      if (length(temp.stop) == 0){ temp.stop<-best.frame[names(best.frame) == "R1"] }
+      if (length(temp.stop) == 0){ temp.stop<-best.frame[names(best.frame) == "F2"] }
+      if (length(temp.stop) == 0){ temp.stop<-best.frame[names(best.frame) == "R2"] }
+      if (length(temp.stop) == 0){ temp.stop<-best.frame[names(best.frame) == "F3"] }
+      if (length(temp.stop) == 0){ temp.stop<-best.frame[names(best.frame) == "R3"] }
+      best.frame<-temp.stop
+    }
 
-    if (trim.column == TRUE){
-      #Trim alignment colums
-      col.align = trimAlignmentColumns(alignment = non.align,
-                                       min.gap.percent = min.column.gap.percent)
-      non.align = col.align
-      #Saves stat data
-      data.table::set(temp.data, i = as.integer(1), j = match("columnSamples", header.data), value = length(col.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("columnLength", header.data), value = Biostrings::width(col.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("columnBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("columnGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("columnPerGaps", header.data), value = gap.count[3])
-    }#end trim column.
+    #Checks the remaining ORF size
+    temp.size<-save.all[save.all$Frame == names(best.frame),]
+    samp.spp<-temp.size[temp.size$sppSize == max(temp.size$sppSize),]
+    samp.seq<-trimmed[names(trimmed) == samp.spp$Sample[1]]
+    samp.size<-nchar(gsub("-", "", as.character(samp.seq)))
 
-    #Step 5. Evaluate and cut out each sample
-    if (trim.coverage == TRUE){
-      #sample coverage function
-      cov.align = trimSampleCoverage(alignment = non.align,
-                                     min.coverage.percent = min.coverage.percent,
-                                     min.sample.bp = min.sample.bp,
-                                     relative.width = "sample")
+    if (mean(temp.size$Size) <= samp.size*.5){ print(paste(locus.names[i], " was small.", sep = "")) }
 
-      non.align = cov.align
-      #Saves stat data
-      data.table::set(temp.data, i = as.integer(1), j = match("covSamples", header.data), value = length(cov.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("covLength", header.data), value = Biostrings::width(cov.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("covBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("covGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
-    }#end trim.external
+    if (mean(temp.size$Size) <= samp.size*.25){
+      print(paste(locus.names[i], " sucked. Too few sequence left.", sep = ""))
+      next
+    }
 
-    #Step 6
-    if (alignment.assess == TRUE) {
-      #Assesses the alignment returning TRUE for pass and FALSE for fail
-      test.result = alignmentAssess(alignment = non.align,
-                                    max.alignment.gap.percent = max.alignment.gap.percent,
-                                    min.taxa.alignment = min.taxa.alignment,
-                                    min.alignment.length = min.alignment.length)
+    if (best.frame <= length(trimmed) * .5){
+      print(paste(locus.names[i], " sucked. No cosistent frame.", sep = ""))
+      next
+    }
 
-      data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
+    #Reverses if it needs to
+    if (length(grep("R", names(best.frame))) != 0){
+      new.align<-reverseComplement(trimmed)
+    }else { new.align<-trimmed }
 
-      if (test.result == FALSE){
-        print(paste0(align.files[i], " Failed and was discarded."))
-      } else {
-        write.temp = strsplit(as.character(non.align), "")
-        aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-        #readies for saving
-        writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
-      }#end else test result
+    ##############
+    #STEP 7: Gets start and stop coordinates for each sequence and find best alignment
+    ##############
+    #Gets trimming locations
+    frame.ranges<-save.all[save.all$Frame == names(best.frame),]
+
+    #Gets potential starts and ends
+    starts<-table(frame.ranges$FrameStart)[table(frame.ranges$FrameStart) == max(table(frame.ranges$FrameStart))]
+    ends<-table(frame.ranges$FrameEnd)[table(frame.ranges$FrameEnd) == max(table(frame.ranges$FrameEnd))]
+    starts<-starts[starts == max(starts)]
+    ends<-ends[ends == max(ends)]
+
+    if (length(starts) != 1 || length(ends) != 1){
+      frame.ranges<-save.all[save.all$Frame == names(best.frame),]
+      starts<-table(frame.ranges$FrameStart)[table(frame.ranges$FrameStart) == max(table(frame.ranges$FrameStart))]
+      ends<-table(frame.ranges$FrameEnd)[table(frame.ranges$FrameEnd) == max(table(frame.ranges$FrameEnd))]
+      starts<-starts[starts == max(starts)]
+      ends<-ends[ends == max(ends)]
+    }
+
+    if (length(starts) != 1 || length(ends) != 1){
+      starts<-starts[as.numeric(names(starts)) == min(as.numeric(names(starts)))]
+      ends<-ends[as.numeric(names(ends)) == max(as.numeric(names(ends)))]
+    }
+
+    ###################
+    #STEP 8: Makes sure entire alignment is a multiple of 3
+    ###################
+    anu.start<-as.numeric(names(starts))
+    new.end<-as.numeric(names(ends))
+    new.len<-new.end-(anu.start-1)
+
+    #Gets a new end to keep in multiples of 3 for proteins
+    if (length(new.len[which(new.len %%3==0)]) == 0) {
+      anu.end<-new.end-1
+    } else { anu.end<-new.end }
+
+    new.len<-anu.end-(anu.start-1)
+    if (length(new.len[which(new.len %%3==0)]) == 0) {
+      anu.end<-new.end-2
+    } else { anu.end<-anu.end }
+
+    #Trims sequence with new coords
+    done.seq<-subseq(start = anu.start, end = anu.end, x = new.align)
+
+    ###################
+    #STEP 9: Trim out odd start/end bases
+    ###################
+    codon.seq<-DNAStringSet()
+    for (k in 1:length(done.seq)){
+      ref.aligned<-as.character(done.seq[k])
+
+      #Chcecks at beginning of sequence
+      not.gaps<-str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
+
+      if (length(not.gaps) <= min.len){ next }
+
+      #Checks if its odd, delete 1 base
+      if ( (not.gaps[1]-1) %%3 == 2){ substr(ref.aligned, not.gaps[1], not.gaps[1])<-"-" }
+
+      #Deletes 2 bases its off by
+      if ( (not.gaps[1]-1) %%3 == 1){
+        substr(ref.aligned, not.gaps[1], not.gaps[1])<-"-"
+        substr(ref.aligned, not.gaps[1]+1, not.gaps[1]+1)<-"-"
+      }#end if
+
+      #checks for end of sequence
+      not.gaps<-str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
+      #counts characters
+      char.len<-(not.gaps[length(not.gaps)]-not.gaps[1])+1
+      end.pos<-not.gaps[length(not.gaps)]
+      #removes odd characters at ends
+      if ( char.len %%3 == 1){ substr(ref.aligned, end.pos, end.pos)<-"-" }
+
+      if ( char.len %%3 == 2){
+        substr(ref.aligned, end.pos-1, end.pos-1)<-"-"
+        substr(ref.aligned, end.pos, end.pos)<-"-"
+      } #end if
+
+      #Saves final seqs
+      save.seq<-DNAStringSet(ref.aligned)
+      names(save.seq)<-names(done.seq[k])
+      codon.seq<-append(codon.seq, save.seq)
+
+    } #END K
+
+    ###################
+    #STEP 10: Change stop codons to N
+    ###################
+
+    if (length(codon.seq) != 0){
+      #Finds stop codons to replace
+      n.seq = DNAStringSet(gsub("-", "N", as.character(codon.seq)))
+      stop.seq = DNAStringSet()
+      del.taxa = c()
+      for (k in 1:length(n.seq)){
+        stop.data = find.codon(n.seq[k], genetic.code = "nuclear", reverse = T)
+        stop.data = stop.data[stop.data$frame == "F1",]
+        #If there is a stop codon take bold action
+        if (stop.data$start[1] == 0){
+          stop.seq = append(stop.seq, n.seq[k])
+        } else {
+          #Goes through each codon
+          #  for (y in 1:nrow(stop.data)){
+          #Saves final seqs
+          #    substr(ref.aligned, stop.data$start[y], stop.data$start[y])<-"N"
+          #    substr(ref.aligned, stop.data$start[y]+1, stop.data$start[y]+1)<-"N"
+          #    substr(ref.aligned, stop.data$start[y]+2, stop.data$start[y]+2)<-"N"
+          #  }#end Y LOOP
+          del.taxa = append(del.taxa, names(ref.aligned) )
+          #Saves final data
+          #save.seq = DNAStringSet(ref.aligned)
+          #names(save.seq) = names(n.seq[k])
+          #stop.seq = append(stop.seq, save.seq)
+        }#end if state
+      }# END K loop
     } else {
-      #If no alignment assessing is done, saves
-      write.temp = strsplit(as.character(non.align), "")
-      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-      #readies for saving
-      writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+      stop.seq = done.seq
     }#end else
 
-    print(data.frame(temp.data))
-    #print(paste0(align.files[i], " Completed."))
+    if (length(stop.seq) <= min.taxa){ next }
+
+    ###################
+    #FINAL STEP: Save everything after some final spp and length filtering
+    ###################
+    #Removes sequences that are less than a certain coverage\
+    t.align<-strsplit(as.character(stop.seq), "")
+    len.loci<-lapply(t.align, function (x) x[x != "N"])
+    spp.len<-unlist(lapply(len.loci, function (x) length(x)))
+    spp.rem<-spp.len[spp.len <= max(spp.len) * as.numeric(min.cov)]
+    spp.rem<-append(spp.rem, spp.len[spp.len <= as.numeric(min.len)]  )
+
+    if (length(spp.rem) > 0){
+      red.align<-t.align[!names(t.align) %in% unique(names(spp.rem))]
+    } else { red.align<-t.align }
+
+    #Removes if all removed
+    if (length(red.align) == 0){
+      print(paste0("not enough alignment remains for ", locus.names[i]))
+      next
+    }
+
+    #removes loci with too few taxa
+    if (length(names(red.align)) <= as.numeric(min.taxa)){
+      print(paste("Too few taxa after trimming."))
+      next
+    }
+
+    #writes alignment
+    mat.align<-lapply(red.align, tolower)
+    write.align<-as.matrix(as.DNAbin(mat.align))
+
+    #readies for saving
+    write.phy(write.align, file=paste0("exon-only_trimmed/", locus.names[i]), interleave = F)
+
+
+
+    ##### ==== OLD
+
+
+    if (reference.type == "target"){
+      #Loads in a pulls out relevant target file
+      target.seq = target.loci[names(target.loci) %in% save.name]
+      names(target.seq) = "Reference_Locus"
+
+    }#end target if
+
+    #If using the alignments
+    if (reference.type == "alignment"){
+
+      if (file.exists(paste0(reference.path, "/", align.files[i])) == FALSE){ return(NULL) }
+
+      ref.align = Biostrings::readAAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
+      ref.align = Biostrings::DNAStringSet(ref.align)
+      #Gets consensus seq for trimming more
+      con.seq = makeConsensus(ref.align, method = "majority")
+      #Removes the edge gaps
+      target.seq = Biostrings::DNAStringSet(gsub("\\+|-", "", as.character(con.seq)))
+      names(target.seq) = "Reference_Locus"
+    }#end alignment if
+
+
+    #Checks for correct target sequence amount
+    if (length(target.seq) == 0){ return(NULL) }
+    if (length(target.seq) >= 2){ return(NULL) }
+    if (Biostrings::width(target.seq) <= 10) { return(NULL) }
+
+    ##############
+    #STEP 2: Runs MAFFT to add
+    ##############
+    #Aligns and then reverses back to correction orientation
+    alignment = runMafft(sequence.data = align,
+                         add.contigs = target.seq,
+                         save.name = paste0(output.directory, "/", align.files[i]),
+                         algorithm = "add",
+                         adjust.direction = TRUE,
+                         threads = 1,
+                         cleanup.files = T,
+                         quiet = TRUE,
+                         mafft.path = mafft.path)
+
+    #Checks for failed mafft run
+    if (length(alignment) == 0){ return(NULL) }
+
+    #Checks if you want to keep to target direction or not
+    if (target.direction == TRUE){
+      #Aligns and then reverses back to correction orientation
+      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+      if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
+      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+    } else {
+      #Regular fixes
+      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+    }#end if
+
+    # ##############
+    # #STEP 3: Removes exon from the intron part
+    # ##############
+    # #Removes the edge gaps
+    ref.aligned = as.character(alignment['Reference_Locus'])
+    not.gaps = stringr::str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
+    ref.start = min(not.gaps)
+    ref.finish = max(not.gaps)
+
+    #Finds weird gaps to fix
+    temp.gaps = as.numeric(1)
+    for (k in 1:length(not.gaps)-1){ temp.gaps = append(temp.gaps, not.gaps[k+1]-not.gaps[k]) }
+    temp.gaps = temp.gaps-1
+    names(temp.gaps) = not.gaps
+    bad.gaps = which(temp.gaps >= 30)
+    front.gaps = bad.gaps[bad.gaps <= length(not.gaps) *0.10]
+    end.gaps = bad.gaps[bad.gaps >= length(not.gaps) *0.90]
+
+    #Fix big gaps if there are any
+    if (length(front.gaps) != 0){
+      temp.change = (max(as.numeric(names(front.gaps))-ref.start))-(max(front.gaps)-1)
+      ref.start = ref.start+temp.change
+    }#end gap if
+
+    #Fix big gaps if there are any
+    if (length(end.gaps) != 0){
+      add.bp = length(temp.gaps)-min(end.gaps)
+      #add.bp<-(ref.finish-min(as.numeric(names(end.gaps))))
+      min.gaps = temp.gaps[min(end.gaps)]
+      temp.change = as.numeric(names(min.gaps))-as.numeric(min.gaps)
+      ref.finish = temp.change+add.bp
+    }#end gap if
+
+    #Cuts out the intron pieces
+    intron.left = Biostrings::subseq(alignment, 1, ref.start-1)
+    intron.right = Biostrings::subseq(alignment, ref.finish+1, Biostrings::width(alignment))
+    save.names  = names(alignment)
+
+    #saves intron flanks separately
+    if (concatenate.intron.flanks == FALSE) {
+      #Remove gap only alignments
+      gap.align = strsplit(as.character(intron.left), "")
+      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
+      gap.rem = gap.count[gap.count <= 10]
+      left.intron = intron.left[!names(intron.left) %in% names(gap.rem)]
+
+      #Remove gap only alignments
+      gap.align = strsplit(as.character(intron.right), "")
+      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
+      gap.rem = gap.count[gap.count <= 10]
+      right.intron = intron.right[!names(intron.right) %in% names(gap.rem)]
+
+      #Saves them
+      write.temp = strsplit(as.character(left.intron), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+
+      save.name = gsub(".phy$", "", align.files[i])
+
+      #readies for saving
+      writePhylip(alignment = aligned.set,
+                  file=paste0(output.directory, "/", save.name, "_1.phy"),
+                  interleave = F,
+                  strict = F)
+
+      #Saves them
+      write.temp = strsplit(as.character(right.intron), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+
+      #readies for saving
+      writePhylip(alignment = aligned.set,
+                  file=paste0(output.directory, "/", save.name, "_2.phy"),
+                  interleave = F,
+                  strict = F)
+
+      #Deletes old files
+      print(paste0(align.files[i], " alignment saved."))
+
+    } else {
+
+      #Merges the alignments
+      intron.align = Biostrings::DNAStringSet(paste0(as.character(intron.left), as.character(intron.right)))
+      names(intron.align) = save.names
+      intron.align = intron.align[names(intron.align) != "Reference_Locus"]
+
+      #Remove gap only alignments
+      gap.align = strsplit(as.character(intron.align), "")
+      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
+      gap.rem = gap.count[gap.count <= 10]
+      rem.align = intron.align[!names(intron.align) %in% names(gap.rem)]
+
+      ##############
+      #STEP 5: Cleanup and save
+      ##############
+
+      if (length(rem.align) != 0 && length(Biostrings::width(rem.align)) != 0){
+        #string splitting
+        write.temp = strsplit(as.character(rem.align), "")
+        aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+
+        #readies for saving
+        writePhylip(alignment = aligned.set,
+                    file=paste0(output.directory, "/", align.files[i]),
+                    interleave = F,
+                    strict = F)
+
+        #Deletes old files
+        print(paste0(align.files[i], " alignment saved."))
+      } else { print(paste0(align.files[i], " alignment not saved. Not enough data."))  }
+    }#end
+
+    rm()
+    gc()
 
   }#end i loop
 
+  #close multithread
   parallel::stopCluster(cl)
-
-  #Print and save summary table
-  write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)
-  #Saves log file of things
-  if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
-  fileConn = file(paste0(output.dir, ".log"), open = "w")
-  writeLines(paste0("Log file for ", output.dir), fileConn)
-  writeLines(paste0("\n"), fileConn)
-  writeLines(paste0("Overall trimming summary:"), fileConn)
-  writeLines(paste0("------------------------------------------------------------------"), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Starting alignments: ", length(align.files)), fileConn)
-  writeLines(paste0("Trimmed alignments: ", length(out.data$Pass[out.data$Pass == TRUE])), fileConn)
-  writeLines(paste0("Discarded alignments: ", length(out.data$Pass[out.data$Pass == FALSE])), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Mean samples removed per alignment: ",
-                    mean(out.data$startSamples - out.data$columnSamples)), fileConn)
-  writeLines(paste0("Mean alignment length trimmed per alignment: ",
-                    mean(out.data$startLength - out.data$columnLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed per alignment: ",
-                    mean(out.data$startBasepairs - out.data$columnBasepairs)), fileConn)
-  writeLines(paste0("Mean gaps trimmed per alignment: ",
-                    mean(out.data$startGaps - out.data$columnGaps)), fileConn)
-  writeLines(paste0("Mean gap percent trimmed per alignment: ",
-                    mean(out.data$startPerGaps - out.data$columnPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Individual trimming step summary:"), fileConn)
-  writeLines(paste0("------------------------------------------------------------------"), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Starting alignments:"), fileConn)
-  writeLines(paste0("Mean samples: ",
-                    mean(out.data$startSamples)), fileConn)
-  writeLines(paste0("Mean alignment length: ",
-                    mean(out.data$startLength)), fileConn)
-  writeLines(paste0("Mean basepairs: ",
-                    mean(out.data$startBasepairs)), fileConn)
-  writeLines(paste0("Mean gaps: ",
-                    mean(out.data$startGaps)), fileConn)
-  writeLines(paste0("Mean gap percentage: ",
-                    mean(out.data$startPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("hmmCleaner:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$startSamples - out.data$hmmSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$startLength - out.data$hmmLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$startBasepairs - out.data$hmmBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$startGaps - out.data$hmmGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$startPerGaps - out.data$hmmPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Trimal:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$hmmSamples - out.data$trimalSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$hmmLength - out.data$trimalLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$hmmBasepairs - out.data$trimalBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$hmmGaps - out.data$trimalGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$hmmPerGaps - out.data$trimalPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("External Trimming:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$trimalSamples - out.data$edgeSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$trimalLength - out.data$edgeLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$trimalBasepairs - out.data$edgeBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$trimalGaps - out.data$edgeGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$trimalPerGaps - out.data$edgePerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Sample Coverage Trimming:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$edgeSamples - out.data$covSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$edgeLength - out.data$covLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$edgeBasepairs - out.data$covBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$edgeGaps - out.data$covGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$edgePerGaps - out.data$covPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
-  writeLines(paste0("Column Coverage Trimming:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$covSamples - out.data$columnSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$covLength - out.data$columnLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$covBasepairs - out.data$columnBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$covGaps - out.data$columnGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$covPerGaps - out.data$columnPerGaps)), fileConn)
-  close(fileConn)
 
 } #end function
