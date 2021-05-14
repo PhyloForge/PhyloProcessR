@@ -78,7 +78,7 @@ if (decontamination == TRUE){
 }
 
 
-if (decontamination == TRUE){
+if (merge.pe.reads == TRUE){
   #merge paired end reads
   mergePairedEndReads(input.reads = input.reads,
                       output.directory = "processed-reads/pe-merged-reads",
@@ -110,8 +110,18 @@ if (denovo.assembly == TRUE){
 }#end if
 
 #################################################
+#################################################
+#################################################
+#################################################
 ## Step 2: Match targets and annotate contigs
 ##################
+
+work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
+setwd(work.dir)
+dir.create("data-analysis")
+assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
+target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+subset.fasta.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa"
 
 if (match.targets == TRUE){
   #match targets
@@ -139,7 +149,7 @@ if (match.targets == TRUE){
 if (align.matching.targets == TRUE){
   #align targets
   alignTargets(targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
-               output.directory = "data-analysis/alignments",
+               output.directory = "alignments/untrimmed_all-markers",
                min.taxa = min.taxa.alignment,
                subset.start = 0,
                subset.end = 1,
@@ -150,6 +160,50 @@ if (align.matching.targets == TRUE){
                quiet = quiet,
                mafft.path = mafft.path)
 }#end if
+
+#### Functions for separating into data types
+trimAlignmentTargets(alignment.directory = "alignments/untrimmed_all-markers",
+                     alignment.format = "phylip",
+                     target.file = target.file,
+                     target.direction = TRUE,
+                     output.directory = "alignments/untrimmed_no-flank",
+                     output.format = "phylip",
+                     min.alignment.length = 100,
+                     min.taxa.alignment = min.taxa.alignment,
+                     threads = threads,
+                     memory = memory,
+                     overwrite = overwrite,
+                     resume = resume,
+                     mafft.path = mafft.path)
+
+makeIntronAlignments(alignment.directory = "alignments/untrimmed_all-markers",
+                     alignment.format = "phylip",
+                     output.directory = "alignments/untrimmed_introns",
+                     output.format = "phylip",
+                     reference.type = "target",
+                     reference.path = target.file,
+                     target.direction = TRUE,
+                     concatenate.intron.flanks = TRUE,
+                     threads = threads,
+                     memory = memory,
+                     overwrite = overwrite,
+                     resume = resume,
+                     mafft.path = mafft.path)
+
+
+makeAlignmentSubset(alignment.directory = "alignments/untrimmed_all-markers",
+                    alignment.format = "phylip",
+                    output.directory = "alignments/untrimmed_UCE",
+                    output.format = "phylip",
+                    subset.reference = "blast",
+                    subset.fasta.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa",
+                    subset.grep.string = NULL,
+                    subset.blast.targets = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa",
+                    blast.path = blast.path,
+                    threads = threads,
+                    memory = memory,
+                    overwrite = overwrite)
+
 
 if (trim.alignments == TRUE){
   #Fix the installs for this

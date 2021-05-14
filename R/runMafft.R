@@ -32,7 +32,7 @@
 
 runMafft = function(sequence.data = NULL,
                     add.contigs = NULL,
-                    algorithm = "localpair",
+                    algorithm = c("localpair", "add"),
                     adjust.direction = TRUE,
                     save.name = NULL,
                     threads = 1,
@@ -65,15 +65,16 @@ runMafft = function(sequence.data = NULL,
     #Saves to folder to run with mafft
     add.save = as.list(as.character(add.contigs))
     writeFasta(sequences = add.save, names = names(add.save),
-               "add_sequences.fa", nbchar = 1000000, as.string = T)
+               paste0(save.name, "_add_sequences.fa"), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0(mafft.path, "mafft --",algorithm, " add_sequences.fa --maxiterate 1000 ", save.name, ".fa > ",
+    system(paste0(mafft.path, "mafft --",algorithm, " ", save.name,
+                  "_add_sequences.fa --maxiterate 1000 ", save.name, ".fa > ",
                   save.name, "_align.fa"), ignore.stderr = T)
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
     unlink(paste0(save.name, ".fa"))
-    unlink("add_sequences.fa")
+    unlink(paste0(save.name, "_add_sequences.fa"))
 
   }#end -add
 

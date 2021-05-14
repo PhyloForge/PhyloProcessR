@@ -221,7 +221,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end phylip
 
     if (alignment.format == "fasta"){
-      align = Biostrings::readDNAStringSet(paste0(alignment.dir, "/", align.files[i]) )
+      exon.align = Biostrings::readDNAStringSet(paste0(alignment.dir, "/", align.files[i]) )
       save.name = gsub(".fa$", "", align.files[i])
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
@@ -360,9 +360,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
     print(data.frame(temp.data))
     #print(paste0(align.files[i], " Completed."))
-
-    rm()
-    gc()
 
   }#end i loop
 

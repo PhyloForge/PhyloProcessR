@@ -107,5 +107,3 @@ writePhylip = function(alignment = NULL,
   }
 }
 
-
-
