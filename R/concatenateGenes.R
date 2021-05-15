@@ -43,17 +43,17 @@ concatenateGenes = function(alignment.folder = NULL,
                             memory = 1) {
 
   #Debug
-  # library(foreach)
+  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
+  # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
+  # feature.gene.names = "/Volumes/Rodents/Murinae/Trimming/Mus_gene_metadata.csv"
+  # out.name = "Emily"
   #
   # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   # align.dir =  "/home/c111h652/scratch/Rodents/Alignments/Emily"
   # feature.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   # out.name = "Emily"
-  #
-  # # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
-  # # feature.gene.names = "/Volumes/Rodents/Murinae/Trimming/Mus_gene_metadata.csv"
-  # # out.name = "Emily"
+  # threads = 1
+  # memory = 1
   #
   # setwd(work.dir)
   # alignment.folder = align.dir
@@ -63,6 +63,7 @@ concatenateGenes = function(alignment.folder = NULL,
   # remove.reverse = TRUE
   # overwrite = FALSE
   # resume = TRUE
+
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -100,8 +101,8 @@ concatenateGenes = function(alignment.folder = NULL,
   # doParallel::registerDoParallel(cl)
   # mem.cl = floor(memory/threads)
 
- # foreach::foreach(i=1:length(gene.names), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  for (i in 1:length(gene.names)){
+  foreach::foreach(i=1:length(gene.names), .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  #for (i in 1:length(gene.names)){
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
     #Match to the files to obtain
@@ -338,8 +339,8 @@ concatenateGenes = function(alignment.folder = NULL,
 
     system(paste0("rm -r ", temp.dir))
 
-  #  rm()
-  #  gc()
+    rm()
+    gc()
 
    }#end i loop
 

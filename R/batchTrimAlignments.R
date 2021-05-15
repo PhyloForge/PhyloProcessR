@@ -202,7 +202,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 

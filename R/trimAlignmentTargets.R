@@ -115,7 +115,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
+  foreach::foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
   #Loops through each locus and does operations on them
   #for (i in 1:length(align.files)){
     #Load in alignments
