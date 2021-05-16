@@ -97,9 +97,9 @@ concatenateGenes = function(alignment.folder = NULL,
   }
 
   # #Sets up multiprocessing
-  # cl = parallel::makeCluster(threads, outfile = "")
-  # doParallel::registerDoParallel(cl)
-  # mem.cl = floor(memory/threads)
+   cl = parallel::makeCluster(threads, outfile = "")
+   doParallel::registerDoParallel(cl)
+   mem.cl = floor(memory/threads)
 
   foreach::foreach(i=1:length(gene.names), .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   #for (i in 1:length(gene.names)){
