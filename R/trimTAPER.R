@@ -49,7 +49,7 @@ trimTAPER = function(alignment = NULL,
              as.string = T)
 
   #Runs the thing
-  system(paste0(julia.path, " ", TAPER.path, " -m N -a N ",
+  system(paste0(julia.path, "julia ", TAPER.path, "correction.jl -m N -a N ",
                 input.file, " > out_", input.file),
          ignore.stdout = F, ignore.stderr = quiet)
 

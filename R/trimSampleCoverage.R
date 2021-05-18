@@ -23,7 +23,7 @@
 #Function trims for sample coverage
 trimSampleCoverage = function(alignment = NULL,
                               min.coverage.percent = 50,
-                              min.sample.bp = 60,
+                              min.coverage.bp = 60,
                               relative.width = c("alignment", "sample")) {
 
   #Debug
@@ -36,13 +36,13 @@ trimSampleCoverage = function(alignment = NULL,
 
   if (length(alignment) <= 3){ return(alignment) }
 
-  if (min.sample.bp >= Biostrings::width(alignment)[1]){ return(alignment) }
+  if (min.coverage.bp >= Biostrings::width(alignment)[1]){ return(alignment) }
 
   #Remove gap only alignments
   c.align = strsplit(as.character(alignment), "")
   gap.align = lapply(c.align, function(x) gsub("N|n", "-", x) )
   base.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
-  base.rem = base.count[base.count <= as.numeric(min.sample.bp)]
+  base.rem = base.count[base.count <= as.numeric(min.coverage.bp)]
 
   if (relative.width == "alignment"){
     r.width = Biostrings::width(alignment)[1]

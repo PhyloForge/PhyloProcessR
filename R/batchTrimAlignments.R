@@ -84,10 +84,10 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                overwrite = FALSE,
                                resume = TRUE) {
 
-  # options(stringsAsFactors = FALSE)
-  # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
+  #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
   # library(PhyloCap)
   # library(foreach)
+  #
   #
   # #Save directory
   # #work.dir = "/Volumes/Rodents/Murinae/Trimming"
@@ -97,7 +97,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #
   # work.dir = "/Volumes/Rodents/Murinae/Trimming"
   # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
-  # feat.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
   # out.name = "Emily"
   #
   # setwd(work.dir)
@@ -105,28 +104,27 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # output.dir = paste0(out.name, "/genes_trimmed")
   # alignment.format = "phylip"
   # output.format = "phylip"
-  # TrimAl = FALSE
   # TAPER = TRUE
-  # TAPER.path = "/home/c111h652/programs/correction.jl"
-  # julia.path = "julia"
-  # HmmCleaner = FALSE
-  # trim.column = TRUE
-  # convert.ambiguous.sites = TRUE
-  # alignment.assess = TRUE
+  # TAPER.path = "/usr/local/bin"
+  # julia.path = "/Applications/Julia-1.6.app/Contents/Resources/julia/bin"
+  # TrimAl = TRUE
+  # TrimAl.path = "/Users/chutter/miniconda3/bin"
   # trim.external = TRUE
+  # min.external.percent = 50
   # trim.coverage = TRUE
   # min.coverage.percent = 35
-  # min.external.percent = 50
+  # trim.column = TRUE
   # min.column.gap.percent = 50
-  # overwrite = FALSE
+  # convert.ambiguous.sites = FALSE
+  # alignment.assess = TRUE
+  # min.coverage.bp = 60
   # min.alignment.length = 100
-  # min.taxa.count = 5
-  # min.gap.percent = 50
-  # min.sample.bp = 60
-  # threads = 1
-  # mem = 10
+  # min.taxa.alignment = 5
+  # max.alignment.gap.percent = 50
+  # threads = 2
+  # memory = 6
+  # overwrite = FALSE
   # resume = TRUE
-  #Same adds to bbmap path
 
   if (is.null(TAPER.path) == FALSE){
     b.string = unlist(strsplit(TAPER.path, ""))
@@ -202,7 +200,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  out.data = foreach::foreach(i=1:10, .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
@@ -256,7 +254,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
       taper.align = trimTAPER(alignment = non.align,
                               TAPER.path = TAPER.path,
                               julia.path = julia.path,
-                              quiet = T,
+                              quiet = TRUE,
                               delete.temp = T)
       non.align = taper.align
       #Saves the data
@@ -319,7 +317,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
       #sample coverage function
       cov.align = trimSampleCoverage(alignment = non.align,
                                      min.coverage.percent = min.coverage.percent,
-                                     min.sample.bp = min.sample.bp,
+                                     min.coverage.bp = min.coverage.bp,
                                      relative.width = "sample")
 
       non.align = cov.align
@@ -361,8 +359,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
     print(data.frame(temp.data))
     #print(paste0(align.files[i], " Completed."))
 
-    rm()
-    gc()
+    #rm()
+    #gc()
 
   }#end i loop
 
