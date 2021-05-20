@@ -84,7 +84,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                overwrite = FALSE,
                                resume = TRUE) {
 
-  #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
+  # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
   # library(PhyloCap)
   # library(foreach)
   #
@@ -95,9 +95,13 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
   # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
   #
+  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
+  # align.dir = "/home/c111h652/scratch/Rodents/Trimming/Emily/genes_untrimmed"
+  #
   # work.dir = "/Volumes/Rodents/Murinae/Trimming"
   # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
   # out.name = "Emily"
+  #
   #
   # setwd(work.dir)
   # alignment.dir = align.dir
@@ -107,6 +111,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
   # TAPER = TRUE
   # TAPER.path = "/usr/local/bin"
   # julia.path = "/Applications/Julia-1.6.app/Contents/Resources/julia/bin"
+  # #TAPER.path = "/home/c111h652/programs"
+  # #julia.path = "/programs/julia/bin"
   # TrimAl = TRUE
   # TrimAl.path = "/Users/chutter/miniconda3/bin"
   # trim.external = TRUE
@@ -201,7 +207,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   #Loops through each locus and does operations on them
   out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
+  #for (i in 45:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
@@ -249,12 +255,12 @@ batchTrimAlignments = function(alignment.dir = NULL,
     data.table::set(temp.data, i = as.integer(1), j = match("startPerGaps", header.data), value = gap.count[3])
 
     # Run the TAPER
-    if (TAPER == TRUE){
+    if (TAPER == TRUE && length(non.align) != 0){
       #Runs the TAPER
       taper.align = trimTAPER(alignment = non.align,
                               TAPER.path = TAPER.path,
                               julia.path = julia.path,
-                              quiet = TRUE,
+                              quiet = F,
                               delete.temp = T)
       non.align = taper.align
       #Saves the data
@@ -267,7 +273,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end if
 
     #Step 3. Trimal trimming
-    if (TrimAl == TRUE){
+    if (TrimAl == TRUE && length(non.align) != 0){
 
       trimal.align = trimTrimal(alignment = non.align,
                                 trimal.path = TrimAl.path,
@@ -283,12 +289,15 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end if
 
     # Step 4. Edge trimming
-    if (trim.external == TRUE){
+    if (trim.external == TRUE && length(non.align) != 0){
       #external trimming function
       edge.align = trimExternal(alignment = non.align,
                                 min.n.seq = ceiling(length(non.align) * (min.external.percent/100)),
                                 codon.trim = F)
+
+      if (class(edge.align) == "numeric") { edge.align = DNAStringSet() }
       non.align = edge.align
+
       #Saves stat data
       data.table::set(temp.data, i = as.integer(1), j = match("edgeSamples", header.data), value = length(edge.align))
       data.table::set(temp.data, i = as.integer(1), j = match("edgeLength", header.data), value = Biostrings::width(edge.align)[1])
@@ -298,7 +307,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("edgePerGaps", header.data), value = gap.count[3])
     }#end trim external
 
-    if (trim.column == TRUE){
+    if (trim.column == TRUE && length(non.align) != 0){
       #Trim alignment colums
       col.align = trimAlignmentColumns(alignment = non.align,
                                        min.gap.percent = min.column.gap.percent)
@@ -313,7 +322,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end trim column.
 
     #Step 5. Evaluate and cut out each sample
-    if (trim.coverage == TRUE){
+    if (trim.coverage == TRUE && length(non.align) != 0){
       #sample coverage function
       cov.align = trimSampleCoverage(alignment = non.align,
                                      min.coverage.percent = min.coverage.percent,
