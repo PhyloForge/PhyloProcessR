@@ -64,7 +64,7 @@ removeAdaptors = function(input.reads = NULL,
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
-  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
+  #if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
