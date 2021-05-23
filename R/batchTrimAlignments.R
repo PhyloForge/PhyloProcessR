@@ -105,7 +105,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #
   # setwd(work.dir)
   # alignment.dir = align.dir
-  # output.dir = paste0(out.name, "/genes_trimmed")
+  # output.dir = paste0(out.name, "/genes_trimmed2")
   # alignment.format = "phylip"
   # output.format = "phylip"
   # TAPER = TRUE
