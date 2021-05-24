@@ -87,7 +87,7 @@ mergePairedEndReads = function(input.reads = NULL,
     sample.names = sample.names[!sample.names %in% done.files]
   }
 
-  if (length(sample.names) == 0){ stop("no samples remain to analyze.") }
+  if (length(sample.names) == 0){ return("no samples remain to analyze.") }
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),

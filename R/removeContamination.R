@@ -105,7 +105,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
     sample.names = sample.names[!sample.names %in% done.files]
   }
 
-  if (length(sample.names) == 0){ stop("no samples remain to analyze.") }
+  if (length(sample.names) == 0){ return("no samples remain to analyze.") }
 
   #Create combined and indexed reference
   if (dir.exists("ref-index") == TRUE && overwrite.reference == TRUE){ system(paste0("rm -rf ref-index")) }
