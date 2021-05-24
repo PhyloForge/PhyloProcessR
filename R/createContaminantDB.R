@@ -54,7 +54,7 @@ createContaminantDB = function(decontamination.list = NULL,
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))
       dir.create(output.directory)
-    }
+    } else { return("Contaminant database already exists, skipping.") }
   }#end else
 
   sample.data = read.csv(file = decontamination.list)
