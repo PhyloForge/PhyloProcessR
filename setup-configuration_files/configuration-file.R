@@ -17,6 +17,8 @@ target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configura
 read.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads"
 #The name for the dataset
 dataset.name = "Test"
+#The name for the processed reads folder
+processed.reads = "processed-reads"
 
 #Global settings
 #########################

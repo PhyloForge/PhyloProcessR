@@ -11,8 +11,9 @@ source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_fi
 ## Step 1: Preprocess reads
 ##################
 
+
 #Checks if everything is installed
-pass.fail = setupCheck(anaconda.environment = "/Users/chutter/conda/PhyloCap",
+pass.fail = setupCheck(anaconda.environment =  NULL,
                        fastp.path = fastp.path,
                        samtools.path = samtools.path,
                        bwa.path = bwa.path,
@@ -34,22 +35,22 @@ dir.create("processed-reads")
 
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.dir,
-                output.dir = "processed-reads/organized-reads",
+                output.dir = paste0(processed.reads, "/organized-reads"),
                 rename.file = file.rename,
                 overwrite = overwrite)
-  input.reads = "processed-reads/organized-reads"
+  input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.dir }
 
 if (remove.adaptors == TRUE) {
   removeAdaptors(input.reads = input.reads,
-                 output.directory = "processed-reads/adaptor-removed-reads",
+                 output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
                  fastp.path = fastp.path,
                  threads = threads,
                  mem = memory,
                  resume = resume,
                  overwrite = overwrite,
                  quiet = quiet)
-  input.reads = "processed-reads/organized-reads"
+  input.reads = paste0(processed.reads, "/adaptor-removed-reads")
 }
 
 #Runs decontamination of reads
@@ -63,7 +64,7 @@ if (decontamination == TRUE){
 
   ## remove external contamination
   removeContamination(input.reads = input.reads,
-                      output.directory = "processed-reads/decontaminated-reads",
+                      output.directory = paste0(processed.reads, "/decontaminated-reads"),
                       decontamination.path = "contaminant-references",
                       map.match = decontamination.match,
                       samtools.path = samtools.path,
@@ -74,21 +75,21 @@ if (decontamination == TRUE){
                       overwrite = overwrite,
                       overwrite.reference = overwrite,
                       quiet = quiet)
-  input.reads = "processed-reads/decontaminated-reads"
+  input.reads = paste0(processed.reads, "/decontaminated-reads")
 }
 
 
 if (merge.pe.reads == TRUE){
   #merge paired end reads
   mergePairedEndReads(input.reads = input.reads,
-                      output.directory = "processed-reads/pe-merged-reads",
+                      output.directory =  paste0(processed.reads, "/pe-merged-reads"),
                       fastp.path = fastp.path,
                       threads = threads,
                       mem = memory,
                       resume = resume,
                       overwrite = overwrite,
                       quiet = quiet)
-  input.reads = "processed-reads/pe-merged-reads"
+  input.reads = paste0(processed.reads, "/pe-merged-reads")
 } #end decontamination
 
 dir.create("data-analysis")
@@ -96,7 +97,7 @@ dir.create("data-analysis")
 if (denovo.assembly == TRUE){
   #Assembles merged paired end reads with spades
   assembleSpades(input.reads = input.reads,
-                 output.directory = "processed-reads/spades-assembly",
+                 output.directory = paste0(processed.reads, "/spades-assembly"),
                  assembly.directory = "data-analysis/draft-assemblies",
                  mismatch.corrector = spades.mismatch.corrector,
                  kmer.values = spades.kmer.values,

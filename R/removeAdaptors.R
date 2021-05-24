@@ -42,7 +42,7 @@ removeAdaptors = function(input.reads = NULL,
   # #Debegging
   # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
   # dir.create('read-processing')
-   # input.reads = read.dir
+   # input.reads = "/Volumes/Rodents/Shrew_Genome/Illumina_Data/raw_data/JAN_004"
    # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
    # output.directory = "processed-reads/adaptor-removed-reads"
    # mode = "directory"
