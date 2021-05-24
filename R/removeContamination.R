@@ -44,7 +44,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                                mem = 1,
                                resume = TRUE,
                                overwrite = FALSE,
-                               overwrite.reference = TRUE,
+                               overwrite.reference = FALSE,
                                quiet = TRUE) {
 
   #Debug
