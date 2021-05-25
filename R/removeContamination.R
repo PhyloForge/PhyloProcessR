@@ -279,6 +279,5 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   }#end sample i loop
 
   write.csv(summary.data, file = paste0("logs/removeContamination_summary.csv"), row.names = FALSE)
-  system(paste0("rm -rf ref-index"))
 }
 
