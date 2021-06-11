@@ -27,9 +27,9 @@ trimTrimal = function(alignment = NULL,
                       method = "auto",
                       quiet = TRUE) {
   #Debug
-  # alignment = non.align
-  # quiet = FALSE
-  # trimal.path = "trimal"
+   # alignment = non.align
+   # quiet = FALSE
+   # trimal.path = "/Users/chutter/conda/PhyloCap/bin"
 
   #Same adds to bbmap path
   if (is.null(trimal.path) == FALSE){
@@ -65,7 +65,7 @@ trimTrimal = function(alignment = NULL,
   out.align = Rsamtools::scanFa(Rsamtools::FaFile(input.file))
 
   #Fixes any terrible NA names introduced by trimal
-  new.names<-c()
+  new.names = c()
   for (j in 1:length(names(out.align))){
     new.names[j] = save.rownames[grep(pattern = paste0(names(out.align)[j], "$"), x = save.rownames)]
   }

@@ -64,6 +64,9 @@ spades.kmer.values = c(21,33,55,77,99,127)
 spades.mismatch.corrector = TRUE
 #Whether to save the corrected reads
 save.corrected.reads = FALSE
+#Clean up large files *** ADD INTO ANALYSES
+clean.up.spades = FALSE
+
 
 #Target matching settings
 #########################

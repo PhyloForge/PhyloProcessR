@@ -117,16 +117,16 @@ if (denovo.assembly == TRUE){
 ## Step 2: Match targets and annotate contigs
 ##################
 
-work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
-setwd(work.dir)
-dir.create("data-analysis")
-assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
-target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
-subset.fasta.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa"
+#work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
+#setwd(work.dir)
+#dir.create("data-analysis")
+#assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
+#target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+#subset.fasta.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa"
 
 if (match.targets == TRUE){
   #match targets
-  matchTargets(assembly.directory = assembly.directory,
+  matchTargets(assembly.directory = "data-analysis/draft-assemblies",
                target.file = target.file,
                alignment.contig.name = paste0("data-analysis/", dataset.name),
                output.directory = "data-analysis/match-targets",
