@@ -72,8 +72,6 @@ clean.up.spades = FALSE
 #########################
 #TRUE = to run target matching on contigs
 match.targets = TRUE
-#Directory of assembled contigs to be used for target matching
-assembly.directory = "draft-assemblies"
 #whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
 trim.to.targets = FALSE
 #The directory of contigs to use for target matching
