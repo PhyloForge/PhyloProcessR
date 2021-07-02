@@ -73,27 +73,27 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
   for (i in 1:nrow(sample.data)){
 
-    sample.reads = all.reads[grep(as.character(sample.data$File_Name[i]), all.reads)]
+    sample.reads = all.reads[grep(as.character(sample.data$File[i]), all.reads)]
 
     if (length(sample.reads) == 0) {
       if (skip.not.found == FALSE){
-        stop(paste0("Error: sample reads for ", sample.data$Final_Name[i], " not found!"))
+        stop(paste0("Error: sample reads for ", sample.data$Sample[i], " not found!"))
       } else { next }
     }#end if
 
     if (length(sample.reads) != 2) {
       if (skip.not.found == FALSE){
-        stop(paste0("Error: too many sample reads for ", sample.data$Final_Name[i], " found!"))
+        stop(paste0("Error: too many sample reads for ", sample.data$Sample[i], " found!"))
       } else { next }
     }#end if
 
     #Save the read files with the new names in the new directory
     rdrop2::drop_download(path = sample.reads[1],
-                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_L001_READ1.fastq.gz"),
+                          local_path = paste0(out.directory, "/", sample.data$Sample[i], "_L001_READ1.fastq.gz"),
                           overwrite = TRUE)
 
     rdrop2::drop_download(path = sample.reads[2],
-                          local_path = paste0(out.directory, "/", sample.data$Final_Name[i], "_L001_READ2.fastq.gz"),
+                          local_path = paste0(out.directory, "/", sample.data$Sample[i], "_L001_READ2.fastq.gz"),
                           overwrite = TRUE)
   }#end i loop
 
