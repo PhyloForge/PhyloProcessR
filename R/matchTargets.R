@@ -61,29 +61,29 @@ matchTargets = function(assembly.directory = NULL,
                         bbmap.path = NULL) {
 
   # #Debug setup
-  # work.dir<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021" #Your main project directory
-  # assembly.directory<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Assembled_Contigs"
-  # target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
-  # output.directory = "match-targets"
-  # alignment.contig.name = "test"
-  # setwd(work.dir)
-  #
-  # #Main settings
-  # threads = 4
-  # memory = 8
-  # trim.target = FALSE
-  # overwrite = TRUE
-  # resume = FALSE
-  # quiet = TRUE
-  #
-  # #tweak settings (make some statements to check these)
-  # min.match.percent = 60
-  # min.match.length = 50
-  # min.match.coverage = 50
-  #
-  # #program paths
-  # blast.path = "/Users/chutter/miniconda3/bin"
-  # bbmap.path = "/usr/local/bin"
+  #  work.dir<-"/Volumes/Rodents/Boophis" #Your main project directory
+  #  assembly.directory<-"/Volumes/Rodents/Boophis/draft-assemblies"
+  #  target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+  #  output.directory = "match-targets"
+  #  alignment.contig.name = "test"
+  #  setwd(work.dir)
+  # #
+  # # #Main settings
+  #  threads = 4
+  #  memory = 8
+  #  trim.target = FALSE
+  #  overwrite = TRUE
+  #  resume = FALSE
+  #  quiet = TRUE
+  # #
+  # # #tweak settings (make some statements to check these)
+  #  min.match.percent = 60
+  #  min.match.length = 50
+  #  min.match.coverage = 50
+  # #
+  # # #program paths
+  #  blast.path = "/Users/chutter/miniconda3/bin"
+  #  bbmap.path = "/usr/local/bin"
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -366,7 +366,7 @@ matchTargets = function(assembly.directory = NULL,
 
         #Saves them if it is split up across the same locus
         if (length(unique(sub.data$tName)) == 1 && length(unique(sub.data$qName)) == 1){
-          spp.seq = contigs[names(contigs) %in% sub.data$qName]
+          spp.seq = contigs[names(contigs) %in% sub.data$tName]
           names(spp.seq) = paste0(sub.data$qName[1], "_:_", sub.data$tName[1], "_|_", sample)
           fix.seq = append(fix.seq, spp.seq)
           next
@@ -456,7 +456,7 @@ matchTargets = function(assembly.directory = NULL,
   samples = gsub(".fa$", "", file.names)
 
   header.data = c("Sample", "noContigs", "dedupeContigs", "targetsMatched", "minLen", "maxLen", "meanLen")
-  save.data = data.table(matrix(as.double(0), nrow = length(samples), ncol = length(header.data)))
+  save.data = data.table::data.table(matrix(as.double(0), nrow = length(samples), ncol = length(header.data)))
   data.table::setnames(save.data, header.data)
   save.data[, Sample:=as.character(samples)]
 
@@ -473,16 +473,16 @@ matchTargets = function(assembly.directory = NULL,
 
     #Gets the saved matching targets
     cd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_matching-contigs.fa"))
-    set(save.data, i =  match(samples[i], samples), j = match("Sample", header.data), value = samples[i] )
-    set(save.data, i = match(samples[i], samples), j = match("noContigs", header.data), value = length(og.contigs) )
-    set(save.data, i = match(samples[i], samples), j = match("dedupeContigs", header.data), value = length(dd.contigs) )
+    data.table::set(save.data, i =  match(samples[i], samples), j = match("Sample", header.data), value = samples[i] )
+    data.table::set(save.data, i = match(samples[i], samples), j = match("noContigs", header.data), value = length(og.contigs) )
+    data.table::set(save.data, i = match(samples[i], samples), j = match("dedupeContigs", header.data), value = length(dd.contigs) )
 
-    set(save.data, i =  match(samples[i], samples), j = match("minLen", header.data), value = min(Biostrings::width(cd.contigs)) )
-    set(save.data, i =  match(samples[i], samples), j = match("maxLen", header.data), value = max(Biostrings::width(cd.contigs)) )
-    set(save.data, i =  match(samples[i], samples), j = match("meanLen", header.data), value = mean(Biostrings::width(cd.contigs)) )
+    data.table::set(save.data, i =  match(samples[i], samples), j = match("minLen", header.data), value = min(Biostrings::width(cd.contigs)) )
+    data.table::set(save.data, i =  match(samples[i], samples), j = match("maxLen", header.data), value = max(Biostrings::width(cd.contigs)) )
+    data.table::set(save.data, i =  match(samples[i], samples), j = match("meanLen", header.data), value = mean(Biostrings::width(cd.contigs)) )
 
     #Gets contig data
-    set(save.data, i = match(samples[i], samples), j = match("targetsMatched", header.data), value = length(cd.contigs) )
+    data.table::set(save.data, i = match(samples[i], samples), j = match("targetsMatched", header.data), value = length(cd.contigs) )
 
     names(cd.contigs) = paste0(gsub("_:_.*", "", names(cd.contigs)), "_|_", samples[i])
     save.contigs = append(save.contigs, cd.contigs)

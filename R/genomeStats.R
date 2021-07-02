@@ -119,6 +119,12 @@ genomeStats = function(genome.directory = NULL,
     data.table::set(collect.data, i = as.integer(i), j = match("N_Contigs_10MB", header.data), value = length(Biostrings::width(genome)[Biostrings::width(genome) > 10000000]) )
     data.table::set(collect.data, i = as.integer(i), j = match("N_Contigs_100MB", header.data), value = length(Biostrings::width(genome)[Biostrings::width(genome) > 100000000]) )
 
+    #### DEPTH OF COVERAGE
+
+
+
+
+
   }# end i loop
 
 write.csv(collect.data, file = paste0(output.directory, "/Spades_assembly_stats.csv"), row.names = F)

@@ -66,7 +66,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     done.files = list.files(out.directory)
     done.files = gsub("_READ.*", "", done.files)
     done.files = done.files[duplicated(done.files) == TRUE]
-    sample.data = sample.data[!sample.data$Final_Name %in% done.files,]
+    sample.data = sample.data[!sample.data$Sample %in% done.files,]
   }
 
   if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }

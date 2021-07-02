@@ -366,7 +366,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
     }#end else
 
     print(data.frame(temp.data))
-    #print(paste0(align.files[i], " Completed."))
+    print(paste0(align.files[i], " Completed."))
 
     #rm()
     #gc()
