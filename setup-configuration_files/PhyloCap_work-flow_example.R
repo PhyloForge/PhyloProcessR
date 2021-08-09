@@ -254,3 +254,39 @@ if (estimate.gene.trees == TRUE) {
                     iqtree.path = iqtree.path)
 
 }#end
+
+
+#################################################
+#################################################
+#################################################
+#################################################
+## Step 3: Selection Analyses
+##################
+
+#Read in basic genome info
+library(PhyloCap)
+setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
+tree.directory= "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/trees_oxphos-coding"
+alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/alignments_oxphos-coding"
+#metadata.file = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Mus-selected-sequences_metadata_final.csv"
+dataset.name = "Busted"
+threads = 4
+memory = 4
+resume = T
+overwrite = F
+quiet = T
+hyphy.path = "/usr/local/bin"
+
+
+
+hyphyBUSTED(tree.directory = tree.directory,
+            alignment.directory = alignment.directory,
+            dataset.name = "busted",
+            threads = threads,
+            memory = memory,
+            overwrite = overwrite,
+            resume = resume,
+            quiet = quiet,
+            hyphy.path = hyphy.path)
+
+
