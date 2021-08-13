@@ -30,7 +30,6 @@
 
 hyphyOmega = function(tree.directory = NULL,
                       alignment.directory = NULL,
-                      metadata.file = NULL,
                       dataset.name = "omega",
                       threads = 1,
                       memory = 1,
@@ -42,18 +41,30 @@ hyphyOmega = function(tree.directory = NULL,
 
 
   #Read in basic genome info
-  library(PhyloCap)
-  setwd("/Volumes/Rodents/Australian_Rodents/Data_Processing")
-  tree.directory= "/Volumes/Rodents/Australian_Rodents/Data_Processing/Trees/Ausfull/genes_trimmed_trees"
-  alignment.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Alignments/Ausfull/coding_trimmed/nt"
-  metadata.file = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Mus-selected-sequences_metadata_final.csv"
+  # library(PhyloCap)
+  # setwd("/Volumes/Rodents/Australian_Rodents/Data_Processing")
+  # tree.directory= "/Volumes/Rodents/Australian_Rodents/Data_Processing/Trees/Ausfull/genes_trimmed_trees"
+  # alignment.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Alignments/Ausfull/coding_trimmed/nt"
+  # metadata.file = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Mus-selected-sequences_metadata_final.csv"
+  # dataset.name = "Omega"
+  # threads = 4
+  # memory = 4
+  # resume = T
+  # overwrite = F
+  # hyphy.path = "/usr/local/bin"
+  # mg94.path = "/Users/chutter/hyphy-analyses/FitMG94"
+
+  #Directoires
+  tree.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/trees_oxphos-coding"
+  alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/alignments_oxphos-coding"
   dataset.name = "Omega"
   threads = 4
-  memory = 4
+  memory = 8
   resume = T
   overwrite = F
-  hyphy.path = "/usr/local/bin"
-  mg94.path = "/Users/chutter/hyphy-analyses/FitMG94"
+  quiet = T
+  hyphy.path = "/usr/local/bin/"
+
 
   #Same adds to bbmap path
   if (is.null(hyphy.path) == FALSE){
@@ -93,7 +104,6 @@ hyphyOmega = function(tree.directory = NULL,
 
   align.files = list.files(alignment.directory)
   tree.files = list.files(tree.directory)
-  meta.data = read.csv(metadata.file)
 
   #Resumes file download
   if (resume == TRUE){
@@ -113,18 +123,17 @@ hyphyOmega = function(tree.directory = NULL,
 
     #Find correct gene tree
     locus.name = gsub("\\..*", "", tree.files[i])
-    temp.meta = meta.data[meta.data$gene_id %in% locus.name,]
-    gene.name = unique(temp.meta$gene_id)
-    prot.name = unique(temp.meta$protein_id)
-    prot.name = prot.name[is.na(prot.name) != T]
+    # temp.meta = meta.data[meta.data$gene_id %in% locus.name,]
+    # gene.name = unique(temp.meta$gene_id)
+    # prot.name = unique(temp.meta$protein_id)
+    # prot.name = prot.name[is.na(prot.name) != T]
+    #
+    # if (length(prot.name) == 0){
+    #   print(paste0(locus.name, " protein not found in the alignments. Skipped."))
+    #   next }
+    #
 
-    if (length(prot.name) == 0){
-      print(paste0(locus.name, " protein not found in the alignments. Skipped."))
-      next }
-
-
-
-    align.name = align.files[grep(prot.name, align.files)]
+    align.name = align.files[grep(locus.name, align.files)]
 
     if (length(align.name) == 0){
       print(paste0(locus.name, " not found in the alignments. Skipped."))
@@ -152,25 +161,25 @@ hyphyOmega = function(tree.directory = NULL,
       print(paste0(locus.name, " alignment has too few taxa. Skipped."))
       next }
 
-    dir.create(paste0(output.directory, "/", gene.name))
+    dir.create(paste0(output.directory, "/", locus.name))
     #Save both as temp files to be used as input in hyphy
     write.temp = strsplit(as.character(temp.align), "")
     aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
     writePhylip(alignment = aligned.set,
-                file=paste0(output.directory, "/", gene.name, "/", gene.name, ".phy"),
+                file=paste0(output.directory, "/", locus.name, "/", locus.name, ".phy"),
                 interleave = F,
                 strict = F)
 
-    ape::write.tree(temp.tree, file = paste0(output.directory, "/", gene.name, "/", gene.name, ".tre"))
+    ape::write.tree(temp.tree, file = paste0(output.directory, "/", locus.name, "/", locus.name, ".tre"))
 
     #Gets Dn/Ds from experiment hyphy function will probably have to change later
-    system(paste0(hyphy.path, "hyphy ", mg94.path, "FitMG94.bf",
-                  " --alignment ", output.directory, "/", gene.name, "/", gene.name, ".phy",
-                  " --tree ", output.directory, "/", gene.name, "/", gene.name, ".tre",
-                  " --output ", output.directory, "/", gene.name, "/", dataset.name, "-fitmg94-results.json",
+    system(paste0(hyphy.path, "hyphy FitMG94.bf",
+                  " --alignment ", output.directory, "/", locus.name, "/", locus.name, ".phy",
+                  " --tree ", output.directory, "/", locus.name, "/", locus.name, ".tre",
+                  " --output ", output.directory, "/", locus.name, "/", dataset.name, "-fitmg94-results.json",
                   " --type local --lrt Yes CPU=", threads))
 
-    json.data = jsonlite::fromJSON(paste0(output.directory, "/", gene.name, "/", dataset.name, "-fitmg94-results.json"))
+    json.data = jsonlite::fromJSON(paste0(output.directory, "/", locus.name, "/", dataset.name, "-fitmg94-results.json"))
     branch.att = json.data$`branch attributes`
     branch.att = unlist(branch.att[[1]])
 
@@ -188,9 +197,9 @@ hyphyOmega = function(tree.directory = NULL,
     w.data = merge(ds.data, dn.data, by = "Sample")
     w.data$omega = w.data$dN/w.data$dS
 
-    write.csv(w.data, file = paste0(output.directory, "/", gene.name, "/dn-ds_stats.csv"), row.names = F, quote = F)
+    write.csv(w.data, file = paste0(output.directory, "/", locus.name, "/dn-ds_stats.csv"), row.names = F, quote = F)
 
-    print(paste0(gene.name, " finished omega calculation!"))
+    print(paste0(locus.name, " finished omega calculation!"))
 
     #Gets Dn/Ds from experiment hyphy function will probably have to change later
     # system(paste0(hyphy.path, "hyphy ", mg94.path, "FitMG94.bf",
