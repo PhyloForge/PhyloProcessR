@@ -26,7 +26,7 @@
 writePhylip = function(alignment = NULL,
                        file = NULL,
                        interleave = FALSE,
-                       strict = FALSE){
+                       strict = FALSE) {
 
   x = as.matrix(alignment)
   #file = "test"
@@ -54,9 +54,7 @@ writePhylip = function(alignment = NULL,
   #   concat.data$Sample[x] = new.name
   # }#end x
 
-  str2cha <- function(x) {
-    unlist(strsplit(x, ""))
-  }
+  str2cha <- function(x) { unlist(strsplit(x, "")) }
   datatype <- ifelse(is.numeric(x[1, 1]), "continuous", "nc")
   ntax <- nrow(x)
   nchar <- ncol(x)
@@ -76,7 +74,8 @@ writePhylip = function(alignment = NULL,
     diff <- max(xx) - xx + 3
     for (i in 1:ntax) taxnames[i] <- paste(taxnames[i], paste(rep(" ",
                                                                   diff[i]), collapse = ""), sep = "")
-  }
+  }#end else
+
   if (!interleave)
     interleave <- nchar
   nbpart <- ceiling(nchar/interleave)
@@ -86,7 +85,8 @@ writePhylip = function(alignment = NULL,
     for (i in 2:(dim(pt)[1])) {
       pt[i, ] <- c(pt[i - 1, 2] + 1, pt[i - 1, 2] + interleave)
       pt[nbpart, 2] <- nchar
-    }
+    }#end for loop
+
   phy <- paste(ntax, nchar)
   for (i in seq(along = pt[, 1])) {
     sm <- as.character(x[, pt[i, 1]:pt[i, 2]])
@@ -98,12 +98,18 @@ writePhylip = function(alignment = NULL,
     if (i < max(seq(along = pt[, 1])))
       sm <- c(sm, "")
     phy <- c(phy, sm)
-  }
+  } #end for loop
   if (file == "") {
     cat(phy, sep = "\n")
-  }
+  }#end if
   else {
     write(phy, file = file)
-  }
+  }#end else
+
 }
+
+
+
+
+
 

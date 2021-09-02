@@ -90,8 +90,7 @@ hyphy.aBSREL = function(tree.directory = NULL,
   #Resumes file download
   if (resume == TRUE){
     done.files = list.files(output.directory)
-    done.files = done.files[duplicated(done.files) == TRUE]
-    tree.files = tree.files[!gsub("\\..*", "", tree.files) %in% gsub("\\..*", "", done.files)]
+    tree.files = tree.files[!gsub("\\..*", "", tree.files) %in% done.files]
   }
 
   #Run analyses through all trees

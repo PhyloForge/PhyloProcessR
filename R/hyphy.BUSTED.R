@@ -1,4 +1,4 @@
-#' @title hyphyBUSTED
+#' @title hyphy.BUSTED
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -30,15 +30,15 @@
 #'
 #' @export
 
-hyphyBUSTED = function(tree.directory = NULL,
-                       alignment.directory = NULL,
-                       dataset.name = "busted",
-                       threads = 1,
-                       memory = 1,
-                       overwrite = FALSE,
-                       resume = TRUE,
-                       quiet = TRUE,
-                       hyphy.path = NULL) {
+hyphy.BUSTED = function(tree.directory = NULL,
+                        alignment.directory = NULL,
+                        dataset.name = "busted",
+                        threads = 1,
+                        memory = 1,
+                        overwrite = FALSE,
+                        resume = TRUE,
+                        quiet = TRUE,
+                        hyphy.path = NULL) {
 
 
   # #Read in basic genome info
@@ -89,8 +89,7 @@ hyphyBUSTED = function(tree.directory = NULL,
   #Resumes file download
   if (resume == TRUE){
     done.files = list.files(output.directory)
-    done.files = done.files[duplicated(done.files) == TRUE]
-    tree.files = tree.files[!gsub("\\..*", "", tree.files) %in% gsub("\\..*", "", done.files)]
+    tree.files = tree.files[!gsub("\\..*", "", tree.files) %in% done.files]
   }
 
   #Stats table prepare

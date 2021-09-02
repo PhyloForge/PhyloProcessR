@@ -173,7 +173,7 @@ addRemoveTaxaAlignments = function(alignment.directory = NULL,
     add.seqs = add.taxa[grep(pattern = paste0(name.locus, "_"), x = names(add.taxa))]
     names(add.seqs) = gsub(pattern = ".*_\\|_", replacement = "", x = names(add.seqs))
 
-    if (length(add.seqs) == 0){ next }
+    if (length(add.seqs) == 0){ return(NULL) }
 
     #Gets reference locus
     ref.locus = bait.loci[grep(pattern = paste0(name.locus, "$"), x = names(bait.loci))]
@@ -206,7 +206,8 @@ addRemoveTaxaAlignments = function(alignment.directory = NULL,
     if (length(bad.seqs) >= length(add.seqs)){
       print(paste0(name.locus, " taxa could not be added."))
       system(paste("rm ", align.dir, "/", name.locus, "_align.fa ", sep = ""))
-      next }
+      return(NULL)
+    }#end if
 
     ### realign if bad seqs removed
     if (length(bad.seqs) != 0){
