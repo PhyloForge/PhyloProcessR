@@ -173,7 +173,7 @@ removeAdaptors = function(input.reads = NULL,
 
       summary.data = rbind(summary.data, temp.remove)
 
-      print(paste0(lane.name, " Completed adaptor removal!"))
+      print(paste0(lane.name, " lane completed adaptor removal!"))
     }#end sample j loop
 
     print(paste0(sample.names[i], " Completed adaptor removal!"))

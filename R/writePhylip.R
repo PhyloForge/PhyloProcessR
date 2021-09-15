@@ -107,9 +107,3 @@ writePhylip = function(alignment = NULL,
   }#end else
 
 }
-
-
-
-
-
-
