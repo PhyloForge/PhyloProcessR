@@ -1,4 +1,4 @@
-#' @title variants.haplotypeCallerGATK4
+#' @title variants.sequenceAlignment
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,188 +34,357 @@
 #'
 #' @export
 
-# variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
-#                                          output.directory = "variant-discovery",
-#                                          reference.path = "ref-index",
-#                                          samtools.path = NULL,
-#                                          bwa.path = NULL,
-#                                          picard.path = NULL,
-#                                          gatk4.path = NULL,
-#                                          threads = 1,
-#                                          memory = 1,
-#                                          resume = TRUE,
-#                                          overwrite = TRUE,
-#                                          quiet = TRUE) {
-#
-#   #Debugging
-#   #Home directoroies
-#   library(doParallel)
-#   work.dir = "/Volumes/Armored/Test/variant-calling" #Your main project directory
-#   dir.create(work.dir)
-#   setwd(work.dir)
-#
-#   bam.directory = "/Volumes/Armored/Test/variant-calling/variant-discovery"
-#   reference.path = "ref-index"
-#   subreference.name = "rag1"
-#   output.directory = "variant-discovery"
-#   auto.readgroup = T #Keep it T unless it crashes.
-#   threads = 4 #number of threads, 8-10 is a recommended amount
-#   memory = 8
-#   samtools.path = "/Users/chutter/miniconda3/bin"
-#   bwa.path = "/usr/local/bin"
-#   picard.path = "/Users/chutter/miniconda3/bin"
-#   gatk4.path = "/Users/chutter/miniconda3/bin"
-#   resume = FALSE
-#   quiet = FALSE
-#   overwrite = TRUE
-#
-#   require(doParallel)
-#
-#
-# ###############################################################################
-# ######## DO NOT EDIT BELOW THIS POINT  ########################################
-# ###############################################################################
-#
-# ############################################################################################
-# ########### Step 1 #########################################################################
-# ##### Merge all these samfiles and stuff
-# ############################################################################################
-#
-# #Sets directory and reads in sample file
-# setwd(work.dir)
-#
-# #Checks for missing files if completed
-# raw.dirs = list.dirs(path = paste0(proc.dir, "/."), full.names = F, recursive = F)
-# merge.dirs = list.dirs(path = paste0(proc.dir, "_MERGE/."), full.names = F, recursive = F)
-# merge.names = gsub("_MERGE$", "", merge.dirs)
-#
-# #Gets all files
-# all.files = list.files(proc.dir, full.names = F, recursive = T)
-#
-# #Sets up multiprocessing
-# cl = makeCluster(threads)
-# registerDoParallel(cl)
-# mem.val = floor(mem.val/threads)
-#
-# #Loops through each locus and does operations on them
-# foreach(i=1:24, .packages = c("foreach", "vcfR", "seqinr","data.table", "Rsamtools")) %dopar% {
-#
-# #Loops through each sample to combine the VCFs
-# #for (i in 1:length(merge.names)){
-#
-#   #Goes back to home
-#   setwd(paste0(proc.dir))
-#
-#   #Prepares and finds files for merging
-#   sample.files = all.files[grep(merge.names[i], all.files)]
-#   snp.files = sample.files[grep("snp_ready.bam", sample.files)]
-#   snp.file.paths = paste0(proc.dir, "/", snp.files)
-#
-#   #Prepares and finds files for merging
-#   ref.files = sample.files[grep("reference", sample.files)]
-#   ref.files.all = ref.files[grep(gsub("/.*","", ref.files)[1], ref.files)]
-#   ref.file.paths = paste0(proc.dir, "/", ref.files.all)
-#
-#   #Goes to directory
-#   sample.merge = merge.dirs[grep(merge.names[i], merge.dirs)]
-#   setwd(paste0(proc.dir, "_MERGE/", sample.merge) )
-#
-#   #Creates the new snp-analysis folder
-#   dir.create("haplocontigs")
-#   setwd(paste0("haplocontigs"))
-#
-#   if (file.exists("varscan_vars.vcf.gz") == T){ next }
-#   del.files = list.files(".")
-#   unlink(del.files)
-#
-#   #Copy files from other directories
-#   for (j in 1:length(snp.file.paths)){
-#     system(paste0("cp ", snp.file.paths[j], " ", as.character(getwd()), "/snp_ready_", j, ".bam" ) )
-#   } #J loop end
-#
-#   #Next combine .bam files together!
-#   snp.merge = list.files(".")
-#
-#   system(paste0(picard.path,
-#                 " MergeSamFiles ", paste0("I=", snp.merge, collapse = " "),
-#                 " O=merged_snp.bam use_jdk_deflater=true"))
-#
-#   #Sort by coordinate for input into MarkDuplicates  use_jdk_deflater=true
-#   system(paste0(picard.path,
-#                 " SortSam INPUT=merged_snp.bam OUTPUT=cleaned_final_sort.bam",
-#                 " CREATE_INDEX=true SORT_ORDER=coordinate use_jdk_deflater=true"))
-#
-#   #Marks duplicate reads  use_jdk_deflater=true
-#   system(paste0(picard.path,
-#                 " MarkDuplicates INPUT=cleaned_final_sort.bam OUTPUT=cleaned_final_md.bam",
-#                 " CREATE_INDEX=true METRICS_FILE=duplicate_metrics.txt use_jdk_deflater=true"))
-#
-#   #### Merges all the reference files
-#   system(paste0("cp ", paste0(ref.file.paths, collapse = " "), " ",
-#          as.character(getwd())) )
-#
-#   #Sorts and stuff  use_jdk_deflater=true
-#   system(paste0(picard.path,
-#                 " SetNmAndUqTags INPUT=cleaned_final_md.bam OUTPUT=snp_ready.bam CREATE_INDEX=true R=reference.fa use_jdk_deflater=true"))
-#
-#   #Delete old files to make more space  use_jdk_deflater=true
-#   system("rm snp_ready_* merged_snp.bam cleaned_final* cleaned_final_sort* cleaned_final_md*")
-#
-#   # #Starts to finally look for Haplotypes!  use_jdk_deflater=true
-#   # system(paste0("/usr/local/bin/gatk4/gatk --java-options '-Xmx", mem.val, "G' HaplotypeCaller",
-#   #                " -R reference.fa -O gatk_output.g.vcf.gz -I snp_ready.bam",
-#   #                " -ERC GVCF --max-alternate-alleles 3 -bamout snp_call.bam"))
-#   #
-#   # #### Varscan alternative
-#   system(paste0("samtools mpileup -B -A -f reference.fa snp_ready.bam |",
-#                 " java -jar /usr/local/bin/varscan.jar mpileup2cns --min-coverage 4",
-#                 " -output-vcf 1 >varscan_output.vcf"))
-#
-#   system(paste0("gzip varscan_vars.vcf"))
-#
-#   ###############################################################################
-#   ######################Step 1 pull out consensus loci  #########################
-#   ###############################################################################
-#
-#   #Gets sample data
-#   vcf.file = paste0(sample.datasets[i], "/haplocontigs/varscan_vars.vcf.gz")
-#   sample.name = gsub(".*/", "", sample.datasets[i])
-#   sample.name = gsub("_MERGE", "", sample.name)
-#
-#   #Get loci names
-#   ref.file = paste0(sample.datasets[i], "/haplocontigs/reference.fa")
-#   sample.exons = scanFa(file = ref.file)
-#   loci.names = names(sample.exons)
-#
-#   #Loads in VCF data
-#   vcf.locus = tryCatch(expr = {read.vcfR(vcf.file, verbose = T) },
-#                        error = function(x) { x<-data.frame(); return(x) })
-#
-#   #Loops through each locus and does operations on them
-#   save.seq = list()
-#   #foreach(j=1:length(loci.names), .packages = c("foreach")) %dopar% {
-#   vcf.chroms = data.table(vcf.locus@fix)
-#
-#   for (j in 1:length(loci.names)){
-#
-#     #temp.ref = sample.exons[names(sample.exons) %in% loci.names[j]]
-#     #chrom = create.chromR(name=loci.names[j], vcf=vcf.locus, verbose = F, seq = temp.ref)
-#
-#     locus.data = vcf.chroms[vcf.chroms$CHROM == loci.names[j],]
-#     locus.temp = paste0(locus.data$REF, collapse = "")
-#
-#     #Converts and saves sequence
-#     final.locus = as.list(as.character(locus.temp))
-#     names(final.locus) = paste0(loci.names[j], "_|_", sample.name)
-#     save.seq = append(save.seq, final.locus)
-#
-#   }#end j loop
-#
-#   # writes the data
-#   seqinr::write.fasta(sequences = save.seq, names = names(save.seq),
-#               paste(sample.name, "_consensus-haplocontigs.fa", sep = ""), nbchar = 1000000, as.string = T)
-#
-# } # end j loop
-#
+variants.sequenceAlignment = function(database.directory = NULL,
+                                      reference.path = "ref-index",
+                                      output.directory = "variant-calling/alignments",
+                                      invariant.sites = TRUE,
+                                      ambiguity.codes = FALSE,
+                                      haplotype.split = FALSE,
+                                      save.all.types = FALSE,
+                                      threads = 1,
+                                      memory = 1,
+                                      resume = TRUE,
+                                      overwrite = TRUE,
+                                      quiet = TRUE) {
+
+  #Debugging
+  #Home directoroies
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Extract_Haplotypes")
+  # database.directory = "variant-calling/variant-database"
+  # reference.path = "ref-index"
+  # #subreference.name = "rag1"
+  # output.directory = "variant-calling/alignments"
+  # threads = 4 #number of threads, 8-10 is a recommended amount
+  # memory = 8
+  # gatk4.path = "/Users/chutter/miniconda3/bin"
+  # resume = FALSE
+  # quiet = FALSE
+  # overwrite = TRUE
+  # invariant.sites = TRUE
+  # ambiguity.codes = TRUE
+  # haplotype.split = FALSE
+  # save.all.types = TRUE
+
+
+  #Same adds to bbmap path
+  require(doParallel)
+  if (is.null(gatk4.path) == FALSE){
+    b.string = unlist(strsplit(gatk4.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      gatk4.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { gatk4.path = "" }
+
+  #Quick checks
+  if (is.null(database.directory) == TRUE){ stop("Please provide the directory to the variant database.") }
+  if (file.exists(database.directory) == F){ stop("Database directory not found.") }
+
+  #Creates output directory
+  if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists(output.directory) == F){ dir.create(output.directory) }
+
+  #Creates various directories
+  dir.create(paste0(output.directory, "/contigs-haplotype"))
+  dir.create(paste0(output.directory, "/contigs-consensus"))
+  dir.create(paste0(output.directory, "/contigs-ambiguity"))
+  dir.create(paste0(output.directory, "/variants-haplotype"))
+  dir.create(paste0(output.directory, "/variants-consensus"))
+  dir.create(paste0(output.directory, "/variants-ambiguity"))
+
+  #Get loci names I guess
+  probe.loci = Biostrings::readDNAStringSet(paste0(reference.path, "/reference.fa"))
+  locus.names = names(probe.loci)
+
+  #Get loci names I guess
+  loci.files = list.files(database.directory, full.names = TRUE)
+  loci.files = loci.files[grep(".vcf$", loci.files)]
+  file.names = gsub(".vcf$", "", loci.files)
+  file.names = gsub(".*\\/", "", file.names)
+  locus.names = loci.names[locus.names %in% file.names]
+
+  if (length(locus.names) == 0){ return("no loci remain to analyze.") }
+
+  # #Resumes file download
+  # if (resume == TRUE){
+  #   done.files = list.files(output.directory, full.names = T, recursive = T)
+  #   done.files = done.files[grep("gatk4-haplotype-caller.g.vcf.gz$", done.files)]
+  #   done.names = gsub("/gatk4-haplotype-caller.g.vcf.gz$", "", done.files)
+  #   done.names = gsub(".*\\/", "", done.names)
+  #   sample.names = sample.names[!sample.names %in% done.names]
+  # }
+  #
+  # #Resumes file download
+  # if (overwrite == FALSE){
+  #   done.files = list.files(output.directory, full.names = T, recursive = T)
+  #   done.files = done.files[grep("gatk4-haplotype-caller.g.vcf.gz$", done.files)]
+  #   done.names = gsub("/gatk4-haplotype-caller.g.vcf.gz$", "", done.files)
+  #   done.names = gsub(".*\\/", "", done.names)
+  #   sample.names = sample.names[!sample.names %in% done.names]
+  # }
+
+  ############################################################################################
+  ########### Step 1 #########################################################################
+  ##### Start up loop for each sample
+  ############################################################################################
+
+  #Sets up multiprocessing
+  cl = makeCluster(threads)
+  registerDoParallel(cl)
+  mem.cl = floor(memory/threads)
+
+  #Loops through each locus and does operations on them
+  foreach(i=1:length(locus.names), .packages = c("foreach", "vcfR", "PhyloCap", "ape", "Biostrings")) %dopar% {
+
+    #Loads in alignment data
+    sub.file = loci.files[grep(locus.names[i], loci.files)]
+    ref.locus = probe.loci[grep(locus.names[i], names(probe.loci))]
+
+    #Loads in VCF data
+    vcf.locus = tryCatch(expr = {vcfR::read.vcfR(sub.file, verbose = FALSE) },
+                         error = function(x) { x<-data.frame(); return(x) })
+
+    #Catches exceptions or bad files
+    if (nrow(vcf.locus) == 0){
+      print(paste0(vcf.files[i], " Could not be read. File is empty or corrupted."))
+      next
+    }
+
+    #Also catches other types of bad files that load in
+    if(nrow(vcf.locus@fix) == 0){
+      print(paste0(locus.names[i], " Had no initial variants. Skip."))
+      next
+    }
+
+    #Extracts genotypes
+    #geno.types = extract.gt(vcf.locus)
+    #Gts the data
+    chrom = vcfR::create.chromR(name='Supercontig', vcf=vcf.locus)
+    dp.filt = quantile(chrom@var.info$DP, c(0.01, 0.99))
+
+    #Creates a mask
+    chrom = vcfR::masker(chrom, min_QUAL=1, min_DP=dp.filt[1], max_DP=dp.filt[2])
+
+    #makes a new contig with ambiguities
+    temp.ref = strsplit(as.character(ref.locus), "")
+    temp.ref = lapply(temp.ref, tolower)
+    temp.ref = as.matrix(ape::as.DNAbin(temp.ref))
+
+    #####################################################
+    ###### output 1: contigs-ambiguity
+    ######
+    if (haplotype.split == FALSE && invariant.sites == TRUE && ambiguity.codes == TRUE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = T, #<= set to TRUE
+                                    extract.haps = F,
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = F,
+                                    ref.seq = temp.ref,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+
+      if (length(align.out) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(align.out), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/contigs-ambiguity/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+    #####################################################
+    ###### output 2: contigs-haplocontigs
+    ######
+    if (haplotype.split == TRUE && invariant.sites == TRUE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = F, #<- set to FALSE
+                                    extract.haps = T, #<- set to TRUE
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = F,
+                                    ref.seq = temp.ref,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+
+      if (length(align.out) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(align.out), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/contigs-haplotype/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+
+    #####################################################
+    ###### output 3: contigs-consensus
+    ######
+    if (haplotype.split == FALSE && invariant.sites == TRUE && ambiguity.codes == FALSE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = T, # <-- changed here
+                                    extract.haps = F,
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = T,
+                                    ref.seq = temp.ref,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+      non.align = convertAmbiguousConsensus(alignment = align.out)
+
+      if (length(non.align) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(non.align), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/contigs-consensus/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+    #####################################################
+    #####################################################
+    #####################################################
+    #####################################################
+    ###### output 4: variants-ambiguity
+    ######
+    if (haplotype.split == FALSE && invariant.sites == FALSE && ambiguity.codes == TRUE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = T, #<= set to TRUE
+                                    extract.haps = F,
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = F,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+
+      if (length(align.out) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(align.out), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/variants-ambiguity/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+    #####################################################
+    ###### output 5: variants-haplocontigs
+    ######
+    if (haplotype.split == TRUE && invariant.sites == FALSE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = F, #<- set to FALSE
+                                    extract.haps = T, #<- set to TRUE
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = F,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+
+      if (length(align.out) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(align.out), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/variants-haplotype/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+    #####################################################
+    ###### output 6: variants-consensus
+    ######
+    if (haplotype.split == FALSE && invariant.sites == FALSE && ambiguity.codes == FALSE | save.all.types == TRUE){
+
+      new.align = vcfR::vcfR2DNAbin(chrom,
+                                    consensus = T, # <-- changed here
+                                    extract.haps = F,
+                                    extract.indels = T,
+                                    asterisk_as_del = T,
+                                    unphased_as_NA = T,
+                                    start.pos = 1,
+                                    verbose = quiet)
+
+      #Fixes messed up NAs
+      temp.align = as.character(new.align)
+      temp.align[is.na(temp.align) == T] = "n"
+      temp.align = as.list(data.frame(t(temp.align)))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+      non.align = convertAmbiguousConsensus(alignment = align.out)
+
+      if (length(non.align) == 0) {
+        print(paste0(locus.names[i], " Had no variants. Skip."))
+        next
+      }
+
+      #If no alignment assessing is done, saves
+      write.temp = strsplit(as.character(non.align), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+
+      #readies for saving
+      writePhylip(aligned.set, file= paste0(output.directory, "/variants-consensus/", locus.names[i], ".phy"), interleave = F)
+    }#end if
+
+  }#end i loop
+
+  stopCluster(cl)
+
+}#end function
+
+
+
+
 # #END SCRIPT
 

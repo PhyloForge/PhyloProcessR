@@ -1,4 +1,4 @@
-#' @title variants.haplotypeCallerGATK4
+#' @title variants.makeDatabase
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -47,6 +47,9 @@ variants.makeDatabase = function(bam.directory = NULL,
   #Debugging
   #Home directoroies
   # library(doParallel)
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Extract_Haplotypes")
+  # bam.directory = "variant-calling/variant-discovery"
+  # output.database = "variant-calling/variant-database"
   # work.dir = "/Volumes/Armored/Test/variant-calling" #Your main project directory
   # dir.create(work.dir)
   # setwd(work.dir)

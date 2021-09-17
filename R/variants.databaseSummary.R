@@ -34,10 +34,9 @@
 #'
 #' @export
 
-variants.databaseSummary = function(bam.directory = NULL,
-                                    output.database = "variant-database",
+variants.databaseSummary = function(database.directory = NULL,
+                                    output.file = "database-summary",
                                     reference.path = "ref-index",
-                                    gatk4.path = NULL,
                                     threads = 1,
                                     memory = 1,
                                     resume = TRUE,
@@ -46,48 +45,29 @@ variants.databaseSummary = function(bam.directory = NULL,
 
   #Debugging
   #Home directoroies
-  # library(doParallel)
-  # work.dir = "/Volumes/Armored/Test/variant-calling" #Your main project directory
-  # dir.create(work.dir)
-  # setwd(work.dir)
-  #
-  # bam.directory = "/Volumes/Armored/Test/variant-calling/variant-discovery"
+  # database.directory = "variant-calling/variant-database"
   # reference.path = "ref-index"
   # #subreference.name = "rag1"
-  # output.database = "variant-database"
+  # output.file = "variant-calling/database-summary"
   # threads = 4 #number of threads, 8-10 is a recommended amount
   # memory = 8
-  # gatk4.path = "/Users/chutter/miniconda3/bin"
   # resume = FALSE
   # quiet = FALSE
   # overwrite = TRUE
 
-  #Same adds to bbmap path
-  if (is.null(gatk4.path) == FALSE){
-    b.string = unlist(strsplit(gatk4.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      gatk4.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { gatk4.path = "" }
-
   #Quick checks
-  if (is.null(bam.directory) == TRUE){ stop("Please provide the bam directory.") }
-  if (file.exists(bam.directory) == F){ stop("BAM folder not found.") }
+  if (is.null(database.directory) == TRUE){ stop("Please provide the directory to the variant database.") }
+  if (file.exists(database.directory) == F){ stop("Database directory not found.") }
 
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
   if (dir.exists(output.database) == F){ dir.create(output.database) }
 
   #Get loci names I guess
-  loci.names = list.files(db.dir, full.names = TRUE)
+  loci.names = list.files(database.directory, full.names = TRUE)
   loci.names = loci.names[grep(".vcf$", loci.names)]
 
-  #Get multifile databases together
-  sample.names = list.dirs(bam.directory, recursive = F, full.names = F)
-  all.files = list.files(bam.directory, recursive = T, full.names = T)
-  vcf.files = all.files[grep("gatk4-haplotype-caller.g.vcf.gz$", all.files)]
-
-  if (length(sample.names) == 0){ return("no samples remain to analyze.") }
+  if (length(loci.names) == 0){ return("no loci remain to analyze.") }
 
   ############################################################################################
   ########### Step 1 #########################################################################
@@ -95,14 +75,15 @@ variants.databaseSummary = function(bam.directory = NULL,
   ############################################################################################
 
   #Sets up filtering rules to get counts
-  SNPrule = VcfFixedRules(exprs = list(qual20 = expression(QUAL >= 20),
-                                       SNP = expression(as.character(REF) %in% c("A", "T", "G", "C") &
+  Q20rule = TVTB::VcfFixedRules(exprs = list(qual20 = expression(QUAL >= 20) ))
+
+  SNPrule = TVTB::VcfFixedRules(exprs = list(SNP = expression(as.character(REF) %in% c("A", "T", "G", "C") &
                                                           as.character(ALT) %in% c("A", "T", "G", "C"))))
 
-  Indrule = VcfFixedRules(exprs = list(INDEL = expression(Biostrings::width(REF) > Biostrings::width(ALT)) ))
+  Indrule = TVTB::VcfFixedRules(exprs = list(INDEL = expression(Biostrings::width(REF) > Biostrings::width(ALT)) ))
 
   #Sets up header
-  header.data = c("Locus", "TotalVariants", "TotalSNPs", "TotalIndels", "TotalQual", "TotalPass")
+  header.data = c("Locus", "TotalQual", "TotalVariants", "TotalSNPs", "TotalIndels")
   #Sets up data to collect
   collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(loci.names), ncol = length(header.data)))
   data.table::setnames(collect.data, header.data)
@@ -111,7 +92,7 @@ variants.databaseSummary = function(bam.directory = NULL,
   for (i in 1:length(loci.names)){
 
     #Qual score for SNP missing, if needed?
-    cvcf = VariantAnnotation::readVcf(file = paste0(loci.names[i], ".vcf"))
+    cvcf = VariantAnnotation::readVcf(file = paste0(loci.names[i]))
 
     #Catches empty SNPs vcf
     if (dim(cvcf)[1] == 0){
@@ -121,7 +102,6 @@ variants.databaseSummary = function(bam.directory = NULL,
       data.table::set(collect.data, i = as.integer(i), j = match("TotalSNPs", header.data), value = 0 )
       data.table::set(collect.data, i = as.integer(i), j = match("TotalIndels", header.data), value = 0 )
       data.table::set(collect.data, i = as.integer(i), j = match("TotalQual", header.data), value = 0 )
-      data.table::set(collect.data, i = as.integer(i), j = match("TotalPass", header.data), value = 0 )
       system(paste0("rm -r ", loci.names[i]))
 
       next
@@ -130,22 +110,29 @@ variants.databaseSummary = function(bam.directory = NULL,
     evcf = VariantAnnotation::expand(x = cvcf, row.names = TRUE)
 
     #Gets the counts for SNPS and indels
-    all.stats = summary(VariantAnnotation::evalSeparately(SNPrule, evcf, enclos = .GlobalEnv))
-    ind.stats = summary(VariantAnnotation::evalSeparately(Indrule, evcf, enclos = .GlobalEnv))
+    q.stats = summary(TVTB::evalSeparately(Q20rule, evcf, enclos = .GlobalEnv))
+    qual.20 = gsub("TRUE:", "", q.stats[2])
+    qual.20 = as.numeric(gsub(" ", "", qual.20))
+
+    all.stats = summary(TVTB::evalSeparately(SNPrule, evcf, enclos = .GlobalEnv))
+    tot.snp = gsub("TRUE :", "", all.stats[3])
+    tot.snp = as.numeric(gsub(" ", "", tot.snp))
+
+    ind.stats = summary(TVTB::evalSeparately(Indrule, evcf, enclos = .GlobalEnv))
+    tot.ind = gsub("TRUE :", "", ind.stats[3])
+    tot.ind = as.numeric(gsub(" ", "", tot.ind))
 
     #Collects the data
-    data.table::set(collect.data, i = as.integer(i), j = match("Locus", header.data), value = loci.names[i] )
-    data.table::set(collect.data, i = as.integer(i), j = match("TotalVariants", header.data), value = as.numeric(all.stats[1]) )
-    data.table::set(collect.data, i = as.integer(i), j = match("TotalSNPs", header.data), value = as.numeric(all.stats[3]) )
-    data.table::set(collect.data, i = as.integer(i), j = match("TotalIndels", header.data), value = as.numeric(ind.stats[2]) )
-    data.table::set(collect.data, i = as.integer(i), j = match("TotalQual", header.data), value = as.numeric(all.stats[2]) )
-    data.table::set(collect.data, i = as.integer(i), j = match("TotalPass", header.data), value = as.numeric(all.stats[4]) )
-
+    data.table::set(collect.data, i = as.integer(i), j = match("Locus", header.data), value = gsub(".vcf$", "", loci.names[i]) )
+    data.table::set(collect.data, i = as.integer(i), j = match("TotalQual", header.data), value = qual.20 )
+    data.table::set(collect.data, i = as.integer(i), j = match("TotalVariants", header.data), value = tot.snp + tot.ind )
+    data.table::set(collect.data, i = as.integer(i), j = match("TotalSNPs", header.data), value = tot.snp )
+    data.table::set(collect.data, i = as.integer(i), j = match("TotalIndels", header.data), value = tot.ind )
     print(paste0(loci.names[i], " done!!"))
 
   }#end i loop
 
-  write.table(collect.data, file = "Locus_SNP_Summary.txt", sep = "\t", row.names = F)
+  write.table(collect.data, file = paste0(output.file, ".txt"), sep = "\t", row.names = F)
 
 }#end functino
 
