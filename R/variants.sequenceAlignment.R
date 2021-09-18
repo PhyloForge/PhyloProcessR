@@ -146,13 +146,13 @@ variants.sequenceAlignment = function(database.directory = NULL,
     #Catches exceptions or bad files
     if (nrow(vcf.locus) == 0){
       print(paste0(vcf.files[i], " Could not be read. File is empty or corrupted."))
-      next
+      return(NULL)
     }
 
     #Also catches other types of bad files that load in
     if(nrow(vcf.locus@fix) == 0){
       print(paste0(locus.names[i], " Had no initial variants. Skip."))
-      next
+      return(NULL)
     }
 
     #Extracts genotypes
@@ -193,7 +193,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(align.out) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves
@@ -227,7 +227,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(align.out) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves
@@ -263,7 +263,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(non.align) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves
@@ -299,7 +299,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(align.out) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves
@@ -332,7 +332,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(align.out) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves
@@ -366,7 +366,7 @@ variants.sequenceAlignment = function(database.directory = NULL,
 
       if (length(non.align) == 0) {
         print(paste0(locus.names[i], " Had no variants. Skip."))
-        next
+        return(NULL)
       }
 
       #If no alignment assessing is done, saves

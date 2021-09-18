@@ -19,6 +19,8 @@ read.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads"
 dataset.name = "Test"
 #The name for the processed reads folder
 processed.reads = "processed-reads"
+#a csv file with the first column having the file size of the read file and the second is the file name
+filesize.check = "fileSize.csv"
 
 #Global settings
 #########################
@@ -37,6 +39,8 @@ quiet = TRUE
 #########################
 #TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
 organize.reads = TRUE
+#whether to save a fastq summary for each sample TRUE or not FALSE
+summary.fastq = TRUE
 #TRUE = to run adaptor removal on reads
 remove.adaptors = TRUE
 #Merge paired end reads
@@ -136,16 +140,19 @@ cleanup.genetrees = TRUE #Only saves the ML tree; FALSE saves all IQTree files f
 #########################
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
 ### e.g. fastp.path = "/conda/PhyloCap/bin
-fastp.path = "/Users/chutter/conda/PhyloCap/bin"
-samtools.path = "/Users/chutter/conda/PhyloCap/bin"
-bwa.path = "/Users/chutter/conda/PhyloCap/bin"
-spades.path = "/Users/chutter/conda/PhyloCap/bin"
-bbmap.path = "/Users/chutter/conda/PhyloCap/bin"
-blast.path = "/Users/chutter/conda/PhyloCap/bin"
-mafft.path = "/Users/chutter/conda/PhyloCap/bin"
-iqtree.path = "/Users/chutter/conda/PhyloCap/bin"
-trimAl.path = "/Users/chutter/conda/PhyloCap/bin"
-taper.path = "/Users/chutter/conda/PhyloCap/bin"
-julia.path = "/Users/chutter/conda/PhyloCap/bin"
+conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloCap/bin/"
+fastp.path = conda.env
+samtools.path = conda.env
+bwa.path = conda.env
+spades.path = conda.env
+bbmap.path = conda.env
+blast.path = conda.env
+mafft.path = conda.env
+iqtree.path = conda.env
+trimAl.path = conda.env
+taper.path = conda.env
+julia.path = conda.env
+gatk4.path = conda.env
+picard.path = conda.env
 
 #### End configuration

@@ -3,12 +3,12 @@ devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
 library(PhyloCap)
 library(foreach)
 
-source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/configuration-file.R")
+source("configuration-file.R")
 
 ##################################################################################################
 ##################################################################################################
 #################################################
-## Step 1: Preprocess reads
+## Step 0: Pre-checks before running
 ##################
 
 
@@ -30,16 +30,41 @@ if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
   print("all required programs are found, PhyloCap pipeline continuing...")
 }
 
+#Uses a spreadsheet of known file sizes to check your files if they are the same after downloading
+reads.checkFileSize(read.directory = read.dir,
+                    check.file = filesize.check,
+                    output.name = "read-fileSize",
+                    overwrite = overwrite)
+
+
+
+##################################################################################################
+##################################################################################################
+#################################################
+## Step 1: Preprocess reads
+##################
+
 setwd(work.dir)
 dir.create("processed-reads")
 
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.dir,
                 output.dir = paste0(processed.reads, "/organized-reads"),
-                rename.file = file.rename,
+                rename.file = sample.file,
                 overwrite = overwrite)
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.dir }
+
+
+if (summary.fastq == TRUE){
+  #This function creates a summary of the fastq files per sample for number of reads
+  summary.fastqStats(read.directory = input.reads,
+                     output.name = "fastq-stats",
+                     read.length = 150,
+                     threads = threads,
+                     mem = memory,
+                     overwrite = overwrite)
+}#end summary.fastq if
 
 if (remove.adaptors == TRUE) {
   removeAdaptors(input.reads = input.reads,

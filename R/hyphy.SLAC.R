@@ -1,4 +1,4 @@
-#' @title hyphy.aBSREL
+#' @title hyphy.SLAC
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -30,15 +30,15 @@
 #'
 #' @export
 
-hyphy.aBSREL = function(tree.directory = NULL,
-                        alignment.directory = NULL,
-                        dataset.name = "aBSREL",
-                        threads = 1,
-                        memory = 1,
-                        overwrite = FALSE,
-                        resume = TRUE,
-                        quiet = FALSE,
-                        hyphy.path = NULL) {
+hyphy.SLAC = function(tree.directory = NULL,
+                      alignment.directory = NULL,
+                      dataset.name = "SLAC",
+                      threads = 1,
+                      memory = 1,
+                      overwrite = FALSE,
+                      resume = TRUE,
+                      quiet = FALSE,
+                      hyphy.path = NULL) {
 
 
   # #Read in basic genome info
@@ -149,7 +149,7 @@ hyphy.aBSREL = function(tree.directory = NULL,
     #Runs the busted
     system(paste0(hyphy.path, "hyphy absrel --alignment ", output.directory, "/", locus.name, "/", locus.name, ".phy",
                                      " --tree ", output.directory, "/", locus.name, "/", locus.name, ".tre",
-                                     " --output ", output.directory, "/", locus.name, "/aBSREL-results.json"),
+                                     " --output ", output.directory, "/", locus.name, "/SLAC-results.json"),
            ignore.stderr = quiet, ignore.stdout = quiet)
   }#end i loop
 
