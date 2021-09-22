@@ -11,7 +11,6 @@ source("configuration-file.R")
 ## Step 0: Pre-checks before running
 ##################
 
-
 #Checks if everything is installed
 pass.fail = setupCheck(anaconda.environment =  NULL,
                        fastp.path = fastp.path,

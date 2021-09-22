@@ -83,6 +83,8 @@ alignTargets = function(targets.to.align = NULL,
     stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
   }
 
+  if (dir.exists("alignments") == FALSE) { dir.create("alignments") }
+
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))
