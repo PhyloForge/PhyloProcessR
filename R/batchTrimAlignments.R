@@ -104,33 +104,31 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #
   #
   # setwd(work.dir)
-  # alignment.dir = align.dir
-  # output.dir = paste0(out.name, "/genes_trimmed2")
+  # library(foreach)
+  # alignment.dir = "alignments/untrimmed_all-markers"
   # alignment.format = "phylip"
+  # output.dir = "alignments/trimmed_all-markers"
   # output.format = "phylip"
-  # TAPER = TRUE
-  # TAPER.path = "/usr/local/bin"
-  # julia.path = "/Applications/Julia-1.6.app/Contents/Resources/julia/bin"
-  # #TAPER.path = "/home/c111h652/programs"
-  # #julia.path = "/programs/julia/bin"
-  # TrimAl = TRUE
-  # TrimAl.path = "/Users/chutter/miniconda3/bin"
-  # trim.external = TRUE
-  # min.external.percent = 50
-  # trim.coverage = TRUE
-  # min.coverage.percent = 35
-  # trim.column = TRUE
-  # min.column.gap.percent = 50
-  # convert.ambiguous.sites = FALSE
-  # alignment.assess = TRUE
-  # min.coverage.bp = 60
-  # min.alignment.length = 100
-  # min.taxa.alignment = 5
-  # max.alignment.gap.percent = 50
-  # threads = 2
-  # memory = 6
-  # overwrite = FALSE
-  # resume = TRUE
+  # overwrite = overwrite
+  # resume = resume
+  # TAPER = FALSE
+  # TAPER.path = taper.path
+  # julia.path = julia.path
+  # TrimAl = run.TrimAl
+  # TrimAl.path = trimAl.path
+  # trim.column = trim.column
+  # convert.ambiguous.sites = convert.ambiguous.sites
+  # alignment.assess = alignment.assess
+  # trim.external = trim.external
+  # trim.coverage = trim.coverage
+  # min.coverage.percent = min.coverage.percent
+  # min.external.percent = min.external.percent
+  # min.column.gap.percent = min.column.gap.percent
+  # min.alignment.length = min.alignment.length
+  # min.taxa.alignment = min.taxa.alignment.trim
+  # min.coverage.bp = min.coverage.bp
+  # threads = threads
+  # memory = memory
 
   if (is.null(TAPER.path) == FALSE){
     b.string = unlist(strsplit(TAPER.path, ""))
@@ -350,8 +348,9 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
 
       if (test.result == FALSE){
-        print(paste0(align.files[i], " Failed and was discarded."))
+        print(paste0(align.files[i], " failed filtering and was discarded."))
       } else {
+        print(paste0(align.files[i], " passed filters and was saved to file."))
         write.temp = strsplit(as.character(non.align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
         #readies for saving
@@ -365,8 +364,8 @@ batchTrimAlignments = function(alignment.dir = NULL,
       writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
     }#end else
 
-    print(data.frame(temp.data))
     print(paste0(align.files[i], " Completed."))
+    print(data.frame(temp.data))
 
     #rm()
     #gc()
@@ -376,7 +375,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   parallel::stopCluster(cl)
 
   #Print and save summary table
-  write.csv(out.data, file = paste0(output.dir, "_trimming-summary.csv"), row.names = F)
+  write.csv(out.data, file = paste0(output.dir, "/alignment-trimming_summary.csv"), row.names = F)
   #Saves log file of things
   if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
   fileConn = file(paste0(output.dir, ".log"), open = "w")
