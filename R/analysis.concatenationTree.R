@@ -101,6 +101,7 @@ analysis.concatenationTree = function(alignment.file = NULL,
   if (partition.scheme == "file"){ part.file = paste0(" -spp ", partition.file) }
   if (codon.partition == T){ codon.st = " -st CODON" } else { codon.st = "" }
 
+  dir.create(paste0(output.directory, "/", output.name))
   system(paste0("cp ", alignment.file, " ", output.directory, "/", output.name, "/alignment.phy"))
 
   #Runs IQTree
