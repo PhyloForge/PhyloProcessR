@@ -375,7 +375,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   parallel::stopCluster(cl)
 
   #Print and save summary table
-  write.csv(out.data, file = paste0(output.dir, "/alignment-trimming_summary.csv"), row.names = F)
+  write.csv(out.data, file = "alignment-trimming_summary.csv", row.names = F)
   #Saves log file of things
   if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
   fileConn = file(paste0(output.dir, ".log"), open = "w")
