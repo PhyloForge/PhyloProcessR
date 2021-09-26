@@ -6,28 +6,37 @@
 #########################
 # *** Full paths should be used whenever possible
 #The main working directory
-work.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset"
+working.directory = "/home/c111h652/scratch/Centrolenidae"
 #The file rename (File, Sample columns) for organizing reads. Set to NULL if not needed
-file.rename = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/file_rename.csv"
+sample.file = "Centrolenidae.csv"
 #The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
-contaminant.genome.list = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/decontamination_database.csv"
+contaminant.genome.list = "decontamination_database.csv"
 #The sequence capture target marker file for extraction from contigs
-target.file = "/Users/chutter/Dropbox/Research/0_Github/PhyloCap/setup-configuration_files/Ranoidea_All-Markers_Apr21-2019.fa"
-#The input raw read directory
-read.dir = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads"
+target.file = "Hyloidea_All-Markers_Apr21-2019.fa"
 #The name for the dataset
-dataset.name = "Test"
+dataset.name = "Centrolenidae"
+
+#Raw read locations
+#########################
+#The input raw read directory
+read.dir = NULL
 #The name for the processed reads folder
 processed.reads = "processed-reads"
-#a csv file with the first column having the file size of the read file and the second is the file name
-filesize.check = "fileSize.csv"
+#TRUE to download files from personal dropbox folder using token and read path
+dropbox.download = TRUE
+#the dropbox directory your files are all contained within
+dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
+#dropbox.tok = "/Users/chutter/Dropbox/dropbox-token.RDS"
+dropbox.token = "/home/c111h652/dropbox-token.RDS"
+#TRUE to save a summary csv file of the raw sequence data
+summary.fastq = TRUE
 
 #Global settings
 #########################
 #number of threads
-threads = 4
+threads = 16
 #Amount of memory to allocate in GB
-memory = 8
+memory = 120
 #Whether to overwrite previous runs
 overwrite = FALSE
 #Resume from previous runs (does not overwrite)
@@ -38,9 +47,7 @@ quiet = TRUE
 #Pre-processing settings
 #########################
 #TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
-organize.reads = TRUE
-#whether to save a fastq summary for each sample TRUE or not FALSE
-summary.fastq = TRUE
+organize.reads = FALSE
 #TRUE = to run adaptor removal on reads
 remove.adaptors = TRUE
 #Merge paired end reads
@@ -63,7 +70,7 @@ decontamination.match = 0.99
 #Denovo assembly with spades
 denovo.assembly = TRUE
 #The selected k-mer values for spades
-spades.kmer.values = c(21,33,55,77,99,127)
+spades.kmer.values = c(33,55,77,99,127)
 #Whether to use mismatch corrector (requires a lot of RAM and resources)
 spades.mismatch.corrector = TRUE
 #Whether to save the corrected reads
@@ -71,61 +78,6 @@ save.corrected.reads = FALSE
 #Clean up large files *** ADD INTO ANALYSES
 clean.up.spades = FALSE
 
-
-#Target matching settings
-#########################
-#TRUE = to run target matching on contigs
-match.targets = TRUE
-#whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
-trim.to.targets = FALSE
-#The directory of contigs to use for target matching
-#contig.directory = "draft-scaffolds" #TO ADD IN
-#The minimum match percentage for a contig match to a target
-min.match.percent = 60
-#The minimum match length for a contig match to a target
-min.match.length = 40
-#The minimum match coverage, contig must overlap by X proportion to target
-min.match.coverage = 50
-
-#Alignment settings
-#########################
-#TRUE = to run alignments for the matching targets from above
-align.matching.targets = TRUE
-#The minimum number of taxa to keep an alignment
-min.taxa.alignment = 4
-
-#Alignment trimming settings
-#########################
-#TRUE = to run alignment trimming function batchTrimAlignments
-trim.alignments = TRUE
-#The minimum number of taxa to keep an alignment
-min.taxa.alignment.trim = 5
-#The minimum alignment basepairs to keep an alignment
-min.alignment.length = 100
-#The maximum gaps from throughout the entire alignment to keep an alignment
-max.alignment.gap.percent = 50
-#run the trimming program TAPER to trim out unalignment sample segments
-run.TAPER = TRUE
-#run the trimming program TrimAl to remove high variable or misaligned columns
-run.TrimAl = TRUE
-#Whether to trim out columns below a certain threshold
-trim.column = TRUE
-#The percent of bases that must be present to keep a column
-min.column.gap.percent = 50
-#Resolves ambiguous sites to the same arbitrary base
-convert.ambiguous.sites = TRUE
-#TRUE = to output an alignment assessment spreadsheet
-alignment.assess = TRUE
-#TRUE = to externally trim alignment edges
-trim.external = TRUE
-#The minimum percent of bases that must be present to keep a column on the edges
-min.external.percent = 50
-#TRUE = to trim samples below a certain coverage (percent bases present out of total alignment) threshold
-trim.coverage = TRUE
-#The minimum percent of bases that must be present to keep a sample
-min.coverage.percent = 35
-#The minimum number of bases that must be present to keep a sample
-min.coverage.bp = 60
 
 #Program paths
 #########################
@@ -138,12 +90,4 @@ bwa.path = conda.env
 spades.path = conda.env
 bbmap.path = conda.env
 blast.path = conda.env
-mafft.path = conda.env
-iqtree.path = conda.env
-trimAl.path = conda.env
-taper.path = conda.env
-julia.path = conda.env
-gatk4.path = conda.env
-picard.path = conda.env
 
-#### End configuration
