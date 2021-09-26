@@ -105,7 +105,7 @@ analysis.concatenationTree = function(alignment.file = NULL,
   system(paste0("cp ", alignment.file, " ", output.directory, "/", output.name, "/alignment.phy"))
 
   #Runs IQTree
-  system(paste0("iqtree2 -s ", output.directory, "/", output.name, "/alignment.phy", part.file,
+  system(paste0(iqtree.path, "iqtree2 -s ", output.directory, "/", output.name, "/alignment.phy", part.file,
                 " -bb ", uf.bootstrap,
                 " -nt ", threads,
                 " -m ", part.scheme, codon.st,
