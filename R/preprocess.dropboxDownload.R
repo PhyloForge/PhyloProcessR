@@ -30,8 +30,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                            dropbox.token = NULL,
                            out.directory = NULL,
                            skip.not.found = FALSE,
-                           overwrite = FALSE,
-                           resume = TRUE){
+                           overwrite = FALSE){
 
   # ### Example usage
   # sample.spreadsheet = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Mitogenome_study.csv"
@@ -39,20 +38,14 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   # dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
   # dropbox.token = "/home/c111h652/dropbox-token.RDS"
   # overwrite = FALSE
-  # resume = TRUE
 
-  options(stringsAsFactors = FALSE)
-
-  if (resume == TRUE & overwrite == TRUE){
-    return("Both resume and overwrite cannot be TRUE. exiting. ")
-  }
-
-  if (dir.exists(out.directory) == T & overwrite == TRUE){
-    system(paste("rm -r ", out.directory))
-    dir.create(out.directory)
-  }
-
-  if (dir.exists(out.directory) == F){ dir.create(out.directory) }
+  #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
+  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
+    if (overwrite == TRUE){
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    }
+  }#end else
 
   all.reads = rdrop2::drop_dir(path = dropbox.directory,
                                recursive = TRUE)$path_display
@@ -62,7 +55,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   sample.data = read.csv(sample.spreadsheet)
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(out.directory)
     done.files = gsub("_READ.*", "", done.files)
     done.files = done.files[duplicated(done.files) == TRUE]
