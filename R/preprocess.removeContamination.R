@@ -186,8 +186,6 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
       outreads[1] = paste0(out.path, "/", lane.name, "_READ1.fastq.gz")
       outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
 
-
-
       #BWA mapping
       system(paste0(bwa.path, "bwa mem -M -E -0 -k 100 -w 4 -L 100",
                     " -t ", threads, " ref-index/reference ",

@@ -1,10 +1,10 @@
-#' @title mergePairedEndReads
+#' @title removeAdaptors
 #'
-#' @description Function for merging paired-end reads from processed Illumina sequence data using the program fastp
+#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
 #'
-#' @param input.reads path to a folder of processed reads in fastq format.
+#' @param input.reads path to a folder of raw reads in fastq format.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.directory the new directory to save the adaptor trimmed sequences
 #'
 #' @param fastp.path system path to fastp in case it can't be found
 #'
@@ -30,26 +30,27 @@
 #'
 #' @export
 
-mergePairedEndReads = function(input.reads = NULL,
-                               output.directory = "read-processing/pe-merged-reads",
-                               fastp.path = NULL,
-                               threads = 1,
-                               mem = 8,
-                               resume = TRUE,
-                               overwrite = TRUE,
-                               quiet = TRUE) {
+removeAdaptors = function(input.reads = NULL,
+                          output.directory = NULL,
+                          fastp.path = NULL,
+                          threads = 1,
+                          mem = 8,
+                          resume = TRUE,
+                          overwrite = FALSE,
+                          quiet = TRUE) {
 
-  #Debegging
+  # #Debegging
   # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # input.reads = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/read-processing/decontaminated-reads"
-  # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-  # output.directory = "read-processing/pe-merged-reads"
-  # mode = "directory"
-  # threads = 4
-  # mem = 8
-  # resume = FALSE
-  # overwrite = FALSE
-  # quiet = TRUE
+  # dir.create('read-processing')
+   # input.reads = "/Volumes/Rodents/Shrew_Genome/Illumina_Data/raw_data/JAN_004"
+   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
+   # output.directory = "processed-reads/adaptor-removed-reads"
+   # mode = "directory"
+   # threads = 4
+   # mem = 8
+   # resume = FALSE
+   # overwrite = FALSE
+   # quiet = TRUE
 
   #Same adds to bbmap path
   if (is.null(fastp.path) == FALSE){
@@ -63,7 +64,7 @@ mergePairedEndReads = function(input.reads = NULL,
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
-  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
+  #if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
@@ -79,7 +80,12 @@ mergePairedEndReads = function(input.reads = NULL,
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
-  sample.names = list.files(input.reads, recursive = F, full.names = F)
+  sample.names = list.dirs(input.reads, recursive = F, full.names = F)
+
+  if (length(sample.names) == 0){
+    sample.names = list.files(input.reads, recursive = F, full.names = F)
+    sample.names = unique(gsub("_L00.*", "", sample.names))
+    }
 
   #Resumes file download
   if (resume == TRUE){
@@ -124,7 +130,7 @@ mergePairedEndReads = function(input.reads = NULL,
       lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
       #Checks the Sample column in case already renamed
-      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = paste0(sample.reads[j], x = reads))] }
+      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = sample.reads[j], x = reads)] }
       #Returns an error if reads are not found
       if (length(lane.reads) == 0 ){
         stop(sample.reads[j], " does not have any reads present for files ")
@@ -140,19 +146,19 @@ mergePairedEndReads = function(input.reads = NULL,
       outreads = paste0(out.path, "/", lane.name)
       outreads[1] = paste0(out.path, "/", lane.name, "_READ1.fastq.gz")
       outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
-      outread.m = paste0(out.path, "/", lane.name, "_READ3.fastq.gz")
 
       #Runs fastp: only does adapter trimming, no quality stuff
-      system(paste0(fastp.path, "fastp --merge --disable_adapter_trimming --disable_quality_filtering",
-                    " --in1 ", lane.reads[1], " --in2 ", lane.reads[2],
-                    " --out1 ", outreads[1], " --out2 ", outreads[2], " --merged_out ", outread.m,
-                    " --html pe-merged_fastp.html --json pe-merged_fastp.json",
+      system(paste0(fastp.path, "fastp --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
+                    " --out1 ", outreads[1], " --out2 ", outreads[2],
+                    " --length_required 30 --low_complexity_filter --complexity_threshold 30",
+                    " --trim_poly_x",
+                    " --html adapter-trim_fastp.html --json adapter-trim_fastp.json --compression 6",
                     " --report_title ", sample.reads[j]," --thread ", threads),
              ignore.stderr = quiet, ignore.stdout = quiet)
 
-      system(paste0("cp pe-merged_fastp.html ",
-                    report.path, "/", lane.name, "_pe-merged_fastp.html"))
-      system(paste0("rm pe-merged_fastp*"))
+      system(paste0("cp ", "adapter-trim_fastp.html ",
+                    report.path, "/", lane.name, "_adapter-trim_fastp.html"))
+      system(paste0("rm adapter-trim_fastp*"))
 
       #Gathers stats on initial data
       start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
@@ -160,7 +166,7 @@ mergePairedEndReads = function(input.reads = NULL,
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Lane = gsub(".*_", "", lane.name),
-                               Task = "merge-pe-reads",
+                               Task = "trim-adaptors+filter-complex",
                                Program = "fastp",
                                startPairs = start.reads,
                                removePairs = start.reads-end.reads,
@@ -168,13 +174,12 @@ mergePairedEndReads = function(input.reads = NULL,
 
       summary.data = rbind(summary.data, temp.remove)
 
-      print(paste0(lane.name, " Completed paired-end read merging!"))
+      print(paste0(lane.name, " lane completed adaptor removal!"))
     }#end sample j loop
 
-    print(paste0(sample.names[i], " Completed paired-end read merging!"))
+    print(paste0(sample.names[i], " Completed adaptor removal!"))
   }#end i loop
 
-  write.csv(summary.data, file = paste0("logs/mergePairedEndReads_summary.csv"), row.names = FALSE)
+  write.csv(summary.data, file = paste0("logs/removeAdaptors_summary.csv"), row.names = FALSE)
 
 }#end function
-

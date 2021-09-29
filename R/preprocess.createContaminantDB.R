@@ -28,6 +28,8 @@ createContaminantDB = function(decontamination.list = NULL,
                                output.directory = "contaminant-references",
                                include.human = TRUE,
                                include.univec = TRUE,
+                               include.genbank = NULL,
+                               include.fasta = NULL,
                                overwrite = FALSE) {
 
   #Debug
@@ -62,6 +64,30 @@ createContaminantDB = function(decontamination.list = NULL,
   if (include.human == FALSE){ sample.data = sample.data[!sample.data$Genome %in% c("Human", "Homo", "Sapien", "Homo_Sapien", "Homo Sapien"),] }
 
   if (nrow(sample.data) == 0){ stop("no samples remain to analyze.") }
+
+  if (include.fasta == TRUE){
+    system(paste0("cp ", include.fasta, " ", output.directory, "/manually-included-data.fa"))
+  }
+
+  if (is.null(include.genbank) != T){
+
+    for (i in 1:length(include.genbank)){
+
+      biomartr::getGenome(db = "genbank",
+                          organism = include.genbank[i],
+                          path = output.directory,
+                          reference = FALSE)
+
+      new.name = paste0("include-genbank_", include.genbank[i])
+
+      file.list = list.files(output.directory)
+      sample.files = file.list[grep(include.genbank[i], file.list)]
+      old.name = sample.files[grep(".fna.gz|.fa$", sample.files)]
+
+      system(paste0("mv ", output.directory, "/", old.name, " ", output.directory, "/", new.name))
+    }#end i
+
+  }#end is.null
 
   if (include.univec == TRUE){
    system(paste0("wget -c https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec -O ", output.directory, "/UniVec.fa"))

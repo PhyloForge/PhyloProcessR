@@ -3,7 +3,8 @@ devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
 library(PhyloCap)
 library(foreach)
 
-source("workflow-1_configuration-file.R")
+setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/work-flows/workflow-1_configuration-file.R")
 setwd(working.directory)
 
 ##################################################################################################
@@ -12,19 +13,24 @@ setwd(working.directory)
 ## Step 1: Preprocess reads
 ##################
 
+##### Ideal processing order
+# 1. Organize / Summary
+# 2. Remove adaptors (fastp)
+# 3. remove duplicates (fastp)
+# 4. read correction (fastp)
+# 5. trim low quality (fastp)
+# 6. Decontamination
+# 7. normalize
+# 8. Merge PE Reads
+
+
 #Checks if everything is installed
 pass.fail = setupCheck(anaconda.environment =  NULL,
                        fastp.path = fastp.path,
                        samtools.path = samtools.path,
                        bwa.path = bwa.path,
                        spades.path = spades.path,
-                       bbmap.path = bbmap.path,
-                       blast.path = blast.path,
-                       mafft.path = mafft.path,
-                       iqtree.path = iqtree.path,
-                       trimAl.path = trimAl.path,
-                       julia.path = julia.path,
-                       taper.path = taper.path)
+                       bbnorm.path = bbnorm.path)
 
 if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
   print("all required programs are found, PhyloCap pipeline continuing...")
@@ -43,18 +49,18 @@ if (dropbox.download == TRUE){
                   overwrite = TRUE,
                   resume = FALSE)
 
-  read.dir = paste0(processed.reads, "/raw-reads")
+  input.reads = paste0(processed.reads, "/raw-reads")
   organize.reads = FALSE
 }#end if
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
-  organizeReads(read.directory = read.dir,
+  organizeReads(read.directory = read.directory,
                 output.dir = paste0(processed.reads, "/organized-reads"),
                 rename.file = sample.file,
                 overwrite = overwrite)
   input.reads = paste0(processed.reads, "/organized-reads")
-} else {input.reads = read.dir }
+} else {input.reads = read.directory }
 
 if (summary.fastq == TRUE){
   #This function creates a summary of the fastq files per sample for number of reads
@@ -66,17 +72,69 @@ if (summary.fastq == TRUE){
                      overwrite = overwrite)
 }#end summary.fastq if
 
-if (remove.adaptors == TRUE) {
-  removeAdaptors(input.reads = input.reads,
-                 output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
+if (fastp.complete == TRUE) {
+  fastpComplete(input.reads = input.reads,
+                 output.directory = paste0(processed.reads, "/cleaned-reads"),
                  fastp.path = fastp.path,
                  threads = threads,
                  mem = memory,
                  resume = resume,
                  overwrite = overwrite,
                  quiet = quiet)
-  input.reads = paste0(processed.reads, "/adaptor-removed-reads")
+  input.reads = paste0(processed.reads, "/cleaned-reads")
 }
+
+# if (remove.adaptors == TRUE) {
+#   removeAdaptors(input.reads = input.reads,
+#                  output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
+#                  fastp.path = fastp.path,
+#                  threads = threads,
+#                  mem = memory,
+#                  resume = resume,
+#                  overwrite = overwrite,
+#                  quiet = quiet)
+#   input.reads = paste0(processed.reads, "/adaptor-removed-reads")
+# }
+#
+# # Runs read error correction
+# if (remove.duplicate.reads == TRUE) {
+#   removeDuplicateReads(input.reads = input.reads,
+#                       output.directory = paste0(processed.reads, "/deduped-reads"),
+#                       fastp.path = fastp.path,
+#                       threads = threads,
+#                       mem = memory,
+#                       resume = resume,
+#                       overwrite = overwrite,
+#                       quiet = quiet)
+#   input.reads = paste0(processed.reads, "/deduped-reads")
+# }
+#
+#
+# # Runs read error correction
+# if (error.correction == TRUE) {
+#   readErrorCorrection(input.reads = input.reads,
+#                       output.directory = paste0(processed.reads, "/error-corrected-reads"),
+#                       fastp.path = fastp.path,
+#                       threads = threads,
+#                       mem = memory,
+#                       resume = resume,
+#                       overwrite = overwrite,
+#                       quiet = quiet)
+#   input.reads = paste0(processed.reads, "/error-corrected-reads")
+# }
+#
+# # Normalizes reads
+# if (quality.trim.reads == TRUE) {
+#   qualityTrimReads(input.reads = input.reads,
+#                    output.directory = paste0(processed.reads, "/quality-trimmed-reads"),
+#                    fastp.path = fastp.path,
+#                    threads = threads,
+#                    mem = memory,
+#                    resume = resume,
+#                    overwrite = overwrite,
+#                    quiet = quiet)
+#   input.reads = paste0(processed.reads, "/quality-trimmed-reads")
+# }
 
 #Runs decontamination of reads
 if (decontamination == TRUE){
@@ -104,6 +162,20 @@ if (decontamination == TRUE){
 }
 
 
+# Normalizes reads
+if (normalize.reads == TRUE) {
+  normalizeReads(input.reads = input.reads,
+                 output.directory = paste0(processed.reads, "/normalized-reads"),
+                 bbnorm.path = bbnorm.path,
+                 threads = threads,
+                 mem = memory,
+                 resume = resume,
+                 overwrite = overwrite,
+                 quiet = quiet)
+  input.reads = paste0(processed.reads, "/normalized-reads")
+}
+
+#merge paired-end reads
 if (merge.pe.reads == TRUE){
   #merge paired end reads
   mergePairedEndReads(input.reads = input.reads,
@@ -122,7 +194,7 @@ dir.create("data-analysis")
 if (denovo.assembly == TRUE){
   #Assembles merged paired end reads with spades
   assembleSpades(input.reads = input.reads,
-                 output.directory = paste0(processed.reads, "/spades-assembly"),
+                 output.directory = paste0("data-analysis/spades-assembly"),
                  assembly.directory = "data-analysis/draft-assemblies",
                  mismatch.corrector = spades.mismatch.corrector,
                  kmer.values = spades.kmer.values,

@@ -42,6 +42,7 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
                       bwa.path = NULL,
                       spades.path = NULL,
                       bbmap.path = NULL,
+                      bbnorm.path = NULL,
                       blast.path = NULL,
                       mafft.path = NULL,
                       iqtree.path = NULL,
@@ -57,6 +58,7 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     bwa.path = paste0(anaconda.environment, "/bin")
     spades.path = paste0(anaconda.environment, "/bin")
     bbmap.path = paste0(anaconda.environment, "/bin")
+    bbnorm.path = paste0(anaconda.environment, "/bin")
     blast.path = paste0(anaconda.environment, "/bin")
     mafft.path = paste0(anaconda.environment, "/bin")
     iqtree.path = paste0(anaconda.environment, "/bin")
@@ -73,6 +75,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("Fastp could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(fastp.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(samtools.path, "/samtools")) == TRUE){
     print("Samtools was found.")
@@ -80,6 +84,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("Samtools could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(samtools.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(bwa.path, "/bwa")) == TRUE){
     print("BWA was found.")
@@ -87,6 +93,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("BWA could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(bwa.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(spades.path, "/spades.py")) == TRUE){
     print("Spades was found.")
@@ -94,6 +102,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("Spades could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(spades.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(bbmap.path, "/bbmap.sh")) == TRUE){
     print("BBMap was found.")
@@ -101,6 +111,17 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("BBMap could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(bbmap.path) == TRUE) { pass = TRUE }
+
+  if (file.exists(paste0(bbnorm.path, "/bbnorm.sh")) == TRUE){
+    print("BBNorm was found.")
+  } else {
+    pass = FALSE
+    print("BBNorm could not be found.")
+  } #end else
+  #CHecks if it was even inputted
+  if (is.null(bbnorm.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(blast.path, "/blastn")) == TRUE){
     print("blastn was found.")
@@ -108,6 +129,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("blastn could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(blast.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(blast.path, "/makeblastdb")) == TRUE){
     print("makeblastdb was found.")
@@ -115,6 +138,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("makeblastdb could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(blast.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(mafft.path, "/mafft")) == TRUE){
     print("mafft was found.")
@@ -122,6 +147,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("mafft could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(mafft.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(iqtree.path, "/iqtree2")) == TRUE){
     print("iqtree was found.")
@@ -129,6 +156,8 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("iqtree could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(iqtree.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(trimAl.path, "/trimal")) == TRUE){
     print("trimal was found.")
@@ -136,6 +165,9 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     pass = FALSE
     print("trimal could not be found.")
   } #end else
+  #CHecks if it was even inputted
+  if (is.null(trimAl.path) == TRUE) { pass = TRUE }
+
 #
 #   if (file.exists(paste0(taper.path, "/taper")) == TRUE){
 #     print("TAPER was found.")

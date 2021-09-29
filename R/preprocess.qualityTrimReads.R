@@ -1,12 +1,16 @@
-#' @title removeAdaptors
+#' @title preprocess.qualityTrimReads
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
 #'
-#' @param input.reads path to a folder of raw reads in fastq format.
+#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
 #'
 #' @param output.directory the new directory to save the adaptor trimmed sequences
 #'
-#' @param fastp.path system path to fastp in case it can't be found
+#' @param decontamination.path directory of genomes contaminants to scan samples
+#'
+#' @param samtools.path system path to samtools in case it can't be found
+#'
+#' @param bwa.path system path to bwa in case it can't be found
 #'
 #' @param threads number of computation processing threads
 #'
@@ -30,27 +34,25 @@
 #'
 #' @export
 
-removeAdaptors = function(input.reads = NULL,
-                          output.directory = NULL,
-                          fastp.path = NULL,
-                          threads = 1,
-                          mem = 8,
-                          resume = TRUE,
-                          overwrite = FALSE,
-                          quiet = TRUE) {
+qualityTrimReads = function(input.reads = "deduped-reads",
+                            output.directory = "quality-trimmed-reads",
+                            fastp.path = NULL,
+                            threads = 1,
+                            mem = 1,
+                            resume = TRUE,
+                            overwrite = FALSE,
+                            quiet = TRUE) {
 
-  # #Debegging
+  # #Debug
   # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # dir.create('read-processing')
-   # input.reads = "/Volumes/Rodents/Shrew_Genome/Illumina_Data/raw_data/JAN_004"
-   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-   # output.directory = "processed-reads/adaptor-removed-reads"
-   # mode = "directory"
-   # threads = 4
-   # mem = 8
-   # resume = FALSE
-   # overwrite = FALSE
-   # quiet = TRUE
+  # input.reads = "read-processing/deduped-reads"
+  # output.directory = "read-processing/quality-trimmed-reads"
+  # fastp.path = "/Users/chutter/miniconda3/bin"
+  # threads = 4
+  # mem = 8
+  # resume = TRUE
+  # overwrite = FALSE
+  # quiet = TRUE
 
   #Same adds to bbmap path
   if (is.null(fastp.path) == FALSE){
@@ -60,12 +62,9 @@ removeAdaptors = function(input.reads = NULL,
     }#end if
   } else { fastp.path = "" }
 
-
   #Quick checks
-  options(stringsAsFactors = FALSE)
-  if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
-  #if (file.exists(input.reads) == F){ stop("Input reads not found.") }
-  if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
+  if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
+  if (dir.exists(input.reads) == F){ stop("Input reads not found.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
@@ -80,12 +79,7 @@ removeAdaptors = function(input.reads = NULL,
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
-  sample.names = list.dirs(input.reads, recursive = F, full.names = F)
-
-  if (length(sample.names) == 0){
-    sample.names = list.files(input.reads, recursive = F, full.names = F)
-    sample.names = unique(gsub("_L00.*", "", sample.names))
-    }
+  sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
   if (resume == TRUE){
@@ -103,6 +97,7 @@ removeAdaptors = function(input.reads = NULL,
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
+  #Runs through each sample
   for (i in 1:length(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
@@ -126,7 +121,7 @@ removeAdaptors = function(input.reads = NULL,
     if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
     for (j in 1:length(sample.reads)){
-
+      #Gets reads for the lane / separately sequenced set
       lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
 
       #Checks the Sample column in case already renamed
@@ -150,14 +145,15 @@ removeAdaptors = function(input.reads = NULL,
       #Runs fastp: only does adapter trimming, no quality stuff
       system(paste0(fastp.path, "fastp --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
                     " --out1 ", outreads[1], " --out2 ", outreads[2],
-                    " --length_required 30 --low_complexity_filter --complexity_threshold 30",
-                    " --html adapter-trim_fastp.html --json adapter-trim_fastp.json",
+                    " --disable_adapter_trimming --disable_length_filtering",
+                    " --cut_front --cut_tail",
+                    " --html quality-trim_fastp.html --json quality-trim_fastp.json --compression 6",
                     " --report_title ", sample.reads[j]," --thread ", threads),
              ignore.stderr = quiet, ignore.stdout = quiet)
 
-      system(paste0("cp ", "adapter-trim_fastp.html ",
-                    report.path, "/", lane.name, "_adapter-trim_fastp.html"))
-      system(paste0("rm adapter-trim_fastp*"))
+      system(paste0("cp ", "quality-trim_fastp.html ",
+                    report.path, "/", lane.name, "_quality-trim_fastp.html"))
+      system(paste0("rm quality-trim_fastp*"))
 
       #Gathers stats on initial data
       start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
@@ -165,7 +161,7 @@ removeAdaptors = function(input.reads = NULL,
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Lane = gsub(".*_", "", lane.name),
-                               Task = "trim-adaptors+filter-complex",
+                               Task = "quality-trim",
                                Program = "fastp",
                                startPairs = start.reads,
                                removePairs = start.reads-end.reads,
@@ -173,12 +169,12 @@ removeAdaptors = function(input.reads = NULL,
 
       summary.data = rbind(summary.data, temp.remove)
 
-      print(paste0(lane.name, " lane completed adaptor removal!"))
     }#end sample j loop
 
-    print(paste0(sample.names[i], " Completed adaptor removal!"))
-  }#end i loop
+    print(paste0(sample.names[i], " Completed quality trimming!"))
 
-  write.csv(summary.data, file = paste0("logs/removeAdaptors_summary.csv"), row.names = FALSE)
+  }#end sample i loop
 
-}#end function
+  write.csv(summary.data, file = paste0("logs/qualityTrimReads_summary.csv"), row.names = FALSE)
+}
+

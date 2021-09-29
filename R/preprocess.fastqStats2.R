@@ -35,12 +35,12 @@
 #' @export
 
 summary.fastqStats = function(read.directory = NULL,
-                      sub.directory = NULL,
-                      output.name = "fastq-stats",
-                      read.length = 150,
-                      threads = 1,
-                      mem = 1,
-                      overwrite = FALSE) {
+                              sub.directory = NULL,
+                              output.name = "fastq-stats",
+                              read.length = 150,
+                              threads = 1,
+                              mem = 1,
+                              overwrite = FALSE) {
 
   # #Debug
   #  setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")

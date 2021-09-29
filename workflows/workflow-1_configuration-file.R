@@ -6,24 +6,25 @@
 #########################
 # *** Full paths should be used whenever possible
 #The main working directory
-working.directory = "/home/c111h652/scratch/Centrolenidae"
-#The file rename (File, Sample columns) for organizing reads. Set to NULL if not needed
-sample.file = "Centrolenidae.csv"
+#working.directory = "/home/c111h652/scratch/Centrolenidae"
+working.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset"
 #The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
 contaminant.genome.list = "decontamination_database.csv"
-#The sequence capture target marker file for extraction from contigs
-target.file = "Hyloidea_All-Markers_Apr21-2019.fa"
 #The name for the dataset
-dataset.name = "Centrolenidae"
+dataset.name = "Test"
 
 #Raw read locations
 #########################
+#The file rename (File, Sample columns) for organizing reads. Set to NULL if not needed
+sample.file = NA
+#TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
+organize.reads = FALSE
 #The input raw read directory
-read.dir = NULL
+read.directory = "/Users/chutter/Dropbox/Research/0_Github/Test-dataset/raw-reads/"
 #The name for the processed reads folder
 processed.reads = "processed-reads"
 #TRUE to download files from personal dropbox folder using token and read path
-dropbox.download = TRUE
+dropbox.download = FALSE
 #the dropbox directory your files are all contained within
 dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
 #dropbox.tok = "/Users/chutter/Dropbox/dropbox-token.RDS"
@@ -44,14 +45,25 @@ resume = TRUE
 #Print verbose output for each function
 quiet = TRUE
 
-#Pre-processing settings
+#FASTP read cleaning
 #########################
-#TRUE = to organize reads and rename to sample names from the "file_rename.csv" above
-organize.reads = FALSE
+# = TRUE to run all processing steps at once (much faster). Overrides settings below.
+fastp.complete = TRUE
 #TRUE = to run adaptor removal on reads
 remove.adaptors = TRUE
+#TRUE to remove exact PCR duplicates
+remove.duplicate.reads = TRUE
+#TRUE to correct errors using the other read pair
+error.correction = TRUE
+#Trims low quality ends off of reads
+quality.trim.reads = TRUE
+#normalizes read depth to facilitate assembly
+normalize.reads = TRUE
 #Merge paired end reads
 merge.pe.reads = TRUE
+
+#Decontamination settings
+#########################
 #Remove contamination
 decontamination = TRUE
 #Download contaminat genomes from genbank if TRUE
@@ -83,11 +95,12 @@ clean.up.spades = FALSE
 #########################
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
 ### e.g. fastp.path = "/conda/PhyloCap/bin
-conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloCap/bin/"
+#conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloCap/bin/"
+conda.env = "/Users/chutter/miniconda3/bin/"
 fastp.path = conda.env
 samtools.path = conda.env
-bwa.path = conda.env
+bwa.path = "/usr/local/bin"
 spades.path = conda.env
-bbmap.path = conda.env
+bbnorm.path = "/usr/local/bin"
 blast.path = conda.env
 
