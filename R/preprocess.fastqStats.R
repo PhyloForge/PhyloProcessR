@@ -1,4 +1,4 @@
-#' @title summary.fastqStats
+#' @title fastqStats
 #'
 #' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
 #'
@@ -34,7 +34,7 @@
 #'
 #' @export
 
-summary.fastqStats = function(read.directory = NULL,
+fastqStats = function(read.directory = NULL,
                       sub.directory = NULL,
                       output.name = "fastq-stats",
                       read.length = 150,
@@ -54,10 +54,9 @@ summary.fastqStats = function(read.directory = NULL,
   if (is.null(read.directory) == TRUE){ stop("Please provide input reads.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (file.exists(output.name) == F){ dir.create(output.name) } else {
+  if (file.exists(paste0(output.name, ".csv")) == T){
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.name))
-      dir.create(output.name)
+      system(paste0("rm ", output.name, ".csv"))
     }
   }#end else
 
@@ -116,10 +115,10 @@ summary.fastqStats = function(read.directory = NULL,
       #Gathers stats on initial data
       read1.count = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
       read2.count = as.numeric(system(paste0("zcat < ", lane.reads[2], " | echo $((`wc -l`/4))"), intern = T))
-      if (length(lane.reads) == 3){  
+      if (length(lane.reads) == 3){
         read3.count = as.numeric(system(paste0("zcat < ", lane.reads[3], " | echo $((`wc -l`/4))"), intern = T))
       } else { read3.count = 0 }
-      
+
       scale.factor = (read1.count + read2.count + read3.count) / 1000000
       if (read1.count == read2.count){ read.pairs = read1.count } else { read.pairs = "PairsUnequal"}
 

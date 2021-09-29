@@ -64,12 +64,12 @@ if (organize.reads == TRUE) {
 
 if (summary.fastq == TRUE){
   #This function creates a summary of the fastq files per sample for number of reads
-  summary.fastqStats(read.directory = input.reads,
-                     output.name = "fastq-stats",
-                     read.length = 150,
-                     threads = threads,
-                     mem = memory,
-                     overwrite = overwrite)
+  fastqStats(read.directory = input.reads,
+             output.name = "fastq-stats",
+             read.length = 150,
+             threads = threads,
+             mem = memory,
+             overwrite = overwrite)
 }#end summary.fastq if
 
 #The complete processing through fastp at once. +++ for speed.
