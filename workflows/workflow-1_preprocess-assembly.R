@@ -46,8 +46,7 @@ if (dropbox.download == TRUE){
   dropboxDownload(sample.spreadsheet = sample.file,
                   dropbox.directory = dropbox.directory,
                   out.directory = paste0(processed.reads, "/raw-reads"),
-                  overwrite = overwrite,
-                  resume = resume)
+                  overwrite = overwrite)
 
   read.directory = paste0(processed.reads, "/raw-reads")
   organize.reads = FALSE
@@ -79,7 +78,6 @@ if (fastp.complete == TRUE) {
                  fastp.path = fastp.path,
                  threads = threads,
                  mem = memory,
-                 resume = resume,
                  overwrite = overwrite,
                  quiet = quiet)
   input.reads = paste0(processed.reads, "/cleaned-reads")
