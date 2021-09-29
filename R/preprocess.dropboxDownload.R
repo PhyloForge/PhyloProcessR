@@ -56,7 +56,9 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
   #Resumes file download
   if (overwrite == FALSE){
-    done.files = list.dirs(output.directory)
+    done.files = list.files(output.directory)
+    done.files = gsub("_READ.*", "", done.files)
+    done.files = done.files[duplicated(done.files) == TRUE]
     sample.data = sample.data[!sample.data$Sample %in% done.files,]
   }
 
