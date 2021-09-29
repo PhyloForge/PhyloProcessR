@@ -46,8 +46,8 @@ if (dropbox.download == TRUE){
   dropboxDownload(sample.spreadsheet = sample.file,
                   dropbox.directory = dropbox.directory,
                   out.directory = paste0(processed.reads, "/raw-reads"),
-                  overwrite = TRUE,
-                  resume = FALSE)
+                  overwrite = overwrite,
+                  resume = resume)
 
   read.directory = paste0(processed.reads, "/raw-reads")
   organize.reads = FALSE
