@@ -3,8 +3,9 @@ devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
 library(PhyloCap)
 library(foreach)
 
-setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/work-flows/workflow-1_configuration-file.R")
+#setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+#source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/work-flows/workflow-1_configuration-file.R")
+source("workflow-1_configuration-file.R")
 setwd(working.directory)
 
 ##################################################################################################
@@ -22,7 +23,6 @@ setwd(working.directory)
 # 6. Decontamination
 # 7. normalize
 # 8. Merge PE Reads
-
 
 #Checks if everything is installed
 pass.fail = setupCheck(anaconda.environment =  NULL,
@@ -49,7 +49,7 @@ if (dropbox.download == TRUE){
                   overwrite = TRUE,
                   resume = FALSE)
 
-  input.reads = paste0(processed.reads, "/raw-reads")
+  read.directory = paste0(processed.reads, "/raw-reads")
   organize.reads = FALSE
 }#end if
 
@@ -72,6 +72,7 @@ if (summary.fastq == TRUE){
                      overwrite = overwrite)
 }#end summary.fastq if
 
+#The complete processing through fastp at once. +++ for speed.
 if (fastp.complete == TRUE) {
   fastpComplete(input.reads = input.reads,
                  output.directory = paste0(processed.reads, "/cleaned-reads"),
@@ -84,57 +85,56 @@ if (fastp.complete == TRUE) {
   input.reads = paste0(processed.reads, "/cleaned-reads")
 }
 
-# if (remove.adaptors == TRUE) {
-#   removeAdaptors(input.reads = input.reads,
-#                  output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
-#                  fastp.path = fastp.path,
-#                  threads = threads,
-#                  mem = memory,
-#                  resume = resume,
-#                  overwrite = overwrite,
-#                  quiet = quiet)
-#   input.reads = paste0(processed.reads, "/adaptor-removed-reads")
-# }
-#
-# # Runs read error correction
-# if (remove.duplicate.reads == TRUE) {
-#   removeDuplicateReads(input.reads = input.reads,
-#                       output.directory = paste0(processed.reads, "/deduped-reads"),
-#                       fastp.path = fastp.path,
-#                       threads = threads,
-#                       mem = memory,
-#                       resume = resume,
-#                       overwrite = overwrite,
-#                       quiet = quiet)
-#   input.reads = paste0(processed.reads, "/deduped-reads")
-# }
-#
-#
-# # Runs read error correction
-# if (error.correction == TRUE) {
-#   readErrorCorrection(input.reads = input.reads,
-#                       output.directory = paste0(processed.reads, "/error-corrected-reads"),
-#                       fastp.path = fastp.path,
-#                       threads = threads,
-#                       mem = memory,
-#                       resume = resume,
-#                       overwrite = overwrite,
-#                       quiet = quiet)
-#   input.reads = paste0(processed.reads, "/error-corrected-reads")
-# }
-#
-# # Normalizes reads
-# if (quality.trim.reads == TRUE) {
-#   qualityTrimReads(input.reads = input.reads,
-#                    output.directory = paste0(processed.reads, "/quality-trimmed-reads"),
-#                    fastp.path = fastp.path,
-#                    threads = threads,
-#                    mem = memory,
-#                    resume = resume,
-#                    overwrite = overwrite,
-#                    quiet = quiet)
-#   input.reads = paste0(processed.reads, "/quality-trimmed-reads")
-# }
+if (remove.adaptors == TRUE & fastp.complete == FALSE) {
+  removeAdaptors(input.reads = input.reads,
+                 output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
+                 fastp.path = fastp.path,
+                 threads = threads,
+                 mem = memory,
+                 resume = resume,
+                 overwrite = overwrite,
+                 quiet = quiet)
+  input.reads = paste0(processed.reads, "/adaptor-removed-reads")
+}
+
+# Runs read error correction
+if (remove.duplicate.reads == TRUE & fastp.complete == FALSE) {
+  removeDuplicateReads(input.reads = input.reads,
+                      output.directory = paste0(processed.reads, "/deduped-reads"),
+                      fastp.path = fastp.path,
+                      threads = threads,
+                      mem = memory,
+                      resume = resume,
+                      overwrite = overwrite,
+                      quiet = quiet)
+  input.reads = paste0(processed.reads, "/deduped-reads")
+}
+
+# Runs read error correction
+if (error.correction == TRUE & fastp.complete == FALSE) {
+  readErrorCorrection(input.reads = input.reads,
+                      output.directory = paste0(processed.reads, "/error-corrected-reads"),
+                      fastp.path = fastp.path,
+                      threads = threads,
+                      mem = memory,
+                      resume = resume,
+                      overwrite = overwrite,
+                      quiet = quiet)
+  input.reads = paste0(processed.reads, "/error-corrected-reads")
+}
+
+# Normalizes reads
+if (quality.trim.reads == TRUE & fastp.complete == FALSE) {
+  qualityTrimReads(input.reads = input.reads,
+                   output.directory = paste0(processed.reads, "/quality-trimmed-reads"),
+                   fastp.path = fastp.path,
+                   threads = threads,
+                   mem = memory,
+                   resume = resume,
+                   overwrite = overwrite,
+                   quiet = quiet)
+  input.reads = paste0(processed.reads, "/quality-trimmed-reads")
+}
 
 #Runs decontamination of reads
 if (decontamination == TRUE){
