@@ -8,7 +8,7 @@
 #'
 #' @param dropbox.token your dropbox token path, created the first time you run the function but needs interactivity for log-in. Can be done once on your computer and the token can be moved around.
 #'
-#' @param out.directory the directory to save the files you are downloading
+#' @param output.directory the directory to save the files you are downloading
 #'
 #' @param skip.not.found the directory to save the files you are downloading
 #'
@@ -28,7 +28,7 @@
 dropboxDownload = function(sample.spreadsheet = NULL,
                            dropbox.directory = NULL,
                            dropbox.token = NULL,
-                           out.directory = NULL,
+                           output.directory = NULL,
                            skip.not.found = FALSE,
                            overwrite = FALSE){
 
@@ -56,7 +56,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
   #Resumes file download
   if (overwrite == FALSE){
-    done.files = list.files(out.directory)
+    done.files = list.files(output.directory)
     done.files = gsub("_READ.*", "", done.files)
     done.files = done.files[duplicated(done.files) == TRUE]
     sample.data = sample.data[!sample.data$Sample %in% done.files,]
@@ -82,11 +82,11 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
     #Save the read files with the new names in the new directory
     rdrop2::drop_download(path = sample.reads[1],
-                          local_path = paste0(out.directory, "/", sample.data$Sample[i], "_L001_READ1.fastq.gz"),
+                          local_path = paste0(output.directory, "/", sample.data$Sample[i], "_L001_READ1.fastq.gz"),
                           overwrite = TRUE)
 
     rdrop2::drop_download(path = sample.reads[2],
-                          local_path = paste0(out.directory, "/", sample.data$Sample[i], "_L001_READ2.fastq.gz"),
+                          local_path = paste0(output.directory, "/", sample.data$Sample[i], "_L001_READ2.fastq.gz"),
                           overwrite = TRUE)
   }#end i loop
 
