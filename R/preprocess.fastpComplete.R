@@ -31,26 +31,22 @@
 #' @export
 
 fastpComplete = function(input.reads = NULL,
-                          output.directory = NULL,
-                          fastp.path = NULL,
-                          threads = 1,
-                          mem = 8,
-                          resume = TRUE,
-                          overwrite = FALSE,
-                          quiet = TRUE) {
+                         output.directory = NULL,
+                         fastp.path = NULL,
+                         threads = 1,
+                         mem = 8,
+                         overwrite = FALSE,
+                         quiet = TRUE) {
 
-  # #Debegging
-  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # dir.create('read-processing')
-   # input.reads = "/Volumes/Rodents/Shrew_Genome/Illumina_Data/raw_data/JAN_004"
-   # fastp.path = "/Users/chutter/miniconda3/bin/fastp"
-   # output.directory = "processed-reads/adaptor-removed-reads"
-   # mode = "directory"
-   # threads = 4
-   # mem = 8
-   # resume = FALSE
-   # overwrite = FALSE
-   # quiet = TRUE
+  #Debug
+  setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  input.reads = "raw-reads"
+  output.directory = "processed-reads/cleaned-reads"
+  fastp.path = "/Users/chutter/miniconda3/bin"
+  threads = 4
+  mem = 8
+  overwrite = TRUE
+  quiet = TRUE
 
   #Same adds to bbmap path
   if (is.null(fastp.path) == FALSE){
@@ -60,12 +56,8 @@ fastpComplete = function(input.reads = NULL,
     }#end if
   } else { fastp.path = "" }
 
-
   #Quick checks
-  options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
-  #if (file.exists(input.reads) == F){ stop("Input reads not found.") }
-  if (is.null(file.rename) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
@@ -88,7 +80,7 @@ fastpComplete = function(input.reads = NULL,
     }
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     sample.names = sample.names[!sample.names %in% done.files]
   }
