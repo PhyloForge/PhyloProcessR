@@ -12,8 +12,6 @@
 #'
 #' @param mem amount of system memory to use
 #'
-#' @param resume TRUE to skip samples already completed
-#'
 #' @param overwrite TRUE to overwrite a folder of samples with output.dir
 #'
 #' @param quiet TRUE to supress screen output
@@ -39,14 +37,14 @@ fastpComplete = function(input.reads = NULL,
                          quiet = TRUE) {
 
   #Debug
-  setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  input.reads = "raw-reads"
-  output.directory = "processed-reads/cleaned-reads"
-  fastp.path = "/Users/chutter/miniconda3/bin"
-  threads = 4
-  mem = 8
-  overwrite = TRUE
-  quiet = TRUE
+  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
+  # input.reads = "raw-reads"
+  # output.directory = "processed-reads/cleaned-reads"
+  # fastp.path = "/Users/chutter/miniconda3/bin"
+  # threads = 4
+  # mem = 8
+  # overwrite = TRUE
+  # quiet = TRUE
 
   #Same adds to bbmap path
   if (is.null(fastp.path) == FALSE){
