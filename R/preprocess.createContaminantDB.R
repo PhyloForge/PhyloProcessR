@@ -65,9 +65,10 @@ createContaminantDB = function(decontamination.list = NULL,
 
   if (nrow(sample.data) == 0){ stop("no samples remain to analyze.") }
 
-  if (include.fasta == TRUE){
+  if (is.null(include.fasta) != TRUE){
+    if (file.exists(include.fasta) == F){ stop("include.fasta file not found.") }
     system(paste0("cp ", include.fasta, " ", output.directory, "/manually-included-data.fa"))
-  }
+  }#end if
 
   if (is.null(include.genbank) != T){
 
