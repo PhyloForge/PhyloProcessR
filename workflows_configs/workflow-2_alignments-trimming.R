@@ -14,14 +14,8 @@ setwd(work.dir)
 
 #Checks if everything is installed
 pass.fail = setupCheck(anaconda.environment =  NULL,
-                       fastp.path = fastp.path,
-                       samtools.path = samtools.path,
-                       bwa.path = bwa.path,
-                       spades.path = spades.path,
-                       bbmap.path = bbmap.path,
                        blast.path = blast.path,
                        mafft.path = mafft.path,
-                       iqtree.path = iqtree.path,
                        trimAl.path = trimAl.path,
                        julia.path = julia.path,
                        taper.path = taper.path)
@@ -137,7 +131,7 @@ if (trim.alignments == TRUE){
                       min.external.percent = min.external.percent,
                       min.column.gap.percent = min.column.gap.percent,
                       min.alignment.length = min.alignment.length,
-                      min.taxa.alignment = min.taxa.alignment.trim,
+                      min.taxa.alignment = min.taxa.alignment,
                       min.coverage.bp = min.coverage.bp,
                       threads = threads,
                       memory = memory)

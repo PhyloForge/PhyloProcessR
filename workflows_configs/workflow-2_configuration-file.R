@@ -6,19 +6,11 @@
 #########################
 # *** Full paths should be used whenever possible
 #The main working directory
-work.dir = "/home/c111h652/scratch/Mantidactylus"
-#The file rename (File, Sample columns) for organizing reads. Set to NULL if not needed
-sample.file = "file_rename.csv"
-#The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
-contaminant.genome.list = "decontamination_database.csv"
+working.directory = "/Path/to/where/the/stuff/is/at"
 #The sequence capture target marker file for extraction from contigs
-target.file = "Ranoidea_All-Markers_Apr21-2019.fa"
-#The input raw read directory
-read.dir = "/home/c111h652/scratch/All_Frogs/novogene/raw_data"
+target.file = "Marker-file.fa"
 #The name for the dataset
-dataset.name = "Mantidactylus"
-#The name for the processed reads folder
-processed.reads = "processed-reads"
+dataset.name = "Descriptive-Name"
 
 #Global settings
 #########################
@@ -39,34 +31,25 @@ quiet = TRUE
 match.targets = TRUE
 #whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
 trim.to.targets = FALSE
-#The directory of contigs to use for target matching
-#contig.directory = "draft-scaffolds" #TO ADD IN
 #The minimum match percentage for a contig match to a target
 min.match.percent = 60
-#The minimum match length for a contig match to a target
+#The minimum match length in basepairs for a contig match to a target
 min.match.length = 40
-#The minimum match coverage, contig must overlap by X proportion to target
+#The minimum match coverage, contig must overlap by X percent to target
 min.match.coverage = 50
-
-#Alignment settings
-#########################
-#TRUE = to run alignments for the matching targets from above
-align.matching.targets = TRUE
-#The minimum number of taxa to keep an alignment
-min.taxa.alignment = 4
 
 #Alignment trimming settings
 #########################
+#TRUE = to run alignments for the matching targets from above
+align.matching.targets = TRUE
 #TRUE = to run alignment trimming function batchTrimAlignments
 trim.alignments = TRUE
 #The minimum number of taxa to keep an alignment
-min.taxa.alignment.trim = 4
+min.taxa.alignment = 4
 #The minimum alignment basepairs to keep an alignment
 min.alignment.length = 100
 #The maximum gaps from throughout the entire alignment to keep an alignment
 max.alignment.gap.percent = 50
-#run the trimming program TAPER to trim out unalignment sample segments
-run.TAPER = FALSE
 #run the trimming program TrimAl to remove high variable or misaligned columns
 run.TrimAl = TRUE
 #Whether to trim out columns below a certain threshold
@@ -75,7 +58,7 @@ trim.column = TRUE
 min.column.gap.percent = 50
 #Resolves ambiguous sites to the same arbitrary base
 convert.ambiguous.sites = TRUE
-#TRUE = to output an alignment assessment spreadsheet
+#TRUE = to output an alignment assessment spreadsheet and filter alignments
 alignment.assess = TRUE
 #TRUE = to externally trim alignment edges
 trim.external = TRUE
@@ -92,12 +75,11 @@ min.coverage.bp = 60
 #########################
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
 ### e.g. fastp.path = "/conda/PhyloCap/bin
-conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloCap/bin/"
+conda.env = "/Path/to/conda/env/bin"
 bbmap.path = conda.env
 blast.path = conda.env
 mafft.path = conda.env
 trimAl.path = conda.env
-taper.path = conda.env
-julia.path = "~/programs/julia/bin/julia"
+julia.path = conda.env
 
 #### End configuration
