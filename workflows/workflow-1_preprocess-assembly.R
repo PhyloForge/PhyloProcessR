@@ -39,18 +39,18 @@ if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
 #Begins by creating processed read directory
 dir.create("processed-reads")
 
-if (dropbox.download == TRUE){
-  #Authorizes token
-  rdrop2::drop_auth(rdstoken = dropbox.token)
-  #Run download function
-  dropboxDownload(sample.spreadsheet = sample.file,
-                  dropbox.directory = dropbox.directory,
-                  out.directory = paste0(processed.reads, "/raw-reads"),
-                  overwrite = overwrite)
-
-  read.directory = paste0(processed.reads, "/raw-reads")
-  organize.reads = FALSE
-}#end if
+# if (dropbox.download == TRUE){
+#   #Authorizes token
+#   rdrop2::drop_auth(rdstoken = dropbox.token)
+#   #Run download function
+#   dropboxDownload(sample.spreadsheet = sample.file,
+#                   dropbox.directory = dropbox.directory,
+#                   out.directory = paste0(processed.reads, "/raw-reads"),
+#                   overwrite = overwrite)
+#
+#   read.directory = paste0(processed.reads, "/raw-reads")
+#   organize.reads = FALSE
+# }#end if
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
@@ -61,15 +61,15 @@ if (organize.reads == TRUE) {
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.directory }
 
-if (summary.fastq == TRUE){
-  #This function creates a summary of the fastq files per sample for number of reads
-  fastqStats(read.directory = input.reads,
-             output.name = "fastq-stats",
-             read.length = 150,
-             threads = threads,
-             mem = memory,
-             overwrite = overwrite)
-}#end summary.fastq if
+# if (summary.fastq == TRUE){
+#   #This function creates a summary of the fastq files per sample for number of reads
+#   fastqStats(read.directory = input.reads,
+#              output.name = "fastq-stats",
+#              read.length = 150,
+#              threads = threads,
+#              mem = memory,
+#              overwrite = overwrite)
+# }#end summary.fastq if
 
 #The complete processing through fastp at once. +++ for speed.
 if (fastp.complete == TRUE) {
