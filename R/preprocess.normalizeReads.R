@@ -154,7 +154,7 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Lane = gsub(".*_", "", lane.name),
-                               Task = "quality-trim",
+                               Task = "normalize",
                                Program = "fastp",
                                startPairs = start.reads,
                                removePairs = start.reads-end.reads,
