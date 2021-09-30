@@ -16,8 +16,6 @@
 #'
 #' @param mem amount of system memory to use
 #'
-#' @param resume TRUE to skip samples already completed
-#'
 #' @param overwrite TRUE to overwrite a folder of samples with output.dir
 #'
 #' @param quiet TRUE to supress screen output
@@ -43,7 +41,6 @@ assembleSpades = function(input.reads = NULL,
                           threads = 1,
                           memory = 4,
                           overwrite = FALSE,
-                          resume = TRUE,
                           save.corrected.reads = FALSE,
                           quiet = TRUE) {
 
@@ -106,7 +103,7 @@ assembleSpades = function(input.reads = NULL,
   samples = unique(gsub("/.*", "", samples))
 
   #Skips samples already finished
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.names = list.files(assembly.directory)
     samples = samples[!samples %in% gsub(".fa$", "", done.names)]
   } else { samples = samples }

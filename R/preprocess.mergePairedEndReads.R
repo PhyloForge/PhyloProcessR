@@ -35,7 +35,6 @@ mergePairedEndReads = function(input.reads = NULL,
                                fastp.path = NULL,
                                threads = 1,
                                mem = 8,
-                               resume = TRUE,
                                overwrite = TRUE,
                                quiet = TRUE) {
 
@@ -82,7 +81,7 @@ mergePairedEndReads = function(input.reads = NULL,
   sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     sample.names = sample.names[!sample.names %in% done.files]
   }

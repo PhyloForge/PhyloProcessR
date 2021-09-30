@@ -24,8 +24,6 @@
 #'
 #' @param overwrite TRUE to overwrite a folder of samples with output.dir
 #'
-#' @param resume TRUE to skip samples already completed
-#'
 #' @param save.corrected.reads TRUE to overwrite a folder of samples with output.dir
 #'
 #' @param quiet TRUE to supress screen output
@@ -55,7 +53,6 @@ concatenateReads = function(input.reads = NULL,
                             threads = 1,
                             memory = 4,
                             overwrite = FALSE,
-                            resume = TRUE,
                             save.all.files = FALSE,
                             quiet = TRUE) {
 

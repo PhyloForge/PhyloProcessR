@@ -42,7 +42,6 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
                                bwa.path = NULL,
                                threads = 1,
                                mem = 1,
-                               resume = TRUE,
                                overwrite = FALSE,
                                overwrite.reference = FALSE,
                                quiet = TRUE) {
@@ -100,7 +99,7 @@ removeContamination = function(input.reads = "adaptor-removed-reads",
   sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     sample.names = sample.names[!sample.names %in% done.files]
   }

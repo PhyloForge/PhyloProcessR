@@ -40,7 +40,6 @@ assembleRNASpades = function(input.reads = NULL,
                              threads = 1,
                              memory = 4,
                              overwrite = FALSE,
-                             resume = TRUE,
                              save.corrected.reads = FALSE,
                              quiet = TRUE) {
 
@@ -91,7 +90,7 @@ assembleRNASpades = function(input.reads = NULL,
   samples = unique(gsub("/.*", "", samples))
 
   #Skips samples already finished
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.names = list.files(assembly.directory)
     samples = samples[!samples %in% gsub(".fa$", "", done.names)]
   } else { samples = samples }

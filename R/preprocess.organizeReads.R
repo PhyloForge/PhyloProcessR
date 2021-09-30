@@ -27,8 +27,7 @@
 organizeReads = function(read.directory = NULL,
                          output.dir = "organized-reads",
                          rename.file = NULL,
-                         overwrite = FALSE,
-                         resume = TRUE) {
+                         overwrite = FALSE) {
 
   #Debegging
   # output.dir = "organized-reads"
@@ -64,7 +63,7 @@ organizeReads = function(read.directory = NULL,
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
   #Skips samples already finished
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.names = list.files(output.dir)
     sample.data = sample.data[!sample.data$Sample %in% done.names,]
   } else { sample.data = sample.data }

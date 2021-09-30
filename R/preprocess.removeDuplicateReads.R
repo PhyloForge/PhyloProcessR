@@ -39,7 +39,6 @@ removeDuplicateReads = function(input.reads = "decontaminated-reads",
                                 fastp.path = NULL,
                                 threads = 1,
                                 mem = 1,
-                                resume = TRUE,
                                 overwrite = FALSE,
                                 quiet = TRUE) {
 
@@ -82,7 +81,7 @@ removeDuplicateReads = function(input.reads = "decontaminated-reads",
   sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     sample.names = sample.names[!sample.names %in% done.files]
   }

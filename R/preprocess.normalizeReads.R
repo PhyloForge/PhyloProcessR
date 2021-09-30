@@ -39,7 +39,6 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
                           bbnorm.path = NULL,
                           threads = 1,
                           memory = 1,
-                          resume = TRUE,
                           overwrite = FALSE,
                           quiet = TRUE) {
 
@@ -82,7 +81,7 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
   sample.names = list.files(input.reads, recursive = F, full.names = F)
 
   #Resumes file download
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     sample.names = sample.names[!sample.names %in% done.files]
   }
