@@ -89,7 +89,6 @@ for (i in 1:length(alignment.files)){
                              threads = threads,
                              memory = memory,
                              iqtree.path = iqtree.path,
-                             resume = resume,
                              overwrite = overwrite)
 
 }#end i loop

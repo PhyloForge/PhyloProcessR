@@ -89,7 +89,6 @@ if (remove.adaptors == TRUE & fastp.complete == FALSE) {
                  fastp.path = fastp.path,
                  threads = threads,
                  mem = memory,
-                 resume = resume,
                  overwrite = overwrite,
                  quiet = quiet)
   input.reads = paste0(processed.reads, "/adaptor-removed-reads")
@@ -102,7 +101,6 @@ if (remove.duplicate.reads == TRUE & fastp.complete == FALSE) {
                       fastp.path = fastp.path,
                       threads = threads,
                       mem = memory,
-                      resume = resume,
                       overwrite = overwrite,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/deduped-reads")
@@ -115,7 +113,6 @@ if (error.correction == TRUE & fastp.complete == FALSE) {
                       fastp.path = fastp.path,
                       threads = threads,
                       mem = memory,
-                      resume = resume,
                       overwrite = overwrite,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/error-corrected-reads")
@@ -128,7 +125,6 @@ if (quality.trim.reads == TRUE & fastp.complete == FALSE) {
                    fastp.path = fastp.path,
                    threads = threads,
                    mem = memory,
-                   resume = resume,
                    overwrite = overwrite,
                    quiet = quiet)
   input.reads = paste0(processed.reads, "/quality-trimmed-reads")
@@ -152,7 +148,6 @@ if (decontamination == TRUE){
                       bwa.path = bwa.path,
                       threads = threads,
                       mem = memory,
-                      resume = resume,
                       overwrite = overwrite,
                       overwrite.reference = overwrite,
                       quiet = quiet)
@@ -167,7 +162,6 @@ if (normalize.reads == TRUE) {
                  bbnorm.path = bbnorm.path,
                  threads = threads,
                  mem = memory,
-                 resume = resume,
                  overwrite = overwrite,
                  quiet = quiet)
   input.reads = paste0(processed.reads, "/normalized-reads")
@@ -181,7 +175,6 @@ if (merge.pe.reads == TRUE){
                       fastp.path = fastp.path,
                       threads = threads,
                       mem = memory,
-                      resume = resume,
                       overwrite = overwrite,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/pe-merged-reads")
@@ -199,7 +192,6 @@ if (denovo.assembly == TRUE){
                  threads = threads,
                  memory = memory,
                  overwrite = overwrite,
-                 resume = resume,
                  save.corrected.reads = save.corrected.reads,
                  quiet = quiet,
                  spades.path = spades.path)

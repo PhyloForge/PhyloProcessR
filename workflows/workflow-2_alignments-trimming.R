@@ -38,7 +38,6 @@ if (match.targets == TRUE){
                memory = memory,
                trim.target = trim.to.targets,
                overwrite = overwrite,
-               resume = resume,
                quiet = quiet,
                blast.path = blast.path,
                bbmap.path = bbmap.path)
@@ -60,7 +59,6 @@ if (align.matching.targets == TRUE){
                threads = threads,
                memory = memory,
                overwrite = overwrite,
-               resume = resume,
                quiet = quiet,
                mafft.path = mafft.path)
 }#end if
@@ -77,7 +75,6 @@ trimAlignmentTargets(alignment.directory = "data-analysis/alignments/untrimmed_a
                      threads = threads,
                      memory = memory,
                      overwrite = overwrite,
-                     resume = resume,
                      mafft.path = mafft.path)
 
 makeIntronAlignments(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
@@ -91,7 +88,6 @@ makeIntronAlignments(alignment.directory = "data-analysis/alignments/untrimmed_a
                      threads = threads,
                      memory = memory,
                      overwrite = overwrite,
-                     resume = resume,
                      mafft.path = mafft.path)
 
 
@@ -115,8 +111,7 @@ if (trim.alignments == TRUE){
                       alignment.format = "phylip",
                       output.dir = "data-analysis/alignments/trimmed_all-markers",
                       output.format = "phylip",
-                      overwrite = TRUE,
-                      resume = FALSE,
+                      overwrite = overwrite,
                       TAPER = FALSE,
                       TAPER.path = taper.path,
                       julia.path = julia.path,

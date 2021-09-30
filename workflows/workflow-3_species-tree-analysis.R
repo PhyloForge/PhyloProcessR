@@ -48,7 +48,6 @@ if (estimate.gene.trees == TRUE) {
                     threads = threads,
                     memory = memory,
                     overwrite = overwrite,
-                    resume = resume,
                     quiet = quiet,
                     cleanup.files = cleanup.genetrees,
                     iqtree.path = iqtree.path)
