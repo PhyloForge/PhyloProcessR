@@ -54,17 +54,17 @@ hyphy.Parser = function(results.directory = NULL,
   # mg94.path = "/Users/chutter/hyphy-analyses/FitMG94"
 
   #Directoires
-  setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
-  results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/busted_all"
-  output.name = "busted_all"
-  hyphy.analysis = "BUSTED"
-  threads = 4
-  memory = 8
-  resume = T
-  overwrite = F
-  quiet = T
-  tips.only = T
-  hyphy.path = "/usr/local/bin/"
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
+  # results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/slac_all"
+  # output.name = "slac_all"
+  # hyphy.analysis = "SLAC"
+  # threads = 4
+  # memory = 8
+  # resume = T
+  # overwrite = F
+  # quiet = T
+  # tips.only = T
+  # hyphy.path = "/usr/local/bin/"
 
 
   #Same adds to bbmap path
@@ -79,6 +79,67 @@ hyphy.Parser = function(results.directory = NULL,
 
   results.files = list.dirs(results.directory, full.names = F)
   results.files = results.files[results.files != ""]
+
+  #################################################################################
+  ################################# SLAC ############################
+  ######################################################
+  if (hyphy.analysis == "SLAC"){
+
+    #Stats table prepare
+    #header.data = c("sample", "constrained", "unconstrained", "gtr_model", "mg94xrev")
+    #collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(results.files), ncol = length(header.data)))
+    #data.table::setnames(collect.data, header.data)
+    #collect.data[, sample:=as.character(sample)]
+
+    #Run analyses through all results output folders
+    all.data = data.frame()
+    for (i in 1:length(results.files)){
+
+      json.data = jsonlite::fromJSON(paste0(results.directory, "/", results.files[i], "/SLAC-results.json"))
+      branch.att = json.data$`branch attributes`
+      branch.att = unlist(branch.att[[1]])
+
+      #Gather stats
+      con.stats = branch.att[grep("\\.constrained", names(branch.att) )]
+      uncon.stats = branch.att[grep("\\.unconstrained", names(branch.att) )]
+      nucl.stats = branch.att[grep("\\.Nucleotide", names(branch.att) )]
+      omega.stats = branch.att[grep("\\.MG94xREV", names(branch.att) )]
+
+      #Make table from stats
+      con.data = data.frame(Sample = gsub("\\.constrained", "", names(con.stats)),
+                            null_constrained = as.numeric(con.stats))
+
+      uncon.data = data.frame(Sample = gsub("\\.unconstrained", "", names(uncon.stats)),
+                              unconstrained = as.numeric(uncon.stats))
+
+      nucl.data = data.frame(Sample = gsub("\\.Nucleotide GTR", "", names(nucl.stats)),
+                             gtr_model = as.numeric(nucl.stats))
+
+      omega.data = data.frame(Sample = gsub("\\.MG94xREV.*", "", names(omega.stats)),
+                              mg94xrev = as.numeric(omega.stats))
+
+      if (nrow(con.data) != 0) { a.data = merge(con.data, uncon.data, by = "Sample") } else {
+        a.data = uncon.data
+        a.data$null_constrained = NA
+      }
+      b.data = merge(nucl.data, omega.data, by = "Sample")
+      w.data = merge(a.data, b.data, by = "Sample")
+
+      save.data = cbind(Locus = results.files[i], w.data)
+      all.data = rbind(all.data, save.data)
+    } #end i loop
+
+    if (tips.only == TRUE){
+      all.data = all.data[grep("Node.*", all.data$Sample, invert = T),]
+    }
+
+    write.csv(all.data, file = paste0(output.name, "_BUSTED-stats.csv"), row.names = F, quote = F)
+    print(paste0("Finished ", hyphy.analysis, " data summary!"))
+
+  }#end busted if
+  #################################################################################
+
+
 
   #################################################################################
   ################################# BUSTED ############################

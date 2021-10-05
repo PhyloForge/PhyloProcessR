@@ -40,14 +40,15 @@ checkMD5 = function(read.directory = NULL,
                     overwrite = FALSE) {
 
   #Debug
-  setwd("/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021")
-  read.directory = "/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021/raw_data"
-  output.name = "md5-check"
-  md5.file = "MD5.txt"
-  overwrite = TRUE
+  # setwd("/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021")
+  # read.directory = "/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021/raw_data"
+  # output.name = "md5-check"
+  # md5.file = "MD5.txt"
+  # overwrite = TRUE
 
   #Quick checks
   if (is.null(read.directory) == TRUE){ stop("Please provide input reads.") }
+  if (is.null(md5.file) == TRUE){ stop("Please provide MD5 file of hashes in the first column and file name in the second.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (file.exists(output.name) == TRUE && overwrite == TRUE){
@@ -86,7 +87,7 @@ checkMD5 = function(read.directory = NULL,
     temp.remove = data.frame(File_Name = sample.nm,
                                Read_actualMD5 = actual.size,
                                Read_checkMD5 = measure.size,
-                               checkSize_Pass = pass.fail)
+                               MD5check_Pass = pass.fail)
 
     summary.data = rbind(summary.data, temp.remove)
 

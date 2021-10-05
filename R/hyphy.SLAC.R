@@ -41,7 +41,7 @@ hyphy.SLAC = function(tree.directory = NULL,
                       hyphy.path = NULL) {
 
 
-  # #Read in basic genome info
+  #Read in basic genome info
   # library(PhyloCap)
   # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
   # tree.directory= "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/trees_oxphos-coding"
@@ -147,7 +147,7 @@ hyphy.SLAC = function(tree.directory = NULL,
     ape::write.tree(temp.tree, file = paste0(output.directory, "/", locus.name, "/", locus.name, ".tre"))
 
     #Runs the busted
-    system(paste0(hyphy.path, "hyphy absrel --alignment ", output.directory, "/", locus.name, "/", locus.name, ".phy",
+    system(paste0(hyphy.path, "hyphy slac --alignment ", output.directory, "/", locus.name, "/", locus.name, ".phy",
                                      " --tree ", output.directory, "/", locus.name, "/", locus.name, ".tre",
                                      " --output ", output.directory, "/", locus.name, "/SLAC-results.json"),
            ignore.stderr = quiet, ignore.stdout = quiet)
