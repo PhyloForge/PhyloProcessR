@@ -20,7 +20,7 @@ pass.fail = setupCheck(anaconda.environment =  NULL,
                        julia.path = julia.path,
                        taper.path = taper.path)
 
-if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
+if (pass.fail == FALSE){ print("Some required programs are missing") } else {
   print("all required programs are found, PhyloCap pipeline continuing...")
 }
 

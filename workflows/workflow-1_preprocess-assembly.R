@@ -37,7 +37,7 @@ if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
 }
 
 #Begins by creating processed read directory
-dir.create("processed-reads")
+dir.create(processed.reads)
 
 # if (dropbox.download == TRUE){
 #   #Authorizes token

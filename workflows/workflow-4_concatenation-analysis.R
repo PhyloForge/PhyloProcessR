@@ -25,7 +25,7 @@ source("workflow-2_configuration-file.R")
 pass.fail = setupCheck(anaconda.environment =  NULL,
                        iqtree.path = iqtree.path)
 
-if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
+if (pass.fail == FALSE){ print("Some required programs are missing") } else {
   print("all required programs are found, PhyloCap pipeline continuing...")
 }
 
