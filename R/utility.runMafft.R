@@ -54,7 +54,7 @@ runMafft = function(sequence.data = NULL,
 
   save.contigs = as.list(as.character(sequence.data))
   if (is.null(save.name) == T) { save.name = paste(sample(LETTERS, 5, replace = T), collapse = "")}
-  if (adjust.direction == T){ adjust.direction = "--adjustdirection" } else { adjust.direction = "" }
+  if (adjust.direction == T){ adjust.direction = "--adjustdirection " } else { adjust.direction = "" }
 
   #Adds a sequence into the alignment. Saves much computation.
   if (algorithm == "add"){
@@ -69,8 +69,8 @@ runMafft = function(sequence.data = NULL,
 
     #Runs MAFFT to align
     system(paste0(mafft.path, "mafft --",algorithm, " ", save.name,
-                  "_add_sequences.fa --maxiterate 1000 ", save.name, ".fa > ",
-                  save.name, "_align.fa"), ignore.stderr = T)
+                  "_add_sequences.fa --maxiterate 1000 ",adjust.direction, save.name, ".fa > ",
+                  save.name, "_align.fa"), ignore.stderr = quiet)
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
     unlink(paste0(save.name, ".fa"))
@@ -85,8 +85,10 @@ runMafft = function(sequence.data = NULL,
                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 ", adjust.direction, " --quiet --op 3 --ep 0.123",
-                  " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"), ignore.stderr = T)
+    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 ", adjust.direction,
+                  "--quiet --op 3 --ep 0.123",
+                  " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"),
+           ignore.stderr = quiet)
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
     unlink(paste0(save.name, ".fa"))

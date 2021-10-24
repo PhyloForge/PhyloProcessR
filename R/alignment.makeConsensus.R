@@ -28,6 +28,7 @@ makeConsensus = function(alignment = NULL,
                          method = c("majority", "threshold", "IUPAC", "profile"),
                          threshold = 0.6,
                          warn.non.IUPAC = FALSE,
+                         remove.gaps = TRUE,
                          type = c("DNA", "RNA")) {
 
   #input.alignment<-trimmed
@@ -53,7 +54,7 @@ makeConsensus = function(alignment = NULL,
     obsvalue <- levels(factor(align.in))
     nrow <- length(obsvalue)
     row.names(align.in) <- NULL
-    res <- apply(matali, 2, function(x) table(factor(x, levels = obsvalue)))
+    res <- apply(align.in, 2, function(x) table(factor(x, levels = obsvalue)))
   }
   if (method == "threshold") {
     profile <- consensus(align.in, method = "profile")
@@ -65,6 +66,10 @@ makeConsensus = function(alignment = NULL,
   }
 
   out.consensus<-Biostrings::DNAStringSet(paste0(res, collapse = ""))
+  if (remove.gaps == TRUE){
+    out.consensus = Biostrings::DNAStringSet(gsub("-", "", out.consensus))
+  }#end if
+
   names(out.consensus)<-"Consensus_Sequence"
   return(out.consensus)
 }

@@ -41,10 +41,10 @@ alignTargets = function(targets.to.align = NULL,
                         min.taxa = 4,
                         subset.start = 0,
                         subset.end = 1,
+                        remove.reverse.tag = TRUE,
                         threads = 1,
                         memory = 1,
                         overwrite = FALSE,
-                        resume = TRUE,
                         quiet = TRUE,
                         mafft.path = NULL) {
 
@@ -77,12 +77,6 @@ alignTargets = function(targets.to.align = NULL,
   #Initial checks
   if (is.null(targets.to.align) == T){ stop("A fasta file of targets is needed for alignment.") }
 
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
-
   if (dir.exists("alignments") == FALSE) { dir.create("alignments") }
 
   if (dir.exists(output.directory) == TRUE) {
@@ -97,7 +91,7 @@ alignTargets = function(targets.to.align = NULL,
   locus.names = unique(gsub("_\\|_.*", "", names(all.data)))
 
   #Checks for alignments already done and removes from the to-do list
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done = list.files(output.directory)
     locus.names = locus.names[!locus.names %in% gsub(".phy$", "", done)]
   }
@@ -143,10 +137,14 @@ alignTargets = function(targets.to.align = NULL,
                          mafft.path = mafft.path)
 
     #Checks for failed mafft run
-    if (length(alignment) == 0){ next }
+    if (length(alignment) == 0){
+      print(paste0(locus.names[i], " did not successfully align."))
+      next }
 
     #Removes the reverse name
-    names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+    if (remove.reverse.tag == TRUE){
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
+    }#end if
 
     #Saves prelim exon file
     new.align = strsplit(as.character(alignment), "")
