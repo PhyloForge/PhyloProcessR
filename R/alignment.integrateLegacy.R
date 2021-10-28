@@ -75,23 +75,23 @@ integrateLegacy = function(alignment.directory = NULL,
                            mafft.path = NULL,
                            blast.path = NULL) {
 
-  # setwd("/Volumes/Armored/Boophis_Tree")
-  # alignment.directory = "alignments/untrimmed_all-markers"
-  # alignment.format = "phylip"
-  # output.directory = "alignments/untrimmed_legacy"
-  # output.format = "phylip"
-  # legacy.directory = "alignments/legacy-genbank-nuc"
-  # legacy.format = "phylip"
-  # target.markers = "Hyloidea_All-Markers_Apr21-2019.fa"
-  # combine.same.sample = TRUE
-  # include.uncaptured.legacy = TRUE
-  # include.all.together = TRUE
-  # threads = 1
-  # memory = 4
-  # overwrite = TRUE
-  # quiet = FALSE
-  # mafft.path = "/usr/local/bin"
-  # blast.path = "/Users/chutter/miniconda3/bin"
+  setwd("/Volumes/Armored/Boophis_Tree")
+  alignment.directory = "alignments/untrimmed_all-markers"
+  alignment.format = "phylip"
+  output.directory = "alignments/untrimmed_legacy"
+  output.format = "phylip"
+  legacy.directory = "alignments/legacy-genbank-nuc"
+  legacy.format = "phylip"
+  target.markers = "Hyloidea_All-Markers_Apr21-2019.fa"
+  combine.same.sample = TRUE
+  include.uncaptured.legacy = TRUE
+  include.all.together = TRUE
+  threads = 1
+  memory = 4
+  overwrite = TRUE
+  quiet = TRUE
+  mafft.path = "/usr/local/bin"
+  blast.path = "/Users/chutter/miniconda3/bin"
 
   # *** combine non-overlapping seqs
   # *** check for duplicates and remove
