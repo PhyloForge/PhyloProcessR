@@ -93,7 +93,7 @@ The main functions of PhyloCap are contained in an R package that has been teste
 1) Install PhyloCap by typing in your R console: 
 
 ```R
-devtools::install_github("chutter/PhyloCap", update = "never", dependencies = FALSE)
+devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
 ```
 
 The update = "never" flag ensures that packages already installed via the anaconda environment are not changed, which will often break things. Additionally, dependencies = FALSE is set for the same reason. 
