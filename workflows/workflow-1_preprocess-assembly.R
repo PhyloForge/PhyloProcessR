@@ -180,9 +180,11 @@ if (merge.pe.reads == TRUE){
   input.reads = paste0(processed.reads, "/pe-merged-reads")
 } #end decontamination
 
-dir.create("data-analysis")
 
 if (denovo.assembly == TRUE){
+
+  dir.create("data-analysis")
+
   #Assembles merged paired end reads with spades
   assembleSpades(input.reads = input.reads,
                  output.directory = paste0("data-analysis/spades-assembly"),

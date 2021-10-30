@@ -37,10 +37,8 @@ dropbox.token = "/Local/Path/to/Token"
 threads = 16
 #Amount of memory to allocate in GB
 memory = 120
-#Whether to overwrite previous runs. Both overwrite and resume cannot be TRUE
+# TRUE to overwrite previous runs. FALSE the script will resume but will not delete anything.
 overwrite = FALSE
-#Resume from previous runs (does not overwrite)
-resume = TRUE
 #Print verbose output for each function
 quiet = TRUE
 

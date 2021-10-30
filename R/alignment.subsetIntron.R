@@ -2,11 +2,11 @@
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to a folder of sequence alignments
 #'
 #' @param alignment.format available input alignment formats: fasta or phylip
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory new alignment directory where the trimmed output files are saved
 #'
 #' @param output.format available output formats: phylip
 #'
@@ -69,7 +69,6 @@ makeIntronAlignments = function(alignment.directory = NULL,
                                 threads = 1,
                                 memory = 1,
                                 overwrite = FALSE,
-                                resume = TRUE,
                                 mafft.path = NULL) {
 
 #
@@ -84,7 +83,6 @@ makeIntronAlignments = function(alignment.directory = NULL,
 #   threads = threads
 #   memory = memory
 #   overwrite = overwrite
-#   resume = resume
 #   mafft.path = mafft.path
 
 
@@ -97,14 +95,6 @@ makeIntronAlignments = function(alignment.directory = NULL,
   } else { mafft.path = "" }
 
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
-
-  # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
-
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -127,7 +117,7 @@ makeIntronAlignments = function(alignment.directory = NULL,
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }

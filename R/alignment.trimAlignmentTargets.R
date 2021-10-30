@@ -1,36 +1,32 @@
 #' @title trimAlignmentTargets
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Function to trim a set of alignments to a provided target. The function operates across a directory of alignments that correspond to a single fasta file of capture targets
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to a folder of sequence alignments
 #'
 #' @param alignment.format available input alignment formats: fasta or phylip
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory new alignment directory where the trimmed output files are saved
 #'
 #' @param output.format available output formats: phylip
 #'
-#' @param target.file algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param target.file path to the fasta file with the target sequences. These should be the entire marker, not the probe.
 #'
-#' @param target.direction TRUE applies the adjust sequence direction function of MAFFT
+#' @param target.direction TRUE ensures output alignments are the same direction as the targets
 #'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
+#' @param min.alignment.length minimum alignment length to save in bp (default: 100)
 #'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
+#' @param min.taxa.alignment mininum number of taxa to save alignment (default: 4)
 #'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param threads number of CPU threads / processes
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param memory memory in GB
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param overwrite TRUE to overwrite output files with the same name
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param mafft.path system path to the mafft program
 #'
-#' @param resume TRUE to supress mafft screen output
-#'
-#' @param mafft.path TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @return a new output directory with the trimmed alignments
 #'
 #' @examples
 #'
@@ -53,7 +49,6 @@ trimAlignmentTargets = function(alignment.directory = NULL,
                                 threads = 1,
                                 memory = 1,
                                 overwrite = FALSE,
-                                resume = TRUE,
                                 mafft.path = NULL) {
 
   # alignment.directory = "alignments/untrimmed_all-markers"
@@ -66,7 +61,6 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   # threads = threads
   # memory = memory
   # overwrite = overwrite
-  # resume = resume
   # mafft.path = mafft.path
   # target.direction = TRUE
 
@@ -82,12 +76,6 @@ trimAlignmentTargets = function(alignment.directory = NULL,
 
  # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
 
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
-
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))
@@ -102,7 +90,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
