@@ -1,5 +1,5 @@
 #Installs updated package version
-devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
+devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
 library(PhyloCap)
 library(foreach)
 

@@ -34,13 +34,13 @@
 #'
 #' @export
 
-removeDuplicateReads = function(input.reads = "decontaminated-reads",
+removeDuplicateReads = function(input.reads = NULL,
                                 output.directory = "deduped-reads",
                                 fastp.path = NULL,
                                 threads = 1,
                                 mem = 1,
                                 overwrite = FALSE,
-                                quiet = TRUE) {
+                                quiet = FALSE) {
 
   # #Debug
   # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")

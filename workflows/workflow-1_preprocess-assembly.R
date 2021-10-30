@@ -1,5 +1,5 @@
 #Installs updated package version
-devtools::install_github("chutter/PhyloCap", upgrade = "never", force = TRUE)
+devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
 library(PhyloCap)
 library(foreach)
 
@@ -14,43 +14,34 @@ setwd(working.directory)
 ## Step 1: Preprocess reads
 ##################
 
-##### Ideal processing order
-# 1. Organize / Summary
-# 2. Remove adaptors (fastp)
-# 3. remove duplicates (fastp)
-# 4. read correction (fastp)
-# 5. trim low quality (fastp)
-# 6. Decontamination
-# 7. normalize
-# 8. Merge PE Reads
-
-#Checks if everything is installed
-pass.fail = setupCheck(anaconda.environment =  NULL,
-                       fastp.path = fastp.path,
-                       samtools.path = samtools.path,
-                       bwa.path = bwa.path,
-                       spades.path = spades.path,
-                       bbnorm.path = bbnorm.path)
-
-if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
-  print("all required programs are found, PhyloCap pipeline continuing...")
-}
-
+# #Checks if everything is installed
+# pass.fail = setupCheck(anaconda.environment =  NULL,
+#                        fastp.path = fastp.path,
+#                        samtools.path = samtools.path,
+#                        bwa.path = bwa.path,
+#                        spades.path = spades.path,
+#                        bbnorm.path = bbnorm.path)
+#
+# if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
+#   print("all required programs are found, PhyloCap pipeline continuing...")
+# }
+#
 #Begins by creating processed read directory
 dir.create(processed.reads)
 
-# if (dropbox.download == TRUE){
-#   #Authorizes token
-#   rdrop2::drop_auth(rdstoken = dropbox.token)
-#   #Run download function
-#   dropboxDownload(sample.spreadsheet = sample.file,
-#                   dropbox.directory = dropbox.directory,
-#                   out.directory = paste0(processed.reads, "/raw-reads"),
-#                   overwrite = overwrite)
-#
-#   read.directory = paste0(processed.reads, "/raw-reads")
-#   organize.reads = FALSE
-# }#end if
+if (dropbox.download == TRUE){
+  #Authorizes token
+  rdrop2::drop_auth(rdstoken = dropbox.token)
+  #Run download function
+  dropboxDownload(sample.spreadsheet = sample.file,
+                  dropbox.directory = dropbox.directory,
+                  output.directory = paste0(processed.reads, "/raw-reads"),
+                  overwrite = overwrite,
+                  skip.not.found = T)
+
+  read.directory = paste0(processed.reads, "/raw-reads")
+  organize.reads = FALSE
+}#end if
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
