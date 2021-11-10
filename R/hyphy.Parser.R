@@ -54,17 +54,17 @@ hyphy.Parser = function(results.directory = NULL,
   # mg94.path = "/Users/chutter/hyphy-analyses/FitMG94"
 
   #Directoires
-  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
-  # results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/slac_all"
-  # output.name = "slac_all"
-  # hyphy.analysis = "SLAC"
-  # threads = 4
-  # memory = 8
-  # resume = T
-  # overwrite = F
-  # quiet = T
-  # tips.only = T
-  # hyphy.path = "/usr/local/bin/"
+  setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
+  results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/slac_all"
+  output.name = "slac_all"
+  hyphy.analysis = "SLAC"
+  threads = 4
+  memory = 8
+  resume = T
+  overwrite = F
+  quiet = T
+  tips.only = T
+  hyphy.path = "/usr/local/bin/"
 
 
   #Same adds to bbmap path
@@ -97,43 +97,55 @@ hyphy.Parser = function(results.directory = NULL,
 
       json.data = jsonlite::fromJSON(paste0(results.directory, "/", results.files[i], "/SLAC-results.json"))
       branch.att = json.data$`branch attributes`
-      branch.att = unlist(branch.att[[1]])
+      branch.att = unlist(branch.att[[2]])
 
-      #Gather stats
-      con.stats = branch.att[grep("\\.constrained", names(branch.att) )]
-      uncon.stats = branch.att[grep("\\.unconstrained", names(branch.att) )]
-      nucl.stats = branch.att[grep("\\.Nucleotide", names(branch.att) )]
-      omega.stats = branch.att[grep("\\.MG94xREV", names(branch.att) )]
+      #Gets header info
+      mle.data = json.data$MLE
+      data.headers = mle.data$headers[,1]
 
-      #Make table from stats
-      con.data = data.frame(Sample = gsub("\\.constrained", "", names(con.stats)),
-                            null_constrained = as.numeric(con.stats))
+      #Gets data
+      bysite.resolved = mle.data$content$`0`$`by-site`$RESOLVED
+      colnames(bysite.resolved) = data.headers
+      bysite.average = mle.data$content$`0`$`by-site`$AVERAGED
+      colnames(bysite.average) = data.headers
 
-      uncon.data = data.frame(Sample = gsub("\\.unconstrained", "", names(uncon.stats)),
-                              unconstrained = as.numeric(uncon.stats))
+      bybr.resolved = mle.data$content$`0`$`by-branch`$RESOLVED
+      colnames(bybr.resolved) = data.headers
+      bybr.averaged = mle.data$content$`0`$`by-branch`$AVERAGED
+      colnames(bybr.averaged) = data.headers
 
-      nucl.data = data.frame(Sample = gsub("\\.Nucleotide GTR", "", names(nucl.stats)),
-                             gtr_model = as.numeric(nucl.stats))
+      taxa.names = mle.data$content$`0`$`by-branch`$NAMES
 
-      omega.data = data.frame(Sample = gsub("\\.MG94xREV.*", "", names(omega.stats)),
-                              mg94xrev = as.numeric(omega.stats))
+      ### * Want by-site average for alignment-based stats
+     # data.headers = c("file", "sample", "ES", "EN", "S", "N", "PS",
+    #                   "dS", "dN", "dN-dS", "P>1", "P<1", "branchLength")
+    #  branch.data = data.frame(file = results.files[i], sample = taxa.names, bybr.averaged)
+     # colnames(branch.data) = data.headers
+      #branch.data$omega = branch.data$dN/branch.data$dS
 
-      if (nrow(con.data) != 0) { a.data = merge(con.data, uncon.data, by = "Sample") } else {
-        a.data = uncon.data
-        a.data$null_constrained = NA
-      }
-      b.data = merge(nucl.data, omega.data, by = "Sample")
-      w.data = merge(a.data, b.data, by = "Sample")
+      # Write the output headers
+      # ES = Expected synonymous sites
+      # EN = Expected non-synonymous sites
+      # S = Inferred synonymous substitutions
+      # N = Inferred non-synonymous substitutions
 
-      save.data = cbind(Locus = results.files[i], w.data)
-      all.data = rbind(all.data, save.data)
+      ### * Want by-branch average for the branches
+      data.headers = c("file", "sample", "ES", "EN", "S", "N", "PS",
+                       "dS", "dN", "dN-dS", "P>1", "P<1", "branchLength")
+      branch.data = data.frame(file = results.files[i], sample = taxa.names, bybr.averaged)
+      colnames(branch.data) = data.headers
+      branch.data$omega = branch.data$dN/branch.data$dS
+
+      all.data = rbind(all.data, branch.data)
+
     } #end i loop
 
+    #removes nodes
     if (tips.only == TRUE){
-      all.data = all.data[grep("Node.*", all.data$Sample, invert = T),]
-    }
+      final.data = all.data[grep("Node.*", all.data$sample, invert = T),]
+    } else { final.data = all.data }
 
-    write.csv(all.data, file = paste0(output.name, "_BUSTED-stats.csv"), row.names = F, quote = F)
+    write.csv(final.data, file = paste0(output.name, "_SLAC_by-branch.csv"), row.names = F, quote = F)
     print(paste0("Finished ", hyphy.analysis, " data summary!"))
 
   }#end busted if
