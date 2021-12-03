@@ -1,0 +1,11 @@
+#Install R packages manually: 
+
+#For Bioconductor packages:
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install(c("Biostrings", "GenomicRanges"), dependencies = TRUE)
+
+
+install.packages(c("devtools", "rdrop2", "ape", "data.table", "doparallel", "foreach", "seqinr", "stringr"), dependencies = T)

@@ -72,9 +72,9 @@ mergeDuplicates = function(alignment.directory = NULL,
 
   # setwd("/Volumes/Armored/Brygomantis")
   # library(foreach)
-  # alignment.directory = "data-processing/alignments-2/untrimmed_all-markers"
+  # alignment.directory = "data-processing/alignments-3/trimmed_all-markers"
   # alignment.format = "phylip"
-  # output.directory = "data-processing/alignments-2/rm-dup-untrimmed_all-markers"
+  # output.directory = "data-processing/alignments-3/rm-dup-trimmed_all-markers"
   # output.format = "phylip"
   # method = "merge-sample"
   # threads = 4

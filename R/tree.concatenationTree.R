@@ -29,7 +29,7 @@ analysis.concatenationTree = function(alignment.file = NULL,
                                       output.directory = NULL,
                                       output.name = NULL,
                                       partition.file = NULL,
-                                      partition.scheme = c("file", "merge"),
+                                      partition.scheme = c("file", "merge", "none"),
                                       codon.partition = FALSE,
                                       program = "IQTREE",
                                       msub.type = c("mitochondrial", "nuclear"),
@@ -99,6 +99,7 @@ analysis.concatenationTree = function(alignment.file = NULL,
   part.scheme = "MFP"
   if (partition.scheme == "merge"){ part.scheme = paste0(part.scheme, "+MERGE") }
   if (partition.scheme == "file"){ part.file = paste0(" -spp ", partition.file) }
+  if (partition.scheme == "none"){ part.scheme = "GTR" }
   if (codon.partition == T){ codon.st = " -st CODON" } else { codon.st = "" }
 
   dir.create(paste0(output.directory, "/", output.name))
