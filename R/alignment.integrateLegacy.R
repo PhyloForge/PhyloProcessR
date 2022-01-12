@@ -75,6 +75,24 @@ integrateLegacy = function(alignment.directory = NULL,
                            mafft.path = NULL,
                            blast.path = NULL) {
 
+#
+#   alignment.directory = "/Volumes/LaCie/mitocap_2/Alignments/untrimmed-alignments"
+#   alignment.format = "phylip"
+#   output.directory = "/Volumes/LaCie//mitocap_2/untrimmed_mt_legacy"
+#   output.format = "phylip"
+#   legacy.directory = "/Volumes/LaCie//mitocap_2/genbank-legacy"
+#   legacy.format = "phylip"
+#   target.markers = "/Volumes/LaCie/mitocap_2/reference/refMarkers.fa"
+#   combine.same.sample = FALSE
+#   include.uncaptured.legacy = FALSE
+#   include.all.together = TRUE
+#   threads = 10
+#   memory = 50
+#   overwrite = TRUE
+#   quiet = FALSE
+#   mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+
   # setwd("/Volumes/Armored/Boophis_Tree")
   # alignment.directory = "alignments/untrimmed_all-markers"
   # alignment.format = "phylip"
@@ -223,6 +241,10 @@ integrateLegacy = function(alignment.directory = NULL,
     if (nrow(match.data) == 0) {
       print(paste0(sample, " had no matches. Skipping"))
       next }
+
+    if (nrow(match.data) >= 2){
+      match.data = match.data[match.data$bitscore == max(match.data$bitscore),]
+    }
 
     if (nrow(match.data) >= 2){
       stop("too many matches...")
@@ -377,8 +399,11 @@ integrateLegacy = function(alignment.directory = NULL,
 
     #Delete old
     delete.old = delete.old[duplicated(delete.old) != T]
-    del.string = paste0(output.directory, "-all/", delete.old, collapse = " ")
-    system(paste0("rm ", del.string))
+
+    if (is.null(delete.old) != TRUE){
+      del.string = paste0(output.directory, "-all/", delete.old, collapse = " ")
+      system(paste0("rm ", del.string))
+    }
 
     #Add new
     new.files = list.files(paste0(output.directory, "-only"))
