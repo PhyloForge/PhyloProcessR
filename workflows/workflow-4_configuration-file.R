@@ -32,9 +32,18 @@ quiet = TRUE
 
 #Filter settings
 #########################
+
+#minimumn length to keep an alignment (already from trimming step)
 filter.length = NULL
+
+#If you wnat to filter by sampling proportion (percent of taxa to keep an alignment)
+#Therefore two trees will be made
 filter.sample = c(0.5, 0.7)
+
+#not very useful here
 filter.prop.pis = NULL
+
+#Not very useful here
 filter.count.pis = NULL
 
 #Concatenation settings
@@ -55,7 +64,7 @@ program = "IQTREE"
 msub.type = "nuclear"
 #number of ultra-fast bootstrap replicates, must be greater than 1000
 uf.bootstrap = 1000
-#number of top models to assess for sequence evolution models
+#number of top models to assess for sequence evolution models. Lower number = faster
 rcluster = 10
 
 #Program paths
