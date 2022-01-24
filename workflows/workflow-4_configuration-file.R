@@ -37,8 +37,8 @@ quiet = TRUE
 filter.length = NULL
 
 #If you wnat to filter by sampling proportion (percent of taxa to keep an alignment)
-#Therefore two trees will be made
-filter.sample = c(0.5, 0.7)
+#I would probably keep this low so you don't accidentally filter legacy stuff
+filter.sample = c(0.01)
 
 #not very useful here
 filter.prop.pis = NULL
