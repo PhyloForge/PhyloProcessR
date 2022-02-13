@@ -31,7 +31,7 @@ makeConsensus = function(alignment = NULL,
                          remove.gaps = TRUE,
                          type = c("DNA", "RNA")) {
 
-  #input.alignment<-trimmed
+  #input.alignment<-temp.align
   #Converts alignment to matrix of characters to be used
   new.align<-strsplit(as.character(alignment), "")
   align.in<-matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)

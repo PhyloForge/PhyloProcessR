@@ -51,9 +51,9 @@ matchTargets = function(assembly.directory = NULL,
                         min.match.percent = 50,
                         min.match.length = 40,
                         min.match.coverage = 50,
+                        trim.target = FALSE,
                         threads = 1,
                         memory = 1,
-                        trim.target = FALSE,
                         overwrite = FALSE,
                         resume = TRUE,
                         quiet = TRUE,
@@ -64,9 +64,10 @@ matchTargets = function(assembly.directory = NULL,
   #  work.dir<-"/Volumes/Rodents/Boophis" #Your main project directory
   #  assembly.directory<-"/Volumes/Rodents/Boophis/draft-assemblies"
   #  target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
-  #  output.directory = "match-targets"
+  # assembly.directory = "/Volumes/LaCie/Anolis/data-analysis/input-samples"
+  # target.file = "/Volumes/LaCie/Anolis/data-analysis/Hutter_uce5k_loci.fa"
+  # output.directory = "match-targets"
   #  alignment.contig.name = "test"
-  #  setwd(work.dir)
   # #
   # # #Main settings
   #  threads = 4
@@ -144,20 +145,22 @@ matchTargets = function(assembly.directory = NULL,
     #Part A: Blasting
     #########################################################################
 
-    #Copies original contigs over
-    system(paste0("cp ", assembly.directory, "/", file.names[i], " ",
-                  species.dir, "/", file.names[i]))
+    #Reads in contigs
+    contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", file.names[i]), format = "fasta")
+    names(contigs) = paste0("contig_", stringr::str_pad(seq(1:length(contigs)), 6, pad = "0"))
+
+    #Finds probes that match to two or more contigs
+    final.loci = as.list(as.character(contigs))
+    writeFasta(sequences = final.loci, names = names(final.loci),
+               paste0(species.dir, "/", sample, "_renamed-contigs.fa"), nbchar = 1000000, as.string = T)
 
     # # DEDUPE almost exact duplicate removal
-    system(paste0(bbmap.path, "dedupe.sh in=",assembly.directory, "/", file.names[i], " ordered=t overwrite=true ",
-                  " out=", species.dir, "/", sample, "_dedupe.fa", " minidentity=97"), ignore.stderr = quiet)
+    system(paste0(bbmap.path, "dedupe.sh in=",species.dir, "/", sample,"_renamed-contigs.fa ordered=t overwrite=true",
+                  " out=", species.dir, "/", sample, "_dedupe.fa", " minidentity=95"), ignore.stderr = quiet)
 
     #Make blast database for the probe loci
     system(paste0(blast.path, "makeblastdb -in ", species.dir, "/", sample, "_dedupe.fa",
                   " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"), ignore.stdout = quiet)
-
-    #Removes extra file
-    system(paste0("rm ", species.dir, "/", file.names[i]))
 
     #Matches samples to loci
     system(paste0(blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",

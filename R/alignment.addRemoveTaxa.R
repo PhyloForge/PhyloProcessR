@@ -1,4 +1,4 @@
-#' @title addRemoveTaxaAlignments
+#' @title addTaxaAlignments
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -58,35 +58,31 @@
 #'
 #' @export
 
-addRemoveTaxaAlignments = function(alignment.directory = NULL,
-                                   alignment.format = "phylip",
-                                   output.directory = NULL,
-                                   output.format = "phylip",
-                                   target.markers = NULL,
-                                   sample.markers = NULL,
-                                   threads = 1,
-                                   memory = 1,
-                                   overwrite = FALSE,
-                                   resume = TRUE,
-                                   mafft.path = NULL) {
+addTaxaAlignments = function(alignment.directory = NULL,
+                             alignment.format = "phylip",
+                             output.directory = NULL,
+                             output.format = "phylip",
+                             copy.all = TRUE,
+                             target.markers = NULL,
+                             sample.markers = NULL,
+                             threads = 1,
+                             memory = 1,
+                             overwrite = FALSE,
+                             mafft.path = NULL) {
 
-#
-#   alignment.directory = "alignments/untrimmed_all-markers"
-#   alignment.format = "phylip"
-#   output.directory = "alignments/untrimmed_introns"
-#   output.format = "phylip"
-#   reference.type = "target"
-#   reference.path = target.file
-#   target.direction = TRUE
-#   concatenate.intron.flanks = TRUE
-#   threads = threads
-#   memory = memory
-#   overwrite = overwrite
-#   resume = resume
-#   mafft.path = mafft.path
+  library(foreach)
+  alignment.directory = "/Volumes/LaCie/Anolis/data-analysis/original_alignments"
+  alignment.format = "phylip"
+  output.directory = "/Volumes/LaCie/Anolis/data-analysis/new_alignments"
+  output.format = "phylip"
+  sample.markers = "/Volumes/LaCie/Anolis/data-analysis/anolis_out_to-align.fa"
+  threads = 10
+  memory = 24
+  overwrite = FALSE
+  copy.all = TRUE
+  mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
-
-  #Same adds to bbmap path
+  #Adds slash to path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -95,14 +91,6 @@ addRemoveTaxaAlignments = function(alignment.directory = NULL,
   } else { mafft.path = "" }
 
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
-
-  # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
-
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -113,19 +101,10 @@ addRemoveTaxaAlignments = function(alignment.directory = NULL,
 
   #Gathers alignments
   align.files = list.files(alignment.directory)
-
-  if (reference.type == "target"){
-    target.loci = Biostrings::readDNAStringSet(file = reference.path, format = "fasta")
-  }#end if
-
-  if (reference.type == "alignment"){
-    ref.align = list.files(reference.path)
-  }#end if
-
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.directory)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
@@ -169,236 +148,59 @@ addRemoveTaxaAlignments = function(alignment.directory = NULL,
     #STEP 1: Sets up new for adding into alignment
     ##############
     #Match probe names to contig names to acquire data
-    name.locus = gsub(".phy$", "", locus.names[i])
-    add.seqs = add.taxa[grep(pattern = paste0(name.locus, "_"), x = names(add.taxa))]
+    add.seqs = add.taxa[gsub("_\\|_.*", "", names(add.taxa)) == save.name]
+    #add.seqs = add.taxa[grep(pattern = paste0(name.locus, "_"), x = names(add.taxa))]
     names(add.seqs) = gsub(pattern = ".*_\\|_", replacement = "", x = names(add.seqs))
 
-    if (length(add.seqs) == 0){ return(NULL) }
+    if (length(add.seqs) == 0){
 
-    #Gets reference locus
-    ref.locus = bait.loci[grep(pattern = paste0(name.locus, "$"), x = names(bait.loci))]
-    names(ref.locus) = paste("Reference_Locus")
-    add.seqs = append(add.seqs, ref.locus)
-
-    ##############
-    #STEP 2: load up and align additional samples to old alignment
-    ##############
-    #Loads in alignment
-    setwd(align.dir)
-    old.align = DNAStringSet(readAAMultipleAlignment(file = paste0(align.dir, "/all-markers_untrimmed-originals/", locus.names[i]), format = "phylip"))
-
-    system(paste0("cp ", align.dir, "/exon-only_untrimmed-originals/", locus.names[i],
-                  " ", align.dir, "/exon-only_untrimmed/", locus.names[i]))
-
-    #Align
-    alignment = run.mafft(unaligned.contigs = old.align, add.contigs = add.seqs, rev.dir = T,
-                          algorithm = "add", save.name = gsub(".phy", "",locus.names[i]), delete.files = F)
-
-    reversed<-names(alignment)[grep(pattern = "_R_", names(alignment))]
-    if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment<-reverseComplement(alignment) }
-    names(alignment)<-gsub(pattern = "_R_", replacement = "", x = names(alignment))
-
-    #Gets the divergence to make sure not crazy
-    diff<-pairwise.inf.sites(alignment, "Reference_Locus")
-    bad.seqs<-names(diff)[which(diff >= 0.40)]
-    rem.align<-alignment[!names(alignment) %in% bad.seqs]
-
-    if (length(bad.seqs) >= length(add.seqs)){
-      print(paste0(name.locus, " taxa could not be added."))
-      system(paste("rm ", align.dir, "/", name.locus, "_align.fa ", sep = ""))
-      return(NULL)
-    }#end if
-
-    ### realign if bad seqs removed
-    if (length(bad.seqs) != 0){
-      #Runs mafft
-      alignment<-run.mafft(rem.align, save.name = locus.names[i], threads = threads, delete.files = F)
-      reversed<-names(alignment)[grep(pattern = "_R_", names(alignment))]
-      if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment<-reverseComplement(alignment) }
-      names(alignment)<-gsub(pattern = "_R_", replacement = "", x = names(alignment))
-    } # end bad.seqs if
-
-    ##############
-    #STEP 4: Save new alignments
-    ##############
-    #Removes the edge gaps
-    ref.aligned<-as.character(alignment['Reference_Locus'])
-    not.gaps<-str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
-    ref.start<-min(not.gaps)
-    ref.finish<-max(not.gaps)
-    temp.intron<-subseq(alignment, ref.start, ref.finish)
-
-    #Saves prelim exon file
-    save.align<-temp.intron[!names(temp.intron) %in% "Reference_Locus"]
-    new.align<-strsplit(as.character(save.align), "")
-    mat.align<-lapply(new.align, tolower)
-    aligned.set<-as.matrix(as.DNAbin(mat.align))
-
-    #readies for saving
-    write.phy(aligned.set, file=paste0(align.dir, "/exon-only_untrimmed/", name.locus, ".phy"), interleave = F)
-
-    #writes alignment
-    red.align<-alignment[!names(alignment) %in% "Reference_Locus"]
-    new.align<-strsplit(as.character(red.align), "")
-    mat.align<-lapply(new.align, tolower)
-    m.align<-as.matrix(as.DNAbin(mat.align))
-
-    #readies for saving
-    write.phy(m.align, file=paste0(align.dir, "/all-markers_untrimmed/", name.locus, ".phy"), interleave = F)
-
-    #Deletes old files
-    system(paste("rm ", align.dir, "/", name.locus, "_align.fa ", sep = ""))
-    print(paste(locus.names[i], " taxa added successfully."))
-
-
-    #### OLD
-
-
-    #Checks for correct target sequence amount
-    if (length(target.seq) == 0){ return(NULL) }
-    if (length(target.seq) >= 2){ return(NULL) }
-    if (Biostrings::width(target.seq) <= 10) { return(NULL) }
-
-    ##############
-    #STEP 2: Runs MAFFT to add
-    ##############
-    #Aligns and then reverses back to correction orientation
-    alignment = runMafft(sequence.data = align,
-                         add.contigs = target.seq,
-                         save.name = paste0(output.directory, "/", align.files[i]),
-                         algorithm = "add",
-                         adjust.direction = TRUE,
-                         threads = 1,
-                         cleanup.files = T,
-                         quiet = TRUE,
-                         mafft.path = mafft.path)
-
-    #Checks for failed mafft run
-    if (length(alignment) == 0){ return(NULL) }
-
-    #Checks if you want to keep to target direction or not
-    if (target.direction == TRUE){
-      #Aligns and then reverses back to correction orientation
-      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
-      if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
-    } else {
-      #Regular fixes
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
-    }#end if
-
-    # ##############
-    # #STEP 3: Removes exon from the intron part
-    # ##############
-    # #Removes the edge gaps
-    ref.aligned = as.character(alignment['Reference_Locus'])
-    not.gaps = stringr::str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
-    ref.start = min(not.gaps)
-    ref.finish = max(not.gaps)
-
-    #Finds weird gaps to fix
-    temp.gaps = as.numeric(1)
-    for (k in 1:length(not.gaps)-1){ temp.gaps = append(temp.gaps, not.gaps[k+1]-not.gaps[k]) }
-    temp.gaps = temp.gaps-1
-    names(temp.gaps) = not.gaps
-    bad.gaps = which(temp.gaps >= 30)
-    front.gaps = bad.gaps[bad.gaps <= length(not.gaps) *0.10]
-    end.gaps = bad.gaps[bad.gaps >= length(not.gaps) *0.90]
-
-    #Fix big gaps if there are any
-    if (length(front.gaps) != 0){
-      temp.change = (max(as.numeric(names(front.gaps))-ref.start))-(max(front.gaps)-1)
-      ref.start = ref.start+temp.change
-    }#end gap if
-
-    #Fix big gaps if there are any
-    if (length(end.gaps) != 0){
-      add.bp = length(temp.gaps)-min(end.gaps)
-      #add.bp<-(ref.finish-min(as.numeric(names(end.gaps))))
-      min.gaps = temp.gaps[min(end.gaps)]
-      temp.change = as.numeric(names(min.gaps))-as.numeric(min.gaps)
-      ref.finish = temp.change+add.bp
-    }#end gap if
-
-    #Cuts out the intron pieces
-    intron.left = Biostrings::subseq(alignment, 1, ref.start-1)
-    intron.right = Biostrings::subseq(alignment, ref.finish+1, Biostrings::width(alignment))
-    save.names  = names(alignment)
-
-    #saves intron flanks separately
-    if (concatenate.intron.flanks == FALSE) {
-      #Remove gap only alignments
-      gap.align = strsplit(as.character(intron.left), "")
-      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
-      gap.rem = gap.count[gap.count <= 10]
-      left.intron = intron.left[!names(intron.left) %in% names(gap.rem)]
-
-      #Remove gap only alignments
-      gap.align = strsplit(as.character(intron.right), "")
-      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
-      gap.rem = gap.count[gap.count <= 10]
-      right.intron = intron.right[!names(intron.right) %in% names(gap.rem)]
-
-      #Saves them
-      write.temp = strsplit(as.character(left.intron), "")
-      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-
-      save.name = gsub(".phy$", "", align.files[i])
-
-      #readies for saving
-      writePhylip(alignment = aligned.set,
-                  file=paste0(output.directory, "/", save.name, "_1.phy"),
-                  interleave = F,
-                  strict = F)
-
-      #Saves them
-      write.temp = strsplit(as.character(right.intron), "")
-      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-
-      #readies for saving
-      writePhylip(alignment = aligned.set,
-                  file=paste0(output.directory, "/", save.name, "_2.phy"),
-                  interleave = F,
-                  strict = F)
-
-      #Deletes old files
-      print(paste0(align.files[i], " alignment saved."))
-
-    } else {
-
-      #Merges the alignments
-      intron.align = Biostrings::DNAStringSet(paste0(as.character(intron.left), as.character(intron.right)))
-      names(intron.align) = save.names
-      intron.align = intron.align[names(intron.align) != "Reference_Locus"]
-
-      #Remove gap only alignments
-      gap.align = strsplit(as.character(intron.align), "")
-      gap.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
-      gap.rem = gap.count[gap.count <= 10]
-      rem.align = intron.align[!names(intron.align) %in% names(gap.rem)]
-
-      ##############
-      #STEP 5: Cleanup and save
-      ##############
-
-      if (length(rem.align) != 0 && length(Biostrings::width(rem.align)) != 0){
-        #string splitting
-        write.temp = strsplit(as.character(rem.align), "")
-        aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+      if (copy.all == TRUE){
+        #Saves prelim exon file
+        new.align = strsplit(as.character(align), "")
+        aligned.set = as.matrix(ape::as.DNAbin(new.align))
 
         #readies for saving
         writePhylip(alignment = aligned.set,
                     file=paste0(output.directory, "/", align.files[i]),
                     interleave = F,
                     strict = F)
+      }#end
 
-        #Deletes old files
-        print(paste0(align.files[i], " alignment saved."))
-      } else { print(paste0(align.files[i], " alignment not saved. Not enough data."))  }
-    }#end
+      return(paste0(align.files[i], " could not be found in sample."))
+    }
 
-    rm()
-    gc()
+    ##############
+    #STEP 2: load up and align additional samples to old alignment
+    ##############
+    #Align
+    alignment = runMafft(sequence.data = align,
+                         add.contigs = add.seqs,
+                         adjust.direction = T,
+                         algorithm = "add",
+                         save.name = save.name,
+                         cleanup.files = TRUE,
+                         quiet = quiet,
+                         mafft.path = mafft.path)
+
+    reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+    if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){
+      alignment = reverseComplement(alignment)
+    }
+
+    names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+
+    #Saves prelim exon file
+    new.align = strsplit(as.character(alignment), "")
+    aligned.set = as.matrix(ape::as.DNAbin(new.align))
+
+    #readies for saving
+    writePhylip(alignment = aligned.set,
+                file=paste0(output.directory, "/", align.files[i]),
+                interleave = F,
+                strict = F)
+
+    #Deletes old files
+    print(paste0(align.files[i], " alignment saved."))
 
   }#end i loop
 

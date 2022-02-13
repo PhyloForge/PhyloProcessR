@@ -13,7 +13,7 @@ library(foreach)
 #setwd(working.directory)
 
 #source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/work-flows/workflow-2_configuration-file.R")
-source("workflow-2_configuration-file.R")
+source("workflow-4_configuration-file.R")
 
 ##################################################################################################
 ##################################################################################################
@@ -80,7 +80,7 @@ for (i in 1:length(alignment.files)){
                              output.directory = out.path,
                              output.name = align.name,
                              partition.file = NULL,
-                             partition.scheme = "merge",
+                             partition.scheme = partition.scheme,
                              codon.partition = FALSE,
                              program = "IQTREE",
                              msub.type = "nuclear",
@@ -92,3 +92,5 @@ for (i in 1:length(alignment.files)){
                              overwrite = overwrite)
 
 }#end i loop
+
+

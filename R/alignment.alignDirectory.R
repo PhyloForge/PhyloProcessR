@@ -1,4 +1,4 @@
-#' @title alignTargets
+#' @title alignDirectory
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -36,37 +36,39 @@
 #'
 #' @export
 
-alignTargets = function(targets.to.align = NULL,
-                        output.directory = "alignments",
-                        min.taxa = 4,
-                        subset.start = 0,
-                        subset.end = 1,
-                        adjust.direction = TRUE,
-                        remove.reverse.tag = TRUE,
-                        threads = 1,
-                        memory = 1,
-                        overwrite = FALSE,
-                        quiet = TRUE,
-                        mafft.path = NULL) {
-
+alignDirectory = function(marker.directory = NULL,
+                          input.format = "fasta",
+                          output.directory = "alignments",
+                          min.taxa = 4,
+                          subset.start = 0,
+                          subset.end = 1,
+                          adjust.direction = TRUE,
+                          remove.reverse.tag = TRUE,
+                          sample.rename = c("none", "space", "_|_"),
+                          threads = 1,
+                          memory = 1,
+                          overwrite = FALSE,
+                          quiet = TRUE,
+                          mafft.path = NULL) {
   #Debug setup
-  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Shrew_Genome")
-  # targets.to.align = "shrews_match-targets_to-align.fa"
+  # setwd("/Users/chutter/Dropbox/Elapid_probe_design/Sanger_venom_genes_from_NCBI")
+  # marker.directory = "/Users/chutter/Dropbox/Elapid_probe_design/Sanger_venom_genes_from_NCBI/01_all_sanger_loci_clustered_(cd_hit_80)"
   # output.directory = "alignments"
+  # input.format = "fasta"
   #
   # #Main settings
   # subset.start = 0
   # subset.end = 1
-  # min.taxa = 4
-  # threads = 4
-  # memory = 8
+  # min.taxa = 2
+  # threads = 1
+  # memory = 2
   # overwrite = TRUE
-  # resume = FALSE
   # quiet = TRUE
+  # remove.reverse.tag = TRUE
   # adjust.direction = TRUE
   #
-  # #program paths
-  # mafft.path = "/usr/local/bin"
+  #program paths
+  #mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
@@ -77,7 +79,7 @@ alignTargets = function(targets.to.align = NULL,
   } else { mafft.path = NULL }
 
   #Initial checks
-  if (is.null(targets.to.align) == T){ stop("A fasta file of targets is needed for alignment.") }
+  if (is.null(marker.directory) == T){ stop("A fasta file of targets is needed for alignment.") }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -87,8 +89,7 @@ alignTargets = function(targets.to.align = NULL,
   } else { dir.create(output.directory) }
 
   #Load sample file from probe matching step
-  all.data = Biostrings::readDNAStringSet(targets.to.align)   # loads up fasta file
-  locus.names = unique(gsub("_\\|_.*", "", names(all.data)))
+  locus.names = list.files(marker.directory)
 
   #Checks for alignments already done and removes from the to-do list
   if (overwrite == FALSE){
@@ -106,18 +107,29 @@ alignTargets = function(targets.to.align = NULL,
   for (i in sub.start:sub.end) {
 
     #Match probe names to contig names to acquire data
-    match.data = all.data[grep(pattern = paste0(locus.names[i], "_"), x = names(all.data))]
+    match.data = Biostrings::readDNAStringSet(paste0(marker.directory, "/", locus.names[i]),format = "fasta")   # loads up fasta file
 
+    ##############
     #STEP 1: Throw out loci if there are too few taxa
-    if (length(names(match.data)) <= min.taxa){
+    ##############
+    if (length(names(match.data)) < min.taxa){
       print(paste0(locus.names[i], " had too few taxa"))
       next
     }
 
-    #STEP 2: Sets up fasta for aligning
-    names(match.data) = gsub(pattern = ".*_\\|_", replacement = "", x = names(match.data))
+    #Rename samples based on pipe
+    if (sample.rename == "_|_"){
+      names(match.data) = gsub(pattern = ".*_\\|_", replacement = "", x = names(match.data))
+    }
 
-    #STEP 3: Runs MAFFT to align
+    #Rename samples here deleting everything after the first space
+    if (sample.rename == "space"){
+      names(match.data) = gsub("\\ .*", "", names(match.data))
+    }
+
+    #Gets reference locus
+    final.loci = match.data
+
     #Aligns and then reverses back to correction orientation
     alignment = runMafft(sequence.data = match.data,
                          save.name = paste0(output.directory, "/", locus.names[i]),
@@ -152,7 +164,6 @@ alignTargets = function(targets.to.align = NULL,
     print(paste0(locus.names[i], " alignment saved."))
 
   }# end big i loop
-
 
 }# end function
 
