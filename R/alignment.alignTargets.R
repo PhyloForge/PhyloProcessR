@@ -38,6 +38,7 @@
 
 alignTargets = function(targets.to.align = NULL,
                         output.directory = "alignments",
+                        algorithm = c("localpair", "globalpair"),
                         min.taxa = 4,
                         subset.start = 0,
                         subset.end = 1,
@@ -121,7 +122,7 @@ alignTargets = function(targets.to.align = NULL,
     #Aligns and then reverses back to correction orientation
     alignment = runMafft(sequence.data = match.data,
                          save.name = paste0(output.directory, "/", locus.names[i]),
-                         algorithm = "localpair",
+                         algorithm = algorithm,
                          adjust.direction = adjust.direction,
                          threads = threads,
                          cleanup.files = T,

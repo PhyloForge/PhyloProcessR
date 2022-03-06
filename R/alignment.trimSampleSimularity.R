@@ -21,19 +21,22 @@
 
 trimSampleSimilarity = function(alignment = NULL,
                                 similarity.threshold = 0.4,
-                                realign.mafft = TRUE) {
+                                realign.mafft = TRUE,
+                                mafft.path = NULL) {
 
   #Debug section
-  # alignment = sample.align
-  #similarity.threshold = 0.003
-  #realign.mafft = TRUE
+  # alignment = non.align
+  # similarity.threshold = 0.45
+  # realign.mafft = TRUE
+  # mafft.path  = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
-  if (length(alignment) <= 3){ return(alignment) }
+  if (length(alignment) <= 2){ return(alignment) }
 
   #Make a consensus sequence
   con.seq = makeConsensus(alignment = alignment,
                           method = "majority",
-                          type = "DNA")
+                          type = "DNA",
+                          remove.gaps = FALSE)
 
   #Finds the alignemnt pairwise distance from the target
   diff = pairwiseDistanceTarget(alignment = alignment,
@@ -44,7 +47,7 @@ trimSampleSimilarity = function(alignment = NULL,
   rem.align = alignment[!names(alignment) %in% bad.seqs]
 
   # Moves onto next loop in there are no good sequences
-  if (length(rem.align) <= 3){ return(rem.align) }
+  if (length(rem.align) <= 2){ return(rem.align) }
 
   ### realign if bad seqs removed
   if (length(bad.seqs) != 0 & realign.mafft == TRUE){
@@ -56,7 +59,8 @@ trimSampleSimilarity = function(alignment = NULL,
                          save.name = NULL,
                          threads = 1,
                          cleanup.files = TRUE,
-                         quiet = TRUE)
+                         quiet = TRUE,
+                         mafft.path = mafft.path)
 
     names(rem.align) = gsub(pattern = "_R_", replacement = "", x = names(rem.align))
 

@@ -32,7 +32,7 @@
 
 runMafft = function(sequence.data = NULL,
                     add.contigs = NULL,
-                    algorithm = c("localpair", "add"),
+                    algorithm = c("localpair", "globalpair", "add"),
                     adjust.direction = TRUE,
                     save.name = NULL,
                     threads = 1,
@@ -79,7 +79,7 @@ runMafft = function(sequence.data = NULL,
   }#end -add
 
   #Does Regular MAFFT Local Pair
-  if (algorithm == "localpair"){
+  if (algorithm != "add"){
     #Saves to folder to run with mafft
     writeFasta(sequences = save.contigs, names = names(save.contigs),
                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)

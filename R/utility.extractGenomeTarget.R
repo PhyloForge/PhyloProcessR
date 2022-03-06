@@ -64,8 +64,11 @@ extractGenomeTarget = function(genome.path = NULL,
                                output.name = NULL,
                                output.bed = TRUE,
                                bed.headers = FALSE,
+                               name.bed.names = TRUE,
                                output.table = TRUE,
+                               match.by.chr = FALSE,
                                duplicate.matches = c("best", "all", "none"),
+                               merge.matches = FALSE,
                                minimum.match.length = 100,
                                minimum.match.identity = 0.75,
                                add.flanks = 500,
@@ -78,26 +81,52 @@ extractGenomeTarget = function(genome.path = NULL,
 
   #todo: make single function for one sample
   #todo: blast type
+  #todo: names
 
-  setwd("/Volumes/LaCie/Ultimate_FrogCap")
-  genome.path = "/Volumes/LaCie/Reference_Genomes"
-  input.file = "/Volumes/LaCie/Anolis/A_carolinensus_RELEC.fa"
-  #input.file = "/Volumes/Armored/Anolis_UCE/Anolis_genome/Anolis_carolinensis_final-table.bed"
-  output.name = "amphibians"
-  input.type = "fasta"
-  output.bed = TRUE
-  bed.headers = TRUE
-  output.table = TRUE
-  duplicate.matches = "best"
-  minimum.match.length = 100
-  minimum.match.identity = 0.60
-  add.flanks = 500
-  threads = 8
-  memory = 24
-  overwrite = TRUE
-  quiet = FALSE
-  blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-  genome.search.string = "_genomic.fna.gz"
+  # setwd("/Volumes/LaCie/Ultimate_FrogCap")
+  # genome.path = "/Volumes/LaCie/Reference_Genomes"
+  # input.file = "/Volumes/LaCie/Anolis/A_carolinensus_RELEC.fa"
+  # #input.file = "/Volumes/Armored/Anolis_UCE/Anolis_genome/Anolis_carolinensis_final-table.bed"
+  # output.name = "amphibians"
+  # input.type = "fasta"
+  # match.by.chr = TRUE
+  # output.bed = TRUE
+  # bed.headers = TRUE
+  # output.table = TRUE
+  # duplicate.matches = "best"
+  # minimum.match.length = 100
+  # minimum.match.identity = 0.60
+  # add.flanks = 500
+  # threads = 8
+  # memory = 24
+  # overwrite = FALSE
+  # quiet = FALSE
+  # merge.matches = TRUE
+  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # genome.search.string = "_genomic.fna.gz"
+
+  # setwd("/Users/chutter/Dropbox/Elapid_probe_design/Gene_based")
+  # genome.path = "/Users/chutter/Dropbox/Elapid_probe_design/Gene_based/genomes/GCA_019473425_1_HCya_v2_genomic.fa"
+  # input.file = "Hcya_coordinates.txt"
+  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin/"
+  # output.name = "Hcur"
+  # input.type = "bed"
+  # match.by.chr = TRUE
+  # output.bed = TRUE
+  # bed.headers = TRUE
+  # output.table = TRUE
+  # duplicate.matches = "best"
+  # minimum.match.length = 100
+  # minimum.match.identity = 0.60
+  # add.flanks = 500
+  # threads = 8
+  # memory = 24
+  # overwrite = FALSE
+  # quiet = FALSE
+  # merge.matches = TRUE
+  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # genome.search.string = "_genomic.fna.gz"
+
 
   #Same adds to blast path
   if (is.null(blast.path) == FALSE){
@@ -123,8 +152,25 @@ extractGenomeTarget = function(genome.path = NULL,
   #Gets file names if they are directory or a single file
   if (dir.exists(genome.path) == TRUE) {
     file.names = list.files(genome.path, recursive = T)
-    if (is.null(genome.search.string) != T){ file.names = file.names[grep(genome.search.string, file.names)]}
-  } else { file.names = genome.path }
+    if (is.null(genome.search.string) != T){
+      genome.files = file.names[grep(genome.search.string, file.names)]
+      }
+  } else {
+    genome.files = genome.path
+    genome.path = dirname(genome.files)
+    genome.files = basename(genome.files)
+  }#end else
+
+
+  # if (match.by.chr == TRUE){
+  #   chrom.samples = file.names[grep("chromosomes", file.names)]
+  #   chrom.names = gsub("/chromosomes.*", "",  chrom.samples)
+  #   chrom.names = unique(gsub(".*/", "", chrom.names))
+  #   #remove and add from original files
+  #   genome.files = genome.files[grep(paste(chrom.names, collapse = "|"), genome.files, invert = T)]
+  #   genome.files = append(genome.files, chrom.samples)
+  # }#end if
+
 
   if (input.type == "fasta"){
 
@@ -142,9 +188,9 @@ extractGenomeTarget = function(genome.path = NULL,
 
 
   #Loops through each locus and does operations on them
-  for (i in 1:length(file.names)) {
+  for (i in 1:length(genome.files)) {
     #Sets up working directories for each species
-    sample = gsub(pattern = ".fa$|.fna|.gz", replacement = "", x = file.names[i])
+    sample = gsub(pattern = ".fa$|.fna|.gz", replacement = "", x = genome.files[i])
     sample = gsub(pattern = ".*/", replacement = "", x = sample)
     species.dir = paste0(output.name, "/", sample)
 
@@ -161,10 +207,21 @@ extractGenomeTarget = function(genome.path = NULL,
       #########################################################################
       #Part A: Blasting
       #########################################################################
+
+      zipped.up = grep(".gz$", genome.files[i])
+
+      if (length(zipped.up) == 1){
+        system(paste0("gzip -dc ", genome.path, "/", genome.files[i], " > ",
+                                  species.dir, "/", sample, "_genome.fa") )
+        species.genome.path = paste0(species.dir, "/", sample, "_genome.fa")
+        } else {
+        species.genome.path = paste0(genome.path, "/", genome.files[i])
+      }#end else
+
       #Matches samples to loci
-      system(paste0("gzip -dc ", genome.path, "/", file.names[i], " | ",
-                    blast.path, "blastn -task dc-megablast -db ", output.name, "/target_nucl-blast_db -evalue 0.001",
-                    " -query - -out ", species.dir, "/", sample, "_target-blast-match.txt",
+      system(paste0(blast.path, "blastn -task dc-megablast -db ", output.name, "/target_nucl-blast_db -evalue 0.001",
+                    " -query ", species.genome.path,
+                    " -out ", species.dir, "/", sample, "_target-blast-match.txt",
                     " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
                     " -num_threads ", threads))
 
@@ -189,13 +246,68 @@ extractGenomeTarget = function(genome.path = NULL,
       #Percent identitiy must match 50% or greater
       filt.data = filt.data[filt.data$pident >= minimum.match.identity,]
 
-
+      #Skips if no matches
       if (nrow(filt.data) == 0) {
         print(paste0(sample, " had no matches. Skipping"))
         next }
 
       #Sorting: exon name, contig name, bitscore higher first, evalue
       data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
+
+      #########################################################################
+      #Part B: Merge tName that match to multiple same contig qName
+      #########################################################################
+
+      if (merge.matches == TRUE){
+
+        merge.names = filt.data$tName[duplicated(filt.data$tName)]
+        merge.match = filt.data[filt.data$tName %in% merge.names,]
+        merge.data = merge.match[order(merge.match$tName)]
+
+        #Loops through each potential duplicate
+        merge.loci = unique(merge.data$tName)
+
+        if (length(merge.loci) != 0){
+          save.merge = c()
+          del.merge = c()
+          for (j in 1:length(merge.loci)){
+            #pulls out data that matches to multiple contigs
+            sub.data = merge.data[merge.data$tName %in% merge.loci[j],]
+            sub.data = sub.data[order(sub.data$tStart)]
+
+            dup.merge = unique(sub.data$qName)
+            del.merge = append(del.merge, merge.loci[j])
+
+            for (k in 1:length(dup.merge)){
+              #merge duplicates
+              m.data = sub.data[sub.data$qName %in% dup.merge[k],]
+              m.data = m.data[order(m.data$tStart)]
+
+              if (nrow(m.data) == 1){ save.merge = rbind(save.merge, m.data) }
+
+              if (nrow(m.data) != 1){
+                #Merge into one record
+                m.data$tStart[1] = min(c(m.data$tEnd, m.data$tStart))
+                m.data$tEnd[1] = max(c(m.data$tEnd, m.data$tStart))
+                m.data$qStart[1] = min(c(m.data$qEnd, m.data$qStart))
+                m.data$qEnd[1] = max(c(m.data$qEnd, m.data$qStart))
+                m.data$bitscore[1] = sum(m.data$bitscore)
+                m.data$matches[1] = sum(m.data$matches)
+                m.data$misMatches[1] = sum(m.data$misMatches)
+                m.data$gapopen[1] = sum(m.data$gapopen)
+
+                save.merge = rbind(save.merge, m.data[1,])
+              }#end if
+
+            }#end k loop
+
+          }#end j
+
+          #Filters to new dataset
+          filt.data = filt.data[!filt.data$tName %in% del.merge,]
+          filt.data = rbind(filt.data, save.merge)
+        }#end if
+      }#end merge.matches if
 
       #########################################################################
       #Part C: Multiple targets (qName) matching to one sample contig (tName)
@@ -238,13 +350,13 @@ extractGenomeTarget = function(genome.path = NULL,
       final.table = final.table[order(final.table$tName)]
 
       #Extracts the genomic data using the final.table coordinates
-      Rsamtools::indexFa(file.names[i])
-      fa = Rsamtools::FaFile(file.names[i])
+      Rsamtools::indexFa(species.genome.path)
+      fa = Rsamtools::FaFile(species.genome.path)
       gr = as(GenomicRanges::seqinfo(fa), "GRanges")
 
       #adds genome columns
-      final.table[, gStart:=as.numeric()]
-      final.table[, gEnd:=as.numeric()]
+      final.table[, gStart:=as.numeric(0)]
+      final.table[, gEnd:=as.numeric(0)]
       header.data = colnames(final.table)
 
       for (j in 1:nrow(final.table)){
@@ -278,7 +390,7 @@ extractGenomeTarget = function(genome.path = NULL,
 
       #gets ranges of stuff and obtains sequences
       target.seqs = BSgenome::getSeq(fa, fin.ranges)
-      names(target.seqs) = paste0(final.table$tName, "_:_", sample)
+      names(target.seqs) = paste0(final.table$tName, "_|_", sample)
 
       #Writes the table
       if (output.table == TRUE){
@@ -296,36 +408,66 @@ extractGenomeTarget = function(genome.path = NULL,
                     sep = "\t")
       }#end if
 
+      system(paste0("rm ", output.name, "/target_nucl-blast_db*"))
+
     }#end input type fasta
 
     if (input.type == "bed"){
 
+      zipped.up = grep(".gz$", genome.files[i])
+
+      if (length(zipped.up) == 1){
+        system(paste0("gzip -dc ", genome.path, "/", genome.files[i], " > ",
+                      species.dir, "/", sample, "_genome.fa") )
+        species.genome.path = paste0(species.dir, "/", sample, "_genome.fa")
+      } else {
+        species.genome.path = paste0(genome.path, "/", genome.files[i])
+      }#end else
+
       #Extracts the genomic data using the final.table coordinates
-      Rsamtools::indexFa(file.names[i])
-      fa = Rsamtools::FaFile(file.names[i])
+      Rsamtools::indexFa(species.genome.path)
+      fa = Rsamtools::FaFile(species.genome.path)
       gr = as(GenomicRanges::seqinfo(fa), "GRanges")
 
       #gets ranges of stuff and obtains sequences
-      final.table = read.table(input.file, header = T)
-      gr.ranges = data.frame(seqnames = final.table[,1],
-                             start = as.integer(final.table[,2]),
-                             end = as.integer(final.table[,3]) )
-      fin.ranges = GenomicRanges::makeGRangesFromDataFrame(gr.ranges)
+      final.table = read.table(input.file, header = bed.headers)
 
-      #gets ranges of stuff and obtains sequences
-      target.seqs = BSgenome::getSeq(fa, fin.ranges)
-      names(target.seqs) = paste0(gr.ranges$seqnames, "_:_", sample)
+
+      if (name.bed.names == TRUE){
+        gr.ranges = data.frame(seqnames = final.table$chrom,
+                               start = as.integer(final.table$start),
+                               end = as.integer(final.table$stop) )
+        fin.ranges = GenomicRanges::makeGRangesFromDataFrame(gr.ranges)
+
+        #gets ranges of stuff and obtains sequences
+        target.seqs = BSgenome::getSeq(fa, fin.ranges)
+        names(target.seqs) = paste0(final.table$name, "_|_", sample)
+
+      } else {
+        gr.ranges = data.frame(seqnames = final.table[,1],
+                               start = as.integer(final.table[,2]),
+                               end = as.integer(final.table[,3]) )
+        fin.ranges = GenomicRanges::makeGRangesFromDataFrame(gr.ranges)
+
+        #gets ranges of stuff and obtains sequences
+        target.seqs = BSgenome::getSeq(fa, fin.ranges)
+        names(target.seqs) = paste0(gr.ranges$chrom, "_", gr.ranges$start, "-",gr.ranges$end, "_|_", sample)
+      }#end else
+
     }#end bed
 
     #Writes the final loci
     final.loci = as.list(as.character(target.seqs))
-    writeFasta(sequences = final.loci, names = names(final.loci),
+    PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
                paste0(species.dir, "/", sample, "_target-matches.fa"),
                nbchar = 1000000, as.string = T)
 
     print(paste0(sample, " Matching to the genome complete. ", length(final.loci), " targets extracted!"))
 
+    if (length(zipped.up) == 1){ system(paste0("rm ", species.dir, "/", sample, "_genome.fa") ) }
+
   }# end i loop
+
 
 } #End function
 

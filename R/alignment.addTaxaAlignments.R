@@ -65,22 +65,25 @@ addTaxaAlignments = function(alignment.directory = NULL,
                              copy.all = TRUE,
                              target.markers = NULL,
                              sample.markers = NULL,
+                             duplicate.handling = "merge",
                              threads = 1,
                              memory = 1,
                              overwrite = FALSE,
                              mafft.path = NULL) {
 
-  library(foreach)
-  alignment.directory = "/Volumes/LaCie/Anolis/data-analysis/original_alignments"
-  alignment.format = "phylip"
-  output.directory = "/Volumes/LaCie/Anolis/data-analysis/new_alignments"
-  output.format = "phylip"
-  sample.markers = "/Volumes/LaCie/Anolis/data-analysis/anolis_out_to-align.fa"
-  threads = 10
-  memory = 24
-  overwrite = FALSE
-  copy.all = TRUE
-  mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # library(foreach)
+  # setwd("/Volumes/LaCie/Anolis/data-analysis/")
+  # alignment.directory = "/Volumes/LaCie/Anolis/data-analysis/original_alignments"
+  # alignment.format = "phylip"
+  # output.directory = "/Volumes/LaCie/Anolis/data-analysis/new_alignments"
+  # output.format = "phylip"
+  # sample.markers = "/Volumes/LaCie/Anolis/data-analysis/anolis_out_to-align.fa"
+  # duplicate.handling = "merge"
+  # threads = 10
+  # memory = 24
+  # overwrite = FALSE
+  # copy.all = TRUE
+  # mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
   #Adds slash to path
   if (is.null(mafft.path) == FALSE){
@@ -113,7 +116,6 @@ addTaxaAlignments = function(alignment.directory = NULL,
 
   ### Reads in the additional stuff
   add.taxa = Biostrings::readDNAStringSet(sample.markers)
-  bait.loci = Biostrings::readDNAStringSet(target.markers)  # loads up fasta file
 
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
@@ -179,7 +181,7 @@ addTaxaAlignments = function(alignment.directory = NULL,
                          algorithm = "add",
                          save.name = save.name,
                          cleanup.files = TRUE,
-                         quiet = quiet,
+                         quiet = TRUE,
                          mafft.path = mafft.path)
 
     reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
@@ -189,8 +191,106 @@ addTaxaAlignments = function(alignment.directory = NULL,
 
     names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
 
+    dup.taxa = names(alignment)[duplicated(names(alignment))]
+
+    if (length(dup.taxa) != 0){
+
+      #To merge duplicates in case extra data was added in or deletes the shortest
+      if (duplicate.handling == "merge"){
+
+        nodup.align = alignment[!names(alignment) %in% dup.taxa]
+
+        #Goes through each duplicate
+        save.seqs = Biostrings::DNAStringSet()
+        for (j in 1:length(dup.taxa)){
+
+          dup.sample = alignment[names(alignment) %in% dup.taxa[j]]
+          #Converts alignment to matrix of characters to be used
+          new.align = strsplit(as.character(dup.sample), "")
+          align.in = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
+
+          save.string = as.character()
+          for (k in 1:ncol(align.in)){
+
+            temp.col = align.in[,k]
+
+            if (temp.col[1] == temp.col[2]){ save.char = temp.col[1] }
+            if (temp.col[1] != temp.col[2]){
+              temp.col = temp.col[temp.col != "-"]
+              temp.col = temp.col[temp.col != "N"]
+              temp.col = temp.col[temp.col != "?"]
+
+              if (length(temp.col) == 0){ save.char = "-" }
+              if (length(temp.col) == 1){ save.char = temp.col }
+              if (length(temp.col) == 2){ save.char = temp.col[1] }
+
+            }#end upper if
+
+            save.string = append(save.string, save.char)
+
+          }#end k loop
+
+          out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
+          names(out.consensus) = dup.taxa[j]
+          save.seqs = append(save.seqs, out.consensus)
+
+        }#end j loop
+
+        dup.alignment = append(nodup.align, save.seqs)
+
+      }# if statement merge
+
+
+      if (duplicate.handling == "longest"){
+
+        nodup.align = alignment[!names(alignment) %in% dup.taxa]
+
+        #Goes through each duplicate
+        save.seqs = Biostrings::DNAStringSet()
+        for (j in 1:length(dup.taxa)){
+
+          dup.sample = alignment[names(alignment) %in% dup.taxa[j]]
+          #Converts alignment to matrix of characters to be used
+          new.align = strsplit(as.character(dup.sample), "")
+          align.in = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
+
+          gap.align = lapply(new.align, function(x) gsub("\\?|N|n", "-", x) )
+          base.count = unlist(lapply(gap.align, function(x) length(x[x != "-"]) ) )
+
+          taxa.keep = base.count[base.count == max(base.count)][1]
+          out.sample = dup.sample[names(dup.sample) %in% names(taxa.keep)][1]
+          names(out.sample) = dup.taxa[j]
+          save.seqs = append(save.seqs, out.sample)
+
+        }#end j loop
+
+        dup.alignment = append(nodup.align, save.seqs)
+
+      }
+
+      if (duplicate.handling == "original"){
+
+        nodup.align = alignment[!names(alignment) %in% dup.taxa]
+
+        #Goes through each duplicate
+        save.seqs = Biostrings::DNAStringSet()
+        for (j in 1:length(dup.taxa)){
+
+          dup.sample = alignment[names(alignment) %in% dup.taxa[j]]
+          out.sample = dup.sample[1]
+          names(out.sample) = dup.taxa[j]
+          save.seqs = append(save.seqs, out.sample)
+
+        }#end j loop
+
+        dup.alignment = append(nodup.align, save.seqs)
+
+
+      }
+    }#end if
+
     #Saves prelim exon file
-    new.align = strsplit(as.character(alignment), "")
+    new.align = strsplit(as.character(dup.alignment), "")
     aligned.set = as.matrix(ape::as.DNAbin(new.align))
 
     #readies for saving

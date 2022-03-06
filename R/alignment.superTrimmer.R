@@ -105,30 +105,30 @@ batchTrimAlignments = function(alignment.dir = NULL,
   #
   # setwd(work.dir)
   # library(foreach)
-  # alignment.dir = "alignments/untrimmed_all-markers"
+  # alignment.dir = "new_alignments"
   # alignment.format = "phylip"
-  # output.dir = "alignments/trimmed_all-markers"
+  # output.dir = "trimmed_alignments"
   # output.format = "phylip"
-  # overwrite = overwrite
-  # resume = resume
+  # overwrite = FALSE
   # TAPER = FALSE
-  # TAPER.path = taper.path
-  # julia.path = julia.path
-  # TrimAl = run.TrimAl
-  # TrimAl.path = trimAl.path
-  # trim.column = trim.column
-  # convert.ambiguous.sites = convert.ambiguous.sites
-  # alignment.assess = alignment.assess
-  # trim.external = trim.external
-  # trim.coverage = trim.coverage
-  # min.coverage.percent = min.coverage.percent
-  # min.external.percent = min.external.percent
-  # min.column.gap.percent = min.column.gap.percent
-  # min.alignment.length = min.alignment.length
-  # min.taxa.alignment = min.taxa.alignment.trim
-  # min.coverage.bp = min.coverage.bp
-  # threads = threads
-  # memory = memory
+  # TAPER.path = NULL
+  # julia.path = NULL
+  # TrimAl = TRUE
+  # TrimAl.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # trim.column = TRUE
+  # convert.ambiguous.sites = TRUE
+  # alignment.assess = F
+  # trim.external = TRUE
+  # trim.coverage = TRUE
+  # min.coverage.percent = 60
+  # min.external.percent = 60
+  # min.column.gap.percent = 60
+  # min.alignment.length = 200
+  # min.taxa.alignment = 4
+  # min.coverage.bp = 60
+  # max.alignment.gap.percent = 50
+  # threads = 8
+  # memory = 24
 
   if (is.null(TAPER.path) == FALSE){
     b.string = unlist(strsplit(TAPER.path, ""))
@@ -153,14 +153,6 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
- # if (dir.exists(output.dir) == FALSE) { dir.create(output.dir) }
-
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
-
   if (dir.exists(output.dir) == TRUE) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.dir))
@@ -174,7 +166,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.dir)
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
@@ -205,7 +197,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
 
   #Loops through each locus and does operations on them
   out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 45:length(align.files)){
+  #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
@@ -293,7 +285,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
                                 min.n.seq = ceiling(length(non.align) * (min.external.percent/100)),
                                 codon.trim = F)
 
-      if (class(edge.align) == "numeric") { edge.align = DNAStringSet() }
+      if (class(edge.align) == "numeric") { edge.align = Biostrings::DNAStringSet() }
       non.align = edge.align
 
       #Saves stat data
@@ -337,32 +329,36 @@ batchTrimAlignments = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
     }#end trim.external
 
+
+
     #Step 6
-    if (alignment.assess == TRUE) {
-      #Assesses the alignment returning TRUE for pass and FALSE for fail
-      test.result = alignmentAssess(alignment = non.align,
-                                    max.alignment.gap.percent = max.alignment.gap.percent,
-                                    min.taxa.alignment = min.taxa.alignment,
-                                    min.alignment.length = min.alignment.length)
+    if (length(non.align) != 0){
+      if (alignment.assess == TRUE) {
+        #Assesses the alignment returning TRUE for pass and FALSE for fail
+        test.result = alignmentAssess(alignment = non.align,
+                                      max.alignment.gap.percent = max.alignment.gap.percent,
+                                      min.taxa.alignment = min.taxa.alignment,
+                                      min.alignment.length = min.alignment.length)
 
-      data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
+        data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
 
-      if (test.result == FALSE){
-        print(paste0(align.files[i], " failed filtering and was discarded."))
+        if (test.result == FALSE){
+          print(paste0(align.files[i], " failed filtering and was discarded."))
+        } else {
+          print(paste0(align.files[i], " passed filters and was saved to file."))
+          write.temp = strsplit(as.character(non.align), "")
+          aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+          #readies for saving
+          writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+        }#end else test result
       } else {
-        print(paste0(align.files[i], " passed filters and was saved to file."))
+        #If no alignment assessing is done, saves
         write.temp = strsplit(as.character(non.align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
         #readies for saving
         writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
-      }#end else test result
-    } else {
-      #If no alignment assessing is done, saves
-      write.temp = strsplit(as.character(non.align), "")
-      aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
-      #readies for saving
-      writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
-    }#end else
+      }#end else
+    }#outer if
 
     print(paste0(align.files[i], " Completed."))
     print(data.frame(temp.data))
