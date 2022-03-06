@@ -59,32 +59,30 @@ matchTargets = function(assembly.directory = NULL,
                         quiet = TRUE,
                         blast.path = NULL,
                         bbmap.path = NULL) {
-
-  # #Debug setup
-  #  work.dir<-"/Volumes/Rodents/Boophis" #Your main project directory
-  #  assembly.directory<-"/Volumes/Rodents/Boophis/draft-assemblies"
-  #  target.file<-"/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
-  # assembly.directory = "/Volumes/LaCie/Anolis/data-analysis/input-samples"
-  # target.file = "/Volumes/LaCie/Anolis/data-analysis/Hutter_uce5k_loci.fa"
-  # output.directory = "match-targets"
-  #  alignment.contig.name = "test"
-  # #
-  # # #Main settings
-  #  threads = 4
-  #  memory = 8
-  #  trim.target = FALSE
-  #  overwrite = TRUE
-  #  resume = FALSE
-  #  quiet = TRUE
-  # #
-  # # #tweak settings (make some statements to check these)
-  #  min.match.percent = 60
-  #  min.match.length = 50
-  #  min.match.coverage = 50
-  # #
-  # # #program paths
-  #  blast.path = "/Users/chutter/miniconda3/bin"
-  #  bbmap.path = "/usr/local/bin"
+#
+#   #Debug setup
+#   setwd("/Volumes/LaCie/India") #Your main project directory
+#   assembly.directory<-"/Volumes/LaCie/India/data-analysis/draft-assemblies"
+#   target.file<-"/Volumes/LaCie/India/Ranoidea_All-Markers_Apr21-2019.fa"
+#   output.directory = "data-analysis/match-targets"
+#   alignment.contig.name = "test"
+#   #
+#   # #Main settings
+#    threads = 4
+#    memory = 8
+#    trim.target = FALSE
+#    overwrite = FALSE
+#    resume = TRUE
+#    quiet = TRUE
+#   #
+#   # #tweak settings (make some statements to check these)
+#    min.match.percent = 60
+#    min.match.length = 50
+#    min.match.coverage = 50
+#   #
+#   # #program paths
+#    blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+#    bbmap.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -105,12 +103,6 @@ matchTargets = function(assembly.directory = NULL,
   #Initial checks
   if (assembly.directory == output.directory){ stop("You should not overwrite the original contigs.") }
   if (is.null(target.file) == T){ stop("A fasta file of targets to match to assembly contigs is needed.") }
-
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -137,8 +129,11 @@ matchTargets = function(assembly.directory = NULL,
     if (file.exists(species.dir) == F){ dir.create(species.dir) }
 
     #Checks if this has been done already
-    if (resume == TRUE){
-      if (file.exists(paste0(species.dir, "/", sample, "_", alignment.contig.name, "_matching-contigs.fa")) == T){ next }
+    if (overwrite == FALSE){
+      if (file.exists(paste0(species.dir, "/", sample, "_matching-contigs.fa")) == T){
+        print(paste0(sample, " already finished, skipping. Set overwrite to T if you want to overwrite."))
+        next
+      }
     }#end
 
     #########################################################################
@@ -439,7 +434,12 @@ matchTargets = function(assembly.directory = NULL,
 
     #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
     temp = fin.loci[duplicated(names(fin.loci)) == T]
-    if(length(temp) != 0){ stop("DUPLICATE FOUND") }
+    if(length(temp) != 0){
+      dup.loci = fin.loci[names(fin.loci) %in% names(temp)]
+      dup.loci = dup.loci[Biostrings::width(dup.loci) == max(Biostrings::width(dup.loci))][1]
+      temp.fin = fin.loci[!names(fin.loci) %in% names(temp)]
+      fin.loci = append(temp.fin, dup.loci)
+    }#end duplicate if
 
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(fin.loci))
