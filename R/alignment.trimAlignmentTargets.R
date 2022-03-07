@@ -95,7 +95,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
 
-  if (length(align.files) == 0) { stop("All alignments have already been completed and overwrite = FALSE.") }
+  if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
 
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
