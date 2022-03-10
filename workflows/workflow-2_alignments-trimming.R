@@ -113,7 +113,7 @@ if (trim.alignments == TRUE){
                       output.format = "phylip",
                       overwrite = overwrite,
                       TAPER = FALSE,
-                      TAPER.path = taper.path,
+                      TAPER.path = NULL,
                       julia.path = julia.path,
                       TrimAl = run.TrimAl,
                       TrimAl.path = trimAl.path,
