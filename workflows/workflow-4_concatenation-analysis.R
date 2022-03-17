@@ -76,20 +76,20 @@ for (i in 1:length(alignment.files)){
   align.name = gsub(".phy$", "", alignment.files[i])
   align.name = gsub(".*\\/", "", align.name)
 
-  analysis.concatenationTree(alignment.file = alignment.files[i],
-                             output.directory = out.path,
-                             output.name = align.name,
-                             partition.file = NULL,
-                             partition.scheme = partition.scheme,
-                             codon.partition = FALSE,
-                             program = "IQTREE",
-                             msub.type = "nuclear",
-                             uf.bootstrap = uf.bootstrap,
-                             rcluster = rcluster,
-                             threads = threads,
-                             memory = memory,
-                             iqtree.path = iqtree.path,
-                             overwrite = overwrite)
+  tree.concatenationTree(alignment.file = alignment.files[i],
+                         output.directory = out.path,
+                         output.name = align.name,
+                         partition.file = NULL,
+                         partition.scheme = partition.scheme,
+                         codon.partition = FALSE,
+                         program = "IQTREE",
+                         msub.type = "nuclear",
+                         uf.bootstrap = uf.bootstrap,
+                         rcluster = rcluster,
+                         threads = threads,
+                         memory = memory,
+                         iqtree.path = iqtree.path,
+                         overwrite = overwrite)
 
 }#end i loop
 

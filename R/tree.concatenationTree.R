@@ -99,8 +99,12 @@ analysis.concatenationTree = function(alignment.file = NULL,
   part.scheme = "MFP"
   if (partition.scheme == "merge"){ part.scheme = paste0(part.scheme, "+MERGE") }
   if (partition.scheme == "file"){ part.file = paste0(" -spp ", partition.file) }
-  if (partition.scheme == "none"){ part.scheme = "GTR" }
-  if (codon.partition == T){ codon.st = " -st CODON" } else { codon.st = "" }
+  if (partition.scheme == "none"){ part.scheme = "GTR+G" }
+  if (codon.partition == T){
+    codon.st = paste0(" -st CODON -rcluster ", rcluster)
+  } else {
+    codon.st = paste0(" -rcluster ", rcluster)
+  }
 
   dir.create(paste0(output.directory, "/", output.name))
   system(paste0("cp ", alignment.file, " ", output.directory, "/", output.name, "/alignment.phy"))
@@ -110,7 +114,6 @@ analysis.concatenationTree = function(alignment.file = NULL,
                 " -bb ", uf.bootstrap,
                 " -nt ", threads,
                 " -m ", part.scheme, codon.st,
-                " -rcluster ", rcluster,
                 " -msub ", msub.type))
 
   print(paste0(output.name, " finished concatenation tree estimation!"))
