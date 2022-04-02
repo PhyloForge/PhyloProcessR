@@ -35,5 +35,5 @@ dependencies:
   - r-seqinr=4.2_4
   - r-stringr=1.4.0
   - samtools=1.10
-  - spades=3.15.4
+  - spades=3.15
   - trimal=1.4.1
