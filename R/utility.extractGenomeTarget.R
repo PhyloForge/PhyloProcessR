@@ -435,7 +435,6 @@ extractGenomeTarget = function(genome.path = NULL,
                     sep = "\t")
       }#end if
 
-      system(paste0("rm ", output.name, "/target_nucl-blast_db*"))
 
     }#end input type fasta
 
@@ -495,6 +494,7 @@ extractGenomeTarget = function(genome.path = NULL,
 
   }# end i loop
 
+  system(paste0("rm ", output.name, "/target_nucl-blast_db*"))
 
 } #End function
 
