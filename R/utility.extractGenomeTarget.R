@@ -271,7 +271,7 @@ extractGenomeTarget = function(genome.path = NULL,
       filt.data = filt.data[filt.data$pident >= minimum.match.identity,]
 
       #Make sure the hit is greater than 50% of the reference length
-      filt.data = filt.data[filt.data$matches >= ( (65/100) * filt.data$qLen),]
+      filt.data = filt.data[filt.data$matches >= ( (minimum.match.coverage/100) * filt.data$qLen),]
 
       #Skips if no matches
       if (nrow(filt.data) == 0) {
