@@ -64,6 +64,16 @@ concatenateGenes = function(alignment.folder = NULL,
   # overwrite = FALSE
   # resume = TRUE
 
+  # alignment.folder = alignment.path
+  # output.folder = gene.out
+  # feature.gene.names = paste0(out.dir, "/feature-gene-names.csv")
+  # input.format = "phylip"
+  # output.format = "phylip"
+  # remove.reverse = TRUE
+  # overwrite = TRUE
+  # threads = 8
+  # memory = 24
+  # resume = F
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -106,7 +116,7 @@ concatenateGenes = function(alignment.folder = NULL,
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
     #Match to the files to obtain
-    gene.exons = gene.data$target_name
+    gene.exons = gene.data$file_name
 
     temp.dir = paste0(output.folder, "/temp-", gene.names[i])
     if (dir.exists(temp.dir) == TRUE){
@@ -118,7 +128,7 @@ concatenateGenes = function(alignment.folder = NULL,
     save.length = 0
     for (y in 1:length(gene.exons)){
       #Finds alignment name
-      temp.exon = align.files[grep(gene.exons[y], align.files)]
+      temp.exon = align.files[align.files %in% gene.exons[y]]
 
       if (length(temp.exon) >= 2){
         temp.exon = temp.exon[gsub("-mafft.fa", "", temp.exon) %in% gene.exons[y]]

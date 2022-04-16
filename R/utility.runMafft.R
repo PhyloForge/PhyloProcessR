@@ -33,6 +33,7 @@
 runMafft = function(sequence.data = NULL,
                     add.contigs = NULL,
                     algorithm = c("localpair", "globalpair", "add"),
+                    dna.type = "nuc",
                     adjust.direction = TRUE,
                     save.name = NULL,
                     threads = 1,
@@ -69,7 +70,8 @@ runMafft = function(sequence.data = NULL,
 
     #Runs MAFFT to align
     system(paste0(mafft.path, "mafft --",algorithm, " ", save.name,
-                  "_add_sequences.fa --maxiterate 1000 ",adjust.direction, save.name, ".fa > ",
+                  "_add_sequences.fa --maxiterate 1000 --", dna.type, " ",
+                  adjust.direction, save.name, ".fa > ",
                   save.name, "_align.fa"), ignore.stderr = quiet)
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
@@ -85,8 +87,8 @@ runMafft = function(sequence.data = NULL,
                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 ", adjust.direction,
-                  "--quiet --op 3 --ep 0.123",
+    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 --", dna.type, " ",
+                  adjust.direction, "--quiet --op 3 --ep 0.123",
                   " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"),
            ignore.stderr = quiet)
 

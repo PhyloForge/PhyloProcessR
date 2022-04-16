@@ -71,6 +71,7 @@ extractGenomeTarget = function(genome.path = NULL,
                                merge.matches = FALSE,
                                minimum.match.length = 100,
                                minimum.match.identity = 0.75,
+                               minimum.match.coverage = 0.75,
                                add.flanks = 500,
                                genome.search.string = NULL,
                                threads = 1,
@@ -126,6 +127,28 @@ extractGenomeTarget = function(genome.path = NULL,
   # merge.matches = TRUE
   # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
   # genome.search.string = "_genomic.fna.gz"
+#
+#   genome.path = genome.dir
+#   input.file = paste0(work.dir, "/BUSCO_all-reference.fa")
+#   input.type = "fasta"
+#   output.name = out.dir
+#   output.bed = TRUE
+#   bed.headers = FALSE
+#   name.bed.names = TRUE
+#   output.table = TRUE
+#   match.by.chr = FALSE
+#   duplicate.matches = c("best")
+#   merge.matches = FALSE
+#   minimum.match.length = 100
+#   minimum.match.identity = 0.75
+#   minimum.match.coverage = 0.75
+#   add.flanks = 0
+#   genome.search.string = NULL
+#   threads = 8
+#   memory = 32
+#   overwrite = FALSE
+#   quiet = FALSE
+#   blast.path = conda.path
 
 
   #Same adds to blast path
@@ -152,6 +175,7 @@ extractGenomeTarget = function(genome.path = NULL,
   #Gets file names if they are directory or a single file
   if (dir.exists(genome.path) == TRUE) {
     file.names = list.files(genome.path, recursive = T)
+    genome.files = file.names[grep(".fai$", file.names, invert = T)]
     if (is.null(genome.search.string) != T){
       genome.files = file.names[grep(genome.search.string, file.names)]
       }
@@ -245,6 +269,9 @@ extractGenomeTarget = function(genome.path = NULL,
       filt.data = filt.data[duplicated(filt.data) != T,]
       #Percent identitiy must match 50% or greater
       filt.data = filt.data[filt.data$pident >= minimum.match.identity,]
+
+      #Make sure the hit is greater than 50% of the reference length
+      filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
       #Skips if no matches
       if (nrow(filt.data) == 0) {
