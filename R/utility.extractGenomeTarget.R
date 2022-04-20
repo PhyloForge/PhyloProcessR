@@ -369,12 +369,13 @@ extractGenomeTarget = function(genome.path = NULL,
 
           save.dup = rbind(save.dup, save.temp)
         } #end j loop
+
+        temp.filt = filt.data[!filt.data$tName %in% dup.names,]
+        filt.data = rbind(temp.filt, save.dup)
+
       }#end if
 
-      #combines tables
-      temp.filt = filt.data[!filt.data$tName %in% dup.names,]
-      final.table = rbind(temp.filt, save.dup)
-      final.table = final.table[order(final.table$tName)]
+      final.table = filt.data[order(filt.data$tName)]
 
       #Extracts the genomic data using the final.table coordinates
       Rsamtools::indexFa(species.genome.path)

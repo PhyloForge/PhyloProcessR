@@ -356,7 +356,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
   parallel::stopCluster(cl)
 
-  system(paste0("rm -r ", output.folder, "/temp*"))
+ # system(paste0("rm -r ", output.folder, "/temp*"))
 
 }#end function
 
