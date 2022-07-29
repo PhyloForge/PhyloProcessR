@@ -63,25 +63,23 @@ mergeDuplicates = function(alignment.directory = NULL,
                            output.directory = NULL,
                            output.format = "phylip",
                            method = c("delete-shortest", "merge-sample"),
-                           include.all.together = FALSE,
                            threads = 1,
                            memory = 1,
                            overwrite = FALSE,
                            quiet = FALSE,
                            mafft.path = NULL) {
 
-  # setwd("/Volumes/Armored/Brygomantis")
-  # library(foreach)
-  # alignment.directory = "data-processing/alignments-3/trimmed_all-markers"
-  # alignment.format = "phylip"
-  # output.directory = "data-processing/alignments-3/rm-dup-trimmed_all-markers"
-  # output.format = "phylip"
-  # method = "merge-sample"
-  # threads = 4
-  # memory = 8
-  # overwrite = TRUE
-  # quiet = TRUE
-  # mafft.path = "/usr/local/bin"
+  setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs")
+  alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs/alignments/trimmed_all-markers"
+  alignment.format = "phylip"
+  output.directory = "alignments/rm-dup-trimmed_all-markers"
+  output.format = "phylip"
+  method = "merge-sample"
+  threads = 4
+  memory = 8
+  overwrite = TRUE
+  quiet = TRUE
+  mafft.path = "/usr/local/bin"
 
   # *** combine non-overlapping seqs
   # *** check for duplicates and remove
@@ -172,10 +170,12 @@ mergeDuplicates = function(alignment.directory = NULL,
       }
 
       if (length(dup.names) != 0){
+        
         nodup.align = old.align[!names(old.align) %in% dup.names]
 
         #Goes through each duplicate
         save.seqs = Biostrings::DNAStringSet()
+        no.del = 0
         for (j in 1:length(dup.names)){
 
           dup.sample = old.align[names(old.align) %in% dup.names[j]]
@@ -184,6 +184,7 @@ mergeDuplicates = function(alignment.directory = NULL,
           align.in = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
 
           save.string = as.character()
+          skip.taxa = FALSE
           for (k in 1:ncol(align.in)){
 
             temp.col = align.in[,k]
@@ -196,7 +197,11 @@ mergeDuplicates = function(alignment.directory = NULL,
 
               if (length(temp.col) == 0){ save.char = "-" }
               if (length(temp.col) == 1){ save.char = temp.col }
-              if (length(temp.col) == 2){ save.char = temp.col[1] }
+              if (length(temp.col) == 2){ 
+                no.del = no.del + 1
+                skip.taxa = TRUE
+                break 
+              }
 
               # temp.col = temp.col[temp.col != "Y"]
               # temp.col = temp.col[temp.col != "B"]
@@ -215,9 +220,11 @@ mergeDuplicates = function(alignment.directory = NULL,
 
           }#end k loop
 
-          out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
-          names(out.consensus) = dup.names[j]
-          save.seqs = append(save.seqs, out.consensus)
+          if (skip.taxa == FALSE){
+            out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
+            names(out.consensus) = dup.names[j]
+            save.seqs = append(save.seqs, out.consensus)
+          }#end false
 
         }#end j
 
@@ -234,6 +241,10 @@ mergeDuplicates = function(alignment.directory = NULL,
                     strict = F)
 
         print(paste0("Finished ", save.name, " duplicate merging successfully!"))
+        if (no.del != 0){
+          print(paste0("***Removed ", no.del, " non-matching duplicates from ", save.name, "."))
+        }
+        
 
       }#end if to do the thing
 

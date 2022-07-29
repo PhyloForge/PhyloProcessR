@@ -18,7 +18,8 @@
 #' @export
 
 trimAlignmentColumns = function(alignment = NULL,
-                                min.gap.percent = 100){
+                                min.gap.percent = 50,
+                                count.n = T){
   #Debug
   # alignment = sim.align
   # min.gap.percent = 55
@@ -34,7 +35,12 @@ trimAlignmentColumns = function(alignment = NULL,
   for (k in 1:ncol(m.align)){
     #Tables gap characters and calculataes prpoption
     gaps = table(as.character(m.align[,k]))
-    per.gaps = sum(gaps[names(gaps) %in% c("-", "n", "?")]/nrow(m.align))
+
+    #Counts Ns as gaps
+    if (count.n == T){ per.gaps = sum(gaps[names(gaps) %in% c("-", "n", "?")]/nrow(m.align)) }
+
+    #Doesn't count N as gaps
+    if (count.n == F){ per.gaps = sum(gaps[names(gaps) %in% c("-", "?")]/nrow(m.align)) }
 
     if (length(per.gaps) == 0){ next }
 

@@ -34,7 +34,7 @@
 #'
 #' @export
 
-removeContamination = function(input.reads = "adaptor-removed-reads",
+removeContamination = function(input.reads = "cleaned-reads",
                                output.directory = "decontaminated-reads",
                                decontamination.path = NULL,
                                map.match = 1,

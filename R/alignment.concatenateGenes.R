@@ -63,17 +63,17 @@ concatenateGenes = function(alignment.folder = NULL,
   # remove.reverse = TRUE
   # overwrite = FALSE
   # resume = TRUE
-
+#
   # alignment.folder = alignment.path
-  # output.folder = gene.out
-  # feature.gene.names = paste0(out.dir, "/feature-gene-names.csv")
+  # output.folder = out.dir
+  # feature.gene.names = paste0(work.dir, "/feature-gene-names.csv")
   # input.format = "phylip"
   # output.format = "phylip"
   # remove.reverse = TRUE
-  # overwrite = TRUE
+  # overwrite = F
   # threads = 8
   # memory = 24
-  # resume = F
+  # resume = T
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -152,11 +152,15 @@ concatenateGenes = function(alignment.folder = NULL,
       exon.save = paste0(temp.dir, "/", gene.names[i], "-", y, ".phy")
       save.names = append(save.names, exon.save)
       #Saves alignment as phylip
-      write.align = alignmentConversion(input.alignment = exon.align, end.format = "matrix")
-      writePhylip(write.align, file = exon.save, interleave = F )
+      write.align = PhyloCap::alignmentConversion(input.alignment = exon.align, end.format = "matrix")
+      PhyloCap::writePhylip(write.align, file = exon.save, interleave = F )
       save.length = save.length + Biostrings::width(exon.align)[1]
     }#end y loop
 
+    dup.names = exon.align[duplicated(names(exon.align)),]
+    if (length(dup.names) != 0){ stop("DUPLICATE names found. Please check alignments.") }
+
+    ## If save names are not provided
     if (is.null(save.names) == FALSE) {
 
       #Loads in the data

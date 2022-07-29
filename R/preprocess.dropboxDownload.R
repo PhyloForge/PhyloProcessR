@@ -32,11 +32,12 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                            skip.not.found = FALSE,
                            overwrite = FALSE){
 
-  # ### Example usage
-  # sample.spreadsheet = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Mitogenome_study.csv"
-  # out.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Hutter_Esselstyn_2021/raw-reads-frogs"
+  # # ### Example usage
+  # sample.spreadsheet = "/Users/chutter/Dropbox/Research/2_Master-Databases/seqcap_datasets/1_FrogCap_Read-Database_June12-2022.csv"
+  # output.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads-Published/Hutter_Esselstyn_2021/raw-reads-frogs"
   # dropbox.directory = "/Research/3_Sequence-Database/Raw-Reads"
   # dropbox.token = "/home/c111h652/dropbox-token.RDS"
+  # dropbox.token = "/Users/chutter/Dropbox/dropbox-token.RDS"
   # overwrite = FALSE
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
@@ -64,10 +65,15 @@ dropboxDownload = function(sample.spreadsheet = NULL,
 
   if (nrow(sample.data) == 0){ return("no samples remain to analyze.") }
 
+  save.miss = c()
   for (i in 1:nrow(sample.data)){
 
     sample.reads = all.reads[grep(as.character(sample.data$File[i]), all.reads)]
 
+    #For checking if reads are present
+    if (length(sample.reads) >= 3){ stop("Problem with reads, row ", i, " File column matches to more than 1 sample.") }
+
+    #Skip not found or crash
     if (length(sample.reads) == 0) {
       if (skip.not.found == FALSE){
         stop(paste0("Error: sample reads for ", sample.data$Sample[i], " not found!"))
