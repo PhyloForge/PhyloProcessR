@@ -226,8 +226,8 @@ matchParalogs = function(assembly.directory = NULL,
     system(paste0("rm ", species.dir, "/", sample, "_target-blast-match.txt"))
     system(paste0("rm ", species.dir, "/", sample, "_renamed-contigs.fa"))
 
-}# end i loop
-
+  }# end i loop
+}
 
 
 
