@@ -25,6 +25,7 @@ Requires:
 - stringr
 - data.table
 - seqinr
+- biomartr (Bioconductor)
 - biostrings (Bioconductor)
 - genomicranges (Bioconductor)
 
