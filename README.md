@@ -13,7 +13,7 @@ R package For processing high-throughput sequencing data for many samples from t
 9) Estimate gene trees for each target
 10) Gene Jackknifing concatenation tree building
 
-# Installation of prerequisites 
+# PhyloCap prerequisites 
 
 PhyloCap uses several R packages and other outside programs for certain functions. 
 
@@ -48,6 +48,7 @@ Imports:
 - GATK4: variant calling functions
 - SamTools: variant calling and read mapping tools
 
+# Installation instructions
 
 First, you will want to clone this repository to your computer to obtain the setup files. Or alternatively go to the green "Code" button in top right of this repository and select "download ZIP".
 
