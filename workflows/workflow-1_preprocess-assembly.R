@@ -40,7 +40,7 @@ if (dropbox.download == TRUE){
                   skip.not.found = T)
 
   read.directory = paste0(processed.reads, "/raw-reads")
-  organize.reads = FALSE
+  organize.reads = TRUE
 }#end if
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset

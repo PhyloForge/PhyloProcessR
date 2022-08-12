@@ -1,4 +1,7 @@
-#Install R packages manually: 
+#Install manually: 
+
+Macbook computer GUI
+==================
 
 #For Bioconductor packages:
 
@@ -9,3 +12,25 @@ BiocManager::install(c("Biostrings", "GenomicRanges"), dependencies = TRUE)
 
 
 install.packages(c("devtools", "rdrop2", "ape", "data.table", "doparallel", "foreach", "seqinr", "stringr"), dependencies = T)
+
+
+
+=================
+Cluster
+
+conda create --prefix /panfs/pfs.local/work/bi/c111h652/conda/tater
+
+conda activate /panfs/pfs.local/work/bi/c111h652/conda/tater
+
+conda config --add channels defaults
+conda config --add channels conda-forge
+conda config --add channels bioconda
+conda config --set channel_priority flexible
+
+conda install -c bioconda bioconductor-rsamtools bioconductor-genomicranges bioconductor-biostrings fastp spades bwa samtools=1.1.0 exonerate
+
+conda install -c conda-forge r-base=4.1 r-devtools r-ape r-stringr r-data.table r-seqinr r-foreach r-doparallel r-rdrop2 r-biomartr
+
+
+
+
