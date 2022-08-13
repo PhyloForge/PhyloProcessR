@@ -25,7 +25,7 @@
 #'
 #' @export
 
-analysis.concatenationTree = function(alignment.file = NULL,
+tree.concatenationTree = function(alignment.file = NULL,
                                       output.directory = NULL,
                                       output.name = NULL,
                                       partition.file = NULL,

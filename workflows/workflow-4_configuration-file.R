@@ -37,7 +37,6 @@ quiet = TRUE
 filter.length = NULL
 
 #If you wnat to filter by sampling proportion (percent of taxa to keep an alignment)
-#I would probably keep this low so you don't accidentally filter legacy stuff
 filter.sample = c(0.01)
 
 #not very useful here
