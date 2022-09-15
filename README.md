@@ -127,4 +127,6 @@ And installation should be done! All the functions for PhyloCap should be ready 
 
 [Tutorial 4: Assess sequence capture results](https://github.com/chutter/PhyloCap/wiki/Tutorial-4:-Assess-results)
 
+[Tutorial 5: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloCap/wiki/Tutorial-4:-Legacy-Integration)
+
 
