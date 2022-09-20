@@ -34,120 +34,29 @@
 #'
 #' @export
 
-summary.sampleSpecificity = function(read.directory = NULL,
-                                     sub.directory = NULL,
-                                     target.fasta = NULL,
-                                     output.name = "sample-specificity",
-                                     sample.groups = NULL,
-                                     threads = 1,
-                                     memory = 1,
-                                     overwrite = FALSE,
-                                     quiet = FALSE,
-                                     bwa.path = NULL,
-                                     picard.path = NULL,
-                                     samtools.path = NULL) {
+analysis.sampleSpecificity = function(read.directory = NULL,
+                                      target.fasta = NULL,
+                                      output.directory = "sample-specificity",
+                                      threads = 1,
+                                      memory = 1,
+                                      overwrite = FALSE,
+                                      quiet = FALSE,
+                                      bwa.path = NULL,
+                                      picard.path = NULL,
+                                      samtools.path = NULL) {
 
-
-  # #Directories and stuff
-  #  ran.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_Ranoidea_Probe-Loci_Sept28.fa")
-  #  red.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_RedRan_Probe-Loci_Sept28.fa")
-  #  hyl.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_Hyloidea_Probe-Loci_Sept28.fa")
+  # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
+  # target.fasta = "/Volumes/LaCie/VenomCap/input-seq.fasta"
+  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
   #
-  #  ran.in = ran.in[duplicated(names(ran.in)) == FALSE]
-  #  red.in = red.in[duplicated(names(red.in)) == FALSE]
-  #  hyl.in = hyl.in[duplicated(names(hyl.in)) == FALSE]
+  # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # picard.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
   #
-  #  save.rownames = names(ran.in)
-  #  write.align = as.list(as.character(ran.in))
-  #
-  #  #Creates random name and saves it
-  #  writeFasta(sequences = write.align,
-  #             names = names(write.align),
-  #             file.out = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/RedRan_Aug18-2021.fa",
-  #             nbchar = 1000000,
-  #             as.string = T)
-  #
-  #
-  #  save.rownames = names(red.in)
-  #  write.align = as.list(as.character(red.in))
-  #
-  #  #Creates random name and saves it
-  #  writeFasta(sequences = write.align,
-  #             names = names(write.align),
-  #             file.out = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Ranoidea_Aug18-2021.fa",
-  #             nbchar = 1000000,
-  #             as.string = T)
-  #
-  #
-  #  save.rownames = names(hyl.in)
-  #  write.align = as.list(as.character(hyl.in))
-  #
-  #  #Creates random name and saves it
-  #  writeFasta(sequences = write.align,
-  #             names = names(write.align),
-  #             file.out = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Hyloidea_Aug18-2021.fa",
-  #             nbchar = 1000000,
-  #             as.string = T)
-  #
-  #
-
-  # ran.loci = ran.in[names(ran.in) %in% names(hyl.in)]
-  # hyl.loci = hyl.in[names(hyl.in) %in% names(ran.in)]
-  # red.loci = red.in[names(red.in) %in% names(ran.in)]
-  #
-  #
-  # #Finds probes that match to two or more contigs
-  # ran.loci = ran.loci[duplicated(names(ran.loci)) != T]
-  # save.rownames = names(ran.loci)
-  # write.align = as.list(as.character(ran.loci))
-  #
-  # #Creates random name and saves it
-  # writeFasta(sequences = write.align,
-  #            names = names(write.align),
-  #            file.out = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Overlapping_Loci_Ran-Hyl_Aug18-2021.fa",
-  #            nbchar = 1000000,
-  #            as.string = T)
-
-#
-#   # #Debug
-#   library(foreach)
-#   setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")
-#   read.directory = "/Volumes/Armored/FrogCap_Anura_Seqcap/Processed_Samples"
-#   target.fasta = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Overlapping_Loci_Ran-Hyl_Aug18-2021.fa"
-#   sub.directory = "cleaned-reads-snp"
-#   sample.groups = "sample_probeset_group.csv"
-#   output.name = "Analyses/sample-specificity"
-#   samtools.path = "/Users/chutter/miniconda3/bin"
-#   bwa.path = "/usr/local/bin"
-#   picard.path = "/Users/chutter/miniconda3/bin"
-#   bbmap.path = "/usr/local/bin"
-#   overwrite = TRUE
-#
-#
-  read.directory = "/Volumes/Armored/FrogCap_Anura_Seqcap/Processed_Samples"
-  sub.directory = "cleaned-reads-snp"
-  target.shared = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Overlapping_Loci_Ran-Hyl_Aug18-2021.fa"
-  target.ranoidea = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Ranoidea_Aug18-2021.fa"
-  target.redran = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/RedRan_Aug18-2021.fa"
-  target.hyloidea = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Hyloidea_Aug18-2021.fa"
-  sample.groups = read.csv("sample_probeset_group.csv", header = T)
-  ranoidea.groups = sample.groups[sample.groups[,1] %in% "Ranoidea-V1",]
-  hyloidea.groups = sample.groups[sample.groups[,1] %in% "Hyloidea-V1",]
-  redran.groups = sample.groups[sample.groups[,1] %in% "RedRan",]
-
-  samtools.path = "/Users/chutter/miniconda3/bin"
-  bwa.path = "/usr/local/bin"
-  picard.path = "/Users/chutter/miniconda3/bin"
-  bbmap.path = "/usr/local/bin"
-
-  output.name = "Analyses/sample-specificity"
-
-  target.fasta = target.redran
-  sample.groups = redran.groups
-  quiet = TRUE
-  threads = 6
-  memory = 6
-
+  # quiet = TRUE
+  # overwrite = FALSE
+  # threads = 6
+  # memory = 6
 
   ##### Program path check
   ####################################################################
@@ -180,59 +89,43 @@ summary.sampleSpecificity = function(read.directory = NULL,
   if (is.null(read.directory) == TRUE){ stop("Please provide input directory.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (file.exists(output.name) == F){ dir.create(output.name) } else {
+  if (file.exists(output.directory) == F){ dir.create(output.directory) } else {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.name))
-      dir.create(output.name)
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
     }
   }#end else
 
-  #  #Read in sample data **** sample is run twice?!
+  # Gathers sample name data
   reads = list.files(read.directory, recursive = T, full.names = T)
-  if (is.null(sub.directory) != TRUE) {
-    reads = reads[grep(paste0(sub.directory, "/"), reads)]
-    sample.names = gsub(paste0("/", sub.directory, "/.*"), "", reads)
-    sample.names = unique(gsub(paste0(read.directory, "/"), "", sample.names))
-  } else {
-    sample.names = list.files(read.directory, recursive = F, full.names = F)
-  }
-
+  sample.names = list.dirs(read.directory, recursive = F, full.names = F)
   if (length(sample.names) == 0){ return("no samples remain to analyze.") }
 
-  #Read in group data and the target markers
-  if (class(sample.groups) == "character"){
-    group.data = read.csv(sample.groups, header = T)
-    } else {
-    group.data = sample.groups
-    }#end else
-
-  sample.names = sample.names[sample.names %in% group.data[,2]]
+  #reads in target markers
   target.markers = Biostrings::readDNAStringSet(target.fasta)
 
   #Specificity refers to the percentage of cleaned reads that can be mapped back to the target markers.
 
   #Sets up data to collect
-  header.all = c("dataset", "sample", "mapped_reads", "unmapped_mates",  "total_unmapped_reads",
+  header.all = c("sample", "mapped_reads", "unmapped_mates",  "total_unmapped_reads",
                   "total_read_pairs",  "median_marker_rpkm", "mean_marker_rpkm", "sample_specificity")
   all.data = data.table::data.table(matrix(as.numeric(0), nrow = length(sample.names), ncol = length(header.all)))
   data.table::setnames(all.data, header.all)
   all.data[, sample:=as.character(sample)]
-  all.data[, dataset:=as.character(dataset)]
 
   #Loops through each locus and does operations on them
   for (i in 1:length(sample.names)){
 
     #Reads in the contig file to check
-    dir.create(paste0(output.name, "/", sample.names[i]))
+    dir.create(paste0(output.directory, "/", sample.names[i]))
     #     sample.contigs = paste0(read.directory, "/", sample.names[i], "/assembled-contigs/", sample.names[i], "_orthologs.fa")
 
     #Sets up data to collect
-    header.data = c("dataset","sample", "marker", "mapped_reads", "unmapped_mates",
+    header.data = c("sample", "marker", "mapped_reads", "unmapped_mates",
                     "marker_total_reads", "total_unmapped", "marker_rpkm")
     collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(target.markers), ncol = length(header.data)))
     data.table::setnames(collect.data, header.data)
     collect.data[, sample:=as.character(sample)]
-    collect.data[, dataset:=as.character(dataset)]
     collect.data[, marker:=as.character(marker)]
 
     #################################################
@@ -262,64 +155,62 @@ summary.sampleSpecificity = function(read.directory = NULL,
       } #end if statement
 
       #Copies ortholog file to act as a reference
-      #       system(paste0("cp ", sample.contigs, " ", output.name, "/", sample.names[i], "/sample-reference.fa"))
+      #       system(paste0("cp ", sample.contigs, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
 
-      system(paste0("cp ", target.fasta, " ", output.name, "/", sample.names[i], "/sample-reference.fa"))
-      system(paste0(bwa.path, "bwa index ", output.name, "/", sample.names[i], "/sample-reference.fa"),
+      system(paste0("cp ", target.fasta, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
+      system(paste0(bwa.path, "bwa index ", output.directory, "/", sample.names[i], "/sample-reference.fa"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       #Creates a bam alignment file of reads mapped to reference
       system(paste0(bwa.path, "bwa mem -M -t ", threads, " ",
-                    output.name, "/", sample.names[i], "/sample-reference.fa ",
+                    output.directory, "/", sample.names[i], "/sample-reference.fa ",
                     lane.reads[1], " ", lane.reads[2],
                     " | ", samtools.path, "samtools sort -@", threads, " -O BAM",
-                    " -o ", output.name, "/", sample.names[i], "/paired.bam  -"),
+                    " -o ", output.directory, "/", sample.names[i], "/paired.bam  -"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       system(paste0(picard.path, "picard -Xmx", memory, "g",
-                    " MarkDuplicates INPUT=", output.name, "/", sample.names[i], "/paired.bam",
-                    " OUTPUT=", output.name, "/", sample.names[i], "/dedup_paired.bam",
-                    " METRICS_FILE=", output.name, "/", sample.names[i], "/metrics.txt",
+                    " MarkDuplicates INPUT=", output.directory, "/", sample.names[i], "/paired.bam",
+                    " OUTPUT=", output.directory, "/", sample.names[i], "/dedup_paired.bam",
+                    " METRICS_FILE=", output.directory, "/", sample.names[i], "/metrics.txt",
                     " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
-      system(paste0("mv ", output.name, "/", sample.names[i], "/metrics.txt ",
-                    output.name, "/", sample.names[i], "/duplication_stats.txt"))
+      system(paste0("mv ", output.directory, "/", sample.names[i], "/metrics.txt ",
+                    output.directory, "/", sample.names[i], "/duplication_stats.txt"))
 
       #HERe again
       system(paste0(picard.path, "picard -Xmx", memory, "g",
-                    " BuildBamIndex INPUT=", output.name, "/", sample.names[i], "/paired.bam",
+                    " BuildBamIndex INPUT=", output.directory, "/", sample.names[i], "/paired.bam",
                     " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       #Gets the genome coverage using bedtools
       system(paste0(samtools.path, "samtools idxstats --threads ", threads, " ",
-                    output.name, "/", sample.names[i], "/paired.bam > ",
-                    output.name, "/", sample.names[i], "/samtools_idxstats.txt"))
+                    output.directory, "/", sample.names[i], "/paired.bam > ",
+                    output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
 
-      #system(paste0("rm ", output.name, "/", sample.names[i], "/paired.bam"))
+      #system(paste0("rm ", output.directory, "/", sample.names[i], "/paired.bam"))
 
       #IDX data
       i.headers = c("marker", "length", "mapped_reads", "unmapped_mates")
-      idx.stats = data.table::fread(file = paste0(output.name, "/", sample.names[i], "/samtools_idxstats.txt"))
+      idx.stats = data.table::fread(file = paste0(output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
       data.table::setnames(idx.stats, i.headers)
       idx.stats = idx.stats[idx.stats$marker != "*",]
 
       #Gets the number of reads that mapped to the reference, also total reads
       #Total number of un-mapped reads
       mapped.all = sum(idx.stats$mapped_reads)
-      mapped.all = as.numeric(system(paste0("samtools view -c -F 4 ",
-                                             output.name, "/", sample.names[i], "/paired.bam"), intern = T))
-      unmapped.all = as.numeric(system(paste0("samtools view -c -f 4 ",
-                                              output.name, "/", sample.names[i], "/paired.bam"), intern = T))
+      mapped.all = as.numeric(system(paste0(samtools.path, "samtools view -c -F 4 ",
+                                             output.directory, "/", sample.names[i], "/paired.bam"), intern = T))
+      unmapped.all = as.numeric(system(paste0(samtools.path, "samtools view -c -f 4 ",
+                                              output.directory, "/", sample.names[i], "/paired.bam"), intern = T))
 
       #Goes through each locus and calculates stats
       locus.names = unique(idx.stats$marker)
-      group.name = group.data[group.data[,2] %in% sample.names[i],][,1]
       locus.rpkm = idx.stats$mapped_reads / (idx.stats$length/1000 * mapped.all/1000000)
 
       #Starter stats
-      data.table::set(collect.data, j = match("dataset", header.data), value = group.name )
       data.table::set(collect.data, j = match("sample", header.data), value = sample.names[i] )
       data.table::set(collect.data, j = match("marker", header.data), value = locus.names )
       data.table::set(collect.data, i = match(locus.names, idx.stats$marker), j = match("mapped_reads", header.data), value = idx.stats$mapped_reads )
@@ -330,11 +221,10 @@ summary.sampleSpecificity = function(read.directory = NULL,
 
     } #end j loop
 
-    write.table(collect.data, file = paste0(output.name, "/", sample.names[i], "/sample_specificity_raw-data.txt"), sep = "\t", row.names = F)
+    write.table(collect.data, file = paste0(output.directory, "/", sample.names[i], "/sample_specificity_raw-data.txt"), sep = "\t", row.names = F)
 
     #Collects the overall summary data
     collect.data = collect.data[collect.data$mapped_reads != 0,]
-    data.table::set(all.data, i = as.integer(i), j = match("dataset", header.all), value = group.name )
     data.table::set(all.data, i = as.integer(i), j = match("sample", header.all), value = sample.names[i] )
     data.table::set(all.data, i = as.integer(i), j = match("mapped_reads", header.all), value = sum(collect.data$mapped_reads) )
     data.table::set(all.data, i = as.integer(i), j = match("unmapped_mates", header.all), value = sum(collect.data$unmapped_mates) )
@@ -348,7 +238,7 @@ summary.sampleSpecificity = function(read.directory = NULL,
 
   }# end i loop
 
-  write.table(all.data, file = paste0(output.name, "/sample-specificity_summary.txt"), sep = "\t", row.names = F)
+  write.table(all.data, file = paste0(output.directory, "/sample-specificity_summary.txt"), sep = "\t", row.names = F)
 
   #### Print some textual summary here
 

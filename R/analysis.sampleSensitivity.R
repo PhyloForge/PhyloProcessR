@@ -34,57 +34,35 @@
 #'
 #' @export
 
-summary.sampleSensitivity = function(alignment.directory = NULL,
-                                     target.fasta = NULL,
-                                     output.name = "sample-sensitivity",
-                                     threads = 1,
-                                     memory = 1,
-                                     mafft.path = NULL,
-                                     overwrite = FALSE,
-                                     quiet = FALSE) {
-
-  #Directories and stuff
-  # ran.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_Ranoidea_Probe-Loci_Sept28.fa")
-  # red.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_RedRan_Probe-Loci_Sept28.fa")
-  # hyl.in<-Biostrings::readDNAStringSet("/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_Hyloidea_Probe-Loci_Sept28.fa")
-  #
-  # ran.loci = ran.in[names(ran.in) %in% names(hyl.in)]
-  # hyl.loci = hyl.in[names(hyl.in) %in% names(ran.in)]
-  # red.loci = red.in[names(red.in) %in% names(ran.in)]
-  #
-  #
-  # #Finds probes that match to two or more contigs
-  # ran.loci = ran.loci[duplicated(names(ran.loci)) != T]
-  # save.rownames = names(ran.loci)
-  # write.align = as.list(as.character(ran.loci))
-  #
-  # #Creates random name and saves it
-  # writeFasta(sequences = write.align,
-  #            names = names(write.align),
-  #            file.out = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Overlapping_Loci_Ran-Hyl_Aug18-2021.fa",
-  #            nbchar = 1000000,
-  #            as.string = T)
+analysis.sampleSensitivity = function(alignment.directory = NULL,
+                                      target.fasta = NULL,
+                                      output.directory = "sample-sensitivity",
+                                      threads = 1,
+                                      memory = 1,
+                                      mafft.path = NULL,
+                                      overwrite = FALSE,
+                                      quiet = FALSE) {
 
 
-  #Debug
-  # library(foreach)
-  # setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")
-  # alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/2_Finished-Submitted/Hutter_etal_Anura_FrogCap/Post_Processing_New/Final_Alignments/Alignments_Ranoidea/all-markers_untrimmed"
-  # target.fasta = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Probe_Sets/Final_Ranoidea_Probe-Loci_Sept28.fa"
-  # sample.groups = "sample_probeset_group.csv"
-  # output.name = "Analyses/sample-sensitivity"
-  # dataset.name = "Ranoidea"
-  # mafft.path = "/usr/local/bin"
-  # overwrite = TRUE
+  # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
+  # target.fasta = "/Volumes/LaCie/VenomCap/input-seq.fasta"
+  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
+  #
+  # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # picard.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  #
   # quiet = TRUE
-  # threads = 4
-  # memory = 4
-
-
+  # overwrite = FALSE
+  # threads = 6
+  # memory = 6
 
   ####################################################################
   ##### Required program path check
   ####################################################################
+
+  require(foreach)
+
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
@@ -100,10 +78,10 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
   if (is.null(alignment.directory) == TRUE){ stop("Please provide input directory.") }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (file.exists(output.name) == F){ dir.create(output.name) } else {
+  if (file.exists(output.directory) == F){ dir.create(output.directory) } else {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.name))
-      dir.create(output.name)
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
     }
   }#end else
 
@@ -206,9 +184,9 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
   parallel::stopCluster(cl)
 
   #Writes final table
-  write.table(all.data, file = paste0(output.name, "/sample-sensitivity_raw-data.txt"), sep = "\t", row.names = F)
+  write.table(all.data, file = paste0(output.directory, "/sample-sensitivity_raw-data.txt"), sep = "\t", row.names = F)
 
-  print(paste0("Saved raw data at ", output.name, "/sample-sensitivity_raw-data.txt"))
+  print(paste0("Saved raw data at ", output.directory, "/sample-sensitivity_raw-data.txt"))
 
   ####################################################################
   ##### Summarizes the raw data previously collected into a summary table
@@ -235,9 +213,9 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
   data.table::set(summary.data, i = match(names(temp.median), summary.data$sample), j = match("median_sensitivity", header.summ), value = temp.median )
   data.table::set(summary.data, i = match(names(temp.sd), summary.data$sample), j = match("sd_sensitivity", header.summ), value = temp.sd )
 
-  write.table(summary.data, file = paste0(output.name, "/sample-sensitivity_summary.txt"), sep = "\t", row.names = F)
+  write.table(summary.data, file = paste0(output.directory, "/sample-sensitivity_summary.txt"), sep = "\t", row.names = F)
 
-  print(paste0("Saved raw data at ", output.name, "/sample-sensitivity_summary.txt"))
+  print(paste0("Saved raw data at ", output.directory, "/sample-sensitivity_summary.txt"))
 
 }#end function
 
@@ -339,7 +317,7 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
 #   for (i in 1:length(sample.names)){
 #
 #     #Reads in the contig file to check
-#     dir.create(paste0(output.name, "/", sample.names[i]))
+#     dir.create(paste0(output.directory, "/", sample.names[i]))
 #
 #     #Sets up data to collect
 #     header.data = c("group","sample", "marker", "mapped_reads", "unmapped_mates", "total_read_pairs", "percent_mapped", "marker_rpkm")
@@ -376,44 +354,44 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
 #       } #end if statement
 #
 #       #Copies ortholog file to act as a reference
-#       system(paste0("cp ", target.fasta, " ", output.name, "/", sample.names[i], "/sample-reference.fa"))
-#       system(paste0(bwa.path, "bwa index ", output.name, "/", sample.names[i], "/sample-reference.fa"),
+#       system(paste0("cp ", target.fasta, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
+#       system(paste0(bwa.path, "bwa index ", output.directory, "/", sample.names[i], "/sample-reference.fa"),
 #              ignore.stdout = quiet, ignore.stderr = quiet)
 #
 #       #Creates a bam alignment file of reads mapped to reference
 #       system(paste0(bwa.path, "bwa mem -M -t ", threads, " ",
-#                     output.name, "/", sample.names[i], "/sample-reference.fa ",
+#                     output.directory, "/", sample.names[i], "/sample-reference.fa ",
 #                     lane.reads[1], " ", lane.reads[2],
 #                     " | ", samtools.path, "samtools sort -@", threads, " -O BAM",
-#                     " -o ", output.name, "/", sample.names[i], "/paired.bam  -"),
+#                     " -o ", output.directory, "/", sample.names[i], "/paired.bam  -"),
 #              ignore.stdout = quiet, ignore.stderr = quiet)
 #
 #       system(paste0(picard.path, "picard -Xmx", memory, "g",
-#                     " MarkDuplicates INPUT=", output.name, "/", sample.names[i], "/paired.bam",
-#                     " OUTPUT=", output.name, "/", sample.names[i], "/dedup_paired.bam",
-#                     " METRICS_FILE=", output.name, "/", sample.names[i], "/metrics.txt",
+#                     " MarkDuplicates INPUT=", output.directory, "/", sample.names[i], "/paired.bam",
+#                     " OUTPUT=", output.directory, "/", sample.names[i], "/dedup_paired.bam",
+#                     " METRICS_FILE=", output.directory, "/", sample.names[i], "/metrics.txt",
 #                     " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
 #              ignore.stdout = quiet, ignore.stderr = quiet)
 #
-#       system(paste0("mv ", output.name, "/", sample.names[i], "/metrics.txt ",
-#                     output.name, "/", sample.names[i], "/duplication_stats.txt"))
+#       system(paste0("mv ", output.directory, "/", sample.names[i], "/metrics.txt ",
+#                     output.directory, "/", sample.names[i], "/duplication_stats.txt"))
 #
 #       #HERe again
 #       system(paste0(picard.path, "picard -Xmx", memory, "g",
-#                     " BuildBamIndex INPUT=", output.name, "/", sample.names[i], "/dedup_paired.bam",
+#                     " BuildBamIndex INPUT=", output.directory, "/", sample.names[i], "/dedup_paired.bam",
 #                     " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
 #              ignore.stdout = quiet, ignore.stderr = quiet)
 #
 #       #Gets the genome coverage using bedtools
 #       system(paste0(samtools.path, "samtools idxstats --threads ", threads, " ",
-#                     output.name, "/", sample.names[i], "/dedup_paired.bam > ",
-#                     output.name, "/", sample.names[i], "/samtools_idxstats.txt"))
+#                     output.directory, "/", sample.names[i], "/dedup_paired.bam > ",
+#                     output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
 #
-#       system(paste0("rm ", output.name, "/", sample.names[i], "/paired.bam"))
+#       system(paste0("rm ", output.directory, "/", sample.names[i], "/paired.bam"))
 #
 #       #IDX data
 #       i.headers = c("marker", "length", "mapped_reads", "unmapped_mates")
-#       idx.stats = data.table::fread(file = paste0(output.name, "/", sample.names[i], "/samtools_idxstats.txt"))
+#       idx.stats = data.table::fread(file = paste0(output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
 #       data.table::setnames(idx.stats, i.headers)
 #       idx.stats = idx.stats[idx.stats$marker != "*",]
 #
@@ -421,7 +399,7 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
 #       #Total number of un-mapped reads
 #       mapped.all = sum(idx.stats$mapped_reads)
 #       unmapped.all = as.numeric(system(paste0("samtools view -c -f 4 ",
-#                                               output.name, "/", sample.names[i], "/dedup_paired.bam"), intern = T))
+#                                               output.directory, "/", sample.names[i], "/dedup_paired.bam"), intern = T))
 #
 #       #Goes through each locus and calculates stats
 #       locus.names = unique(idx.stats$marker)
@@ -440,7 +418,7 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
 #
 #     } #end j loop
 #
-#     write.table(collect.data, file = paste0(output.name, "/", sample.names[i], "/species_specificity_data.txt"), sep = "\t", row.names = F)
+#     write.table(collect.data, file = paste0(output.directory, "/", sample.names[i], "/species_specificity_data.txt"), sep = "\t", row.names = F)
 #
 #     #Collects the overall summary data
 #     data.table::set(all.data, i = as.integer(i), j = match("group", header.all), value = group.name )
@@ -457,7 +435,7 @@ summary.sampleSensitivity = function(alignment.directory = NULL,
 #
 #   }# end i loop
 #
-#   write.table(all.data, file = paste0(output.name, "/sample-specificity_summmary.txt"), sep = "\t", row.names = F)
+#   write.table(all.data, file = paste0(output.directory, "/sample-specificity_summmary.txt"), sep = "\t", row.names = F)
 #
 #   #### Print some textual summary here
 #
