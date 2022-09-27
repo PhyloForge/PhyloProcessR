@@ -29,9 +29,9 @@
 #' @export
 
 
-analysis.readStats = function(read.directory = NULL,
-                              output.directory = "read-stats",
-                              overwrite = FALSE) {
+readStats = function(read.directory = NULL,
+                     output.directory = "read-stats",
+                     overwrite = FALSE) {
 
   #Debug comment out
   # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"

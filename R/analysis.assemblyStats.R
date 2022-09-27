@@ -28,9 +28,9 @@
 #'
 #' @export
 
-analysis.assemblyStats = function(assembly.directory = NULL,
-                                  output.directory = "assembly-stats",
-                                  overwrite = FALSE) {
+assemblyStats = function(assembly.directory = NULL,
+                         output.directory = "assembly-stats",
+                         overwrite = FALSE) {
 
 
   # assembly.directory = "/Volumes/LaCie/VenomCap/data-analysis/draft-assemblies"
