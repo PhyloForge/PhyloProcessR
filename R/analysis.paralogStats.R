@@ -1,4 +1,4 @@
-#' @title matchTargets
+#' @title analysis.paralogStats
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -44,64 +44,41 @@
 #'
 #' @export
 
-matchParalogs = function(assembly.directory = NULL,
-                         target.file = NULL,
-                         alignment.contig.name = NULL,
-                         output.directory = "match-targets",
-                         min.match.percent = 50,
-                         min.match.length = 40,
-                         min.match.coverage = 50,
-                         trim.target = FALSE,
-                         threads = 1,
-                         memory = 1,
-                         overwrite = FALSE,
-                         resume = TRUE,
-                         quiet = TRUE,
-                         blast.path = NULL,
-                         bbmap.path = NULL) {
-#
-
-  # comb.loci = list.files("/Volumes/Rodents/Murinae/paralogs", full.names = T)
-  #
-  # save.loci = DNAStringSet()
-  # for (j in 1:length(comb.loci)){
-  #
-  #   temp.loci = readDNAStringSet(comb.loci[j], format = "fasta")
-  #   names(temp.loci) = gsub("_sequence.fa", "", gsub(".*\\/", "", comb.loci[j]))
-  #   save.loci = append(save.loci, temp.loci)
-  #
-  # }
-  #
-  # final.loci = as.list(as.character(save.loci))
-  #
-  # PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
-  #                      "/Volumes/Rodents/Murinae/paralogs/mouse_paralogs.fa", nbchar = 1000000, as.string = T)
-  #
+paralogStats = function(assembly.directory = NULL,
+                        target.file = NULL,
+                        alignment.contig.name = NULL,
+                        output.directory = "match-targets",
+                        min.match.percent = 50,
+                        min.match.length = 40,
+                        min.match.coverage = 50,
+                        trim.target = FALSE,
+                        threads = 1,
+                        memory = 1,
+                        overwrite = FALSE,
+                        quiet = TRUE,
+                        blast.path = NULL,
+                        bbmap.path = NULL) {
 
 
-#   #Debug setup
-  # setwd("/Volumes/Rodents/Murinae/Data_Processing") #Your main project directory
-  # assembly.directory<-"/Volumes/Rodents/Murinae/Data_Processing/iupacAssemblies"
-  # target.file<-"/Volumes/Rodents/Murinae/paralogs/mouse_paralogs.fa"
-  # output.directory = "paralogFinder"
-  # alignment.contig.name = "paralog_murinae"
-  # #
-  # # #Main settings
-  #  threads = 4
-  #  memory = 8
-  #  trim.target = FALSE
-  #  overwrite = FALSE
-  #  resume = TRUE
-  #  quiet = TRUE
-  # #
+  # #Debug setup
+  # assembly.directory = "/Volumes/LaCie/VenomCap/data-analysis/draft-assemblies"
+  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/paralog-stats"
+  # target.file = "/Volumes/LaCie/VenomCap/input-seq.fasta"
+  # alignment.contig.name = "paralog_counts"
+  #
+  # bbmap.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # blast.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  #
+  # quiet = TRUE
+  # overwrite = FALSE
+  # threads = 6
+  # memory = 6
+  #
   # # #tweak settings (make some statements to check these)
   #  min.match.percent = 60
   #  min.match.length = 50
-  #  min.match.coverage = 50
-  # #
-  # # #program paths
-  #  blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-  #  bbmap.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  #  min.match.coverage = 35
+
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -198,7 +175,7 @@ matchParalogs = function(assembly.directory = NULL,
     data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
 
     #Make sure the hit is greater than 50% of the reference length
-    #filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
+    filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
     #Reads in contigs
     contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", sample, "_renamed-contigs.fa"), format = "fasta")
@@ -206,27 +183,52 @@ matchParalogs = function(assembly.directory = NULL,
 
     paralog.loci = unique(filt.data$qName)
 
+    #Stats table prepare
+    header.data = c("sample", "total_nucleotides", "total_megabases", "total_contigs",
+                    "unique_paralogs", "mean_copy", "median_copy", "min_copy", "max_copy",
+                    "mean_contig_length","median_contig_length", "max_contig_length", "min_contig_length")
+    collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(paralog.loci), ncol = length(header.data)))
+    data.table::setnames(collect.data, header.data)
+    collect.data[, sample:=as.character(sample)]
+
+
     all.paralogs = Biostrings::DNAStringSet()
+    para.count = c()
     for (j in 1:length(paralog.loci)){
 
         temp.para = filt.data[filt.data$qName %in% paralog.loci[j],]
+        if (nrow(temp.para) <= 1){ next}
         para.contigs = contigs[names(contigs) %in% temp.para$tName]
         names(para.contigs) = paste0(sample, "_|_", paralog.loci[j], "-p", seq(1:length(para.contigs)))
         all.paralogs = append(all.paralogs, para.contigs)
-
+        para.count = append(para.count, length(para.contigs))
     }
 
-    #Finds probes that match to two or more contigs
-    final.loci = as.list(as.character(all.paralogs))
-    PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(species.dir, "/", sample, "_matching-paralogs.fa"), nbchar = 1000000, as.string = T)
+    data.table::set(collect.data, i = as.integer(i), j = match("sample", header.data), value = gsub(".fa|.fasta", "", file.names[i]))
+    data.table::set(collect.data, i = as.integer(i), j = match("total_nucleotides", header.data), value = sum(Biostrings::width(all.paralogs)))
+    data.table::set(collect.data, i = as.integer(i), j = match("total_megabases", header.data), value = sum(Biostrings::width(all.paralogs))/1000000)
+    data.table::set(collect.data, i = as.integer(i), j = match("total_contigs", header.data), value = length(Biostrings::width(all.paralogs)) )
 
-    print(paste0(sample, " paralog matching complete. ", length(final.loci), " targets found!"))
+    data.table::set(collect.data, i = as.integer(i), j = match("unique_paralogs", header.data), value = length(para.count) )
+    data.table::set(collect.data, i = as.integer(i), j = match("mean_copy", header.data), value = mean(para.count) )
+    data.table::set(collect.data, i = as.integer(i), j = match("median_copy", header.data), value = median(para.count) )
+    data.table::set(collect.data, i = as.integer(i), j = match("min_copy", header.data), value = min(para.count) )
+    data.table::set(collect.data, i = as.integer(i), j = match("max_copy", header.data), value = max(para.count) )
+
+    data.table::set(collect.data, i = as.integer(i), j = match("mean_contig_length", header.data), value = mean(Biostrings::width(all.paralogs)))
+    data.table::set(collect.data, i = as.integer(i), j = match("median_contig_length", header.data), value = median(Biostrings::width(all.paralogs)))
+    data.table::set(collect.data, i = as.integer(i), j = match("max_contig_length", header.data), value = max(Biostrings::width(all.paralogs)))
+    data.table::set(collect.data, i = as.integer(i), j = match("min_contig_length", header.data), value = min(Biostrings::width(all.paralogs)))
+
+    print(paste0(sample, " paralog stats complete. ", length(final.loci), " paralogs found!"))
 
     system(paste0("rm ", species.dir, "/", sample, "_target-blast-match.txt"))
     system(paste0("rm ", species.dir, "/", sample, "_renamed-contigs.fa"))
 
   }# end i loop
+
+  write.table(collect.data, file = paste0(output.directory, "/sample-paralog-summary.txt"), sep = "\t", row.names = F)
+
 }
 
 
