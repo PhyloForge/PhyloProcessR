@@ -1,4 +1,4 @@
-#' @title analysis.paralogStats
+#' @title paralogStats
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -47,17 +47,15 @@
 paralogStats = function(assembly.directory = NULL,
                         target.file = NULL,
                         alignment.contig.name = NULL,
-                        output.directory = "match-targets",
+                        output.directory = "paralog-stats",
                         min.match.percent = 50,
                         min.match.length = 40,
                         min.match.coverage = 50,
-                        trim.target = FALSE,
                         threads = 1,
                         memory = 1,
                         overwrite = FALSE,
                         quiet = TRUE,
-                        blast.path = NULL,
-                        bbmap.path = NULL) {
+                        blast.path = NULL) {
 
 
   # #Debug setup
@@ -88,14 +86,6 @@ paralogStats = function(assembly.directory = NULL,
     }#end if
   } else { blast.path = "" }
 
-  #Same adds to bbmap path
-  if (is.null(bbmap.path) == FALSE){
-    b.string = unlist(strsplit(bbmap.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bbmap.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { bbmap.path = "" }
-
   #Initial checks
   if (assembly.directory == output.directory){ stop("You should not overwrite the original contigs.") }
   if (is.null(target.file) == T){ stop("A fasta file of targets to match to assembly contigs is needed.") }
@@ -113,6 +103,14 @@ paralogStats = function(assembly.directory = NULL,
   #headers for the blast db
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
              "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
+
+  #Stats table prepare
+  header.data = c("sample", "total_nucleotides", "total_megabases", "total_contigs",
+                  "unique_paralogs", "mean_copy", "median_copy", "min_copy", "max_copy",
+                  "mean_contig_length","median_contig_length", "max_contig_length", "min_contig_length")
+  collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(file.names), ncol = length(header.data)))
+  data.table::setnames(collect.data, header.data)
+  collect.data[, sample:=as.character(sample)]
 
   #Matching and processing for each sample
   for (i in 1:length(file.names)) {
@@ -183,22 +181,13 @@ paralogStats = function(assembly.directory = NULL,
 
     paralog.loci = unique(filt.data$qName)
 
-    #Stats table prepare
-    header.data = c("sample", "total_nucleotides", "total_megabases", "total_contigs",
-                    "unique_paralogs", "mean_copy", "median_copy", "min_copy", "max_copy",
-                    "mean_contig_length","median_contig_length", "max_contig_length", "min_contig_length")
-    collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(paralog.loci), ncol = length(header.data)))
-    data.table::setnames(collect.data, header.data)
-    collect.data[, sample:=as.character(sample)]
-
-
     all.paralogs = Biostrings::DNAStringSet()
     para.count = c()
     for (j in 1:length(paralog.loci)){
 
         temp.para = filt.data[filt.data$qName %in% paralog.loci[j],]
-        if (nrow(temp.para) <= 1){ next}
         para.contigs = contigs[names(contigs) %in% temp.para$tName]
+        if (length(para.contigs) <= 1){ next}
         names(para.contigs) = paste0(sample, "_|_", paralog.loci[j], "-p", seq(1:length(para.contigs)))
         all.paralogs = append(all.paralogs, para.contigs)
         para.count = append(para.count, length(para.contigs))
@@ -220,7 +209,7 @@ paralogStats = function(assembly.directory = NULL,
     data.table::set(collect.data, i = as.integer(i), j = match("max_contig_length", header.data), value = max(Biostrings::width(all.paralogs)))
     data.table::set(collect.data, i = as.integer(i), j = match("min_contig_length", header.data), value = min(Biostrings::width(all.paralogs)))
 
-    print(paste0(sample, " paralog stats complete. ", length(final.loci), " paralogs found!"))
+    print(paste0(sample, " paralog stats complete. ", length(all.paralogs), " paralogs found!"))
 
     system(paste0("rm ", species.dir, "/", sample, "_target-blast-match.txt"))
     system(paste0("rm ", species.dir, "/", sample, "_renamed-contigs.fa"))

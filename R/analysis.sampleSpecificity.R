@@ -35,7 +35,7 @@
 #' @export
 
 analysis.sampleSpecificity = function(read.directory = NULL,
-                                      target.fasta = NULL,
+                                      target.file = NULL,
                                       output.directory = "sample-specificity",
                                       threads = 1,
                                       memory = 1,
@@ -46,7 +46,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
                                       samtools.path = NULL) {
 
   # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
-  # target.fasta = "/Volumes/LaCie/VenomCap/input-seq.fasta"
+  # target.file = "/Volumes/LaCie/VenomCap/input-seq.fasta"
   # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
   #
   # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
@@ -102,7 +102,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
   if (length(sample.names) == 0){ return("no samples remain to analyze.") }
 
   #reads in target markers
-  target.markers = Biostrings::readDNAStringSet(target.fasta)
+  target.markers = Biostrings::readDNAStringSet(target.file)
 
   #Specificity refers to the percentage of cleaned reads that can be mapped back to the target markers.
 
@@ -157,7 +157,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
       #Copies ortholog file to act as a reference
       #       system(paste0("cp ", sample.contigs, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
 
-      system(paste0("cp ", target.fasta, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
+      system(paste0("cp ", target.file, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
       system(paste0(bwa.path, "bwa index ", output.directory, "/", sample.names[i], "/sample-reference.fa"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 

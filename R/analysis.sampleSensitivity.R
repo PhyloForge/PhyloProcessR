@@ -35,7 +35,7 @@
 #' @export
 
 analysis.sampleSensitivity = function(alignment.directory = NULL,
-                                      target.fasta = NULL,
+                                      target.file = NULL,
                                       output.directory = "sample-sensitivity",
                                       threads = 1,
                                       memory = 1,
@@ -45,7 +45,7 @@ analysis.sampleSensitivity = function(alignment.directory = NULL,
 
 
   # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
-  # target.fasta = "/Volumes/LaCie/VenomCap/input-seq.fasta"
+  # target.file = "/Volumes/LaCie/VenomCap/input-seq.fasta"
   # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
   #
   # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
@@ -92,7 +92,7 @@ analysis.sampleSensitivity = function(alignment.directory = NULL,
   #Gather alignments
   alignment.files = list.files(alignment.directory, full.names = T)
   alignment.files = alignment.files[grep(".phy$", alignment.files)]
-  target.markers = Biostrings::readDNAStringSet(target.fasta)
+  target.markers = Biostrings::readDNAStringSet(target.file)
   target.markers = target.markers[duplicated(names(target.markers)) != T]
 
   marker.names = gsub(".*\\/", "", alignment.files)
@@ -301,7 +301,7 @@ analysis.sampleSensitivity = function(alignment.directory = NULL,
 #
 #   #Read in group data and the target markers
 #   group.data = read.csv(sample.groups, header = T)
-#   target.markers = Biostrings::readDNAStringSet(target.fasta)
+#   target.markers = Biostrings::readDNAStringSet(target.file)
 #
 #   #Specificity refers to the percentage of cleaned reads that can be mapped back to the target markers.
 #
@@ -354,7 +354,7 @@ analysis.sampleSensitivity = function(alignment.directory = NULL,
 #       } #end if statement
 #
 #       #Copies ortholog file to act as a reference
-#       system(paste0("cp ", target.fasta, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
+#       system(paste0("cp ", target.file, " ", output.directory, "/", sample.names[i], "/sample-reference.fa"))
 #       system(paste0(bwa.path, "bwa index ", output.directory, "/", sample.names[i], "/sample-reference.fa"),
 #              ignore.stdout = quiet, ignore.stderr = quiet)
 #
