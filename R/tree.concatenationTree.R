@@ -25,21 +25,21 @@
 #'
 #' @export
 
-concatenationTree = function(alignment.file = NULL,
-                                      output.directory = NULL,
-                                      output.name = NULL,
-                                      partition.file = NULL,
-                                      partition.scheme = c("file", "merge", "none"),
-                                      codon.partition = FALSE,
-                                      program = "IQTREE",
-                                      msub.type = c("mitochondrial", "nuclear"),
-                                      uf.bootstrap = 100,
-                                      rcluster = 100,
-                                      threads = 1,
-                                      memory = 1,
-                                      iqtree.path = NULL,
-                                      resume = TRUE,
-                                      overwrite = FALSE) {
+tree.concatenationTree = function(alignment.file = NULL,
+                                  output.directory = NULL,
+                                  output.name = NULL,
+                                  partition.file = NULL,
+                                  partition.scheme = c("file", "merge", "none"),
+                                  codon.partition = FALSE,
+                                  program = "IQTREE",
+                                  msub.type = c("mitochondrial", "nuclear"),
+                                  uf.bootstrap = 100,
+                                  rcluster = 100,
+                                  threads = 1,
+                                  memory = 1,
+                                  iqtree.path = NULL,
+                                  resume = TRUE,
+                                  overwrite = FALSE) {
 
   #Debug
   # alignment.file = alignment.files[i]
