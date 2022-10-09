@@ -36,17 +36,17 @@
 
 normalizeReads = function(input.reads = "quality-trimmed-reads",
                           output.directory = "normalized-reads",
-                          bbnorm.path = NULL,
+                          orna.path = NULL,
                           threads = 1,
                           memory = 1,
                           overwrite = FALSE,
                           quiet = TRUE) {
 
   # #Debug
-  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # input.reads = "read-processing/quality-trimmed-reads"
-  # output.directory = "read-processing/normalized-reads"
-  # bbnorm.path = "/usr/local/bin/"
+  # setwd("/Volumes/LaCie/Mantellidae_Genome")
+  # input.reads = "adaptor-removed-reads"
+  # output.directory = "normalized-reads"
+  # orna.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
   # threads = 4
   # memory = 8
   # resume = TRUE
@@ -54,12 +54,12 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
   # quiet = TRUE
 
   #Same adds to bbmap path
-  if (is.null(bbnorm.path) == FALSE){
-    b.string = unlist(strsplit(bbnorm.path, ""))
+  if (is.null(orna.path) == FALSE){
+    b.string = unlist(strsplit(orna.path, ""))
     if (b.string[length(b.string)] != "/") {
-      bbnorm.path = paste0(append(b.string, "/"), collapse = "")
+      orna.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { bbnorm.path = "" }
+  } else { orna.path = "" }
 
   #Quick checks
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
@@ -138,24 +138,26 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
       #################################################
       #sets up output reads
       outreads = paste0(out.path, "/", lane.name)
-      outreads[1] = paste0(out.path, "/", lane.name, "_READ1.fastq.gz")
-      outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
 
       #Runs fastp: only does adapter trimming, no quality stuff
-      system(paste0(bbnorm.path, "bbnorm.sh -Xmx", memory, "g",
-                    " in=",lane.reads[1], " in2=", lane.reads[2],
-                    " out=", outreads[1], " out2=", outreads[2],
-                    " target=40 mindepth=2"),
+      system(paste0(orna.path, "ORNA -type fastq",
+                    " -pair1 ",lane.reads[1], " -pair2 ", lane.reads[2],
+                    " -output ", outreads),
              ignore.stderr = quiet, ignore.stdout = quiet)
+
+      system(paste0("gzip ", outreads, "_1.fq"))
+      system(paste0("mv ", outreads, "_1.fq.gz", " ", outreads, "_READ1.fastq.gz"))
+      system(paste0("gzip ", outreads, "_2.fq"))
+      system(paste0("mv ", outreads, "_2.fq.gz", " ", outreads, "_READ2.fastq.gz"))
 
       #Gathers stats on initial data
       start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
-      end.reads = as.numeric(system(paste0("zcat < ", outreads[1], " | echo $((`wc -l`/4))"), intern = T))
+      end.reads = as.numeric(system(paste0("zcat < ", outreads, "_READ1.fastq.gz | echo $((`wc -l`/4))"), intern = T))
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Lane = gsub(".*_", "", lane.name),
                                Task = "normalize",
-                               Program = "fastp",
+                               Program = "ORNA",
                                startPairs = start.reads,
                                removePairs = start.reads-end.reads,
                                endPairs = end.reads)
