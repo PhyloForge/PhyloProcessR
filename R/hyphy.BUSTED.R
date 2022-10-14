@@ -42,17 +42,17 @@ hyphy.BUSTED = function(tree.directory = NULL,
 
 
   # #Read in basic genome info
-  # library(PhyloCap)
-  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
-  # tree.directory= "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/trees_oxphos-coding"
-  # alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/alignments_oxphos-coding"
-  # #metadata.file = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Mus-selected-sequences_metadata_final.csv"
-  # dataset.name = "Busted"
-  # threads = 4
-  # memory = 4
-  # resume = T
-  # overwrite = F
-  # hyphy.path = "/usr/local/bin"
+  library(PhyloCap)
+  setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
+  tree.directory= "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/trees_oxphos-coding"
+  alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial/Align-Trees/nuclear/alignments_oxphos-coding"
+  #metadata.file = "/Volumes/Rodents/Australian_Rodents/Data_Processing/Mus-selected-sequences_metadata_final.csv"
+  dataset.name = "Busted"
+  threads = 4
+  memory = 4
+  resume = T
+  overwrite = F
+  hyphy.path = "/usr/local/bin"
 
   #Same adds to bbmap path
   if (is.null(hyphy.path) == FALSE){
@@ -161,27 +161,27 @@ hyphy.BUSTED = function(tree.directory = NULL,
 #
 #
 #
-#     json.data = jsonlite::fromJSON(paste0(output.directory, "/", locus.name, "/BUSTED-results.json"))
-#     branch.att = json.data$`branch attributes`
-#     branch.att = unlist(branch.att[[1]])
-#
-#     #Gather stats
-#     dn.stats = branch.att[grep("dN", names(branch.att) )]
-#     ds.stats = branch.att[grep("dS", names(branch.att) )]
-#
-#     #Make table from stats
-#     ds.data = data.frame(Sample = gsub(".dS", "", names(ds.stats)),
-#                dS = as.numeric(ds.stats))
-#
-#     dn.data = data.frame(Sample = gsub(".dN", "", names(dn.stats)),
-#                dN = as.numeric(dn.stats))
-#
-#     w.data = merge(ds.data, dn.data, by = "Sample")
-#     w.data$omega = w.data$dN/w.data$dS
-#
-#     write.csv(w.data, file = paste0(output.directory, "/", gene.name, "/dn-ds_stats.csv"), row.names = F, quote = F)
-#
-#     print(paste0(gene.name, " finished omega calculation!"))
+    json.data = jsonlite::fromJSON(paste0(output.directory, "/", locus.name, "/BUSTED-results.json"))
+    branch.att = json.data$`branch attributes`
+    branch.att = unlist(branch.att[[1]])
+
+    #Gather stats
+    dn.stats = branch.att[grep("dN", names(branch.att) )]
+    ds.stats = branch.att[grep("dS", names(branch.att) )]
+
+    #Make table from stats
+    ds.data = data.frame(Sample = gsub(".dS", "", names(ds.stats)),
+               dS = as.numeric(ds.stats))
+
+    dn.data = data.frame(Sample = gsub(".dN", "", names(dn.stats)),
+               dN = as.numeric(dn.stats))
+
+    w.data = merge(ds.data, dn.data, by = "Sample")
+    w.data$omega = w.data$dN/w.data$dS
+
+    write.csv(w.data, file = paste0(output.directory, "/", gene.name, "/dn-ds_stats.csv"), row.names = F, quote = F)
+
+    print(paste0(gene.name, " finished omega calculation!"))
 
     #Gets Dn/Ds from experiment hyphy function will probably have to change later
     # system(paste0(hyphy.path, "hyphy ", mg94.path, "FitMG94.bf",

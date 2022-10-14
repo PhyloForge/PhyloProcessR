@@ -55,9 +55,9 @@ hyphy.Parser = function(results.directory = NULL,
 
   #Directoires
   setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Rodent_Mitochondrial")
-  results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/slac_all"
-  output.name = "slac_all"
-  hyphy.analysis = "SLAC"
+  results.directory = "/Volumes/Rodents/Australian_Rodents/Data_Processing/hyphy/busted_all"
+  output.name = "busted_all"
+  hyphy.analysis = "BUSTED"
   threads = 4
   memory = 8
   resume = T

@@ -35,7 +35,7 @@
 assembleRNASpades = function(input.reads = NULL,
                              output.directory = "processed-reads/rnaspades-assembly",
                              assembly.directory = "draft-transcripts",
-                             spades.path = "spades.py",
+                             spades.path = NULL,
                              kmer.values = c(21,33,55,77,99,127),
                              threads = 1,
                              memory = 4,
@@ -56,12 +56,22 @@ assembleRNASpades = function(input.reads = NULL,
   # quiet = FALSE
   # resume = TRUE
 
+
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
   if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(output.directory) == TRUE){ stop("Please provide an output directory.") }
   if (is.null(assembly.directory) == TRUE){ stop("Please provide an contig save directory.") }
+
+
+  #Same adds to bbmap path
+  if (is.null(spades.path) == FALSE){
+    b.string = unlist(strsplit(spades.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      spades.path = paste0(append(b.string, "/"), collapse = "")
+    }#end if
+  } else { spades.path = "" }
 
   #Sets directory and reads
   if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
@@ -126,7 +136,7 @@ assembleRNASpades = function(input.reads = NULL,
     }#end j loop
 
     #Runs spades command
-    system(paste0(spades.path, " --rna ", final.read.string,
+    system(paste0(spades.path, "spades.py --rna ", final.read.string,
                   "-o ", save.assem, " -k ", k.val, " ",
                   "-t ", threads, " -m ", memory),
            ignore.stdout = quiet)
