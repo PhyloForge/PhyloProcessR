@@ -106,7 +106,7 @@ paralogStats = function(assembly.directory = NULL,
 
   #Stats table prepare
   header.data = c("sample", "total_nucleotides", "total_megabases", "total_contigs",
-                  "unique_paralogs", "mean_copy", "median_copy", "min_copy", "max_copy",
+                  "unique_paralogs", "all_paralogs", "mean_copy", "median_copy", "min_copy", "max_copy",
                   "mean_contig_length","median_contig_length", "max_contig_length", "min_contig_length")
   collect.data = data.table::data.table(matrix(as.numeric(0), nrow = length(file.names), ncol = length(header.data)))
   data.table::setnames(collect.data, header.data)
@@ -198,7 +198,8 @@ paralogStats = function(assembly.directory = NULL,
     data.table::set(collect.data, i = as.integer(i), j = match("total_megabases", header.data), value = sum(Biostrings::width(all.paralogs))/1000000)
     data.table::set(collect.data, i = as.integer(i), j = match("total_contigs", header.data), value = length(Biostrings::width(all.paralogs)) )
 
-    data.table::set(collect.data, i = as.integer(i), j = match("unique_paralogs", header.data), value = length(para.count) )
+    data.table::set(collect.data, i = as.integer(i), j = match("unique_paralogs", header.data), value = length(paralog.loci) )
+    data.table::set(collect.data, i = as.integer(i), j = match("all_paralogs", header.data), value = length(para.count) )
     data.table::set(collect.data, i = as.integer(i), j = match("mean_copy", header.data), value = mean(para.count) )
     data.table::set(collect.data, i = as.integer(i), j = match("median_copy", header.data), value = median(para.count) )
     data.table::set(collect.data, i = as.integer(i), j = match("min_copy", header.data), value = min(para.count) )
