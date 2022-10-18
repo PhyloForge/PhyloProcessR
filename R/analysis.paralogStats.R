@@ -209,7 +209,7 @@ paralogStats = function(assembly.directory = NULL,
     data.table::set(collect.data, i = as.integer(i), j = match("max_contig_length", header.data), value = max(Biostrings::width(all.paralogs)))
     data.table::set(collect.data, i = as.integer(i), j = match("min_contig_length", header.data), value = min(Biostrings::width(all.paralogs)))
 
-    print(paste0(sample, " paralog stats complete. ", length(all.paralogs), " paralogs found!"))
+    print(paste0(sample, " paralog stats completed. ", length(all.paralogs), " paralogs found!"))
 
     system(paste0("rm ", species.dir, "/", sample, "_target-blast-match.txt"))
     system(paste0("rm ", species.dir, "/", sample, "_renamed-contigs.fa"))
