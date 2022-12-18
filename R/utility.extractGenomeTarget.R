@@ -106,51 +106,27 @@ extractGenomeTarget = function(genome.path = NULL,
   # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
   # genome.search.string = "_genomic.fna.gz"
 #
-#   setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/2_sea_snake_genomes")
-#   genome.path = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/Gene_based/genomes/GCA_019472885_1_HCur_v2_genomic.fa"
-#   input.file = "Hcur_coordinates.txt"
-#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin/"
-#
-#   output.name = "Hcur"
-#   input.type = "bed"
-#   match.by.chr = TRUE
-#   output.bed = TRUE
-#   bed.headers = FALSE
-#   output.table = TRUE
-#   duplicate.matches = "best"
-#   minimum.match.length = 100
-#   minimum.match.identity = 0.60
-#   add.flanks = 500
-#   threads = 8
-#   memory = 24
-#   overwrite = FALSE
-#   quiet = FALSE
-#   merge.matches = TRUE
-#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-#   genome.search.string = "_genomic.fna.gz"
-#
-#   genome.path = genome.dir
-#   input.file = paste0(work.dir, "/BUSCO_all-reference.fa")
-#   input.type = "fasta"
-#   output.name = out.dir
-#   output.bed = TRUE
-#   bed.headers = FALSE
-#   name.bed.names = TRUE
-#   output.table = TRUE
-#   match.by.chr = FALSE
-#   duplicate.matches = c("best")
-#   merge.matches = FALSE
-#   minimum.match.length = 100
-#   minimum.match.identity = 0.75
-#   minimum.match.coverage = 0.75
-#   add.flanks = 0
-#   genome.search.string = NULL
-#   threads = 8
-#   memory = 32
-#   overwrite = FALSE
-#   quiet = FALSE
-#   blast.path = conda.path
-
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/2_sea_snake_genomes")
+  # genome.path = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/Gene_based/genomes/GCA_019472885_1_HCur_v2_genomic.fa"
+  # input.file = "Hcur_coordinates.txt"
+  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin/"
+  #
+  # output.name = "Hcur"
+  # input.type = "bed"
+  # output.bed = TRUE
+  # bed.headers = FALSE
+  # output.table = FALSE
+  # match.by.chr = FALSE
+  # duplicate.matches = "none"
+  # merge.matches = FALSE
+  # minimum.match.length = 100
+  # minimum.match.identity = 0.75
+  # add.flanks = 30
+  # genome.search.string = "_genomic.fna.gz"
+  # threads = 8
+  # memory = 16
+  # overwrite = FALSE
+  # quiet = FALSE
 
   #Same adds to blast path
   if (is.null(blast.path) == FALSE){
@@ -493,8 +469,6 @@ extractGenomeTarget = function(genome.path = NULL,
     if (length(zipped.up) == 1){ system(paste0("rm ", species.dir, "/", sample, "_genome.fa") ) }
 
   }# end i loop
-
-  system(paste0("rm ", output.name, "/target_nucl-blast_db*"))
 
 } #End function
 
