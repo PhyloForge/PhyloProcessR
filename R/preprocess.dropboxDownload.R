@@ -71,7 +71,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     sample.reads = all.reads[grep(as.character(sample.data$File[i]), all.reads)]
 
     #For checking if reads are present
-    if (length(sample.reads) >= 3){ stop("Problem with reads, row ", i, " File column matches to more than 1 sample.") }
+    if (length(sample.reads) >= 3){ stop("Problem with reads, row ", i, " File column matches to more than 1 sample. Check to ensure sample spreadsheet has multiple entries for samples with more than 1 lane of data.") }
 
     #Skip not found or crash
     if (length(sample.reads) == 0) {

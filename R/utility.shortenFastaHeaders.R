@@ -30,9 +30,8 @@
 
 shortenFastaHeaders = function(fasta.directory = NULL,
                                output.directory = "shortened-headers",
-                               number.characters = 70,
+                               number.characters = 50,
                                overwrite = FALSE,
-                               resume = TRUE,
                                quiet = TRUE) {
 
 
@@ -43,12 +42,7 @@ shortenFastaHeaders = function(fasta.directory = NULL,
 
   if (is.null(fasta.directory) == T){ stop("A directory of genome(s) is needed.") }
 
-  #So I don't accidentally delete everything while testing resume
-  if (resume == TRUE & overwrite == TRUE){
-    overwrite = FALSE
-    stop("Error: resume = T and overwrite = T, cannot resume if you are going to delete everything!")
-  }
-
+  #Overwrites
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory))

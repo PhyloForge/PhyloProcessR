@@ -105,28 +105,29 @@ extractGenomeTarget = function(genome.path = NULL,
   # merge.matches = TRUE
   # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
   # genome.search.string = "_genomic.fna.gz"
-
-  # setwd("/Users/chutter/Dropbox/Elapid_probe_design/Gene_based")
-  # genome.path = "/Users/chutter/Dropbox/Elapid_probe_design/Gene_based/genomes/GCA_019473425_1_HCya_v2_genomic.fa"
-  # input.file = "Hcya_coordinates.txt"
-  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin/"
-  # output.name = "Hcur"
-  # input.type = "bed"
-  # match.by.chr = TRUE
-  # output.bed = TRUE
-  # bed.headers = TRUE
-  # output.table = TRUE
-  # duplicate.matches = "best"
-  # minimum.match.length = 100
-  # minimum.match.identity = 0.60
-  # add.flanks = 500
-  # threads = 8
-  # memory = 24
-  # overwrite = FALSE
-  # quiet = FALSE
-  # merge.matches = TRUE
-  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-  # genome.search.string = "_genomic.fna.gz"
+#
+#   setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/2_sea_snake_genomes")
+#   genome.path = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/Gene_based/genomes/GCA_019472885_1_HCur_v2_genomic.fa"
+#   input.file = "Hcur_coordinates.txt"
+#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin/"
+#
+#   output.name = "Hcur"
+#   input.type = "bed"
+#   match.by.chr = TRUE
+#   output.bed = TRUE
+#   bed.headers = FALSE
+#   output.table = TRUE
+#   duplicate.matches = "best"
+#   minimum.match.length = 100
+#   minimum.match.identity = 0.60
+#   add.flanks = 500
+#   threads = 8
+#   memory = 24
+#   overwrite = FALSE
+#   quiet = FALSE
+#   merge.matches = TRUE
+#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+#   genome.search.string = "_genomic.fna.gz"
 #
 #   genome.path = genome.dir
 #   input.file = paste0(work.dir, "/BUSCO_all-reference.fa")
@@ -431,7 +432,6 @@ extractGenomeTarget = function(genome.path = NULL,
         bam.table = data.frame(chr = final.table$qName, start = final.table$gStart, stop = final.table$gEnd)
         write.table(bam.table, file = paste0(species.dir, "/", sample, "_final-table.bed"),
                     row.names = FALSE,
-                    col.names = bed.headers,
                     quote = F,
                     sep = "\t")
       }#end if
@@ -459,8 +459,7 @@ extractGenomeTarget = function(genome.path = NULL,
       #gets ranges of stuff and obtains sequences
       final.table = read.table(input.file, header = bed.headers)
 
-
-      if (name.bed.names == TRUE){
+      if (bed.headers == TRUE){
         gr.ranges = data.frame(seqnames = final.table$chrom,
                                start = as.integer(final.table$start),
                                end = as.integer(final.table$stop) )
@@ -478,7 +477,7 @@ extractGenomeTarget = function(genome.path = NULL,
 
         #gets ranges of stuff and obtains sequences
         target.seqs = BSgenome::getSeq(fa, fin.ranges)
-        names(target.seqs) = paste0(gr.ranges$chrom, "_", gr.ranges$start, "-",gr.ranges$end, "_|_", sample)
+        names(target.seqs) = paste0(gr.ranges$seqnames, "_", gr.ranges$start, "-",gr.ranges$end, "_|_", sample)
       }#end else
 
     }#end bed
