@@ -148,11 +148,12 @@ if (decontamination == TRUE){
 
 # Normalizes reads
 if (normalize.reads == TRUE) {
+  #Normalizes reads using ORNA
   normalizeReads(input.reads = input.reads,
                  output.directory = paste0(processed.reads, "/normalized-reads"),
-                 bbnorm.path = bbnorm.path,
+                 orna.path = conda.path,
                  threads = threads,
-                 mem = memory,
+                 memory = memory,
                  overwrite = overwrite,
                  quiet = quiet)
   input.reads = paste0(processed.reads, "/normalized-reads")

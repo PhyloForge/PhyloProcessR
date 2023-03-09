@@ -72,23 +72,23 @@ addContigsAlignments = function(alignment.directory = NULL,
                                 mafft.path = NULL,
                                 blast.path = NULL) {
 
-  library(foreach)
-  library(PhyloCap)
-  setwd("/Volumes/LaCie/Mantellidae_Subfamily/Transcriptomes_new")
-  alignment.directory = "Alignments/original"
-  alignment.format = "phylip"
-  output.directory = "Alignments/new_alignments"
-  output.format = "phylip"
-  sample.contigs = "contigs"
-  duplicate.handling = "merge"
-  threads = 8
-  memory = 24
-  overwrite = FALSE
-  quiet = FALSE
-  copy.all = TRUE
-  mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-  blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-  bbmap.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # library(foreach)
+  # library(PhyloCap)
+  # setwd("/Volumes/LaCie/Mantellidae_Subfamily/Transcriptomes_new")
+  # alignment.directory = "Alignments/original"
+  # alignment.format = "phylip"
+  # output.directory = "Alignments/new_alignments"
+  # output.format = "phylip"
+  # sample.contigs = "contigs"
+  # duplicate.handling = "merge"
+  # threads = 8
+  # memory = 24
+  # overwrite = FALSE
+  # quiet = FALSE
+  # copy.all = TRUE
+  # mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # bbmap.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
 
   #Adds slash to path
   if (is.null(mafft.path) == FALSE){

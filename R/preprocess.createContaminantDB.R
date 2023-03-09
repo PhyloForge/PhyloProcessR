@@ -32,20 +32,17 @@ createContaminantDB = function(decontamination.list = NULL,
                                include.fasta = NULL,
                                overwrite = FALSE) {
 
-  #Debug
+  # #Debug
   # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # read.directory = "read-processing/adaptor-removed-reads"
-  # output.directory = "read-processing/decontaminated-reads"
-  # decontamination.path = "/Users/chutter/Dropbox/Research/0_Github/Contamination_Genomes"
-  # samtools.path = "/Users/chutter/miniconda3/bin/samtools"
-  # bwa.path = "/usr/local/bin/bwa"
-  # mode = "directory"
-  # threads = 4
-  # mem = 8
-  # resume = TRUE
+  # output.directory = "contaminant-references"
+  # decontamination.list = "decontamination_database.csv"
   # overwrite = FALSE
   # quiet = TRUE
-  # map.match = 0.99
+  # include.human = TRUE
+  # include.univec = TRUE
+  # include.genbank = NULL
+  # include.fasta = NULL
+  # # map.match = 0.99
 
   #Quick checks
   if (is.null(decontamination.list) == TRUE){ stop("Please provide list of sequences and genbank numbers.") }

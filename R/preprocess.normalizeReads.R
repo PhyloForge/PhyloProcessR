@@ -34,7 +34,7 @@
 #'
 #' @export
 
-normalizeReads = function(input.reads = "quality-trimmed-reads",
+normalizeReads = function(input.reads = NULL,
                           output.directory = "normalized-reads",
                           orna.path = NULL,
                           threads = 1,
@@ -163,6 +163,8 @@ normalizeReads = function(input.reads = "quality-trimmed-reads",
                                endPairs = end.reads)
 
       summary.data = rbind(summary.data, temp.remove)
+
+      system(paste0("rm ", outreads, "_READ2.fastq.h5"))
 
     }#end sample j loop
 

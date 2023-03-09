@@ -41,7 +41,7 @@ makeConsensus = function(alignment = NULL,
 
   if (method == "IUPAC") {
     type <- match.arg(type)
-    res <- apply(align.in, 2, bma, warn.non.IUPAC = warn.non.IUPAC,
+    res <- apply(align.in, 2, seqinr::bma, warn.non.IUPAC = warn.non.IUPAC,
                  type = type)
     names(res) <- NULL
   }

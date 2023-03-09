@@ -69,17 +69,17 @@ mergeDuplicates = function(alignment.directory = NULL,
                            quiet = FALSE,
                            mafft.path = NULL) {
 
-  setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs")
-  alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs/alignments/trimmed_all-markers"
-  alignment.format = "phylip"
-  output.directory = "alignments/rm-dup-trimmed_all-markers"
-  output.format = "phylip"
-  method = "merge-sample"
-  threads = 4
-  memory = 8
-  overwrite = TRUE
-  quiet = TRUE
-  mafft.path = "/usr/local/bin"
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs")
+  # alignment.directory = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/New-Guinea_Frogs/alignments/trimmed_all-markers"
+  # alignment.format = "phylip"
+  # output.directory = "alignments/rm-dup-trimmed_all-markers"
+  # output.format = "phylip"
+  # method = "merge-sample"
+  # threads = 4
+  # memory = 8
+  # overwrite = TRUE
+  # quiet = TRUE
+  # mafft.path = "/usr/local/bin"
 
   # *** combine non-overlapping seqs
   # *** check for duplicates and remove
@@ -170,7 +170,7 @@ mergeDuplicates = function(alignment.directory = NULL,
       }
 
       if (length(dup.names) != 0){
-        
+
         nodup.align = old.align[!names(old.align) %in% dup.names]
 
         #Goes through each duplicate
@@ -197,10 +197,10 @@ mergeDuplicates = function(alignment.directory = NULL,
 
               if (length(temp.col) == 0){ save.char = "-" }
               if (length(temp.col) == 1){ save.char = temp.col }
-              if (length(temp.col) == 2){ 
+              if (length(temp.col) == 2){
                 no.del = no.del + 1
                 skip.taxa = TRUE
-                break 
+                break
               }
 
               # temp.col = temp.col[temp.col != "Y"]
@@ -244,7 +244,7 @@ mergeDuplicates = function(alignment.directory = NULL,
         if (no.del != 0){
           print(paste0("***Removed ", no.del, " non-matching duplicates from ", save.name, "."))
         }
-        
+
 
       }#end if to do the thing
 
