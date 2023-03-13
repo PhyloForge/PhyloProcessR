@@ -170,7 +170,7 @@ normalizeReads = function(input.reads = NULL,
 
       summary.data = rbind(summary.data, temp.remove)
 
-      system(paste0("rm ", sample.names[i], "_READ2.fastq.h5"))
+      system(paste0("rm ", lane.name, "_READ2.fastq.h5"))
 
     }#end sample j loop
 
