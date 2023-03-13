@@ -96,8 +96,14 @@ normalizeReads = function(input.reads = NULL,
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
-  #Runs through each sample
-  for (i in 1:length(sample.names)) {
+  # #Sets up multiprocessing
+  cl = parallel::makeCluster(threads, outfile = "")
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(memory/threads)
+
+  foreach::foreach(i=1:length(gene.names), .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+    #Runs through each sample
+    #for (i in 1:length(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
@@ -171,6 +177,9 @@ normalizeReads = function(input.reads = NULL,
     print(paste0(sample.names[i], " Completed read normalization!"))
 
   }#end sample i loop
+
+  parallel::stopCluster(cl)
+
 
   write.csv(summary.data, file = paste0("logs/normalizeReads_summary.csv"), row.names = FALSE)
 }
