@@ -39,10 +39,11 @@
 runSpades = function(read.paths = NULL,
                      full.path.spades = NULL,
                      mismatch.corrector = FALSE,
-                     kmer.values = c(9,13,21,33,55,77,99,127),
-                     read.contigs = T,
-                     save.file = T,
+                     isolate = TRUE,
+                     kmer.values = c(21,33,55,77,99,127),
+                     read.contigs = F,
                      save.name = NULL,
+                     clean = FALSE,
                      threads = 1,
                      memory = 4,
                      overwrite = T,
@@ -51,11 +52,17 @@ runSpades = function(read.paths = NULL,
   # #debug
   # full.path.spades = spades.path
   # read.paths = temp.read.path
-  # supress.print = T
-  # save.file = F
-  # read.contigs = T
+  # #read.paths = paste0("/Volumes/LaCie/Mantellidae/Wakea_madinika_2001F54/", list.files("/Volumes/LaCie/Mantellidae/Wakea_madinika_2001F54"))
+  # quiet = F
+  # save.name = "iterative_temp/contigs"
+  # clean = T
+  # read.contigs = F
   # mismatch.corrector = F
+  # isolate = T
   # overwrite = T
+  # kmer.values = c(21,33,55,77,99,127)
+  # memory = 1024
+  # threads = 8
 
   #Same adds to bbmap path
   if (is.null(full.path.spades) == FALSE){
@@ -70,8 +77,11 @@ runSpades = function(read.paths = NULL,
     if (dir.exists("spades") == TRUE){ system(paste0("rm -r spades")) }
   }#end
 
+
+  if (isolate == TRUE && mismatch.corrector == TRUE) {stop("Both --isolate or --careful (mismatch corrector) can not be used together. Please choose only one.")}
+  if (mismatch.corrector == FALSE && isolate == FALSE){ mismatch.string = "" }
+  if (isolate == TRUE){ mismatch.string = "--isolate " }
   if (mismatch.corrector == TRUE){ mismatch.string = "--careful " }
-  if (mismatch.corrector == FALSE){ mismatch.string = "" }
 
   #Run SPADES on sample
   k = kmer.values
@@ -97,7 +107,7 @@ runSpades = function(read.paths = NULL,
 
     if (length(read.paths)  == 3){
       system(paste0(full.path.spades, "spades.py --pe1-1 ", read.paths[1],
-                    " --pe1-2 ", read.paths[2], " --merged ", read.paths[3],
+                    " --pe1-2 ", read.paths[2], " --pe1-m ", read.paths[3],
                     " -o spades -k ",k.val, " ", mismatch.string, "-t ", threads, " -m ", memory),
              ignore.stdout = quiet)
     }#end 3 reads
@@ -116,28 +126,30 @@ runSpades = function(read.paths = NULL,
   }#end k
 
   if (read.contigs == T){
-    if (file.exists("spades/contigs.fasta") == TRUE){
-      contigs = Biostrings::readDNAStringSet("spades/contigs.fasta")
-    } else {
+    if (file.exists("spades/scaffolds.fasta") == TRUE){
       contigs = Biostrings::readDNAStringSet("spades/scaffolds.fasta")
+    } else {
+      contigs = Biostrings::readDNAStringSet("spades/contigs.fasta")
     }#end else
+
+    if (length(contigs) == 0){
+      print("No contigs were assembled.")
+      return(contigs) }
+
   } #end if
 
-  if (save.file == T){
-    if (file.exists("spades/contigs.fasta") == TRUE){
-      system(paste0("cp spades/contigs.fasta ", save.name, ".fa"))
-    } else {
+  if (is.null(save.name) == FALSE){
+    if (file.exists("spades/scaffolds.fasta") == TRUE){
       system(paste0("cp spades/scaffolds.fasta ", save.name, ".fa"))
+    } else {
+      system(paste0("cp spades/contigs.fasta ", save.name, ".fa"))
     }#end else
   }#end save file
-  system("rm -r spades")
 
-  if (length(contigs) == 0){
-    print("No contigs were assembled.")
-    return(contigs) }
+  if (clean == TRUE){ system("rm -r spades") }
 
   if (read.contigs == T) {return(contigs) }
-  if (save.file == T) {return("Contigs were saved to file.") }
+  if (is.null(save.name) == F) {return("Contigs were saved to file.") }
 
   return("Nothing was saved.")
   ##############################

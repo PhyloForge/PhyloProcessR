@@ -34,6 +34,7 @@ runCap3 = function(contigs = input.contigs,
                    output.name = NULL,
                    cap3.path = NULL,
                    read.R = FALSE,
+                   include.singlets = FALSE,
                    a = 20,
                    b = 20,
                    c = 12,
@@ -87,8 +88,13 @@ runCap3 = function(contigs = input.contigs,
   # -z  N  specify min no. of good reads at clip pos N > 0 (3)
 
   #Writes contigs for cap3
-
-  #Same adds to bbmap path
+  # contigs = spades.contigs
+  #  cap3.path = "cap3"
+  # z = 3
+  #  o = 40
+  # e = 30
+  #  s = 900
+  #
   if (is.null(cap3.path) == FALSE){
     b.string = unlist(strsplit(cap3.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -96,11 +102,10 @@ runCap3 = function(contigs = input.contigs,
     }#end if
   } else { cap3.path = "" }
 
-
   if (class(contigs) != "character") {
     write.loci = as.list(as.character(contigs))
-    writeFasta(sequences = write.loci, names = names(write.loci),
-               "input_contigs.fa", nbchar = 1000000, as.string = T)
+    PhyloCap::writeFasta(sequences = write.loci, names = names(write.loci),
+                         "input_contigs.fa", nbchar = 1000000, as.string = T)
     contig.file = "input_contigs.fa"
   } else { contig.file = contigs }
 
@@ -117,11 +122,16 @@ runCap3 = function(contigs = input.contigs,
 
   #Reads in results files
   if (read.R == TRUE){
-    temp.assembled = Rsamtools::scanFa(Rsamtools::FaFile(paste0("input_contigs.fa.cap.contigs")))
-    temp.singlets = Rsamtools::scanFa(Rsamtools::FaFile(paste0("input_contigs.fa.cap.singlets")))
-    final.save = append(temp.assembled, temp.singlets)
-    system(paste("rm input_contigs.fa*"))
+    temp.assembled = Biostrings::readDNAStringSet(paste0("input_contigs.fa.cap.contigs"))
+    if (include.singlets == TRUE){
+      temp.singlets = Biostrings::readDNAStringSet(paste0("input_contigs.fa.cap.singlets"))
+      final.save = append(temp.assembled, temp.singlets)
+    } else{ final.save = temp.assembled }
+
+      system(paste("rm input_contigs.fa*"))
     return(final.save)
   }#end if
+
+  system(paste0("rm ", contig.file, "*"))
 
 }#end function
