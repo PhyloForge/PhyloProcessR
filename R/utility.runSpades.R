@@ -38,8 +38,8 @@
 
 runSpades = function(read.paths = NULL,
                      full.path.spades = NULL,
-                     mismatch.corrector = FALSE,
-                     isolate = TRUE,
+                     mismatch.corrector = TRUE,
+                     isolate = FALSE,
                      kmer.values = c(21,33,55,77,99,127),
                      read.contigs = F,
                      save.name = NULL,
