@@ -8,6 +8,8 @@
 #'
 #' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
 #'
+#' @param isolate algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#'
 #' @param read.contigs TRUE applies the adjust sequence direction function of MAFFT
 #'
 #' @param save.file if a file name is provided, save.name will be used to save aligment to file as a fasta
