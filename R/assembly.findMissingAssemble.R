@@ -84,7 +84,8 @@ findMissingAssemble = function(assembly.directory = NULL,
   mapper = "bbmap"
   quiet = TRUE
   overwrite = TRUE
-  threads = 6
+  threads = 8
+  memory = 1024
   min.match.percent = 60
   min.match.length = 100
   min.match.coverage = 35
@@ -269,12 +270,6 @@ findMissingAssemble = function(assembly.directory = NULL,
   writeFasta(sequences = final.loci, names = names(final.loci),
              paste0(output.directory, "/unique_matches.fa"), nbchar = 1000000, as.string = T)
 
-  #Cluster using cd-hit-est
-  # system(paste0(cdhit.path, "cd-hit-est -i ", output.directory, "/unclustered_matches.fa ",
-  #                "-o ", output.directory, "/clustered_matches.fa -c 0.8 -n 4 -T ", threads, " -M ", memory * 1000))
-  #
-  # new.reference = paste0(output.directory, "/clustered_matches.fa")
-
   #####################################################################################
   #### Read mapping and assembly step
   #####################################################################################
@@ -293,6 +288,7 @@ findMissingAssemble = function(assembly.directory = NULL,
   # 4. map reads to unique sample database
   # 5. assemble
 
+  dir.create("expanded-assemblies")
 
   for (i in 1:length(file.names)){
 
@@ -308,7 +304,6 @@ findMissingAssemble = function(assembly.directory = NULL,
     found.data = read.table(paste0(species.dir, "/filtered-blast-match.txt"), sep = "\t", header = T, stringsAsFactors = FALSE)
 
     #found.data1 = read.table(paste0(species.dir, "/found-missing-blast-match.txt"), sep = "\t", header = T, stringsAsFactors = FALSE)
-    #found.data1[found.data1$tName %in% found.data2$tName,]
     #found.data = rbind(found.data1, found.data2)
 
     sample.save = final.save[!names(final.save) %in% found.data$tName]
@@ -335,15 +330,20 @@ findMissingAssemble = function(assembly.directory = NULL,
     # Here is running hisat2
     system(paste0(hisat2.path, "hisat2 -q -x ", species.dir, "/index/reference",
                   " -1 ", set.reads[1], " -2 ", set.reads[2],
-                  " -S ", species.dir, "/mapped_reads.sam --mp 1,0 --sp 1,0 --score-min L,0.0,-0.4",
+                  " -S ", species.dir, "/mapped_reads.sam --mp 1,0 --sp 1,0 --score-min L,0.0,-0.3",
                   " --threads ", threads))
 
-    system(paste0(samtools.path, "samtools view -@ ", threads, " -b -f 0x02 ", species.dir, "/mapped_reads.sam > ", species.dir, "/mapped_only.sam"))
-    system(paste0(samtools.path, "samtools sort -n ", species.dir, "/mapped_only.sam > ", species.dir, "/mapped_sort.sam"))
+    system(paste0(samtools.path, "samtools view -@ ", threads, " -b -F 4 ", species.dir, "/mapped_reads.sam > ", species.dir, "/mapped_all.sam"))
+    system(paste0(samtools.path, "samtools view -@ ", threads, " -b -f 4 -F 264 ", species.dir, "/mapped_reads.sam > ", species.dir, "/mapped1.sam"))
+    system(paste0(samtools.path, "samtools view -@ ", threads, " -b -f 8 -F 260 ", species.dir, "/mapped_reads.sam > ", species.dir, "/mapped2.sam"))
+    system(paste0(samtools.path, "samtools merge ", species.dir, "/mapped_combined.sam ", species.dir, "/mapped_all.sam ", species.dir, "/mapped1.sam ", species.dir, "/mapped2.sam"))
+    system(paste0(samtools.path, "samtools sort -n ", species.dir, "/mapped_combined.sam > ", species.dir, "/mapped_sort.sam"))
 
-    #system(paste0(samtools.path, "samtools view -@ ", threads, " -b -f 12 -F 256 ", species.dir, "/mapped_reads.sam > ", species.dir, "/unmapped_only.sam"))
-    #system(paste0(samtools.path, "samtools sort -n ", species.dir, "/unmapped_only.sam > ", species.dir, "/unmapped_sort.sam"))
-
+    # system(paste0(samtools.path, "samtools flagstat ", species.dir, "/mapped_sort.sam"))
+    #
+    # system(paste0(samtools.path, "samtools view -@ ", threads, " -b -f 12 -F 256 ", species.dir, "/mapped_reads.sam > ", species.dir, "/unmapped_only.sam"))
+    # system(paste0(samtools.path, "samtools sort -n ", species.dir, "/unmapped_only.sam > ", species.dir, "/unmapped_sort.sam"))
+    #
     dir.create(paste0(species.dir, "/temp_reads"))
     dir.create(paste0(species.dir, "/temp_reads/sample"))
     system(paste0(samtools.path, "samtools fastq -@ ", threads, " ", species.dir, "/mapped_sort.sam",
@@ -357,22 +357,30 @@ findMissingAssemble = function(assembly.directory = NULL,
                         fastp.path = fastp.path,
                         threads = threads,
                         mem = memory,
-                        overwrite = TRUE,
+                        overwrite = overwrite,
                         quiet = F)
 
-    system(paste0("rm ", species.dir, "/mapped_only.sam ",
+    #Removes if nothing merged
+    if (file.size(paste0(species.dir, "/temp-merged-reads/sample/sample_READ3.fastq.gz")) == 0){
+      system(paste0("rm ", species.dir, "/temp-merged-reads/sample/sample_READ3.fastq.gz"))
+    }
+
+    system(paste0("rm ", species.dir, "/mapped_all.sam ",
+                  species.dir, "/mapped_combined.sam ",
                   species.dir, "/mapped_reads.sam ",
-                  species.dir, "/mapped_sort.sam"))
+                  species.dir, "/mapped_sort.sam ",
+                  species.dir, "/mapped1.sam ",
+                  species.dir, "/mapped2.sam"))
 
     temp.read.path = paste0(species.dir, "/temp-merged-reads/sample/", list.files(paste0(species.dir, "/temp-merged-reads/sample")))
-    system(paste0("rm -rf ", species.dir, "temp_reads"))
+    system(paste0("rm -rf ", species.dir, "/temp_reads"))
 
     #Runs spades
     spades.contigs = runSpades(read.paths = temp.read.path,
                                full.path.spades = spades.path,
                                mismatch.corrector = T,
                                isolate = F,
-                               quiet = T,
+                               quiet = F,
                                read.contigs = T,
                                threads = threads,
                                memory = memory)
@@ -391,7 +399,7 @@ findMissingAssemble = function(assembly.directory = NULL,
     headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
                 "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
-    system(paste0(blast.path, "makeblastdb -in ", new.reference, " -parse_seqids -dbtype nucl",
+    system(paste0(blast.path, "makeblastdb -in ", missing.ref, " -parse_seqids -dbtype nucl",
                   " -out ", species.dir, "/blast_db"), ignore.stdout = quiet, ignore.stderr = quiet)
 
     #Matches samples to loci
@@ -408,7 +416,7 @@ findMissingAssemble = function(assembly.directory = NULL,
     sample.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/blast_contigs.fa"))
     system(paste0("rm ", species.dir, "/blast_match.txt ",  species.dir, "/blast_db* ",
                   species.dir, "/blast_contigs.fa"))
-    system(paste0("rm -r ", species.dir, "/temp_reads"))
+    system(paste0("rm -r ", species.dir, "/temp-merged-reads"))
 
     #Matches need to be greater than 12
     filt.data = match.data[match.data$matches > min.match.length,]
@@ -438,14 +446,19 @@ findMissingAssemble = function(assembly.directory = NULL,
     print(paste0(sample, " target matching complete. ", length(unique(found.data$tName)), " targets found in the first round. ",
                  length(match.contigs), " found in the rebuild missing round!"))
 
+
+    #Saves final contigs
+    found.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", sample, "_matching-contigs.fa"))
+    output.contigs = append(match.contigs, found.contigs)
+
+    #Finds probes that match to two or more contigs
+    final.loci = as.list(as.character(output.contigs))
+    writeFasta(sequences = final.loci, names = names(final.loci),
+               paste0("expanded-assemblies/", sample, ".fa"), nbchar = 1000000, as.string = T)
+
+    #593, 22
+
   }#end iterations if
-
-
-system(paste0("rm -r ", output.directory, "/index"))
-
-    system("rm -r iterative_temp")
-    return(combined.contigs)
-  }#end else
   ##########################
 }#end function
 
