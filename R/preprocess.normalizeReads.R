@@ -148,7 +148,7 @@ normalizeReads = function(input.reads = NULL,
       #Runs fastp: only does adapter trimming, no quality stuff
       system(paste0(orna.path, "ORNA -type fastq",
                     " -pair1 ",lane.reads[1], " -pair2 ", lane.reads[2],
-                    " -output ", outreads),
+                    " -output ", outreads, " -ksorting 1"),
              ignore.stderr = quiet, ignore.stdout = quiet)
 
       system(paste0("gzip ", outreads, "_1.fq"))
@@ -174,7 +174,7 @@ normalizeReads = function(input.reads = NULL,
 
     }#end sample j loop
 
-    print(paste0(sample.names[i], " Completed read normalization!"))
+    print(paste0(sample.names[i], " Completed read normalization with kmer sorting!"))
 
   }#end sample i loop
 

@@ -3,6 +3,7 @@ Database,UniVec,https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec
 Animal,Caenorhabditis,GCA_000002985.3
 Animal,Drosophila,GCA_000001215.4
 Animal,Human,GCA_000001405.28
+Animal,Human_mito,NC_012920.1
 Bacteria,Achromobacter,GCA_013267375.1
 Bacteria,Acidaminococcus,GCA_000025305.1
 Bacteria,Acinetobacter,GCA_002055515.1

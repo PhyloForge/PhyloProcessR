@@ -330,7 +330,7 @@ findMissingAssemble = function(assembly.directory = NULL,
     # Here is running hisat2
     system(paste0(hisat2.path, "hisat2 -q -x ", species.dir, "/index/reference",
                   " -1 ", set.reads[1], " -2 ", set.reads[2],
-                  " -S ", species.dir, "/mapped_reads.sam --mp 1,0 --sp 1,0 --score-min L,0.0,-0.3",
+                  " -S ", species.dir, "/mapped_reads.sam --mp 1,0 --sp 1,0 --score-min L,0.0,-0.4",
                   " --threads ", threads))
 
     system(paste0(samtools.path, "samtools view -@ ", threads, " -b -F 4 ", species.dir, "/mapped_reads.sam > ", species.dir, "/mapped_all.sam"))
@@ -380,7 +380,7 @@ findMissingAssemble = function(assembly.directory = NULL,
                                full.path.spades = spades.path,
                                mismatch.corrector = T,
                                isolate = F,
-                               quiet = F,
+                               quiet = quiet,
                                read.contigs = T,
                                threads = threads,
                                memory = memory)
@@ -456,7 +456,11 @@ findMissingAssemble = function(assembly.directory = NULL,
     writeFasta(sequences = final.loci, names = names(final.loci),
                paste0("expanded-assemblies/", sample, ".fa"), nbchar = 1000000, as.string = T)
 
-    #593, 22
+    #0.6 = 498
+    #0.5 = 495
+    #0.4 = 481
+    #0.3 = 443
+    #0.2 = 382
 
   }#end iterations if
   ##########################

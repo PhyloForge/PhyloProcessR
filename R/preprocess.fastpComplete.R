@@ -140,9 +140,9 @@ fastpComplete = function(input.reads = NULL,
       #Runs fastp: only does adapter trimming, no quality stuff
       system(paste0(fastp.path, "fastp --in1 ",lane.reads[1], " --in2 ", lane.reads[2],
                     " --out1 ", outreads[1], " --out2 ", outreads[2],
-                    " --length_required 30 --low_complexity_filter --complexity_threshold 30",
-                    " --trim_poly_x --cut_front --cut_tail",
-                    " --dedup dup_calc_accracy 6",
+                    " --length_required 60 --low_complexity_filter --complexity_threshold 30",
+                    " --trim_poly_x --correction --detect_adapter_for_pe",
+                    " --dedup dup_calc_accracy 5",
                     " --html fastp-complete.html --json fastp-complete.json --compression 8",
                     " --report_title ", sample.reads[j]," --thread ", threads),
              ignore.stderr = quiet, ignore.stdout = quiet)
