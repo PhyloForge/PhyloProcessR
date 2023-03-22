@@ -65,30 +65,30 @@ findMissingAssemble = function(assembly.directory = NULL,
                                quiet = TRUE) {
 
   #Debug
-  library(PhyloCap)
-  setwd("/Volumes/LaCie/Mantellidae")
-  assembly.directory = "/Volumes/LaCie/Mantellidae/draft-assemblies"
-  output.directory = "find-missing-asssemble"
-  reference = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-  read.directory = "/Volumes/LaCie/Mantellidae/reads"
-
-  iterations = 5
-  spades.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  hisat2.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  blast.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  fastp.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  cdhit.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-
-  mapper = "bbmap"
-  quiet = TRUE
-  overwrite = TRUE
-  threads = 8
-  memory = 1024
-  min.match.percent = 60
-  min.match.length = 100
-  min.match.coverage = 35
+  # library(PhyloCap)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # assembly.directory = "/Volumes/LaCie/Mantellidae/draft-assemblies"
+  # output.directory = "find-missing-asssemble"
+  # reference = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+  # read.directory = "/Volumes/LaCie/Mantellidae/reads"
+  #
+  # iterations = 5
+  # spades.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # hisat2.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # blast.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # fastp.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # cdhit.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  #
+  # mapper = "bbmap"
+  # quiet = TRUE
+  # overwrite = TRUE
+  # threads = 8
+  # memory = 1024
+  # min.match.percent = 60
+  # min.match.length = 100
+  # min.match.coverage = 35
 
   if (is.null(fastp.path) == FALSE){
     b.string = unlist(strsplit(fastp.path, ""))

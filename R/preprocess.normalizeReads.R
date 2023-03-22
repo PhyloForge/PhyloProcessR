@@ -42,9 +42,10 @@ normalizeReads = function(input.reads = NULL,
                           overwrite = FALSE,
                           quiet = TRUE) {
 
-  # #Debug
-  # setwd("/Volumes/LaCie/Mantellidae_Genome")
-  # input.reads = "adaptor-removed-reads"
+
+  #Debug
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # input.reads = "/Volumes/LaCie/Mantellidae/reads"
   # output.directory = "normalized-reads"
   # orna.path = "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
   # threads = 4
@@ -151,10 +152,12 @@ normalizeReads = function(input.reads = NULL,
                     " -output ", outreads, " -ksorting 1"),
              ignore.stderr = quiet, ignore.stdout = quiet)
 
-      system(paste0("gzip ", outreads, "_1.fq"))
-      system(paste0("mv ", outreads, "_1.fq.gz", " ", outreads, "_READ1.fastq.gz"))
-      system(paste0("gzip ", outreads, "_2.fq"))
-      system(paste0("mv ", outreads, "_2.fq.gz", " ", outreads, "_READ2.fastq.gz"))
+      system(paste0("gzip ", outreads, "_Sorted_1.fq"))
+      system(paste0("mv ", outreads, "_Sorted_1.fq.gz", " ", outreads, "_READ1.fastq.gz"))
+      system(paste0("gzip ", outreads, "_Sorted_2.fq"))
+      system(paste0("mv ", outreads, "_Sorted_2.fq.gz", " ", outreads, "_READ2.fastq.gz"))
+      system(paste0("rm ", outreads, "_1.fq", " ", outreads, "_2.fq"))
+      system(paste0("rm -r ", out.path, "/tmp"))
 
       #Gathers stats on initial data
       start.reads = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
