@@ -47,7 +47,7 @@ if (dropbox.download == TRUE){
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.directory,
                 output.dir = paste0(processed.reads, "/organized-reads"),
-                rename.file = sample.file,
+                rename.file = "file_rename.csv",
                 overwrite = overwrite)
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.directory }
@@ -151,7 +151,7 @@ if (normalize.reads == TRUE) {
   #Normalizes reads using ORNA
   normalizeReads(input.reads = input.reads,
                  output.directory = paste0(processed.reads, "/normalized-reads"),
-                 orna.path = conda.path,
+                 orna.path = conda.env,
                  threads = threads,
                  memory = memory,
                  overwrite = overwrite,
