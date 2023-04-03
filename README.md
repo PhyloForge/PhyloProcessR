@@ -64,6 +64,9 @@ cd /PhyloCap/setup-configuration_files/
 
 The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file if manual installation is desired). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once installed, you can create a new environment for PhyloCap by: 
 
+**** WARNING: For the time, you should jump up to the Wiki and head to the first Tutorial on manual installation. Basically, only very old versions of Samtools will install with the current package configuration and some weird dependencies based on channel order. Until Samtools loosens the restrictions, the dependencies cannot be installed from an environment package. 
+
+
 ```bash
 conda env create -f PhyloCap.yml -n PhyloCap
 ```
