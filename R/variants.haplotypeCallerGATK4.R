@@ -159,13 +159,15 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
     reference.path = paste0(bam.directory, "/", sample.names[i], "/index/reference.fa")
 
     if (length(sample.bams) != 1) {
-      dir.create(paste0(sample.dir, "/Lane_Merge"))
+
+      merge.dir = paste0(bam.directory, "/", sample.names[i], "/Lane_Merge")
+      dir.create(merge.dir)
 
       # Next combine .bam files together!
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " MergeSamFiles",
-        " ", input.string, " -O ", sample.dir, "/Lane_Merge/final-mapped-merge.bam",
+        " ", input.string, " -O ", merge.dir, "/final-mapped-merge.bam",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
 
@@ -173,8 +175,8 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SortSam",
-        " -INPUT ", sample.dir, "/Lane_Merge/final-mapped-merge.bam",
-        " -OUTPUT ", sample.dir, "/Lane_Merge/final-mapped-sort.bam",
+        " -INPUT ", merge.dir, "/final-mapped-merge.bam",
+        " -OUTPUT ", merge.dir, "/final-mapped-sort.bam",
         " -CREATE_INDEX true -SORT_ORDER coordinate",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
@@ -183,8 +185,8 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " MarkDuplicates",
-        " -INPUT ", sample.dir, "/Lane_Merge/final-mapped-sort.bam",
-        " -OUTPUT ", sample.dir, "/Lane_Merge/final-mapped-dup.bam",
+        " -INPUT ", merge.dir, "/final-mapped-sort.bam",
+        " -OUTPUT ", merge.dir, "/final-mapped-dup.bam",
         " -CREATE_INDEX true -METRICS_FILE logs/", sample.names[i], "/duplicate_metrics.txt",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
@@ -193,25 +195,25 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SortSam",
-        " -INPUT ", sample.dir, "/Lane_Merge/final-mapped-dup.bam",
+        " -INPUT ", merge.dir, "/final-mapped-dup.bam",
         " -OUTPUT /dev/stdout -SORT_ORDER coordinate",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SetNmAndUqTags",
-        " -INPUT /dev/stdin -OUTPUT ", sample.dir, "/Lane_Merge/final-mapped-all.bam",
+        " -INPUT /dev/stdin -OUTPUT ", merge.dir, "/final-mapped-all.bam",
         " -CREATE_INDEX true -R ", reference.path, "/reference.fa",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
 
-      input.bam = paste0(sample.dir, "/Lane_Merge/final-mapped-all.bam")
+      input.bam = paste0(merge.dir, "/final-mapped-all.bam")
 
       # Delete old files to make more space
-      system(paste0("rm ", sample.dir, "/Lane_Merge/final-mapped-dup.bam"))
-      system(paste0("rm ", sample.dir, "/Lane_Merge/final-mapped-sort.bam"))
-      system(paste0("rm ", sample.dir, "/Lane_Merge/final-mapped-merge.bam"))
+      system(paste0("rm ", merge.dir, "/final-mapped-dup.bam"))
+      system(paste0("rm ", merge.dir, "/final-mapped-sort.bam"))
+      system(paste0("rm ", merge.dir, "/final-mapped-merge.bam"))
     } else {
       # lane 1 if thats all there is
-      input.bam = paste0(sample.dir, "/Lane_1/final-mapped-all.bam")
+      input.bam = paste0(bam.directory, "/", sample.names[i], "/Lane_1/final-mapped-all.bam")
     } # end else
 
     #Starts to finally look for Haplotypes! *here

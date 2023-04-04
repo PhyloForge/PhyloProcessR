@@ -47,25 +47,25 @@ variants.mapReference <- function(bam.directory = NULL,
                                   overwrite.reference = TRUE,
                                   quiet = TRUE) {
   # Debugging
-    # library(PhyloCap)
-    # library(foreach)
-    # setwd("/Volumes/LaCie/Mantellidae")
-    # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-    # output.directory <- "variant-discovery/sample-mapping"
-    # reference.file <- "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-    # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
+  # library(PhyloCap)
+  # library(foreach)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
+  # output.directory <- "variant-discovery/sample-mapping"
+  # reference.file <- "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
 
-    # iterations <- 5
-    # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-    # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-    # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-    # hisat2.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # iterations <- 5
+  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # hisat2.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-    # auto.readgroup <- T
-    # threads <- 4
-    # memory <- 8
-    # quiet <- FALSE
-    # overwrite <- TRUE
+  # auto.readgroup <- T
+  # threads <- 4
+  # memory <- 8
+  # quiet <- FALSE
+  # overwrite <- TRUE
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {

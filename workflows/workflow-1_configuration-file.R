@@ -81,19 +81,6 @@ include.univec = TRUE
 #The matching proportion of bases for a contaminant hit and removal
 decontamination.match = 1.0
 
-#Assembly settings
-#########################
-#Denovo assembly with spades
-denovo.assembly = TRUE
-#The selected k-mer values for spades
-spades.kmer.values = c(33,55,77,99,127)
-#Whether to use mismatch corrector (requires a lot of RAM and resources)
-spades.mismatch.corrector = TRUE
-#Whether to save the corrected reads
-save.corrected.reads = FALSE
-#Clean up large files 
-clean.up.spades = FALSE
-
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory

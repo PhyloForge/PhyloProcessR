@@ -34,16 +34,15 @@
 #'
 #' @export
 
-reads.checkFileSize = function(read.directory = NULL,
-                               check.file = NULL,
-                               output.name = "read-fileSize",
-                               overwrite = FALSE) {
+utility.checkFileSize = function(read.directory = NULL,
+                                check.file.name = NULL,
+                                output.name = "check-fileSize",
+                                overwrite = FALSE) {
 
   #Debug
-  # setwd("/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021")
-  # read.directory = "/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021/raw_data"
-  # output.name = "read-counts-verified"
-  # check.file = "checkSize.csv"
+  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF13_Ancient_DNA"
+  # output.name = "read-fileSize"
+  # check.file = "/Volumes/Backup_Hub/Raw_Data/HF14_Ultimate_FrogCap/checkSize.txt"
   # overwrite = TRUE
 
   #Quick checks
@@ -58,16 +57,16 @@ reads.checkFileSize = function(read.directory = NULL,
   reads = list.files(read.directory, recursive = T, full.names = T)
   reads = reads[grep("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", reads)]
 
-  check.size = read.csv(check.file, header = FALSE)
+  check.size = read.table(check.file, header = FALSE)
 
   #Creates the summary log
   summary.data =  data.frame(File_Name = as.character(),
-                             Read_fileSize = as.numeric(),
-                             Read_checkSize = as.numeric(),
-                             checkSize_Pass = as.character())
+                            Read_fileSize = as.numeric(),
+                            Read_checkSize = as.numeric(),
+                            checkSize_Pass = as.character())
 
   #Runs through each sample
-  for (i in 1:length(reads)) {
+  for (i in seq_along(reads)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
@@ -83,9 +82,9 @@ reads.checkFileSize = function(read.directory = NULL,
     if (actual.size != measure.size){ pass.fail = "FAIL" }
 
     temp.remove = data.frame(File_Name = reads[i],
-                               Read_fileSize = measure.size,
-                               Read_checkSize = actual.size,
-                               checkSize_Pass = pass.fail)
+                              Read_fileSize = measure.size,
+                              Read_checkSize = actual.size,
+                              checkSize_Pass = pass.fail)
 
     summary.data = rbind(summary.data, temp.remove)
 

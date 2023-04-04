@@ -34,21 +34,24 @@
 #'
 #' @export
 
-checkMD5 = function(read.directory = NULL,
-                    md5.file = NULL,
+utility.checkMD5 = function(read.directory = NULL,
+                    md5.file.name = NULL,
+                    md5.type = c("single-file", "many-files"),
                     output.name = "md5-check",
                     overwrite = FALSE) {
 
-  #Debug
-  # setwd("/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021")
-  # read.directory = "/Volumes/Main_Data/Raw_Data/HF11_All-Frogs_Sept2021/raw_data"
+  # #Debug
+  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF13_Ancient_DNA"
   # output.name = "md5-check"
-  # md5.file = "MD5.txt"
+  # md5.type = "many-files"
+  # md5.file.name = "MD5.txt"
   # overwrite = TRUE
 
   #Quick checks
   if (is.null(read.directory) == TRUE){ stop("Please provide input reads.") }
-  if (is.null(md5.file) == TRUE){ stop("Please provide MD5 file of hashes in the first column and file name in the second.") }
+  if (is.null(md5.file.name) == TRUE) {
+    stop("Please provide MD5 file of hashes in the first column and file name in the second.")
+  }
 
   #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (file.exists(output.name) == TRUE && overwrite == TRUE){
@@ -56,19 +59,34 @@ checkMD5 = function(read.directory = NULL,
   }#end else
 
   #Read in sample data **** sample is run twice?!
-  reads = list.files(read.directory, recursive = T, full.names = T)
-  reads = reads[grep("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", reads)]
+  files = list.files(read.directory, recursive = T, full.names = T)
+  reads = files[grep("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", files)]
 
-  check.md5 = read.table(md5.file, header = FALSE)
+  if (md5.type == "single-file") {
+    check.md5 = read.table(md5.file.name, header = FALSE)
+  }
+
+  if (md5.type == "many-files") {
+
+    hash.files = files[grep("MD5.txt", files)]
+
+    check.md5 = c()
+    for (i in seq_along(hash.files)){
+        temp.md5 = read.table(hash.files[i], header = FALSE)
+        temp.md5$V2 = paste0(gsub("MD5.txt", "", hash.files[i]), temp.md5$V2)
+        check.md5 = rbind(check.md5, temp.md5)
+    }#end i loop
+
+  }#end
 
   #Creates the summary log
   summary.data =  data.frame(File_Name = as.character(),
-                             Read_fileSize = as.numeric(),
-                             Read_checkSize = as.numeric(),
-                             checkSize_Pass = as.character())
+                            Read_fileSize = as.numeric(),
+                            Read_checkSize = as.numeric(),
+                            checkSize_Pass = as.character())
 
   #Runs through each sample
-  for (i in 1:length(reads)) {
+  for (i in seq_along(reads)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
@@ -85,17 +103,16 @@ checkMD5 = function(read.directory = NULL,
     if (actual.size != measure.size){ pass.fail = "FAIL" }
 
     temp.remove = data.frame(File_Name = sample.nm,
-                               Read_actualMD5 = actual.size,
-                               Read_checkMD5 = measure.size,
-                               MD5check_Pass = pass.fail)
+                              Read_actualMD5 = actual.size,
+                              Read_checkMD5 = measure.size,
+                              MD5check_Pass = pass.fail)
 
     summary.data = rbind(summary.data, temp.remove)
 
-    print(paste0(sample.nm, " Completed fastq counting!"))
+    print(paste0(sample.nm, " Completed MD5 check!"))
 
   }#end sample i loop
 
   write.csv(summary.data, file = paste0(output.name, ".csv"), row.names = FALSE)
   return(summary.data)
 }
-

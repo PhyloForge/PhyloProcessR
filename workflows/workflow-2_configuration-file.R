@@ -1,85 +1,49 @@
 #################################################
-## Configuration file for workflow -2: alignments and trimming
+## Configuration file for PhyloCap
 #################################################
 
 #Directories and input files
 #########################
 # *** Full paths should be used whenever possible
-#The main working directory
-working.directory = "/Path/to/where/the/stuff/is/at"
-#The sequence capture target marker file for extraction from contigs
-target.file = "Marker-file.fa"
-#The name for the dataset
-dataset.name = "Descriptive-Name"
+#The main working directory 
+working.directory = "/Path/to/where/the/stuff/will/happen"
+#The processed reads directory
+processed.reads = "processed-reads"
+#The read folder within processed reads to assemble, pe-merged-reads recommended
+assembly.reads = "pe-merged-reads"
 
-#Global settings
+# Global settings
 #########################
-#number of threads
+# number of threads
 threads = 16
-#Amount of memory to allocate in GB
+# Amount of memory to allocate in GB
 memory = 120
-#Whether to overwrite previous runs
+# TRUE to overwrite previous runs. FALSE the script will resume but will not delete anything.
 overwrite = FALSE
-#Resume from previous runs (does not overwrite)
-resume = TRUE
-#Print verbose output for each function
-quiet = TRUE
+# Hide verbose output for each function
+quiet = FALSE
 
-#Target matching settings
+#Assembly settings
 #########################
-#TRUE = to run target matching on contigs
-match.targets = TRUE
-#whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
-trim.to.targets = FALSE
-#The minimum match percentage for a contig match to a target
-min.match.percent = 60
-#The minimum match length in basepairs for a contig match to a target
-min.match.length = 40
-#The minimum match coverage, contig must overlap by X percent to target
-min.match.coverage = 50
-
-#Alignment trimming settings
-#########################
-#TRUE = to run alignments for the matching targets from above
-align.matching.targets = TRUE
-#TRUE = to run alignment trimming function batchTrimAlignments
-trim.alignments = TRUE
-#The minimum number of taxa to keep an alignment
-min.taxa.alignment = 4
-#The minimum alignment basepairs to keep an alignment
-min.alignment.length = 100
-#The maximum gaps from throughout the entire alignment to keep an alignment
-max.alignment.gap.percent = 50
-#run the trimming program TrimAl to remove high variable or misaligned columns
-run.TrimAl = TRUE
-#Whether to trim out columns below a certain threshold
-trim.column = TRUE
-#The percent of bases that must be present to keep a column
-min.column.gap.percent = 50
-#Resolves ambiguous sites to the same arbitrary base
-convert.ambiguous.sites = TRUE
-#TRUE = to output an alignment assessment spreadsheet and filter alignments
-alignment.assess = TRUE
-#TRUE = to externally trim alignment edges
-trim.external = TRUE
-#The minimum percent of bases that must be present to keep a column on the edges
-min.external.percent = 50
-#TRUE = to trim samples below a certain coverage (percent bases present out of total alignment) threshold
-trim.coverage = TRUE
-#The minimum percent of bases that must be present to keep a sample
-min.coverage.percent = 35
-#The minimum number of bases that must be present to keep a sample
-min.coverage.bp = 60
+#Denovo assembly with spades
+denovo.assembly = TRUE
+#The selected k-mer values for spades
+spades.kmer.values = c(33,55,77,99,127)
+#Whether to use mismatch corrector (requires a lot of RAM and resources, recommended if possible)
+spades.mismatch.corrector = TRUE
+#Whether to save the corrected reads
+save.corrected.reads = FALSE
+#Clean up large files 
+clean.up.spades = FALSE
 
 #Program paths
 #########################
-### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
-### e.g. fastp.path = "/conda/PhyloCap/bin
+### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
+### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
 conda.env = "/Path/to/conda/env/bin"
-bbmap.path = conda.env
+fastp.path = conda.env
+samtools.path = conda.env
+bwa.path = conda.env
+spades.path = conda.env
+bbnorm.path = conda.env
 blast.path = conda.env
-mafft.path = conda.env
-trimAl.path = conda.env
-julia.path = conda.env
-
-#### End configuration

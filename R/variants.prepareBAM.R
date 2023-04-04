@@ -47,22 +47,22 @@ variants.prepareBAM <- function(read.directory = NULL,
                                 auto.readgroup = TRUE,
                                 quiet = TRUE) {
  
-  library(PhyloCap)
-  library(doParallel)
-  setwd("/Volumes/LaCie/Mantellidae")
-  assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  output.directory <- "variant-discovery/sample-mapping"
-  read.directory <- "/Volumes/LaCie/Mantellidae/reads"
+  # library(PhyloCap)
+  # library(doParallel)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
+  # output.directory <- "variant-discovery/sample-mapping"
+  # read.directory <- "/Volumes/LaCie/Mantellidae/reads"
 
-  gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-  auto.readgroup <- T
-  threads <- 4
-  memory <- 8
-  quiet <- FALSE
-  overwrite <- TRUE
+  # auto.readgroup <- T
+  # threads <- 4
+  # memory <- 8
+  # quiet <- FALSE
+  # overwrite <- TRUE
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {

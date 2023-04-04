@@ -171,24 +171,3 @@ if (merge.pe.reads == TRUE){
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/pe-merged-reads")
 } #end decontamination
-
-
-if (denovo.assembly == TRUE){
-
-  dir.create("data-analysis")
-
-  #Assembles merged paired end reads with spades
-  assembleSpades(input.reads = input.reads,
-                 output.directory = paste0("data-analysis/spades-assembly"),
-                 assembly.directory = "data-analysis/draft-assemblies",
-                 mismatch.corrector = spades.mismatch.corrector,
-                 kmer.values = spades.kmer.values,
-                 threads = threads,
-                 memory = memory,
-                 overwrite = overwrite,
-                 save.corrected.reads = save.corrected.reads,
-                 quiet = quiet,
-                 spades.path = spades.path)
-}#end if
-
-#End script
