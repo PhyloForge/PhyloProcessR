@@ -75,7 +75,7 @@ OR if a specific location for the environment directory is needed:
 conda env create -f environment.yml -p /PLACE/YOUR/DIRECTORY/HERE/PhyloCap
 ```
 
-**** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux on April 3 2023 and installed fine. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial). The "environment_macos.yml" file was last tested Feb 13 2021, and may no longer function.
+**** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux on April 3 2023 and installed fine and should theoretically work on MacOS but has not yet been tested. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial).
 
 And finally, the cloned GitHub directory may be deleted after installing the prerequisites through the conda env file that manually installs the anaconda environment. There are some useful example files (also in the tutorial here), which could be saved.   
 
