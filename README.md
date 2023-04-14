@@ -69,7 +69,7 @@ The R packages and outside programs can be installed manually or more easily thr
 conda env create -f environment.yml -n PhyloCap
 ```
 
-**** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux on April 3 2023 and installed fine and should theoretically work on MacOS but has not yet been tested. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial).
+**** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux and MacOS on April 3 2023 and installed fine. For MacOS, you must use the X84 (not M1) version of anaconda as most packages are not available for M1 but can be emulated through X84. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial). 
 
 And finally, the cloned GitHub directory may be deleted after installing the prerequisites through the conda env file that manually installs the anaconda environment. There are some useful example files (also in the tutorial here), which could be saved.   
 
