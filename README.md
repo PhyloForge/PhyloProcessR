@@ -15,7 +15,7 @@ R package For processing high-throughput sequencing data for many samples from t
 
 # PhyloCap prerequisites 
 
-PhyloCap uses several R packages and other outside programs for certain functions.
+PhyloCap uses several R packages and other outside programs for certain functions, which will be installed all at once below using an anaconda environment file.
 
 1. R packages (R version 4.0.2 tested)
 - From CRAN: devtools, ape, stringr, data.table, seqinr, foreach, doparallel, rdrop2, biomartr
