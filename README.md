@@ -15,27 +15,13 @@ R package For processing high-throughput sequencing data for many samples from t
 
 # PhyloCap prerequisites 
 
-PhyloCap uses several R packages and other outside programs for certain functions. 
+PhyloCap uses several R packages and other outside programs for certain functions.
 
-1. R version 4.0.2 (and above likely work)
-
-Requires:
-- devtools
-- ape
-- stringr
-- data.table
-- seqinr
-- biomartr (Bioconductor)
-- biostrings (Bioconductor)
-- genomicranges (Bioconductor)
-
-Imports:
-- foreach
-- doparallel
-- rdrop2
+1. R packages (R version 4.0.2 tested)
+- From CRAN: devtools, ape, stringr, data.table, seqinr, foreach, doparallel, rdrop2, biomartr
+- From BioConductor: rsamtools, genomicranges, biostrings
 
 2. Outside programs
-
 - fastp: adaptor trimming and paired-end read merging
 - ORNA: read normalization
 - bwa: read mapping
