@@ -40,19 +40,19 @@ PhyloProcessR uses several R packages and other outside programs for certain fun
 First, you will want to clone this repository to your computer to obtain the setup files. Or alternatively go to the green "Code" button in top right of this repository and select "download ZIP".
 
 ```bash
-git clone https://github.com/chutter/PhyloCap.git
+git clone https://github.com/chutter/PhyloProcessR.git
 ```
 
 Second, change your working directory in the terminal to the downloaded repository. The key file here is the "environment.yml" anaconda environment file, which must be present in the working directory being used. 
 
 ```bash
-cd /PhyloCap/setup-configuration_files/
+cd /PhyloProcessR/setup-configuration_files/
 ```
 
 The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file if manual installation is desired). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended. Once installed, you can create a new environment for PhyloCap by: 
 
 ```bash
-conda env create -f environment.yml -n PhyloCap
+conda env create -f environment.yml -n PhyloProcessR
 ```
 
 **** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux and MacOS on April 3 2023 and installed fine. For MacOS, you must use the X84 (not M1) version of anaconda as most packages are not available for M1 but can be emulated through X84. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial). 
@@ -62,12 +62,12 @@ And finally, the cloned GitHub directory may be deleted after installing the pre
 To use the environment, it must first be activated in your current terminal session or placed in your cluster job script. 
 
 ```bash
-conda activate PhyloCap
+conda activate PhyloProcessR
 ```
 
 # Installation of R package
 
-The main functions of PhyloProcessR are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloProcessR from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloCap functions. Here are step-by-step instructions for installation:
+The main functions of PhyloProcessR are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloProcessR from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloProcessR functions. Here are step-by-step instructions for installation:
 
 1) Install PhyloProcessR by typing in your R console: 
 
