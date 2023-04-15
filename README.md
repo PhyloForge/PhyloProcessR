@@ -1,6 +1,8 @@
 # PhyloProcessR
 
-R package For processing high-throughput sequencing data for many samples from targeted sequence capture. The R package and pipeline does the following:
+R package For processing high-throughput sequencing data for many samples from targeted sequence capture. 
+
+The R package and pipeline does the following:
 
 1) Organize raw read data
 2) Remove adaptor contamination and merge paired-end reads
@@ -10,8 +12,7 @@ R package For processing high-throughput sequencing data for many samples from t
 6) Match contigs to design targets for sequence capture
 7) Align and trim contigs from samples
 8) Concatenate all targets or only targets from the same gene
-9) Estimate gene trees for each target
-10) Gene Jackknifing concatenation tree building
+
 
 # PhyloProcessR prerequisites 
 
@@ -35,9 +36,9 @@ PhyloProcessR uses several R packages and other outside programs for certain fun
 - SamTools: variant calling and read mapping tools
 
 
-# Installation instructions
+# Quick installation instructions
 
-First, you will want to clone this repository to your computer to obtain the setup files. Or alternatively go to the green "Code" button in top right of this repository and select "download ZIP".
+First, clone this repository to your computer to obtain the setup files. Or alternatively go to the green "Code" button in top right of this repository and select "download ZIP".
 
 ```bash
 git clone https://github.com/chutter/PhyloProcessR.git
