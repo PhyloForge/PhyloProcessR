@@ -100,10 +100,8 @@ And installation should be done! All the functions for PhyloProcessR should be r
 
 [Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
 
-[Tutorial 3: Advanced function use](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Advanced-function-use)
+[Tutorial 3: Assess sequence capture results](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Assess-results)
 
-[Tutorial 4: Assess sequence capture results](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Assess-results)
-
-[Tutorial 5: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-5:-Legacy-Integration)
+[Tutorial 4: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
 
 
