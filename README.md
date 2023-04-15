@@ -98,7 +98,7 @@ And installation should be done! All the functions for PhyloProcessR should be r
 
 [Tutorial 1: PhyloProcessR configuration](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
 
-[Tutorial 2: PhyloProcessR quick start pipeline](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-quick-start-pipeline)
+[Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
 
 [Tutorial 3: Advanced function use](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Advanced-function-use)
 
