@@ -1,6 +1,6 @@
 # PhyloProcessR
 
-R package For processing high-throughput sequencing data for many samples from targeted sequence capture. 
+R package for processing high-throughput sequencing data from raw reads to alignments for many samples from targeted sequence capture. 
 
 The R package and pipeline does the following:
 
