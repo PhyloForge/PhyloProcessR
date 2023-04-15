@@ -1,5 +1,5 @@
 ################################################
-## Configuration file for PhyloCap
+## Configuration file for PhyloProcessR
 #################################################
 
 #Directories and input files
@@ -50,8 +50,8 @@ cleanup.genetrees = TRUE
 #Program paths
 #########################
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
-### e.g. fastp.path = "/conda/PhyloCap/bin
-conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloCap/bin/"
+### e.g. fastp.path = "/conda/PhyloProcessR/bin
+conda.env = "/panfs/pfs.local/work/bi/c111h652/conda/PhyloProcessR/bin/"
 iqtree.path = conda.env
 
 #### End configuration

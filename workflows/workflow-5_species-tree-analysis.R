@@ -1,6 +1,6 @@
 #Installs updated package version
-devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
-library(PhyloCap)
+devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
+library(PhyloProcessR)
 library(foreach)
 
 source("workflow-3_configuration-file.R")
@@ -16,7 +16,7 @@ pass.fail = setupCheck(anaconda.environment =  NULL,
                        iqtree.path = iqtree.path)
 
 if (pass.fail == FALSE){ print("Some required programs are missing") } else {
-  print("all required programs are found, PhyloCap pipeline continuing...")
+  print("all required programs are found, PhyloProcessR pipeline continuing...")
 }
 
 ##################################################################################################

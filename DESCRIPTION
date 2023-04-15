@@ -1,6 +1,6 @@
-Package: PhyloCap
+Package: PhyloProcessR
 Title: Package For processing high-throughput sequencing data from targeted sequence capture 
-Version: 0.2.0
+Version: 0.5.0
 Authors@R: 
     person(given = "Carl",
            family = "Hutter",

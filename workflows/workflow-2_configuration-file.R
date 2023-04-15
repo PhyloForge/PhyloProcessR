@@ -1,5 +1,5 @@
 #################################################
-## Configuration file for PhyloCap
+## Configuration file for PhyloProcessR
 #################################################
 
 #Directories and input files

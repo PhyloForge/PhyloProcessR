@@ -1,6 +1,6 @@
 #Installs updated package version
-devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
-library(PhyloCap)
+devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
+library(PhyloProcessR)
 library(foreach)
 
 #setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
