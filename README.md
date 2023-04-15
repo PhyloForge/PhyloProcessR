@@ -1,4 +1,4 @@
-# PhyloCap
+# PhyloProcessR
 
 R package For processing high-throughput sequencing data for many samples from targeted sequence capture. The R package and pipeline does the following:
 
@@ -13,9 +13,9 @@ R package For processing high-throughput sequencing data for many samples from t
 9) Estimate gene trees for each target
 10) Gene Jackknifing concatenation tree building
 
-# PhyloCap prerequisites 
+# PhyloProcessR prerequisites 
 
-PhyloCap uses several R packages and other outside programs for certain functions, which will be installed all at once below using an anaconda environment file.
+PhyloProcessR uses several R packages and other outside programs for certain functions, which will be installed all at once below using an anaconda environment file.
 
 1. R packages (R version 4.0.2 tested)
 - From CRAN: devtools, ape, stringr, data.table, seqinr, foreach, doparallel, rdrop2, biomartr
@@ -43,7 +43,7 @@ First, you will want to clone this repository to your computer to obtain the set
 git clone https://github.com/chutter/PhyloCap.git
 ```
 
-Second, change your working directory in the terminal to the downloaded repository. The key file here is the "PhyloCap.yml" anaconda environment file, which must be present in the working directory being used. 
+Second, change your working directory in the terminal to the downloaded repository. The key file here is the "environment.yml" anaconda environment file, which must be present in the working directory being used. 
 
 ```bash
 cd /PhyloCap/setup-configuration_files/
@@ -67,12 +67,12 @@ conda activate PhyloCap
 
 # Installation of R package
 
-The main functions of PhyloCap are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloCap from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloCap functions. Here are step-by-step instructions for installation:
+The main functions of PhyloProcessR are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloProcessR from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloCap functions. Here are step-by-step instructions for installation:
 
-1) Install PhyloCap by typing in your R console: 
+1) Install PhyloProcessR by typing in your R console: 
 
 ```R
-devtools::install_github("chutter/PhyloCap", upgrade = "never", dependencies = FALSE)
+devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 ```
 
 The update = "never" flag ensures that packages already installed via the anaconda environment are not changed, which will often break things. Additionally, dependencies = FALSE is set for the same reason. 
@@ -81,10 +81,10 @@ The update = "never" flag ensures that packages already installed via the anacon
 2) Devtools should finish and say the package loaded properly with no errors. Load the package in your R script with:
 
 ```R
-library(PhyloCap)
+library(PhyloProcessR)
 ```
 
-And installation should be done! All the functions for PhyloCap should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
+And installation should be done! All the functions for PhyloProcessR should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
 
 
 3) You can run the following function to see if PhyloCap can find the dependencies: 
@@ -92,18 +92,18 @@ And installation should be done! All the functions for PhyloCap should be ready 
 < coming soon a function to test if they can found >
 
 
-# PhyloCap pipeline tutorials 
+# PhyloProcessR pipeline tutorials 
 
-[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloCap/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
+[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
-[Tutorial 1: PhyloCap configuration](https://github.com/chutter/PhyloCap/wiki/Tutorial-1:-PhyloCap-configuration)
+[Tutorial 1: PhyloProcessR configuration](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
 
-[Tutorial 2: PhyloCap quick start pipeline](https://github.com/chutter/PhyloCap/wiki/Tutorial-2:-PhyloCap-quick-start-pipeline)
+[Tutorial 2: PhyloProcessR quick start pipeline](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-quick-start-pipeline)
 
-[Tutorial 3: Advanced function use](https://github.com/chutter/PhyloCap/wiki/Tutorial-3:-Advanced-function-use)
+[Tutorial 3: Advanced function use](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Advanced-function-use)
 
-[Tutorial 4: Assess sequence capture results](https://github.com/chutter/PhyloCap/wiki/Tutorial-4:-Assess-results)
+[Tutorial 4: Assess sequence capture results](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Assess-results)
 
-[Tutorial 5: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloCap/wiki/Tutorial-5:-Legacy-Integration)
+[Tutorial 5: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-5:-Legacy-Integration)
 
 
