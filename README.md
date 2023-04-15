@@ -22,7 +22,7 @@ PhyloProcessR uses several R packages and other outside programs for certain fun
 - From CRAN: devtools, ape, stringr, data.table, seqinr, foreach, doparallel, rdrop2, biomartr
 - From BioConductor: rsamtools, genomicranges, biostrings
 
-2. Outside programs
+2. Stand alone programs
 - fastp: adaptor trimming and paired-end read merging
 - ORNA: read normalization
 - bwa: read mapping
