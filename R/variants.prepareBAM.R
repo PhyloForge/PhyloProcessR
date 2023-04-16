@@ -43,7 +43,6 @@ variants.prepareBAM <- function(read.directory = NULL,
                                 threads = 1,
                                 memory = 1,
                                 overwrite = FALSE,
-                                overwrite.reference = TRUE,
                                 auto.readgroup = TRUE,
                                 quiet = TRUE) {
  
