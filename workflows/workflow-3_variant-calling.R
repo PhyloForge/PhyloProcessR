@@ -1,10 +1,9 @@
 #Installs updated package version
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
-library(foreach)
 
 #setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-#source("/Users/chutter/Dropbox/Research/0_Github/PhyloProcessR/work-flows/workflow-1_configuration-file.R")
+source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
 setwd(working.directory)
 
@@ -14,7 +13,29 @@ setwd(working.directory)
 ##################################################################################################
 
 #Begins by creating processed read directory
-dir.create(processed.reads)
+dir.create(dataset.name)
+
+#Function that prepares the BAM files and sets the metadata correctly for GATK4
+prepareBAM(
+  read.directory = read.directory,
+  output.directory = paste0(dataset.name, "/sample-mapping"),
+  samtools.path = samtools.path,
+  bwa.path = bwa.path,
+  gatk4.path = gatk4.path,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite,
+  auto.readgroup = auto.readgroup,
+  quiet = quiet
+)
+
+
+
+
+
+
+
+
 
 if (dropbox.download == TRUE){
   #Authorizes token

@@ -35,7 +35,7 @@
 #'
 #' @export
 
-prepareBAM <- function(read.directory = NULL,
+prepareBAM = function(read.directory = NULL,
                       output.directory = "variant-discovery/sample-mapping",
                       samtools.path = NULL,
                       bwa.path = NULL,
