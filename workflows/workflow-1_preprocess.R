@@ -10,22 +10,9 @@ setwd(working.directory)
 
 ##################################################################################################
 ##################################################################################################
-#################################################
 ## Step 1: Preprocess reads
-##################
+##################################################################################################
 
-# #Checks if everything is installed
-# pass.fail = setupCheck(anaconda.environment =  NULL,
-#                        fastp.path = fastp.path,
-#                        samtools.path = samtools.path,
-#                        bwa.path = bwa.path,
-#                        spades.path = spades.path,
-#                        bbnorm.path = bbnorm.path)
-#
-# if (pass.fail == FALSE){ stop("Some required programs are missing") } else {
-#   print("all required programs are found, PhyloProcessR pipeline continuing...")
-# }
-#
 #Begins by creating processed read directory
 dir.create(processed.reads)
 
@@ -37,17 +24,18 @@ if (dropbox.download == TRUE){
                   dropbox.directory = dropbox.directory,
                   output.directory = paste0(processed.reads, "/raw-reads"),
                   overwrite = overwrite,
-                  skip.not.found = T)
+                  skip.not.found = skip.not.found)
 
   read.directory = paste0(processed.reads, "/raw-reads")
   organize.reads = TRUE
+  sample.file = "file_rename_dropbox.csv"
 }#end if
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.directory,
                 output.dir = paste0(processed.reads, "/organized-reads"),
-                rename.file = "file_rename.csv",
+                rename.file = sample.file,
                 overwrite = overwrite)
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.directory }
@@ -144,7 +132,6 @@ if (decontamination == TRUE){
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/decontaminated-reads")
 }
-
 
 # Normalizes reads
 if (normalize.reads == TRUE) {

@@ -125,7 +125,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
   }#end i loop
 
   write.csv(new.sample.data,
-    file = "file_rename.csv",
+    file = "file_rename_dropbox.csv",
     row.names = FALSE, quote = FALSE
   )
 

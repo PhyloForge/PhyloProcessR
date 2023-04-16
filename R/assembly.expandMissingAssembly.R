@@ -392,7 +392,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     system(paste0(samtools.path, "samtools fastq -@ ", threads, " ", species.dir, "/mapped_sort.sam",
                   " -1 ", species.dir, "/temp_reads/sample/sample_READ1.fastq.gz ",
                   " -2 ", species.dir, "/temp_reads/sample/sample_READ2.fastq.gz "),
-           ignore.stdout = quiet, ignore.stderr = quiet)
+          ignore.stdout = quiet, ignore.stderr = quiet)
 
     #Merge paired-end reads for de novo assembly
     mergePairedEndReads(input.reads = paste0(species.dir, "/temp_reads"),
@@ -481,13 +481,13 @@ expandMissingAssembly = function(assembly.directory = NULL,
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(match.contigs))
     writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(species.dir, "/", sample, "_found-contigs.fa"), nbchar = 1000000, as.string = T)
+              paste0(species.dir, "/", sample, "_found-contigs.fa"), nbchar = 1000000, as.string = T)
 
     write.table(filt.data, file = paste0(species.dir, "/found-missing-blast-match.txt"),
                 row.names = F, quote = F, sep = "\t")
 
     print(paste0(sample, " target matching complete. ", length(unique(found.data$tName)), " targets found in the first round. ",
-                 length(match.contigs), " found in the rebuild missing round!"))
+                length(match.contigs), " found in the rebuild missing round!"))
 
 
     #Saves final contigs
@@ -497,7 +497,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(output.contigs))
     writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0("expanded-assemblies/", sample, ".fa"), nbchar = 1000000, as.string = T)
+              paste0("expanded-assemblies/", sample, ".fa"), nbchar = 1000000, as.string = T)
 
     #0.6 = 498
     #0.5 = 495
