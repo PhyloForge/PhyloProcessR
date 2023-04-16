@@ -36,7 +36,7 @@
 #' @export
 
 prepareBAM = function(read.directory = NULL,
-                      output.directory = "variant-discovery/sample-mapping",
+                      output.directory = "variant-calling/sample-mapping",
                       samtools.path = NULL,
                       bwa.path = NULL,
                       gatk4.path = NULL,
@@ -140,8 +140,8 @@ prepareBAM = function(read.directory = NULL,
   ############################################################################################
 
   # Sets up multiprocessing
-  cl <- makeCluster(threads)
-  registerDoParallel(cl)
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
   mem.cl <- floor(memory / threads)
 
   # Loops through each locus and does operations on them
@@ -264,7 +264,7 @@ prepareBAM = function(read.directory = NULL,
     print(paste0(sample.names[i], " completed BAM creation!"))
   } # end i loop
 
-  stopCluster(cl)
+  snow::stopCluster(cl)
 } # end function
 
 

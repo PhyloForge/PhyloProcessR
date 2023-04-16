@@ -1,4 +1,4 @@
-#' @title variants.mapReference
+#' @title mapReference
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,18 +34,18 @@
 #'
 #' @export
 
-variants.mapReference <- function(bam.directory = NULL,
-                                  output.directory = "variant-discovery",
-                                  reference.file = "all",
-                                  subreference.name = NULL,
-                                  samtools.path = NULL,
-                                  bwa.path = NULL,
-                                  picard.path = NULL,
-                                  threads = 1,
-                                  memory = 1,
-                                  resume = TRUE,
-                                  overwrite.reference = TRUE,
-                                  quiet = TRUE) {
+mapReference = function(bam.directory = NULL,
+                        output.directory = "variant-discovery",
+                        reference.file = "all",
+                        subreference.name = NULL,
+                        samtools.path = NULL,
+                        bwa.path = NULL,
+                        picard.path = NULL,
+                        threads = 1,
+                        memory = 1,
+                        resume = TRUE,
+                        overwrite.reference = TRUE,
+                        quiet = TRUE) {
   # Debugging
   # library(PhyloCap)
   # library(foreach)
