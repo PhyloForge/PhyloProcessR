@@ -69,7 +69,12 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     
     for (j in 1:nrow(temp.data)) {
     
-      sample.reads = all.reads[grep(as.character(temp.data$File[j]), all.reads)]
+      sample.reads = all.reads[grep(paste0(as.character(temp.data$File[j]), "_"), all.reads)]
+
+      # Skip not found or crash
+      if (length(sample.reads) == 0) {
+      sample.reads = all.reads[grep(paste0(as.character(temp.data$File[j]), "-"), all.reads)]
+      } # end if
 
       if (file.exists(paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ1.fastq.gz")) == TRUE) {
         temp.sample.data <- data.frame(File = paste0(temp.data$Sample[j], "_L00", j), Sample = temp.data$Sample[j])

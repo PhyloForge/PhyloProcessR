@@ -308,6 +308,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     #Sets up working directories for each species
     sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
+    species.dir <- paste0(output.directory, "/", sample)
 
     # Checks if this has been done already
     if (overwrite == FALSE) {

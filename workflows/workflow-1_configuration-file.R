@@ -29,7 +29,7 @@ quiet = FALSE
 sample.file = "file_rename.csv"
 #TRUE = to rename reads from a csv file above, first column is "File" and second is "Sample"
 organize.reads = TRUE
-#The input raw read directory
+# The input raw read directory, NULL if downloading from dropbox
 read.directory = "/Path/to/where/the/raw/reads/are"
 #The name for the processed reads folder
 processed.reads = "processed-reads"
@@ -90,5 +90,5 @@ fastp.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
 spades.path = conda.env
-bbnorm.path = conda.env
+orna.path = conda.env
 blast.path = conda.env

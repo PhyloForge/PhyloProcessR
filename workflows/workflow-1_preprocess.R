@@ -151,7 +151,7 @@ if (normalize.reads == TRUE) {
   #Normalizes reads using ORNA
   normalizeReads(input.reads = input.reads,
                  output.directory = paste0(processed.reads, "/normalized-reads"),
-                 orna.path = conda.env,
+                 orna.path = orna.path,
                  threads = threads,
                  memory = memory,
                  overwrite = overwrite,
