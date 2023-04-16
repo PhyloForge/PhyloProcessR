@@ -1,4 +1,4 @@
-#' @title variants.prepareBAM
+#' @title prepareBAM
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -35,16 +35,16 @@
 #'
 #' @export
 
-variants.prepareBAM <- function(read.directory = NULL,
-                                output.directory = "variant-discovery/sample-mapping",
-                                samtools.path = NULL,
-                                bwa.path = NULL,
-                                gatk4.path = NULL,
-                                threads = 1,
-                                memory = 1,
-                                overwrite = FALSE,
-                                auto.readgroup = TRUE,
-                                quiet = TRUE) {
+prepareBAM <- function(read.directory = NULL,
+                      output.directory = "variant-discovery/sample-mapping",
+                      samtools.path = NULL,
+                      bwa.path = NULL,
+                      gatk4.path = NULL,
+                      threads = 1,
+                      memory = 1,
+                      overwrite = FALSE,
+                      auto.readgroup = TRUE,
+                      quiet = TRUE) {
  
   # library(PhyloCap)
   # library(doParallel)
@@ -62,6 +62,9 @@ variants.prepareBAM <- function(read.directory = NULL,
   # memory <- 8
   # quiet <- FALSE
   # overwrite <- TRUE
+
+
+  require(foreach)
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
