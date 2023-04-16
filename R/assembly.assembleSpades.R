@@ -37,7 +37,8 @@ assembleSpades = function(input.reads = NULL,
                           assembly.directory = "draft-assemblies",
                           spades.path = NULL,
                           mismatch.corrector = TRUE,
-                          kmer.values = c(21,33,55,77,99,127),
+                          isolate = FALSE,
+                          kmer.values = c(33,55,77,99,127),
                           threads = 1,
                           memory = 4,
                           overwrite = FALSE,
@@ -58,67 +59,96 @@ assembleSpades = function(input.reads = NULL,
   # quiet = TRUE
   # resume = TRUE
 
-  #Same adds to bbmap path
-  if (is.null(spades.path) == FALSE){
+  # Same adds to bbmap path
+  if (is.null(spades.path) == FALSE) {
     b.string = unlist(strsplit(spades.path, ""))
     if (b.string[length(b.string)] != "/") {
       spades.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { spades.path = "" }
+    } # end if
+  } else {
+    spades.path = ""
+  }
 
-  #Quick checks
-  if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
-  if (file.exists(input.reads) == F){ stop("Input reads not found.") }
-  if (is.null(output.directory) == TRUE){ stop("Please provide an output directory.") }
-  if (is.null(assembly.directory) == TRUE){ stop("Please provide an contig save directory.") }
+  # Quick checks
+  if (is.null(input.reads) == TRUE) {
+    stop("Please provide input reads.")
+  }
+  if (file.exists(input.reads) == F) {
+    stop("Input reads not found.")
+  }
+  if (is.null(output.directory) == TRUE) {
+    stop("Please provide an output directory.")
+  }
+  if (is.null(assembly.directory) == TRUE) {
+    stop("Please provide an contig save directory.")
+  }
 
-  #Sets directory and reads
-  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
-    if (overwrite == TRUE){
+  # Sets directory and reads
+  if (dir.exists(output.directory) == F) {
+    dir.create(output.directory)
+  } else {
+    if (overwrite == TRUE) {
       system(paste0("rm -r ", output.directory))
       dir.create(output.directory)
     }
-  }#end else
+  } # end else
 
-  #Sets directory and reads
-  if (dir.exists(assembly.directory) == F){ dir.create(assembly.directory) } else {
-    if (overwrite == TRUE){
+  # Sets directory and reads
+  if (dir.exists(assembly.directory) == F) {
+    dir.create(assembly.directory)
+  } else {
+    if (overwrite == TRUE) {
       system(paste0("rm -r ", assembly.directory))
       dir.create(assembly.directory)
     }
-  }#end else
+  } # end else
 
-  #Creates output directory
-  if (dir.exists("logs") == F){ dir.create("logs") }
+  # Creates output directory
+  if (dir.exists("logs") == F) {
+    dir.create("logs")
+  }
 
-  #mismatch corrector
-  if (mismatch.corrector == TRUE){ mismatch.string = "--careful " }
-  if (mismatch.corrector == FALSE){ mismatch.string = " " }
+  if (isolate == TRUE && mismatch.corrector == TRUE) {
+    stop("Both --isolate or --careful (mismatch corrector) can not be used together. Please choose only one.")
+  }
 
-  #Sets up the reads
-  files = list.files(path = input.reads, full.names = T, recursive = T)
-  reads = files[grep(pattern = "fastq|fq|clustS", x = files)]
+  if (mismatch.corrector == FALSE && isolate == FALSE) {
+    mismatch.string = ""
+  }
+  
+  if (isolate == TRUE) {
+    mismatch.string = "--isolate "
+  }
+  
+  if (mismatch.corrector == TRUE) {
+    mismatch.string = "--careful "
+  }
 
-  samples = gsub(paste0(input.reads, "/"), "", reads)
-  samples = unique(gsub("/.*", "", samples))
+  # Sets up the reads
+  files <- list.files(path = input.reads, full.names = T, recursive = T)
+  reads <- files[grep(pattern = "fastq|fq|clustS", x = files)]
 
-  #Skips samples already finished
-  if (overwrite == FALSE){
-    done.names = list.files(assembly.directory)
-    samples = samples[!samples %in% gsub(".fa$", "", done.names)]
-  } else { samples = samples }
+  samples <- gsub(paste0(input.reads, "/"), "", reads)
+  samples <- unique(gsub("/.*", "", samples))
 
-  if (length(samples) == 0){ stop("No samples to run or incorrect directory.") }
+  # Skips samples already finished
+  if (overwrite == FALSE) {
+    done.names <- list.files(assembly.directory)
+    samples <- samples[!samples %in% gsub(".fa$", "", done.names)]
+  } else {
+    samples <- samples
+  }
 
+  if (length(samples) == 0) {
+    stop("No samples to run or incorrect directory.")
+  }
   #Header data for features and whatnot
-  for (i in 1:length(samples)){
+  for (i in seq_along(samples)){
 
     sample.reads = reads[grep(pattern = paste0(samples[i], "_"), x = reads)]
 
     #Checks the Sample column in case already renamed
     if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = samples[i], x = reads)] }
-
-    #sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.fast.*|_R2.fast.*|_R3.fast.*|_READ1.fast.*|_READ2.fast.*|_READ3.fast.*", "", sample.reads))
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
