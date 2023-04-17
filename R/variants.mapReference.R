@@ -36,6 +36,8 @@
 
 mapReference = function(bam.directory = NULL,
                         output.directory = "variant-calling/sample-mapping",
+                        assembly.directory = NULL,
+                        check.assemblies = TRUE,
                         reference.file = NULL,
                         samtools.path = NULL,
                         bwa.path = NULL,
@@ -47,23 +49,22 @@ mapReference = function(bam.directory = NULL,
   # Debugging
   # library(PhyloCap)
   # library(foreach)
-  # setwd("/Volumes/LaCie/Mantellidae")
+  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
   # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  # output.directory <- "variant-discovery/sample-mapping"
+  # output.directory <- "variant-calling/sample-mapping"
   # reference.file <- "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
+  # bam.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-mapping"
 
-  # iterations <- 5
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # hisat2.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # bwa.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
+  # check.assemblies = FALSE
   # auto.readgroup <- T
   # threads <- 4
   # memory <- 8
   # quiet <- FALSE
-  # overwrite <- TRUE
+  # overwrite <- FALSE
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
@@ -100,40 +101,54 @@ mapReference = function(bam.directory = NULL,
   if (is.null(bam.directory) == TRUE) {
     stop("Please provide the bam directory.")
   }
-  if (file.exists(bam.directory) == F) {
+  if (file.exists(bam.directory) == FALSE) {
     stop("BAM folder not found.")
   }
 
   # Creates output directory
-  if (dir.exists("logs") == F) {
+  if (dir.exists("logs") == FALSE) {
     dir.create("logs")
   }
 
   # Read in sample data
-  bam.files <- list.files(bam.directory, recursive = T, full.names = T)
+  bam.files <- list.files(bam.directory, recursive = TRUE, full.names = TRUE)
   bam.files <- bam.files[grep("all_reads.bam$", bam.files)]
-  sample.names <- list.dirs(bam.directory, recursive = F, full.names = F)
+  sample.names <- list.dirs(bam.directory, recursive = FALSE, full.names = FALSE)
+
+  #Checks to see if assemblies match to reads
+  sample.files <- list.files(assembly.directory)
+
+  #Stops if TRUE
+  if (check.assemblies == TRUE) {
+    if (length(sample.files) != length(sample.names)) {
+      stop("Assembly count does not match raw read count. Ensure that all samples have been assembled or set check.assemblies == FALSE")
+    }
+  }
+
+  #Removes reads for missing assemblies if FALSE
+  if (check.assemblies == FALSE) {
+    sample.names = sample.names[sample.names %in% gsub(".fa$|.fasta$", "", sample.files)]
+  }
 
   # Resumes file download
   if (overwrite == FALSE) {
-    done.files <- list.files(output.directory, full.names = T, recursive = T)
+    done.files <- list.files(output.directory, full.names = TRUE, recursive = TRUE)
     done.files <- done.files[grep("final-mapped-all.bam", done.files)]
     done.names <- gsub("/Lane_.*", "", done.files)
-    done.names <- gsub(".*\\/", "", done.names)
+    done.names <- unique(gsub(".*\\/", "", done.names))
     sample.names <- sample.names[!sample.names %in% done.names]
   }
 
   if (length(sample.names) == 0) {
     return("no samples remain to analyze.")
   }
- 
+
   ############################################################################################
   ########### Step 1 #########################################################################
   ##### Index reference
   ############################################################################################
 
   dir.create(output.directory)
-  sample.files <- list.files(assembly.directory)
 
   for (i in seq_along(sample.files)) {
     # Creates output directory for the sample
@@ -162,8 +177,6 @@ mapReference = function(bam.directory = NULL,
       " --USE_JDK_DEFLATER true --USE_JDK_INFLATER true"
     ))
   } # end i loop for indexing reference
-
-#Here
 
   ############################################################################################
   ########### Step 1 #########################################################################
@@ -198,9 +211,6 @@ mapReference = function(bam.directory = NULL,
 
     for (j in seq_along(sample.bams)) {
       
-      # gets the bam for the lane
-      lane.bams <- sample.bams[j]
-
       # Gets lane names
       lane.name <- paste0("Lane_", j)
       lane.dir <- paste0(sample.dir, "/", lane.name)
@@ -239,7 +249,6 @@ mapReference = function(bam.directory = NULL,
       if (file.exists(paste0(lane.dir, "/cleaned_final.bam")) != TRUE) {
         stop("Stopped. Something failed after mapping before sorting.")
       }
-
 
       # Sort by coordinate for input into MarkDuplicates
       system(paste0(

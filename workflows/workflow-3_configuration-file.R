@@ -23,18 +23,21 @@ threads = 6
 # Amount of memory to allocate in GB
 memory = 20
 # TRUE to overwrite previous runs. FALSE the script will resume but will not delete anything.
-overwrite = TRUE
+overwrite = FALSE
 # Hide verbose output for each function
 quiet = FALSE
 
 # Variant calling pipeline settings
 #########################
-#TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names.
+# TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names.
 auto.readgroup = TRUE
+# TRUE to stop the pipeline when read sets do not have corresponding assemblies; FALSE removes read sets without assemblies
+check.assemblies = FALSE
 # TRUE to run the GATK4 base-recalibrator. 
 # Uses initial strongly supported haplotype calls, refines base calls
 # Recommended only if you have sufficient sequencing depth greater than 20X. 
 base.recalibration = TRUE
+
 
 
 #Program paths
