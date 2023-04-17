@@ -1,4 +1,4 @@
-#' @title variants.baseRecalibration
+#' @title baseRecalibration
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,33 +34,33 @@
 #'
 #' @export
 
-variants.baseRecalibration = function(haplotype.caller.directory = "variant-discovery/haplotype-caller",
-                                      sample.mapping.directory = "variant-discovery/sample-mapping",
-                                      gatk4.path = NULL,
-                                      threads = 1,
-                                      memory = 1,
-                                      overwrite = TRUE,
-                                      clean.up = TRUE,
-                                      quiet = TRUE) {
+baseRecalibration = function(haplotype.caller.directory = "variant-discovery/haplotype-caller",
+                            sample.mapping.directory = "variant-discovery/sample-mapping",
+                            gatk4.path = NULL,
+                            threads = 1,
+                            memory = 1,
+                            clean.up = TRUE,
+                            overwrite = TRUE,
+                            quiet = TRUE) {
 
   #Debugging
   #Home directoroies
-  library(PhyloCap)
-  setwd("/Volumes/LaCie/Mantellidae")
-  haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
-  sample.mapping.directory <- "variant-discovery/sample-mapping"
+  # library(PhyloCap)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
+  # sample.mapping.directory <- "variant-discovery/sample-mapping"
 
-  gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-  threads <- 4
-  memory <- 8
-  quiet <- FALSE
-  overwrite <- TRUE
-  clean.up = TRUE
+  # threads <- 4
+  # memory <- 8
+  # quiet <- FALSE
+  # overwrite <- TRUE
+  # clean.up = TRUE
 
   # Same adds to bbmap path
-  require(doParallel)
+  require(foreach)
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {

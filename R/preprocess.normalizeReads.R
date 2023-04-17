@@ -102,7 +102,7 @@ normalizeReads = function(input.reads = NULL,
   doParallel::registerDoParallel(cl)
   mem.cl = floor(memory/threads)
 
-  foreach::foreach(i=1:length(sample.names), .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  foreach::foreach(i=1:length(sample.names), .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
     #Runs through each sample
     #for (i in 1:length(sample.names)) {
     #################################################

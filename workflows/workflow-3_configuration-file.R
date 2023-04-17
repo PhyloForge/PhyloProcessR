@@ -26,6 +26,8 @@ memory = 20
 overwrite = FALSE
 # Hide verbose output for each function
 quiet = FALSE
+# deletes intermediate files
+clean.up = TRUE
 
 # Variant calling pipeline settings
 #########################
