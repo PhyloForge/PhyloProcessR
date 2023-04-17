@@ -1,4 +1,4 @@
-#' @title variants.haplotypeCallerGATK4
+#' @title haplotypeCallerGATK4
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,37 +34,36 @@
 #'
 #' @export
 
-variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
-                                         output.directory = "haplotype-caller",
-                                         samtools.path = NULL,
-                                         gatk4.path = NULL,
-                                         threads = 1,
-                                         memory = 1,
-                                         overwrite = TRUE,
-                                         quiet = TRUE) {
+haplotypeCallerGATK4 = function(bam.directory = NULL,
+                                output.directory = "variant-calling/haplotype-caller",
+                                samtools.path = NULL,
+                                gatk4.path = NULL,
+                                threads = 1,
+                                memory = 1,
+                                overwrite = TRUE,
+                                quiet = TRUE) {
 
   #Debugging
   #Home directoroies
   # Debugging
   # Home directoroies
-  library(PhyloCap)
-  library(doParallel)
-  setwd("/Volumes/LaCie/Mantellidae")
-  output.directory <- "variant-discovery/haplotype-caller"
-  bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
+  # library(PhyloCap)
+  # library(doParallel)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # output.directory <- "variant-discovery/haplotype-caller"
+  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
 
-  gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-  threads <- 4
-  memory <- 8
-  quiet <- FALSE
-  overwrite <- TRUE
-
+  # threads <- 4
+  # memory <- 8
+  # quiet <- FALSE
+  # overwrite <- TRUE
 
   # Same adds to bbmap path
-  require(doParallel)
+  require(foreach)
   
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
@@ -126,12 +125,12 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
   ##### Start up loop for each sample
   ############################################################################################
   #Sets up multiprocessing
-  cl = makeCluster(threads)
-  registerDoParallel(cl)
-  mem.cl = floor(memory/threads)
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(sample.names), .packages = c("foreach", "ShortRead")) %dopar% {
+  foreach(i=1:length(sample.names), .packages = c("foreach")) %dopar% {
     #Runs through each sample
     #for (i in 1:length(sample.names)) {
     #################################################
@@ -230,7 +229,7 @@ variants.haplotypeCallerGATK4 = function(bam.directory = NULL,
 
   }# end i loop
 
-  stopCluster(cl)
+  snow::stopCluster(cl)
 
 
 }#end function

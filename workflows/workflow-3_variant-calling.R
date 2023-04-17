@@ -43,6 +43,17 @@ mapReference(
   quiet = quiet
 )
 
+# Function that calls the haplotypes using GATK4
+haplotypeCallerGATK4(
+  bam.directory = paste0(dataset.name, "/sample-mapping"),
+  output.directory = paste0(dataset.name, "/haplotype-caller"),
+  samtools.path = samtools.path,
+  gatk4.path = gatk4.path,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite,
+  quiet = quiet
+)
 
 
 

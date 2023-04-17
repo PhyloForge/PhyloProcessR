@@ -27,36 +27,14 @@ overwrite = TRUE
 # Hide verbose output for each function
 quiet = FALSE
 
-# BAM and read mapping settings
+# Variant calling pipeline settings
 #########################
-#TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names. 
+#TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names.
 auto.readgroup = TRUE
-
-
-
-  # Debugging
-  # library(PhyloCap)
-  # library(foreach)
-  # setwd("/Volumes/LaCie/Mantellidae")
-  # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  # output.directory <- "variant-discovery/sample-mapping"
-  # reference.file <- "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
-
-  # iterations <- 5
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # hisat2.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-
-  # auto.readgroup <- T
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- TRUE
-
-
-
+# TRUE to run the GATK4 base-recalibrator. 
+# Uses initial strongly supported haplotype calls, refines base calls
+# Recommended only if you have sufficient sequencing depth greater than 20X. 
+base.recalibration = TRUE
 
 
 #Program paths
