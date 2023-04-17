@@ -45,22 +45,22 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
 
   #Debugging
   #Home directoroies
-  # Debugging
-  # Home directoroies
-  # library(PhyloCap)
-  # library(doParallel)
-  # setwd("/Volumes/LaCie/Mantellidae")
-  # output.directory <- "variant-discovery/haplotype-caller"
-  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
+  Debugging
+  Home directoroies
+  library(PhyloCap)
+  library(doParallel)
+  setwd("/Volumes/LaCie/Mantellidae")
+  output.directory <- "variant-discovery/haplotype-caller"
+  bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
 
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- TRUE
+  threads <- 4
+  memory <- 8
+  quiet <- FALSE
+  overwrite <- TRUE
 
   # Same adds to bbmap path
   require(foreach)
@@ -200,7 +200,7 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SetNmAndUqTags",
         " -INPUT /dev/stdin -OUTPUT ", merge.dir, "/final-mapped-all.bam",
-        " -CREATE_INDEX true -R ", reference.path, "/reference.fa",
+        " -CREATE_INDEX true -R ", reference.path,
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
 
