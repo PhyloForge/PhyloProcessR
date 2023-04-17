@@ -35,16 +35,14 @@
 #' @export
 
 mapReference = function(bam.directory = NULL,
-                        output.directory = "variant-discovery",
-                        reference.file = "all",
-                        subreference.name = NULL,
+                        output.directory = "variant-calling/sample-mapping",
+                        reference.file = NULL,
                         samtools.path = NULL,
                         bwa.path = NULL,
-                        picard.path = NULL,
+                        gatk4.path = NULL,
                         threads = 1,
                         memory = 1,
-                        resume = TRUE,
-                        overwrite.reference = TRUE,
+                        overwrite = FALSE,
                         quiet = TRUE) {
   # Debugging
   # library(PhyloCap)
@@ -173,7 +171,7 @@ mapReference = function(bam.directory = NULL,
   ############################################################################################
 
   # Runs through each sample
-  for (i in 1:length(sample.names)) {
+  for (i in seq_along(sample.names)) {
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
@@ -198,7 +196,7 @@ mapReference = function(bam.directory = NULL,
       dir.create(report.path)
     }
 
-    for (j in 1:length(sample.bams)) {
+    for (j in seq_along(sample.bams)) {
       
       # gets the bam for the lane
       lane.bams <- sample.bams[j]

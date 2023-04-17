@@ -37,13 +37,13 @@
 
 prepareBAM = function(read.directory = NULL,
                       output.directory = "variant-calling/sample-mapping",
+                      auto.readgroup = TRUE,
                       samtools.path = NULL,
                       bwa.path = NULL,
                       gatk4.path = NULL,
                       threads = 1,
                       memory = 1,
                       overwrite = FALSE,
-                      auto.readgroup = TRUE,
                       quiet = TRUE) {
  
   # library(PhyloCap)

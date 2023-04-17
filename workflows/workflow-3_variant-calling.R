@@ -19,17 +19,29 @@ dir.create(dataset.name)
 prepareBAM(
   read.directory = read.directory,
   output.directory = paste0(dataset.name, "/sample-mapping"),
+  auto.readgroup = auto.readgroup,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
-  auto.readgroup = auto.readgroup,
   quiet = quiet
 )
 
-
+#Function that prepares the BAM files and sets the metadata correctly for GATK4
+mapReference(
+  bam.directory = paste0(dataset.name, "/sample-mapping"),
+  output.directory = paste0(dataset.name, "/sample-mapping"),
+  reference.file = reference.file,
+  samtools.path = samtools.path,
+  bwa.path = bwa.path,
+  gatk4.path = gatk4.path,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite,
+  quiet = quiet
+)
 
 
 
