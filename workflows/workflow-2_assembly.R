@@ -1,7 +1,6 @@
 #Installs updated package version
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
-library(foreach)
 
 #setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
 #source("/Users/chutter/Dropbox/Research/0_Github/PhyloCap/work-flows/workflow-1_configuration-file.R")

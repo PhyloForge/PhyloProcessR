@@ -34,8 +34,8 @@
 #'
 #' @export
 
-variants.genotypeSamples = function(haplotype.caller.directory = "variant-discovery/haplotype-caller",
-                                    sample.mapping.directory = "variant-discovery/sample-mapping",
+variants.genotypeSamples = function(haplotype.caller.directory = "variant-calling/haplotype-caller",
+                                    sample.mapping.directory = "variant-calling/sample-mapping",
                                     gatk4.path = NULL,
                                     threads = 1,
                                     memory = 1,
@@ -59,7 +59,7 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-discov
   clean.up = TRUE
 
   # Same adds to bbmap path
-  require(doParallel)
+  require(foreach)
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
@@ -105,10 +105,10 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-discov
   ##### Start up loop for each sample
   ############################################################################################
 
-  #Sets up multiprocessing
-  cl = makeCluster(threads)
-  registerDoParallel(cl)
-  mem.cl = floor(memory/threads)
+  # Sets up multiprocessing
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
   foreach::foreach(i=seq_along(sample.names), .packages = c("foreach")) %dopar% {
@@ -212,7 +212,7 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-discov
 
   }#end i loop
 
-  stopCluster(cl)
+  snow::stopCluster(cl)
 
 }#end function
 

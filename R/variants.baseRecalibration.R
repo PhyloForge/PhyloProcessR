@@ -34,8 +34,8 @@
 #'
 #' @export
 
-baseRecalibration = function(haplotype.caller.directory = "variant-discovery/haplotype-caller",
-                            sample.mapping.directory = "variant-discovery/sample-mapping",
+baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplotype-caller",
+                            sample.mapping.directory = "variant-calling/sample-mapping",
                             gatk4.path = NULL,
                             threads = 1,
                             memory = 1,
@@ -95,6 +95,16 @@ baseRecalibration = function(haplotype.caller.directory = "variant-discovery/hap
 
   #Get multifile databases together
   sample.names = list.dirs(haplotype.caller.directory, recursive = F, full.names = F)
+
+  # Resumes file download
+  if (overwrite == FALSE) {
+    done.files <- list.files(sample.mapping.directory, full.names = T, recursive = T)
+    done.files <- done.files[grep("gatk4-haplotype-caller.g.vcf.gz$", done.files)]
+    done.names <- gsub("/gatk4-haplotype-caller.g.vcf.gz$", "", done.files)
+    done.names <- gsub(".*\\/", "", done.names)
+    sample.names <- sample.names[!sample.names %in% done.names]
+  }
+
 
   if (length(sample.names) == 0){ return("no samples available to analyze.") }
 
