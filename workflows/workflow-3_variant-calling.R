@@ -18,8 +18,10 @@ dir.create(dataset.name)
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
+  assembly.directory = assembly.directory,
   output.directory = paste0(dataset.name, "/sample-mapping"),
   auto.readgroup = auto.readgroup,
+  check.assemblies = check.assemblies,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
@@ -61,8 +63,8 @@ haplotypeCallerGATK4(
 if (base.recalibration == TRUE){
   #runs function
   baseRecalibration(
-    haplotype.caller.directory = "variant-discovery/haplotype-caller",
-    sample.mapping.directory = "variant-discovery/sample-mapping",
+    haplotype.caller.directory = paste0(dataset.name, "/haplotype-caller"),
+    sample.mapping.directory = paste0(dataset.name, "/sample-mapping"),
     gatk4.path = gatk4.path,
     threads = threads,
     memory = memory,

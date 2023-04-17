@@ -103,10 +103,10 @@ baseRecalibration = function(haplotype.caller.directory = "variant-discovery/hap
   ##### Start up loop for each sample
   ############################################################################################
 
-  #Sets up multiprocessing
-  cl = makeCluster(threads)
-  registerDoParallel(cl)
-  mem.cl = floor(memory/threads)
+  # Sets up multiprocessing
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
   foreach::foreach(i=seq_along(sample.names), .packages = c("foreach")) %dopar% {
@@ -249,7 +249,7 @@ baseRecalibration = function(haplotype.caller.directory = "variant-discovery/hap
 
   }#end i loop
 
-  stopCluster(cl)
+  snow::stopCluster(cl)
 
 }#end function
 
