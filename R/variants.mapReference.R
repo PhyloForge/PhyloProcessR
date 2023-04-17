@@ -60,7 +60,6 @@ mapReference = function(bam.directory = NULL,
   # bwa.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   # check.assemblies = FALSE
-  # auto.readgroup <- T
   # threads <- 4
   # memory <- 8
   # quiet <- FALSE

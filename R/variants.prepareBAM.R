@@ -36,7 +36,9 @@
 #' @export
 
 prepareBAM = function(read.directory = NULL,
+                      assembly.directory = NULL,
                       output.directory = "variant-calling/sample-mapping",
+                      check.assemblies = TRUE,
                       auto.readgroup = TRUE,
                       samtools.path = NULL,
                       bwa.path = NULL,
@@ -101,12 +103,12 @@ prepareBAM = function(read.directory = NULL,
     stop("Please provide input reads.")
   }
 
-  if (file.exists(read.directory) == F) {
+  if (file.exists(read.directory) == FALSE) {
     stop("Input reads not found.")
   }
 
   # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.directory) == F) {
+  if (dir.exists(output.directory) == FALSE) {
     dir.create(output.directory)
   } else {
     if (overwrite == TRUE) {
@@ -121,13 +123,31 @@ prepareBAM = function(read.directory = NULL,
   }
 
   # Read in sample data **** sample is run twice?!
-  reads <- list.files(read.directory, recursive = T, full.names = T)
-  sample.names <- list.files(read.directory, recursive = F, full.names = F)
+  reads <- list.files(read.directory, recursive = TRUE, full.names = TRUE)
+  sample.names <- list.files(read.directory, recursive = FALSE, full.names = FALSE)
+
+  # Checks to see if assemblies match to reads
+  sample.files <- list.files(assembly.directory)
+
+  # Stops if TRUE
+  if (check.assemblies == TRUE) {
+    if (length(sample.files) != length(sample.names)) {
+      stop("Assembly count does not match raw read count. Ensure that all samples have been assembled or set check.assemblies == FALSE")
+    }
+  }
+
+  # Removes reads for missing assemblies if FALSE
+  if (check.assemblies == FALSE) {
+    sample.names <- sample.names[sample.names %in% gsub(".fa$|.fasta$", "", sample.files)]
+  }
 
   # Resumes file download
   if (overwrite == FALSE) {
-    done.files <- list.files(output.directory)
-    sample.names <- sample.names[!sample.names %in% done.files]
+    done.files <- list.files(output.directory, full.names = TRUE, recursive = TRUE)
+    done.files <- done.files[grep("final-mapped-all.bam", done.files)]
+    done.names <- gsub("/Lane_.*", "", done.files)
+    done.names <- unique(gsub(".*\\/", "", done.names))
+    sample.names <- sample.names[!sample.names %in% done.names]
   }
 
   if (length(sample.names) == 0) {
