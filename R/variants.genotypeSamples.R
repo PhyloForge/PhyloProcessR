@@ -45,18 +45,18 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
 
  #Debugging
   #Home directoroies
-  library(PhyloCap)
-  setwd("/Volumes/LaCie/Mantellidae")
-  haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
-  sample.mapping.directory <- "variant-discovery/sample-mapping"
+  # library(PhyloCap)
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
+  # sample.mapping.directory <- "variant-discovery/sample-mapping"
 
-  gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
 
-  threads <- 4
-  memory <- 8
-  quiet <- FALSE
-  overwrite <- TRUE
-  clean.up = TRUE
+  # threads <- 4
+  # memory <- 8
+  # quiet <- FALSE
+  # overwrite <- TRUE
+  # clean.up = TRUE
 
   # Same adds to bbmap path
   require(foreach)

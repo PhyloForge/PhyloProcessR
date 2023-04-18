@@ -75,5 +75,17 @@ if (base.recalibration == TRUE){
 
 }#end if
 
+#hereish, restart and check bqrsr
+
+variants.genotypeSamples(
+  haplotype.caller.directory = paste0(dataset.name, "/haplotype-caller"),
+  sample.mapping.directory = paste0(dataset.name, "/sample-mapping"),
+  gatk4.path = gatk4.path,
+  threads = threads,
+  memory = memory,
+  clean.up = clean.up,
+  overwrite = overwrite,
+  quiet = quiet
+)
 
 
