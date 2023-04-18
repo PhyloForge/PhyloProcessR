@@ -46,9 +46,9 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
   #Debugging
   #Home directoroies
   # library(PhyloCap)
-  # setwd("/Volumes/LaCie/Mantellidae")
-  # haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
-  # sample.mapping.directory <- "variant-discovery/sample-mapping"
+  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
+  # haplotype.caller.directory <- "variant-calling/haplotype-caller"
+  # sample.mapping.directory <- "variant-calling/sample-mapping"
 
   # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
   # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
@@ -98,13 +98,12 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
 
   # Resumes file download
   if (overwrite == FALSE) {
-    done.files <- list.files(sample.mapping.directory, full.names = T, recursive = T)
-    done.files <- done.files[grep("gatk4-haplotype-caller.g.vcf.gz$", done.files)]
-    done.names <- gsub("/gatk4-haplotype-caller.g.vcf.gz$", "", done.files)
+    done.files <- list.files(haplotype.caller.directory, full.names = T, recursive = T)
+    done.files <- done.files[grep("gatk4-bqsr-haplotype-caller.g.vcf.gz$", done.files)]
+    done.names <- gsub("/gatk4-bqsr-haplotype-caller.g.vcf.gz$", "", done.files)
     done.names <- gsub(".*\\/", "", done.names)
     sample.names <- sample.names[!sample.names %in% done.names]
   }
-
 
   if (length(sample.names) == 0){ return("no samples available to analyze.") }
 
