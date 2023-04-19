@@ -12,14 +12,14 @@ setwd(working.directory)
 ## Step 1: Preprocess reads
 ##################################################################################################
 
-#Begins by creating processed read directory
-dir.create(dataset.name)
+# Begins by creating processed read directory
+dir.create(paste0("data-analysis/", dataset.name))
 
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
   assembly.directory = assembly.directory,
-  output.directory = paste0(dataset.name, "/sample-mapping"),
+  output.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   auto.readgroup = auto.readgroup,
   check.assemblies = check.assemblies,
   samtools.path = samtools.path,
@@ -33,8 +33,7 @@ prepareBAM(
 
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 mapReference(
-  bam.directory = paste0(dataset.name, "/sample-mapping"),
-  output.directory = paste0(dataset.name, "/sample-mapping"),
+  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   assembly.directory = assembly.directory,
   check.assemblies = check.assemblies,
   reference.file = reference.file,
@@ -49,9 +48,8 @@ mapReference(
 
 # Function that calls the haplotypes using GATK4
 haplotypeCallerGATK4(
-  bam.directory = paste0(dataset.name, "/sample-mapping"),
-  output.directory = paste0(dataset.name, "/haplotype-caller"),
-  samtools.path = samtools.path,
+  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+  output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
@@ -64,7 +62,7 @@ if (base.recalibration == TRUE){
   #runs function
   baseRecalibration(
     haplotype.caller.directory = paste0(dataset.name, "/haplotype-caller"),
-    sample.mapping.directory = paste0(dataset.name, "/sample-mapping"),
+    mapping.directory = paste0(dataset.name, "/sample-mapping"),
     gatk4.path = gatk4.path,
     threads = threads,
     memory = memory,
@@ -75,17 +73,20 @@ if (base.recalibration == TRUE){
 
 }#end if
 
-#hereish, restart and check bqrsr
-
+# Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs
 variants.genotypeSamples(
-  haplotype.caller.directory = paste0(dataset.name, "/haplotype-caller"),
-  sample.mapping.directory = paste0(dataset.name, "/sample-mapping"),
+  haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
+  sample.mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
-  clean.up = clean.up,
   overwrite = overwrite,
   quiet = quiet
 )
+
+#Function that converts SNP files back into finished and SNP called contigs, choose format
+
+
+
 
 

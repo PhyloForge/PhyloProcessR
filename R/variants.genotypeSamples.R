@@ -34,42 +34,29 @@
 #'
 #' @export
 
-variants.genotypeSamples = function(haplotype.caller.directory = "variant-calling/haplotype-caller",
-                                    sample.mapping.directory = "variant-calling/sample-mapping",
+variants.genotypeSamples = function(variant.calling.directory = "variant-calling",
+                                    output.directory = "sample-genotypes",
                                     gatk4.path = NULL,
                                     threads = 1,
                                     memory = 1,
                                     overwrite = TRUE,
-                                    clean.up = TRUE,
                                     quiet = TRUE) {
 
  #Debugging
   #Home directoroies
   # library(PhyloCap)
   # setwd("/Volumes/LaCie/Mantellidae")
-  # haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/haplotype-caller"
-  # sample.mapping.directory <- "variant-discovery/sample-mapping"
-
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # variant.calling.directory = "variant-calling"
+  # output.directory <- "sample-genotypes"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   # threads <- 4
   # memory <- 8
   # quiet <- FALSE
   # overwrite <- TRUE
-  # clean.up = TRUE
 
   # Same adds to bbmap path
   require(foreach)
-
-  # Same adds to bbmap path
-  if (is.null(samtools.path) == FALSE) {
-    b.string <- unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    samtools.path <- ""
-  }
 
   # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
@@ -81,6 +68,11 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     gatk4.path <- ""
   }
 
+  #Sets up directories
+  haplotype.caller.directory = paste0(variant.calling.directory, "/haplotype-caller")
+  sample.mapping.directory = paste0(variant.calling.directory, "/sample-mapping")
+  output.directory = paste0(variant.calling.directory, "/", output.directory)
+
   #Quick checks
   if (is.null(haplotype.caller.directory) == TRUE) {
     stop("Please provide the haplotype caller directory.")
@@ -89,14 +81,42 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     stop("Haplotype caller directory not found.")
   }
 
+  # Quick checks
+  if (is.null(sample.mapping.directory) == TRUE) {
+    stop("Please provide the sample mapping directory.")
+  }
+  if (file.exists(sample.mapping.directory) == FALSE) {
+    stop("Sample mapping directory not found.")
+  }
+
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
 
-  #Get multifile databases together
-  sample.names = list.dirs(haplotype.caller.directory, recursive = F, full.names = F)
-  all.files = list.files(haplotype.caller.directory, recursive = T, full.names = T)
-  vcf.files = all.files[grep("gatk4-haplotype-caller.g.vcf.gz$", all.files)]
-  vcf.string = paste0("-V ", vcf.files, collapse = " ")
+  # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
+  if (dir.exists(output.directory) == FALSE) {
+    dir.create(output.directory)
+  } else {
+    if (overwrite == TRUE) {
+      system(paste0("rm -r ", output.directory))
+      dir.create(output.directory)
+    }
+  } # end else
+
+  # Get multifile databases together
+  sample.names <- list.dirs(haplotype.caller.directory, recursive = F, full.names = F)
+
+  # Resumes file download
+  if (overwrite == FALSE) {
+    done.files <- list.files(output.directory, full.names = T, recursive = T)
+    done.files <- done.files[grep("gatk4-final-genotype.vcf$", done.files)]
+    done.names <- gsub("/gatk4-final-genotype.vcf$", "", done.files)
+    done.names <- gsub(".*\\/", "", done.names)
+    sample.names <- sample.names[!sample.names %in% done.names]
+  }
+
+  if (length(sample.names) == 0) {
+    return("no samples available to analyze.")
+  }
 
   if (length(sample.names) == 0){ return("no samples available to analyze.") }
 
@@ -111,9 +131,11 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i=seq_along(sample.names), .packages = c("foreach")) %dopar% {
+  foreach::foreach(i = seq_along(sample.names), .packages = c("foreach")) %dopar% {
     # Loops through each locus and does operations on them
     # for (i in 1:length(loci.names)){
+
+    dir.create(paste0(output.directory, "/", sample.names[i]))
 
     reference.path <- paste0(sample.mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
@@ -128,15 +150,15 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " GenotypeGVCFs -R ", reference.path,
       " -V ", haplocaller.file,
-      " --use-new-qual-calculator true -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-genotype.vcf"
+      " --use-new-qual-calculator true -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf"
     ))
 
     # Selects only the SNPs from the VCF
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-genotype.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-snps.vcf",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
       " --select-type SNP"
     ))
 
@@ -144,8 +166,8 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-genotype.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-indels.vcf",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
       " --select-type INDEL"
     ))
 
@@ -153,8 +175,8 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " VariantFiltration -R ", reference.path,
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-snps.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-snps.vcf",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
       " -filter \"QD<2.0\" --filter-name \"QD2\"",
       " -filter \"QUAL<30.0\" --filter-name \"QUAL30\"",
       " -filter \"SOR>3.0\" --filter-name \"SOR3\"",
@@ -168,8 +190,8 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " VariantFiltration -R ", reference.path,
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-indels.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-indels.vcf",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
       " -filter \"QD<2.0\" --filter-name \"QD2\"",
       " -filter \"QUAL<30.0\" --filter-name \"QUAL30\"",
       " -filter \"FS>200.0\" --filter-name \"FS200\"",
@@ -180,35 +202,20 @@ variants.genotypeSamples = function(haplotype.caller.directory = "variant-callin
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " SortVcf",
-      " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-snps.vcf",
-      " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-indels.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-combined.vcf"
+      " -I ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
+      " -I ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-genotypes.vcf"
     ))
 
     system(paste0(
       gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
       " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-combined.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-rem-filtered-combined.vcf",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-genotypes.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-final-genotypes.vcf",
       " --exclude-filtered TRUE"
     ))
-    #Cleans up extra intermediate fils
-    if (clean.up == TRUE) {
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-combined.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-combined.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-indels.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-snps.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-indels.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-filtered-snps.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-rem-filtered-combined.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-rem-filtered-combined.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-snps.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-indels.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-snps.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-indels.vcf.idx"))
-    }
 
-    print(paste0(sample.names[i], " completed GATK4 base recalibration!"))
+    print(paste0(sample.names[i], " completed GATK4 sample genotyping!"))
 
   }#end i loop
 

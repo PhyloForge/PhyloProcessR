@@ -4,7 +4,7 @@
 #'
 #' @param read.directory directory of processed reads
 #'
-#' @param output.directory save name for the output directory
+#' @param mapping.directory save name for the output directory
 #'
 #' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
 #'
@@ -34,11 +34,9 @@
 #'
 #' @export
 
-mapReference = function(bam.directory = NULL,
-                        output.directory = "variant-calling/sample-mapping",
+mapReference = function(mapping.directory = NULL,
                         assembly.directory = NULL,
                         check.assemblies = TRUE,
-                        reference.file = NULL,
                         samtools.path = NULL,
                         bwa.path = NULL,
                         gatk4.path = NULL,
@@ -51,9 +49,8 @@ mapReference = function(bam.directory = NULL,
   # library(foreach)
   # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
   # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  # output.directory <- "variant-calling/sample-mapping"
-  # reference.file <- "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-  # bam.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-mapping"
+  # mapping.directory <- "variant-calling/sample-mapping"
+  # mapping.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-mapping"
 
   # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # samtools.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
@@ -97,10 +94,10 @@ mapReference = function(bam.directory = NULL,
 
 
   # Quick checks
-  if (is.null(bam.directory) == TRUE) {
+  if (is.null(mapping.directory) == TRUE) {
     stop("Please provide the bam directory.")
   }
-  if (file.exists(bam.directory) == FALSE) {
+  if (file.exists(mapping.directory) == FALSE) {
     stop("BAM folder not found.")
   }
 
@@ -110,9 +107,9 @@ mapReference = function(bam.directory = NULL,
   }
 
   # Read in sample data
-  bam.files <- list.files(bam.directory, recursive = TRUE, full.names = TRUE)
+  bam.files <- list.files(mapping.directory, recursive = TRUE, full.names = TRUE)
   bam.files <- bam.files[grep("all_reads.bam$", bam.files)]
-  sample.names <- list.dirs(bam.directory, recursive = FALSE, full.names = FALSE)
+  sample.names <- list.dirs(mapping.directory, recursive = FALSE, full.names = FALSE)
 
   #Checks to see if assemblies match to reads
   sample.files <- list.files(assembly.directory)
@@ -131,7 +128,7 @@ mapReference = function(bam.directory = NULL,
 
   # Resumes file download
   if (overwrite == FALSE) {
-    done.files <- list.files(output.directory, full.names = TRUE, recursive = TRUE)
+    done.files <- list.files(mapping.directory, full.names = TRUE, recursive = TRUE)
     done.files <- done.files[grep("final-mapped-all.bam", done.files)]
     done.names <- gsub("/Lane_.*", "", done.files)
     done.names <- unique(gsub(".*\\/", "", done.names))
@@ -147,20 +144,20 @@ mapReference = function(bam.directory = NULL,
   ##### Index reference
   ############################################################################################
 
-  dir.create(output.directory)
+  dir.create(mapping.directory)
 
   for (i in seq_along(sample.files)) {
     # Creates output directory for the sample
     sample.name <- gsub(".fa|.fasta", "", sample.files[i])
-    dir.create(paste0(output.directory, "/", sample.name))
-    dir.create(paste0(output.directory, "/", sample.name, "/index"))
+    dir.create(paste0(mapping.directory, "/", sample.name))
+    dir.create(paste0(mapping.directory, "/", sample.name, "/index"))
 
     system(paste0(
       "cp ", assembly.directory, "/", sample.files[i], " ",
-      output.directory, "/", sample.name, "/index/reference.fa"
+      mapping.directory, "/", sample.name, "/index/reference.fa"
     ))
 
-    reference.location <- paste0(output.directory, "/", sample.name, "/index/reference.fa")
+    reference.location <- paste0(mapping.directory, "/", sample.name, "/index/reference.fa")
 
     # Indexes the reference
     system(paste0(bwa.path, "bwa index -a bwtsw ", reference.location),
@@ -172,7 +169,7 @@ mapReference = function(bam.directory = NULL,
 
     system(paste0(
       gatk4.path, "gatk CreateSequenceDictionary --REFERENCE ", reference.location,
-      " --OUTPUT ", output.directory, "/", sample.name, "/index/reference.dict",
+      " --OUTPUT ", mapping.directory, "/", sample.name, "/index/reference.dict",
       " --USE_JDK_DEFLATER true --USE_JDK_INFLATER true"
     ))
   } # end i loop for indexing reference
@@ -187,7 +184,7 @@ mapReference = function(bam.directory = NULL,
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
-    sample.dir <- paste0(output.directory, "/", sample.names[i])
+    sample.dir <- paste0(mapping.directory, "/", sample.names[i])
     
     # Gets the reads for the sample
     sample.bams <- bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
@@ -219,7 +216,7 @@ mapReference = function(bam.directory = NULL,
 
       # Piped verison
       tmp.dir <- paste0(lane.dir, "/tmp")
-      reference.location = paste0(output.directory, "/", sample.names[i], "/index/reference.fa")
+      reference.location = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SamToFastq -I ", lane.dir, "/all_reads.bam -FASTQ /dev/stdout -TMP_DIR ", tmp.dir,

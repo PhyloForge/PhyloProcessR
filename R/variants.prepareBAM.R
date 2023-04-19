@@ -37,7 +37,7 @@
 
 prepareBAM = function(read.directory = NULL,
                       assembly.directory = NULL,
-                      output.directory = "variant-calling/sample-mapping",
+                      output.directory = "sample-mapping",
                       check.assemblies = TRUE,
                       auto.readgroup = TRUE,
                       samtools.path = NULL,
@@ -64,7 +64,6 @@ prepareBAM = function(read.directory = NULL,
   # memory <- 8
   # quiet <- FALSE
   # overwrite <- TRUE
-
 
   require(foreach)
 

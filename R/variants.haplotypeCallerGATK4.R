@@ -34,9 +34,8 @@
 #'
 #' @export
 
-haplotypeCallerGATK4 = function(bam.directory = NULL,
-                                output.directory = "variant-calling/haplotype-caller",
-                                samtools.path = NULL,
+haplotypeCallerGATK4 = function(mapping.directory = NULL,
+                                output.directory = "haplotype-caller",
                                 gatk4.path = NULL,
                                 threads = 1,
                                 memory = 1,
@@ -51,7 +50,7 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
   # library(doParallel)
   # setwd("/Volumes/LaCie/Mantellidae")
   # output.directory <- "variant-discovery/haplotype-caller"
-  # bam.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
+  # mapping.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
 
   # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
   # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
@@ -66,16 +65,6 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
   require(foreach)
   
   # Same adds to bbmap path
-  if (is.null(samtools.path) == FALSE) {
-    b.string <- unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    samtools.path <- ""
-  }
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -86,8 +75,8 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
   }
 
   #Quick checks
-  if (is.null(bam.directory) == TRUE){ stop("Please provide the bam directory.") }
-  if (file.exists(bam.directory) == F){ stop("BAM folder not found.") }
+  if (is.null(mapping.directory) == TRUE){ stop("Please provide the bam directory.") }
+  if (file.exists(mapping.directory) == F){ stop("BAM folder not found.") }
 
   # Creates output directory
   if (dir.exists("logs") == F) {
@@ -105,9 +94,9 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
   } # end else
 
   #Read in sample data
-  bam.files = list.files(bam.directory, recursive = T, full.names = T)
+  bam.files = list.files(mapping.directory, recursive = T, full.names = T)
   bam.files = bam.files[grep("final-mapped-all.bam$", bam.files)]
-  sample.names <- list.dirs(bam.directory, recursive = F, full.names = F)
+  sample.names <- list.dirs(mapping.directory, recursive = F, full.names = F)
 
   # Resumes file download
   if (overwrite == FALSE) {
@@ -155,11 +144,11 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
 
     # Sets up merging of bams from different lanes
     input.string = paste0("-I ", sample.bams, collapse = " ")
-    reference.path = paste0(bam.directory, "/", sample.names[i], "/index/reference.fa")
+    reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
     if (length(sample.bams) != 1) {
 
-      merge.dir = paste0(bam.directory, "/", sample.names[i], "/Lane_Merge")
+      merge.dir = paste0(mapping.directory, "/", sample.names[i], "/Lane_Merge")
       dir.create(merge.dir)
 
       # Next combine .bam files together!
@@ -212,7 +201,7 @@ haplotypeCallerGATK4 = function(bam.directory = NULL,
       system(paste0("rm ", merge.dir, "/final-mapped-merge.bam"))
     } else {
       # lane 1 if thats all there is
-      input.bam = paste0(bam.directory, "/", sample.names[i], "/Lane_1/final-mapped-all.bam")
+      input.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_1/final-mapped-all.bam")
     } # end else
 
     #Starts to finally look for Haplotypes! *here

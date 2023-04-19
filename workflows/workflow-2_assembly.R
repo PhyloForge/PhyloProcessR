@@ -22,7 +22,7 @@ input.reads = paste0(processed.reads, "/", assembly.reads)
 
   #Assembles merged paired end reads with spades
   assembleSpades(input.reads = input.reads,
-                 output.directory = paste0("data-analysis/spades-assembly"),
+                 output.directory = "data-analysis/spades-assembly",
                  assembly.directory = "data-analysis/draft-assemblies",
                  mismatch.corrector = spades.mismatch.corrector,
                  kmer.values = spades.kmer.values,

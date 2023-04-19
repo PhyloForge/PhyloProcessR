@@ -5,8 +5,8 @@
 # Directories and input files
 #########################
 # *** Full paths should be used whenever possible
-# The main working directory, must already exist. "data-analysis" from the assembly step recommended. 
-working.directory = "/Volumes/LaCie/Mantellidae/data-analysis"
+# The main working directory where a "dataset.name" directory with variant calling results will be saved.
+working.directory = "/Volumes/LaCie/Mantellidae"
 # The read directory desired for mapping, recommended "decontaminated-reads"
 read.directory = "/Volumes/LaCie/Mantellidae/reads"
 # The assembly directory desired to have variants called on. 
@@ -50,4 +50,3 @@ conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
-blast.path = conda.env

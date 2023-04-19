@@ -34,8 +34,8 @@
 #'
 #' @export
 
-baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplotype-caller",
-                            sample.mapping.directory = "variant-calling/sample-mapping",
+baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
+                            mapping.directory = "sample-mapping",
                             gatk4.path = NULL,
                             threads = 1,
                             memory = 1,
@@ -48,7 +48,7 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
   # library(PhyloCap)
   # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
   # haplotype.caller.directory <- "variant-calling/haplotype-caller"
-  # sample.mapping.directory <- "variant-calling/sample-mapping"
+  # mapping.directory <- "variant-calling/sample-mapping"
 
   # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
   # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
@@ -61,16 +61,6 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
 
   # Same adds to bbmap path
   require(foreach)
-
-  # Same adds to bbmap path
-  if (is.null(samtools.path) == FALSE) {
-    b.string <- unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    samtools.path <- ""
-  }
 
   # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
@@ -122,7 +112,7 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
     # Loops through each locus and does operations on them
     # for (i in 1:length(loci.names)){
 
-    reference.path <- paste0(sample.mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    reference.path <- paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
     # Genotype haplotype caller results
     system(paste0(
@@ -195,14 +185,14 @@ baseRecalibration = function(haplotype.caller.directory = "variant-calling/haplo
     ))
 
     #Gathers correct read files
-    lane.files = list.dirs(paste0(sample.mapping.directory, "/", sample.names[i]))
+    lane.files = list.dirs(paste0(mapping.directory, "/", sample.names[i]))
     lane.files = lane.files[grep("Lane_", lane.files)]
 
     if (length(lane.files) != 1) {
-      read.bam = paste0(sample.mapping.directory, "/", sample.names[i], "/Lane_Merge")
+      read.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_Merge")
     }
     if (length(lane.files) == 1) {
-      read.bam = paste0(sample.mapping.directory, "/", sample.names[i], "/Lane_1")
+      read.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_1")
     }
 
     #Applies base recalibration to the original bam file
