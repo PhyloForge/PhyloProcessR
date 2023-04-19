@@ -11,8 +11,6 @@ working.directory = "/Volumes/LaCie/Mantellidae"
 read.directory = "/Volumes/LaCie/Mantellidae/reads"
 # The assembly directory desired to have variants called on. 
 assembly.directory = "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-# The assembly directory desired to have variants called on.
-reference.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
 #The name for the dataset
 dataset.name = "variant-calling"
 
@@ -40,7 +38,14 @@ check.assemblies = FALSE
 # Recommended only if you have sufficient sequencing depth greater than 20X. 
 base.recalibration = TRUE
 
-
+# Output settings
+#########################
+#VCF file to use. Choices are "SNP", "Indel", "Both". SNP should be used in the majority of cases.
+vcf.file = "SNP"
+# TRUE to save contigs with ambiguity codes placed at heterozygous sites
+ambuiguity.codes = TRUE
+# TRUE to save contigs using a consensus base (randomly selected) for each heterozygous site.
+consensus.sequences = TRUE
 
 #Program paths
 #########################

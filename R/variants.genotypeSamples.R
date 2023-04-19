@@ -34,7 +34,8 @@
 #'
 #' @export
 
-variants.genotypeSamples = function(variant.calling.directory = "variant-calling",
+variants.genotypeSamples = function(mapping.directory = "sample-mapping",
+                                    haplotype.caller.directory = "haplotype-caller",
                                     output.directory = "sample-genotypes",
                                     gatk4.path = NULL,
                                     threads = 1,
@@ -68,11 +69,6 @@ variants.genotypeSamples = function(variant.calling.directory = "variant-calling
     gatk4.path <- ""
   }
 
-  #Sets up directories
-  haplotype.caller.directory = paste0(variant.calling.directory, "/haplotype-caller")
-  sample.mapping.directory = paste0(variant.calling.directory, "/sample-mapping")
-  output.directory = paste0(variant.calling.directory, "/", output.directory)
-
   #Quick checks
   if (is.null(haplotype.caller.directory) == TRUE) {
     stop("Please provide the haplotype caller directory.")
@@ -82,10 +78,10 @@ variants.genotypeSamples = function(variant.calling.directory = "variant-calling
   }
 
   # Quick checks
-  if (is.null(sample.mapping.directory) == TRUE) {
+  if (is.null(mapping.directory) == TRUE) {
     stop("Please provide the sample mapping directory.")
   }
-  if (file.exists(sample.mapping.directory) == FALSE) {
+  if (file.exists(mapping.directory) == FALSE) {
     stop("Sample mapping directory not found.")
   }
 
@@ -137,7 +133,7 @@ variants.genotypeSamples = function(variant.calling.directory = "variant-calling
 
     dir.create(paste0(output.directory, "/", sample.names[i]))
 
-    reference.path <- paste0(sample.mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    reference.path <- paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
     if (file.exists(paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz")) == TRUE ) {
       haplocaller.file <- paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz")

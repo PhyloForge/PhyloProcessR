@@ -9,7 +9,7 @@ setwd(working.directory)
 
 ##################################################################################################
 ##################################################################################################
-## Step 1: Preprocess reads
+## Runs series of functions and organizes results
 ##################################################################################################
 
 # Begins by creating processed read directory
@@ -36,7 +36,6 @@ mapReference(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   assembly.directory = assembly.directory,
   check.assemblies = check.assemblies,
-  reference.file = reference.file,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
@@ -75,8 +74,9 @@ if (base.recalibration == TRUE){
 
 # Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs
 variants.genotypeSamples(
-  haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
-  sample.mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+  haplotype.caller.directory = paste0(dataset.name, "/haplotype-caller"),
+  output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
@@ -84,9 +84,34 @@ variants.genotypeSamples(
   quiet = quiet
 )
 
-#Function that converts SNP files back into finished and SNP called contigs, choose format
+if (consensus.sequences == TRUE) {
+  # Function that converts SNP files back into finished and SNP called contigs, choose format
+  VCFtoContigs(
+    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+    output.directory = paste0("data-analysis/", dataset.name, "/iupac-contigs"),
+    vcf.file = vcf.file,
+    consensus.sequences = TRUE,
+    ambiguity.codes = FALSE,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    quiet = quiet
+  )
+}
 
+if (ambiguity.codes == TRUE) {
+  # Function that converts SNP files back into finished and SNP called contigs, choose format
+  VCFtoContigs(
+    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+    output.directory = paste0("data-analysis/", dataset.name, "/consensus-contigs"),
+    vcf.file = vcf.file,
+    consensus.sequences = FALSE,
+    ambiguity.codes = TRUE,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    quiet = quiet
+  )
+}
 
-
-
-
+#END Workflow 3

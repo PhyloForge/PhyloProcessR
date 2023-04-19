@@ -34,13 +34,11 @@
 #'
 #' @export
 
-VCFtoContigs = function(haplotype.caller.directory = "variant-calling/haplotype-caller",
-                        sample.mapping.directory = "variant-calling/sample-mapping",
-                        output.directory = "variant-calling/final-contigs",
-                        invariant.sites = TRUE,
-                        ambiguity.codes = FALSE,
-                        haplotype.split = FALSE,
-                        save.all.types = FALSE,
+VCFtoContigs = function(genotype.directory = "variant-calling",
+                        output.directory = "final-contigs",
+                        vcf.file = c("SNP", "Indel", "Both"),
+                        consensus.sequences = FALSE,
+                        ambiguity.codes = TRUE,
                         threads = 1,
                         memory = 1,
                         overwrite = TRUE,
@@ -86,6 +84,26 @@ VCFtoContigs = function(haplotype.caller.directory = "variant-calling/haplotype-
     stop("Sample mapping directory not found.")
   }
 
+  if (consensus.sequences == TRUE && ambiguity.codes == TRUE) {
+    stop("Cannot have both consensus sequences and ambiguity codes. If both are needed, run function twice")
+  }
+
+  vcf.string = NULL
+  if (vcf.file == "SNP") {
+    vcf.string = "gatk4-filtered-snp.vcf"
+  }
+
+  if (vcf.file == "Indel" || vcf.file == "indel" || vcf.file == "INDEL") {
+    vcf.string = "gatk4-filtered-indel.vcf"
+  }
+
+  if (vcf.file == "Both" || vcf.file == "both" || vcf.file == "BOTH") {
+    vcf.string <- "gatk4-final-genotype.vcf"
+  }
+
+  if (vcf.string == NULL) {
+    stop("please choose SNP, Indel, or Both for vcf.string.")
+  }
 
   # Creates output directory
   if (dir.exists(output.directory) == FALSE) {
@@ -120,18 +138,31 @@ VCFtoContigs = function(haplotype.caller.directory = "variant-calling/haplotype-
   foreach(i = seq_along(sample.names), .packages = c("foreach", "vcfR", "PhyloProcessR", "ape", "Biostrings")) %dopar% {
 
     # Obtains sample vcf
-    sample.vcf = paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-final-genotype.vcf")
+    sample.vcf = paste0(haplotype.caller.directory, "/", sample.names[i], "/", vcf.string)
     reference.path = paste0(sample.mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
-    # Selects only the SNPs from the VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
-      " FastaAlternateReferenceMaker",
-      " -R ", reference.path,
-      " -V ", sample.vcf,
-      " -O ", output.directory, "/", sample.names[i], ".fa",
-      " --use-iupac-sample ", sample.names[i]
-    ))
+    if (ambiguity.codes == TRUE) {
+      # Selects only the SNPs from the VCF
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+        " FastaAlternateReferenceMaker",
+        " -R ", reference.path,
+        " -V ", sample.vcf,
+        " -O ", output.directory, "/", sample.names[i], ".fa",
+        " --use-iupac-sample ", sample.names[i]
+      ))
+    } # end if
+    
+    if (consensus.sequences == TRUE) {
+      # Selects only the SNPs from the VCF
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+        " FastaAlternateReferenceMaker",
+        " -R ", reference.path,
+        " -V ", sample.vcf,
+        " -O ", output.directory, "/", sample.names[i], ".fa"
+      ))
+    } # end if
 
   }#end i loop
 
