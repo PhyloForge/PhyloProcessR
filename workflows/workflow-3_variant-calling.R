@@ -2,7 +2,6 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-#setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
 source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
 setwd(working.directory)
