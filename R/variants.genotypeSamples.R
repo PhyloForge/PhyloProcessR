@@ -104,8 +104,8 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
   # Resumes file download
   if (overwrite == FALSE) {
     done.files <- list.files(output.directory, full.names = T, recursive = T)
-    done.files <- done.files[grep("gatk4-final-genotype.vcf$", done.files)]
-    done.names <- gsub("/gatk4-final-genotype.vcf$", "", done.files)
+    done.files <- done.files[grep("gatk4-final-genotypes.vcf$", done.files)]
+    done.names <- gsub("/gatk4-final-genotypes.vcf$", "", done.files)
     done.names <- gsub(".*\\/", "", done.names)
     sample.names <- sample.names[!sample.names %in% done.names]
   }
