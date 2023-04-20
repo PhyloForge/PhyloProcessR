@@ -89,6 +89,7 @@ if (consensus.sequences == TRUE) {
   # Function that converts SNP files back into finished and SNP called contigs, choose format
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
     output.directory = paste0("data-analysis/", dataset.name, "/iupac-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = TRUE,
@@ -104,6 +105,7 @@ if (ambiguity.codes == TRUE) {
   # Function that converts SNP files back into finished and SNP called contigs, choose format
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
     output.directory = paste0("data-analysis/", dataset.name, "/consensus-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = FALSE,

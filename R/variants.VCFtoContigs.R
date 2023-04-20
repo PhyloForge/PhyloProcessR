@@ -35,6 +35,7 @@
 #' @export
 
 VCFtoContigs = function(genotype.directory = "variant-calling",
+                        mapping.directory = "sample-mapping",
                         output.directory = "final-contigs",
                         vcf.file = c("SNP", "Indel", "Both"),
                         consensus.sequences = FALSE,
@@ -108,7 +109,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   }
 
   # Get multifile databases together
-  sample.names <- list.dirs(haplotype.caller.directory, recursive = FALSE, full.names = FALSE)
+  sample.names <- list.dirs(genotype.directory, recursive = FALSE, full.names = FALSE)
 
   # Resumes file download
   if (overwrite == FALSE) {
@@ -135,8 +136,8 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   foreach(i = seq_along(sample.names), .packages = c("foreach", "vcfR", "PhyloProcessR", "ape", "Biostrings")) %dopar% {
 
     # Obtains sample vcf
-    sample.vcf = paste0(haplotype.caller.directory, "/", sample.names[i], "/", vcf.string)
-    reference.path = paste0(sample.mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    sample.vcf = paste0(genotype.directory, "/", sample.names[i], "/", vcf.string)
+    reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
     if (ambiguity.codes == TRUE) {
       # Selects only the SNPs from the VCF
