@@ -69,19 +69,16 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   }
 
   # Quick checks
-  if (is.null(haplotype.caller.directory) == TRUE) {
-    stop("Please provide the haplotype caller directory.")
+  if (is.null(genotype.directory) == TRUE) {
+    stop("Please provide the genotype directory.")
   }
-  if (file.exists(haplotype.caller.directory) == FALSE) {
-    stop("Haplotype caller directory not found.")
+  if (file.exists(genotype.directory) == FALSE) {
+    stop("Genotype directory not found.")
   }
 
   # Quick checks
-  if (is.null(sample.mapping.directory) == TRUE) {
-    stop("Please provide the sample mapping directory.")
-  }
-  if (file.exists(sample.mapping.directory) == FALSE) {
-    stop("Sample mapping directory not found.")
+  if (is.null(output.directory) == TRUE) {
+    stop("Please provide the output directory.")
   }
 
   if (consensus.sequences == TRUE && ambiguity.codes == TRUE) {
