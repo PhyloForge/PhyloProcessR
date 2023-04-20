@@ -162,6 +162,9 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
       ))
     } # end if
 
+    system(paste0("rm ", output.directory, "/", sample.names[i], ".fa.fai"))
+    system(paste0("rm ", output.directory, "/", sample.names[i], ".dict"))
+
   }#end i loop
 
   snow::stopCluster(cl)
