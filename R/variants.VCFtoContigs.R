@@ -98,7 +98,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
     vcf.string <- "gatk4-final-genotype.vcf"
   }
 
-  if (vcf.string == NULL) {
+  if (is.null(vcf.string) == TRUE) {
     stop("please choose SNP, Indel, or Both for vcf.string.")
   }
 
