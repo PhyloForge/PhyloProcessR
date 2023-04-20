@@ -133,7 +133,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach(i = seq_along(sample.names), .packages = c("foreach", "vcfR", "PhyloProcessR", "ape", "Biostrings")) %dopar% {
+  foreach(i = seq_along(sample.names), .packages = c("foreach", "PhyloProcessR")) %dopar% {
 
     # Obtains sample vcf
     sample.vcf = paste0(genotype.directory, "/", sample.names[i], "/", vcf.string)
