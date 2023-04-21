@@ -13,25 +13,28 @@ setwd(working.directory)
 ## Step 1: Assemble reads
 ##################
 
-#Begins by creating processed read directory
+# Begins by creating processed read directory
 dir.create("data-analysis")
+dir.create("data-analysis/contigs")
 
 if (denovo.assembly == TRUE){
 
-input.reads = paste0(processed.reads, "/", assembly.reads)
+input.reads <- paste0(processed.reads, "/", assembly.reads)
 
-  #Assembles merged paired end reads with spades
-  assembleSpades(input.reads = input.reads,
-                 output.directory = "data-analysis/spades-assembly",
-                 assembly.directory = "data-analysis/draft-assemblies",
-                 mismatch.corrector = spades.mismatch.corrector,
-                 kmer.values = spades.kmer.values,
-                 threads = threads,
-                 memory = memory,
-                 overwrite = overwrite,
-                 save.corrected.reads = save.corrected.reads,
-                 quiet = quiet,
-                 spades.path = spades.path)
+# Assembles merged paired end reads with spades
+assembleSpades(
+  input.reads = input.reads,
+  output.directory = "data-analysis/spades-assembly-raw",
+  assembly.directory = "data-analysis/contigs/draft-assemblies",
+  mismatch.corrector = spades.mismatch.corrector,
+  kmer.values = spades.kmer.values,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite,
+  save.corrected.reads = save.corrected.reads,
+  quiet = quiet,
+  spades.path = spades.path
+)
 }#end if
 
 #End script

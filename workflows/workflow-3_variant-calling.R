@@ -2,7 +2,7 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
+#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
 setwd(working.directory)
 
@@ -47,7 +47,7 @@ mapReference(
 )
 
 # Function that calls the haplotypes using GATK4
-haplotypeCallerGATK4(
+haplotypeCaller(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   gatk4.path = gatk4.path,
@@ -58,7 +58,7 @@ haplotypeCallerGATK4(
 )
 
 # Function that recalibrates bases and calls haplotypes again
-if (base.recalibration == TRUE){
+if (base.recalibration == TRUE) {
   #runs function
   baseRecalibration(
     haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
@@ -90,7 +90,7 @@ if (consensus.sequences == TRUE) {
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/", dataset.name, "/iupac-contigs"),
+    output.directory = paste0("data-analysis/", dataset.name, "/consensus-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = TRUE,
     ambiguity.codes = FALSE,
@@ -106,7 +106,7 @@ if (ambiguity.codes == TRUE) {
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/", dataset.name, "/consensus-contigs"),
+    output.directory = paste0("data-analysis/", dataset.name, "/iupac-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = FALSE,
     ambiguity.codes = TRUE,

@@ -6,11 +6,11 @@
 #########################
 # *** Full paths should be used whenever possible
 # The main working directory where a "dataset.name" directory with variant calling results will be saved.
-working.directory = "/Volumes/LaCie/Mantellidae"
+working.directory = "/Path/to/where/the/stuff/will/happen"
 # The read directory desired for mapping, recommended "decontaminated-reads"
-read.directory = "/Volumes/LaCie/Mantellidae/reads"
+read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. 
-assembly.directory = "/Volumes/LaCie/Mantellidae/expanded-assemblies"
+assembly.directory = "data-analysis/draft-contigs"
 #The name for the dataset
 dataset.name = "variant-calling"
 
@@ -43,15 +43,16 @@ base.recalibration = TRUE
 #VCF file to use. Choices are "SNP", "Indel", "Both". SNP should be used in the majority of cases.
 vcf.file = "SNP"
 # TRUE to save contigs with ambiguity codes placed at heterozygous sites
-ambuiguity.codes = TRUE
+ambiguity.codes = TRUE
 # TRUE to save contigs using a consensus base (randomly selected) for each heterozygous site.
 consensus.sequences = TRUE
 
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
+### *** Replace /PATH/TO/ with your system 
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
-conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env

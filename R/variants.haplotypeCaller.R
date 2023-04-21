@@ -1,4 +1,4 @@
-#' @title haplotypeCallerGATK4
+#' @title haplotypeCaller
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,13 +34,13 @@
 #'
 #' @export
 
-haplotypeCallerGATK4 = function(mapping.directory = NULL,
-                                output.directory = "haplotype-caller",
-                                gatk4.path = NULL,
-                                threads = 1,
-                                memory = 1,
-                                overwrite = TRUE,
-                                quiet = TRUE) {
+haplotypeCaller = function(mapping.directory = NULL,
+                          output.directory = "haplotype-caller",
+                          gatk4.path = NULL,
+                          threads = 1,
+                          memory = 1,
+                          overwrite = TRUE,
+                          quiet = TRUE) {
 
   #Debugging
   #Home directoroies
@@ -210,7 +210,7 @@ haplotypeCallerGATK4 = function(mapping.directory = NULL,
       " HaplotypeCaller",
       " -R ", reference.path, " -O ", sample.dir, "/gatk4-haplotype-caller.g.vcf.gz",
       " -I ", input.bam,
-      " -ERC GVCF --max-alternate-alleles 3",
+      " -ERC GVCF",
       " -bamout ", sample.dir, "/gatk4-haplotype-caller.bam"
     ))
 

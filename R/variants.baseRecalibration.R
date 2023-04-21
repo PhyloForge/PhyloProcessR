@@ -224,7 +224,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
       " -R ", reference.path,
       " -I ", recal.bam,
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz",
-      " -ERC GVCF --max-alternate-alleles 3",
+      " -ERC GVCF",
       " -bamout ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.bam"
     ))
 
