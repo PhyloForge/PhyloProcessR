@@ -11,14 +11,14 @@ working.directory <- "/Volumes/LaCie/Mantellidae"
 # The read directory desired for mapping, recommended "decontaminated-reads"
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. 
-assembly.directory = "data-analysis/contigs/expanded-assemblies"
+assembly.directory = "data-analysis/contigs/3_target-contigs"
 #The name for the dataset
 dataset.name = "variant-calling"
 
 # Global settings
 #########################
 # number of threads
-threads = 6
+threads = 5
 # Amount of memory to allocate in GB
 memory = 20
 # TRUE to overwrite previous runs. FALSE the script will resume but will not delete anything.
@@ -32,11 +32,12 @@ clean.up = TRUE
 #########################
 # TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names.
 auto.readgroup = TRUE
-# TRUE to stop the pipeline when read sets do not have corresponding assemblies; FALSE removes read sets without assemblies
+# TRUE to stop  pipeline when read sets are missing corresponding assemblies; FALSE removes read sets without assemblies
 check.assemblies = FALSE
 # TRUE to run the GATK4 base-recalibrator. 
 # Uses initial strongly supported haplotype calls, refines base calls
 # Recommended only if you have sufficient sequencing depth greater than 20X. 
+# if you observe few SNPs, turn this off and restart
 base.recalibration = TRUE
 
 # Output settings
