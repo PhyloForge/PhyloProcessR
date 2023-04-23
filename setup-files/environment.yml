@@ -17,6 +17,7 @@ dependencies:
   - r-biomartr=1.0.2
   - r-devtools=2.4.5
   - orna=2.0
+  - cd-hit=4.8.1
   - bioconductor-rsamtools=2.14.0
   - blast>=2.12.0
   - mafft=7.520

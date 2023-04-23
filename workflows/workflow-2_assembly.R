@@ -17,15 +17,11 @@ setwd(working.directory)
 dir.create("data-analysis")
 dir.create("data-analysis/contigs")
 
-if (denovo.assembly == TRUE){
-
-input.reads <- paste0(processed.reads, "/", assembly.reads)
-
 # Assembles merged paired end reads with spades
 assembleSpades(
-  input.reads = input.reads,
+  input.reads = paste0(processed.reads, "/", assembly.reads),
   output.directory = "data-analysis/spades-assembly-raw",
-  assembly.directory = "data-analysis/contigs/draft-assemblies",
+  assembly.directory = "data-analysis/contigs/1_draft-contigs",
   mismatch.corrector = spades.mismatch.corrector,
   kmer.values = spades.kmer.values,
   threads = threads,
@@ -35,6 +31,27 @@ assembleSpades(
   quiet = quiet,
   spades.path = spades.path
 )
-}#end if
 
+#Reduces contig redundancy by removing the shortest contig in a set of similar contigs using cd-hit-est
+reduceRedundancy(
+  assembly.directory = "data-analysis/contigs/1_draft-contigs",
+  output.directory = "data-analysis/contigs/2_reduced-redundancy",
+  similarity = similarity,
+  cdhit.path = cdhit.path,
+  memory = memory,
+  threads = threads,
+  overwrite = overwrite,
+  quiet = quiet
+)
+
+removeOffTargetContigs(
+  assembly.directory = "data-analysis/contigs/2_reduced-redundancy",
+  target.markers = target.markers,
+  output.directory = "data-analysis/contigs/3_target-contigs",
+  blast.path = blast.path,
+  memory = memory,
+  threads = threads,
+  overwrite = overwrite,
+  quiet = quiet
+)
 #End script

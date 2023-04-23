@@ -6,11 +6,12 @@
 #########################
 # *** Full paths should be used whenever possible
 # The main working directory where a "dataset.name" directory with variant calling results will be saved.
-working.directory = "/Path/to/where/the/stuff/will/happen"
+working.directory <- "/Volumes/LaCie/Mantellidae"
+#working.directory = "/Path/to/where/the/stuff/will/happen"
 # The read directory desired for mapping, recommended "decontaminated-reads"
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. 
-assembly.directory = "data-analysis/draft-contigs"
+assembly.directory = "data-analysis/contigs/expanded-assemblies"
 #The name for the dataset
 dataset.name = "variant-calling"
 
@@ -52,7 +53,7 @@ consensus.sequences = TRUE
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
 ### *** Replace /PATH/TO/ with your system 
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
-conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
+conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env

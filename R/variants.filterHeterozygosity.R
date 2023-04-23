@@ -79,17 +79,20 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
     #Reads in contigs
     contigs = Biostrings::readDNAStringSet(paste0(iupac.directory, "/", file.names[i]), format = "fasta")
-    #names(contigs) = paste0("contig_", stringr::str_pad(seq(1:length(contigs)), 6, pad = "0"))
+    # names(contigs) = paste0("contig_", stringr::str_pad(seq(1:length(contigs)), 6, pad = "0"))
 
     collect.count = c()
+    collect.prop = c()
     for (j in seq_along(contigs)) {
       temp.contig = as.character(contigs[j])
-      count = sum(stringr::str_count(temp.contig, pattern = c("R", "Y", "K", "M", "S", "W", "B", "D", "H", "V"))) / Biostrings::width(temp.contig)
-      if (count > 0.05) {
-        print(count)
-      }
+      count = sum(stringr::str_count(temp.contig, pattern = c("R", "Y", "K", "M", "S", "W", "B", "D", "H", "V")))
+      temp.prop = count / Biostrings::width(temp.contig)
       collect.count = append(collect.count, count)
+      collect.prop = append(collect.count, temp.prop)
+
     }
+
+    
 
     # Finds probes that match to two or more contigs
     # final.loci = as.list(as.character(contigs))
