@@ -37,13 +37,13 @@ save.corrected.reads = FALSE
 #Clean up large files 
 clean.up.spades = FALSE
 # the similarity threshold for redundancy reduction
-reduce.redundancy = 0.95
+similarity = 0.95
 
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
-conda.env = "/Path/to/conda/env/bin"
+conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 cdhit.path = conda.env
 spades.path = conda.env
 blast.path = conda.env

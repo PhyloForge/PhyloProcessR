@@ -4,7 +4,7 @@
 #'
 #' @param input.reads path to a folder of raw reads in fastq format.
 #'
-#' @param reference a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
+#' @param target.markers a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
 #'
 #' @param output.name the new directory to save the adaptor trimmed sequences
 #'
@@ -63,7 +63,7 @@ removeOffTargetContigs = function(assembly.directory = NULL,
   # setwd("/Volumes/LaCie/Mantellidae")
   # assembly.directory = "data-analysis/contigs/reduced-redundancy"
   # output.directory = "data-analysis/contigs/target-contigs"
-  # reference = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+  # target.markers = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
   # blast.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   # quiet = TRUE
@@ -84,7 +84,7 @@ removeOffTargetContigs = function(assembly.directory = NULL,
   if (is.null(assembly.directory) == TRUE) {
     stop("Please provide input reads.")
   }
-  if (is.null(reference) == TRUE) {
+  if (is.null(target.markers) == TRUE) {
     stop("Please provide a reference.")
   }
 
@@ -119,7 +119,7 @@ removeOffTargetContigs = function(assembly.directory = NULL,
 
     # Make blast database for the probe loci
     system(paste0(
-      blast.path, "makeblastdb -in ", reference,
+      blast.path, "makeblastdb -in ", target.markers,
       " -parse_seqids -dbtype nucl -out ", species.dir, "/nucl-blast_db"
     ), ignore.stdout = quiet)
 
@@ -142,7 +142,7 @@ removeOffTargetContigs = function(assembly.directory = NULL,
     # Percent identitiy must match 50% or greater
     filt.data = filt.data[filt.data$pident >= 0.6, ]
 
-    # Make sure the hit is greater than 50% of the reference length
+    # Make sure the hit is greater than 50% of the target.markers length
     filt.data = filt.data[filt.data$matches >= ((30 / 100) * filt.data$tLen), ]
 
     if (nrow(filt.data) == 0) {
