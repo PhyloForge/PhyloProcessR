@@ -242,7 +242,7 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " VariantFiltration -R ", reference.path,
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
-        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
+        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf"
       ))
 
       # Applies filters to indels
@@ -250,7 +250,7 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " VariantFiltration -R ", reference.path,
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
-        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
+        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf"
       ))
     } # end high if
 
