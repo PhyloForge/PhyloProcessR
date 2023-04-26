@@ -275,6 +275,22 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
       " --exclude-filtered TRUE"
     ))
 
+    system(paste0(
+      gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+      " SelectVariants",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-final-snps.vcf",
+      " --exclude-filtered TRUE"
+    ))
+
+    system(paste0(
+      gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+      " SelectVariants",
+      " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
+      " -O ", output.directory, "/", sample.names[i], "/gatk4-final-indels.vcf",
+      " --exclude-filtered TRUE"
+    ))
+
     print(paste0(sample.names[i], " completed GATK4 sample genotyping!"))
 
   }#end i loop

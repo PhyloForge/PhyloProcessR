@@ -88,11 +88,11 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
 
   vcf.string = NULL
   if (vcf.file == "SNP") {
-    vcf.string = "gatk4-filtered-snps.vcf"
+    vcf.string = "gatk4-final-snps.vcf"
   }
 
   if (vcf.file == "Indel" || vcf.file == "indel" || vcf.file == "INDEL") {
-    vcf.string = "gatk4-filtered-indels.vcf"
+    vcf.string = "gatk4-final-indels.vcf"
   }
 
   if (vcf.file == "Both" || vcf.file == "both" || vcf.file == "BOTH") {

@@ -79,7 +79,7 @@ variants.genotypeSamples(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-  filtering.thresholds = "low",
+  filtering.thresholds = "high",
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
