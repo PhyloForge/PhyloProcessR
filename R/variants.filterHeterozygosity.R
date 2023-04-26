@@ -30,7 +30,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
                                 ) {
 
   setwd("/Volumes/LaCie/Mantellidae")
-  iupac.directory = "data-analysis/variant-calling/iupac-contigs"
+  iupac.directory = "data-analysis/contigs/5_iupac-contigs"
   removed.directory = "data-analysis/contigs/high-het-contigs"
   output.directory = "data-analysis/contigs/filtered-contigs"
   threshold = 0.05
@@ -92,6 +92,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
     }
 
+    sum(collect.count)
     
 
     # Finds probes that match to two or more contigs

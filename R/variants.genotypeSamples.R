@@ -213,10 +213,10 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
         " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
         " -filter \"QD<1.0\" --filter-name \"QD2\"",
-        " -filter \"QUAL<20.0\" --filter-name \"QUAL20\"",
+        " -filter \"QUAL<10.0\" --filter-name \"QUAL20\"",
         " -filter \"SOR>3.0\" --filter-name \"SOR3\"",
         " -filter \"FS>60.0\" --filter-name \"FS60\"",
-        " -filter \"MQ<20.0\" --filter-name \"MQ40\"",
+        " -filter \"MQ<10.0\" --filter-name \"MQ40\"",
         " -filter \"MQRankSum<-12.5\" --filter-name \"MQRankSum12.5\"",
         " -filter \"ReadPosRankSum<-8.0\" --filter-name \"ReadPosRankSum8\""
       ))
@@ -228,7 +228,7 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
         " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
         " -filter \"QD<2.0\" --filter-name \"QD2\"",
-        " -filter \"QUAL<20.0\" --filter-name \"QUAL20\"",
+        " -filter \"QUAL<10.0\" --filter-name \"QUAL20\"",
         " -filter \"FS>200.0\" --filter-name \"FS200\"",
         " -filter \"ReadPosRankSum<-20.0\" --filter-name \"ReadPosRankSum20\""
       ))
@@ -243,13 +243,6 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         " VariantFiltration -R ", reference.path,
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
         " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
-        " -filter \"QD<1.0\" --filter-name \"QD2\"",
-        " -filter \"QUAL<20.0\" --filter-name \"QUAL30\"",
-        " -filter \"SOR>2.0\" --filter-name \"SOR3\"",
-        " -filter \"FS>40.0\" --filter-name \"FS60\"",
-        " -filter \"MQ<20.0\" --filter-name \"MQ40\"",
-        " -filter \"MQRankSum<-10\" --filter-name \"MQRankSum12.5\"",
-        " -filter \"ReadPosRankSum<-6.0\" --filter-name \"ReadPosRankSum8\""
       ))
 
       # Applies filters to indels
@@ -258,10 +251,6 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
         " VariantFiltration -R ", reference.path,
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
         " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
-        " -filter \"QD<2.0\" --filter-name \"QD2\"",
-        " -filter \"QUAL<30.0\" --filter-name \"QUAL30\"",
-        " -filter \"FS>200.0\" --filter-name \"FS200\"",
-        " -filter \"ReadPosRankSum<-10.0\" --filter-name \"ReadPosRankSum20\""
       ))
     } # end high if
 

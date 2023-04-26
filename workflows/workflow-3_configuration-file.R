@@ -40,7 +40,7 @@ base.recalibration = TRUE
 # High: strict filtering where ~50% of the variants removed. Recommended when accuracy is most important. 
 # Medium: medium filtering where ~25% of the variants removed. A balance between the two (recommended).
 # Low: low filtering where ~10% of variants removed. Recommended when more variants are needed and accuracy can waver. 
-filtering.threshold = "medium"
+filtering.thresholds = "low"
 
 # Output settings
 #########################

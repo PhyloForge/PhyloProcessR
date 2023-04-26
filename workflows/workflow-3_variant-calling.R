@@ -2,7 +2,7 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
+source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
 
 setwd(working.directory)
@@ -79,10 +79,11 @@ variants.genotypeSamples(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+  filtering.thresholds = "low",
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
-  overwrite = overwrite,
+  overwrite = TRUE,
   quiet = quiet
 )
 
