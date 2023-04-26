@@ -2,13 +2,14 @@
 ## Configuration file for workflow -2: alignments and trimming
 #################################################
 
-#Directories and input files
+# Directories and input files
 #########################
 # *** Full paths should be used whenever possible
-#The main working directory
-working.directory = "/Path/to/where/the/stuff/is/at"
+# The main working directory
+#working.directory = "/Path/to/where/the/stuff/is/at"
+working.directory <- "/Volumes/LaCie/Mantellidae"
 #The sequence capture target marker file for extraction from contigs
-target.file = "Marker-file.fa"
+target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
 #The name for the dataset
 dataset.name = "Descriptive-Name"
 
@@ -75,8 +76,7 @@ min.coverage.bp = 60
 #########################
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
 ### e.g. fastp.path = "/conda/PhyloCap/bin
-conda.env = "/Path/to/conda/env/bin"
-bbmap.path = conda.env
+conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 blast.path = conda.env
 mafft.path = conda.env
 trimAl.path = conda.env

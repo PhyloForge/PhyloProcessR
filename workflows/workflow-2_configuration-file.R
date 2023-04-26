@@ -6,13 +6,13 @@
 #########################
 # *** Full paths should be used whenever possible
 # The main working directory
-working.directory = "/Path/to/where/the/stuff/will/happen"
+working.directory = "/PATH/TO/where/the/stuff/will/happen"
 #The processed reads directory
 processed.reads = "processed-reads"
 #The read folder within processed reads to assemble, pe-merged-reads recommended
 assembly.reads = "pe-merged-reads"
 # The target markers reference file
-target.markers = "Path/to/target-markers.fa"
+target.markers = "PATH/TO/target-markers.fa"
 
 # Global settings
 #########################

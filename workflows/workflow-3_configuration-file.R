@@ -34,11 +34,13 @@ clean.up = TRUE
 auto.readgroup = TRUE
 # TRUE to stop  pipeline when read sets are missing corresponding assemblies; FALSE removes read sets without assemblies
 check.assemblies = FALSE
-# TRUE to run the GATK4 base-recalibrator. 
-# Uses initial strongly supported haplotype calls, refines base calls
-# Recommended only if you have sufficient sequencing depth greater than 20X. 
-# if you observe few SNPs, turn this off and restart
+# TRUE to run the GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, turn this off and restart
 base.recalibration = TRUE
+# select between: high, medium, low.
+# High: strict filtering where ~50% of the variants removed. Recommended when accuracy is most important. 
+# Medium: medium filtering where ~25% of the variants removed. A balance between the two (recommended).
+# Low: low filtering where ~10% of variants removed. Recommended when more variants are needed and accuracy can waver. 
+filtering.threshold = "medium"
 
 # Output settings
 #########################

@@ -2,8 +2,9 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
+#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
+
 setwd(working.directory)
 
 ##################################################################################################
@@ -90,7 +91,7 @@ if (consensus.sequences == TRUE) {
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/", dataset.name, "/consensus-contigs"),
+    output.directory = paste0("data-analysis/contigs/4_consensus-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = TRUE,
     ambiguity.codes = FALSE,
@@ -106,7 +107,7 @@ if (ambiguity.codes == TRUE) {
   VCFtoContigs(
     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/", dataset.name, "/iupac-contigs"),
+    output.directory = paste0("data-analysis/contigs/5_iupac-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = FALSE,
     ambiguity.codes = TRUE,

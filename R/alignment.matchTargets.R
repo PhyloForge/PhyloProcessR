@@ -54,35 +54,32 @@ matchTargets = function(assembly.directory = NULL,
                         trim.target = FALSE,
                         threads = 1,
                         memory = 1,
-                        overwrite = FALSE,
-                        resume = TRUE,
-                        quiet = TRUE,
                         blast.path = NULL,
-                        bbmap.path = NULL) {
+                        overwrite = FALSE,
+                        quiet = TRUE
+                        ) {
 #
-#   #Debug setup
-#   setwd("/Volumes/LaCie/India") #Your main project directory
-#   assembly.directory<-"/Volumes/LaCie/India/data-analysis/draft-assemblies"
-#   target.file<-"/Volumes/LaCie/India/Ranoidea_All-Markers_Apr21-2019.fa"
-#   output.directory = "data-analysis/match-targets"
-#   alignment.contig.name = "test"
-#   #
-#   # #Main settings
-#    threads = 4
-#    memory = 8
-#    trim.target = FALSE
-#    overwrite = FALSE
-#    resume = TRUE
-#    quiet = TRUE
-#   #
-#   # #tweak settings (make some statements to check these)
-#    min.match.percent = 60
-#    min.match.length = 50
-#    min.match.coverage = 50
-#   #
-#   # #program paths
-#    blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-#    bbmap.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  #Debug setup
+ #Debugging
+ setwd("/Volumes/LaCie/Mantellidae/")
+ assembly.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/contigs/5_iupac-contigs"
+ target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+ output.directory = "data-analysis/contigs/6_annotated-contigs"
+ blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+
+  #
+  # #Main settings
+  threads = 4
+  memory = 8
+  trim.target = FALSE
+  overwrite = FALSE
+  quiet = TRUE
+  #
+  # #tweak settings (make some statements to check these)
+  min.match.percent = 60
+  min.match.length = 50
+  min.match.coverage = 30
+  #
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -92,17 +89,9 @@ matchTargets = function(assembly.directory = NULL,
     }#end if
   } else { blast.path = "" }
 
-  #Same adds to bbmap path
-  if (is.null(bbmap.path) == FALSE){
-    b.string = unlist(strsplit(bbmap.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bbmap.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { bbmap.path = "" }
-
   #Initial checks
   if (assembly.directory == output.directory){ stop("You should not overwrite the original contigs.") }
-  if (is.null(target.file) == T){ stop("A fasta file of targets to match to assembly contigs is needed.") }
+  if (is.null(target.file) == TRUE){ stop("A fasta file of targets to match to assembly contigs is needed.") }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -116,10 +105,10 @@ matchTargets = function(assembly.directory = NULL,
 
   #headers for the blast db
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
-             "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
+            "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
   #Matching and processing for each sample
-  for (i in 1:length(file.names)) {
+  for (i in seq_along(file.names)) {
 
     #Sets up working directories for each species
     sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
@@ -140,38 +129,19 @@ matchTargets = function(assembly.directory = NULL,
     #Part A: Blasting
     #########################################################################
 
-    #Reads in contigs
-    contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", file.names[i]), format = "fasta")
-    names(contigs) = paste0("contig_", stringr::str_pad(seq(1:length(contigs)), 6, pad = "0"))
+    # Make blast database for the probe loci
+    system(paste0(
+      blast.path, "makeblastdb -in ", assembly.directory, "/", file.names[i],
+      " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"
+    ), ignore.stdout = quiet)
 
-    #Finds probes that match to two or more contigs
-    final.loci = as.list(as.character(contigs))
-    writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(species.dir, "/", sample, "_renamed-contigs.fa"), nbchar = 1000000, as.string = T)
-
-    # # DEDUPE almost exact duplicate removal
-    system(paste0(bbmap.path, "dedupe.sh in=",species.dir, "/", sample,"_renamed-contigs.fa ordered=t overwrite=true",
-                  " out=", species.dir, "/", sample, "_dedupe.fa", " minidentity=95"), ignore.stderr = quiet)
-
-    #Make blast database for the probe loci
-    system(paste0(blast.path, "makeblastdb -in ", species.dir, "/", sample, "_dedupe.fa",
-                  " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"), ignore.stdout = quiet)
-
-    #Matches samples to loci
-    system(paste0(blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
-                  " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
-                  " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-                  " -num_threads ", threads))
-
-    #Matches samples to proteins
-    # system(paste0("tblastn -task tblastn-fast -db ", sample, "_nucl-blast_db -evalue 0.001 -seg no",
-    #               " -query ", prot.file, " -out ", sample, "_prot-match.txt",
-    #               " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-    #               " -num_threads ", threads))
-    #  #Matches need to be greater than 12
-    #filt.data = match.data[match.data$matches > 12,]
-    #Percent identitiy must match 50% or greater
-    #filt.data = filt.data[filt.data$pident >= 50,]
+    # Matches samples to loci
+    system(paste0(
+      blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
+      " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
+      " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
+      " -num_threads ", threads
+    ))
 
     #Need to load in transcriptome for each species and take the matching transcripts to the database
     system(paste0("rm ", species.dir, "/*nucl-blast_db*"))
@@ -196,8 +166,7 @@ matchTargets = function(assembly.directory = NULL,
     filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
     #Reads in contigs
-    contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", sample, "_dedupe.fa"), format = "fasta")
-    names(contigs) = gsub(" .*", "", names(contigs))
+    contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", file.names[i]), format = "fasta")
 
     #########################################################################
     #Part B: Multiple sample contigs (tName) matching to one target (qName)

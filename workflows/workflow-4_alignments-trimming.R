@@ -1,47 +1,37 @@
 #Installs updated package version
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
-library(foreach)
 
-source("workflow-2_configuration-file.R")
+source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-4_configuration-file.R")
+source("workflow-4_configuration-file.R")
+
 setwd(working.directory)
 
 ##################################################################################################
 ##################################################################################################
 #################################################
-## Step 1: Preprocess reads
+## Step 1: Match targets
 ##################
 
-#Checks if everything is installed
-pass.fail = setupCheck(anaconda.environment =  NULL,
-                       blast.path = blast.path,
-                       mafft.path = mafft.path,
-                       trimAl.path = trimAl.path,
-                       julia.path = julia.path,
-                       taper.path = taper.path)
-
-if (pass.fail == FALSE){ print("Some required programs are missing") } else {
-  print("all required programs are found, PhyloProcessR pipeline continuing...")
-}
-
-
-if (match.targets == TRUE){
-  #match targets
-  matchTargets(assembly.directory = "data-analysis/draft-assemblies",
-               target.file = target.file,
-               alignment.contig.name = paste0("data-analysis/", dataset.name),
-               output.directory = "data-analysis/match-targets",
-               min.match.percent = min.match.percent,
-               min.match.length = min.match.length,
-               min.match.coverage = min.match.coverage,
-               threads = threads,
-               memory = memory,
-               trim.target = trim.to.targets,
-               overwrite = overwrite,
-               quiet = quiet,
-               blast.path = blast.path,
-               bbmap.path = bbmap.path)
-}#end if
+if (match.targets == TRUE) {
+  # match targets
+  matchTargets(
+    assembly.directory = "data-analysis/draft-assemblies",
+    target.file = target.file,
+    alignment.contig.name = paste0("data-analysis/", dataset.name),
+    output.directory = "data-analysis/match-targets",
+    min.match.percent = min.match.percent,
+    min.match.length = min.match.length,
+    min.match.coverage = min.match.coverage,
+    threads = threads,
+    memory = memory,
+    trim.target = trim.to.targets,
+    overwrite = overwrite,
+    quiet = quiet,
+    blast.path = blast.path,
+    bbmap.path = bbmap.path
+  )
+} # end if
 
 #################################################
 ## Step 3: Align targets and trim
