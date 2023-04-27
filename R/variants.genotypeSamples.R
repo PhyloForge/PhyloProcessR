@@ -37,6 +37,7 @@
 variants.genotypeSamples = function(mapping.directory = "sample-mapping",
                                     haplotype.caller.directory = "haplotype-caller",
                                     output.directory = "sample-genotypes",
+                                    use.base.recalibration = FALSE,
                                     filtering.thresholds = c("high", "medium", "low"),
                                     gatk4.path = NULL,
                                     threads = 1,
@@ -45,13 +46,19 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
                                     quiet = TRUE) {
 
  #Debugging
-  #Home directoroies
-  # library(PhyloCap)
+  # #Home directoroies
+  # library(PhyloProcessR)
   # setwd("/Volumes/LaCie/Mantellidae")
-  # variant.calling.directory = "variant-calling"
+  
+  # dataset.name = "variant-calling"
+  # mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping")
+  # haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller")
+  # output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes")
+
   # output.directory <- "sample-genotypes"
   # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-
+  # use.base.recalibration = FALSE
+  # filtering.thresholds = "high"
   # threads <- 4
   # memory <- 8
   # quiet <- FALSE
@@ -136,10 +143,18 @@ variants.genotypeSamples = function(mapping.directory = "sample-mapping",
 
     reference.path <- paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
-    if (file.exists(paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz")) == TRUE ) {
+    if (use.base.recalibration == TRUE) {
       haplocaller.file <- paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz")
-    } else {
+      if (file.exists(haplocaller.file) == FALSE) {
+        stop("the haplotype caller file for use.base.recalibration does not exist.")
+      }
+    }
+
+    if (use.base.recalibration == FALSE) {
       haplocaller.file <- paste0(haplotype.caller.directory, "/", sample.names[i], "/gatk4-haplotype-caller.g.vcf.gz")
+      if (file.exists(haplocaller.file) == FALSE) {
+        stop("the haplotype caller file does not exist.")
+      }
     }
 
     # Genotype haplotype caller results

@@ -79,6 +79,7 @@ variants.genotypeSamples(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+  use.base.recalibration = FALSE,
   filtering.thresholds = "high",
   gatk4.path = gatk4.path,
   threads = threads,
@@ -98,7 +99,7 @@ if (consensus.sequences == TRUE) {
     ambiguity.codes = FALSE,
     threads = threads,
     memory = memory,
-    overwrite = overwrite,
+    overwrite = TRUE,
     quiet = quiet
   )
 }
@@ -114,7 +115,7 @@ if (ambiguity.codes == TRUE) {
     ambiguity.codes = TRUE,
     threads = threads,
     memory = memory,
-    overwrite = overwrite,
+    overwrite = TRUE,
     quiet = quiet
   )
 }
