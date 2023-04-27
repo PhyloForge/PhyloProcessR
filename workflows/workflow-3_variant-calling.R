@@ -75,7 +75,7 @@ if (base.recalibration == TRUE) {
 }#end if
 
 # Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs
-variants.genotypeSamples(
+genotypeSamples(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),

@@ -36,6 +36,8 @@ auto.readgroup = TRUE
 check.assemblies = FALSE
 # TRUE to run the GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, turn this off and restart
 base.recalibration = TRUE
+# TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
+use.base.recalibration = FALSE
 # select between: high, medium, low.
 # High: strict filtering where ~50% of the variants removed. Recommended when accuracy is most important. 
 # Medium: medium filtering where ~25% of the variants removed. A balance between the two (recommended).
