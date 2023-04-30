@@ -29,7 +29,6 @@ if (match.targets == TRUE) {
     overwrite = overwrite,
     quiet = quiet,
     blast.path = blast.path,
-    bbmap.path = bbmap.path
   )
 } # end if
 
