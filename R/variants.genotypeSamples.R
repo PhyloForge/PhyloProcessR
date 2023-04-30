@@ -38,7 +38,18 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
                             haplotype.caller.directory = "haplotype-caller",
                             output.directory = "sample-genotypes",
                             use.base.recalibration = FALSE,
-                            filtering.thresholds = c("high", "medium", "low"),
+                            filtering.thresholds = c("high", "medium", "low", "custom"),
+                            custom.SNP.QD =  NULL,
+                            custom.SNP.QUAL =  NULL,
+                            custom.SNP.SOR =  NULL,
+                            custom.SNP.FS =  NULL,
+                            custom.SNP.MQ =  NULL,
+                            custom.SNP.MQRankSum =  NULL,
+                            custom.SNP.ReadPosRankSum =  NULL,
+                            custom.INDEL.QD =  NULL,
+                            custom.INDEL.QUAL =  NULL,
+                            custom.INDEL.FS =  NULL,
+                            custom.INDEL.ReadPosRankSum =  NULL,                                                        
                             gatk4.path = NULL,
                             threads = 1,
                             memory = 1,
@@ -50,6 +61,19 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   # library(PhyloProcessR)
   # setwd("/Volumes/LaCie/Mantellidae")
   
+  # custom.SNP.QD <- 2
+  # custom.SNP.QUAL <- 30
+  # custom.SNP.SOR <- 3
+  # custom.SNP.FS <- 60
+  # custom.SNP.MQ <- 40
+  # custom.SNP.MQRankSum <- -12.5
+  # custom.SNP.ReadPosRankSum <- -8
+  # custom.INDEL.QD <- 2
+  # custom.INDEL.QUAL <- 30
+  # custom.INDEL.FS <- 60
+  # custom.INDEL.ReadPosRankSum <- -8
+
+
   # dataset.name = "variant-calling"
   # mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping")
   # haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller")
@@ -123,6 +147,21 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   }
 
   if (length(sample.names) == 0){ return("no samples available to analyze.") }
+
+  if (filtering.thresholds == "custom") {
+    SNP.QD.string <- paste0(" -filter \"QD<", custom.SNP.QD, "\" --filter-name \"QD\"")
+    SNP.QUAL.string <- paste0(" -filter \"QUAL<", custom.SNP.QUAL, "\" --filter-name \"QUAL\"")
+    SNP.SOR.string <- paste0(" -filter \"SOR>", custom.SNP.SOR, "\" --filter-name \"SOR\"")
+    SNP.FS.string <- paste0(" -filter \"FS>", custom.SNP.FS, "\" --filter-name \"FS\"")
+    SNP.MQ.string <- paste0(" -filter \"MQ<", custom.SNP.MQ, "\" --filter-name \"MQ\"")
+    SNP.MQRankSum.string <- paste0(" -filter \"MQRankSum<", custom.SNP.MQRankSum, "\" --filter-name \"MQRankSum\"")
+    SNP.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", custom.SNP.ReadPosRankSum, "\" --filter-name \"ReadPosRankSum\"")
+
+    IN.QD.string <- paste0(" -filter \"QD<", custom.INDEL.QD, "\" --filter-name \"QD\"")
+    IN.QUAL.string <- paste0(" -filter \"QUAL<", custom.INDEL.QUAL, "\" --filter-name \"QUAL\"")
+    IN.FS.string <- paste0(" -filter \"FS>", custom.INDEL.FS, "\" --filter-name \"FS\"")
+    IN.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", custom.INDEL.ReadPosRankSum, "\" --filter-name \"ReadPosRankSum\"")
+  } # end custom if
 
   ############################################################################################
   ########### Step 1 #########################################################################
@@ -266,6 +305,37 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
         " VariantFiltration -R ", reference.path,
         " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
         " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf"
+      ))
+    } # end high if
+
+    # Custom filtering
+    #########################
+    if (filtering.thresholds == "custom") {
+      # Applies filters to SNPs
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        " VariantFiltration -R ", reference.path,
+        " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
+        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
+        SNP.QD.string,
+        SNP.QUAL.string,
+        SNP.SOR.string,
+        SNP.FS.string,
+        SNP.MQ.string,
+        SNP.MQRankSum.string,
+        SNP.ReadPosRankSum.string
+      ))
+
+      # Applies filters to indels
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        " VariantFiltration -R ", reference.path,
+        " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
+        " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
+        IN.QD.string,
+        IN.QUAL.string,
+        IN.FS.string,
+        IN.ReadPosRankSum.string
       ))
     } # end high if
 

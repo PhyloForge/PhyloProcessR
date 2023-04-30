@@ -53,6 +53,34 @@ ambiguity.codes = TRUE
 # TRUE to save contigs using a consensus base (randomly selected) for each heterozygous site.
 consensus.sequences = TRUE
 
+# Custom hard filtering thresholds
+#########################
+# Only used when filtering.thresholds is set to custom above
+# Default values are shown here
+# For filter explanations see: https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
+# Quality score
+custom.SNP.QUAL = 30
+# Quality by Depth: quality score normalized by depth
+custom.SNP.QD = 2
+# Strand Odds Ratio: odds ratio of strand bias
+custom.SNP.SOR =  3
+# Fisher Strand: phred-scaled probability of strand bias
+custom.SNP.FS =  60
+# Map quality: root mean square mapping quality
+custom.SNP.MQ =  40
+# Map quality rank sum: compares mapping quality of reads supporting reference and alternative allele
+custom.SNP.MQRankSum =  -12.5
+# Read position rank sum: tests for site position within reads
+custom.SNP.ReadPosRankSum = -8  
+# Indel quality by depth: quality score normalized by depth
+custom.INDEL.QD =  2
+# Indel quality
+custom.INDEL.QUAL =  30
+# Indel Fisher strand: phred-scaled probability of strand bias
+custom.INDEL.FS =  60
+# Indel Read position rank sum: tests for site position within reads
+custom.INDEL.ReadPosRankSum = -8  
+
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
