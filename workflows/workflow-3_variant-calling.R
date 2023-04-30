@@ -79,7 +79,7 @@ genotypeSamples(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-  use.base.recalibration = FALSE,
+  use.base.recalibration = use.base.recalibration,
   custom.SNP.QD =  custom.SNP.QD,
   custom.SNP.QUAL =  custom.SNP.QUAL,
   custom.SNP.SOR =  custom.SNP.SOR,
@@ -94,7 +94,7 @@ genotypeSamples(
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
-  overwrite = TRUE,
+  overwrite = overwrite,
   quiet = quiet
 )
 
@@ -109,7 +109,7 @@ if (consensus.sequences == TRUE) {
     ambiguity.codes = FALSE,
     threads = threads,
     memory = memory,
-    overwrite = TRUE,
+    overwrite = overwrite,
     quiet = quiet
   )
 }
@@ -125,7 +125,7 @@ if (ambiguity.codes == TRUE) {
     ambiguity.codes = TRUE,
     threads = threads,
     memory = memory,
-    overwrite = TRUE,
+    overwrite = overwrite,
     quiet = quiet
   )
 }

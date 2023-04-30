@@ -6,21 +6,20 @@
 #########################
 # *** Full paths should be used whenever possible
 # The main working directory where a "dataset.name" directory with variant calling results will be saved.
-working.directory <- "/Volumes/LaCie/Mantellidae"
-#working.directory = "/Path/to/where/the/stuff/will/happen"
-# The read directory desired for mapping, recommended "decontaminated-reads"
+working.directory = "/Path/to/where/the/stuff/will/happen"
+# The read directory desired for mapping, recommended "decontaminated-reads". Default shown.
 read.directory = "processed-reads/decontaminated-reads"
-# The assembly directory desired to have variants called on. 
+# The assembly directory desired to have variants called on. Default shown. 
 assembly.directory = "data-analysis/contigs/3_target-contigs"
-#The name for the dataset
+# The name for the dataset
 dataset.name = "variant-calling"
 
 # Global settings
 #########################
 # number of threads
-threads = 5
+threads = 8
 # Amount of memory to allocate in GB
-memory = 20
+memory = 80
 # TRUE to overwrite previous runs. FALSE the script will resume but will not delete anything.
 overwrite = FALSE
 # Hide verbose output for each function
@@ -34,16 +33,16 @@ clean.up = TRUE
 auto.readgroup = TRUE
 # TRUE to stop  pipeline when read sets are missing corresponding assemblies; FALSE removes read sets without assemblies
 check.assemblies = FALSE
-# TRUE to run the GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, turn this off and restart
-base.recalibration = TRUE
+# TRUE to run GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, set use.base.recalibration = FALSE
+base.recalibration = FALSE
 # TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
 use.base.recalibration = FALSE
 
 # Custom hard filtering thresholds
 #########################
-# Only used when filtering.thresholds is set to custom above
 # Default GATK4 recommended values are shown here
-# For filter explanations see: https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
+# For filter explanations see: 
+#   https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
 # Quality score
 custom.SNP.QUAL = 30
 # Quality by Depth: quality score normalized by depth
@@ -81,7 +80,7 @@ consensus.sequences = TRUE
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
 ### *** Replace /PATH/TO/ with your system 
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
-conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env

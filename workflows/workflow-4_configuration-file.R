@@ -6,11 +6,11 @@
 #########################
 # *** Full paths should be used whenever possible
 # The main working directory
-#working.directory = "/Path/to/where/the/stuff/is/at"
+# working.directory = "/Path/to/where/the/stuff/is/at"
 working.directory <- "/Volumes/LaCie/Mantellidae"
-#The sequence capture target marker file for extraction from contigs
+# The sequence capture target marker file for extraction from contigs
 target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
-#The name for the dataset
+# The name for the dataset
 dataset.name = "Descriptive-Name"
 
 #Global settings
