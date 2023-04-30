@@ -56,7 +56,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
                             quiet = TRUE) {
 
  #Debugging
-  # #Home directoroies
+  #Home directoroies
   # library(PhyloProcessR)
   # setwd("/Volumes/LaCie/Mantellidae")
   
@@ -148,18 +148,18 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   if (length(sample.names) == 0){ return("no samples available to analyze.") }
 
 
-  SNP.QD.string <- paste0(" -filter \"QD<", custom.SNP.QD, "\" --filter-name \"QD\"")
-  SNP.QUAL.string <- paste0(" -filter \"QUAL<", custom.SNP.QUAL, "\" --filter-name \"QUAL\"")
-  SNP.SOR.string <- paste0(" -filter \"SOR>", custom.SNP.SOR, "\" --filter-name \"SOR\"")
-  SNP.FS.string <- paste0(" -filter \"FS>", custom.SNP.FS, "\" --filter-name \"FS\"")
-  SNP.MQ.string <- paste0(" -filter \"MQ<", custom.SNP.MQ, "\" --filter-name \"MQ\"")
-  SNP.MQRankSum.string <- paste0(" -filter \"MQRankSum<", custom.SNP.MQRankSum, "\" --filter-name \"MQRankSum\"")
-  SNP.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", custom.SNP.ReadPosRankSum, "\" --filter-name \"ReadPosRankSum\"")
+  SNP.QD.string <- paste0(" -filter \"QD<", format(custom.SNP.QD, nsmall = 1), "\" --filter-name \"QD\"")
+  SNP.QUAL.string <- paste0(" -filter \"QUAL<", format(custom.SNP.QUAL, nsmall = 1), "\" --filter-name \"QUAL\"")
+  SNP.SOR.string <- paste0(" -filter \"SOR>", format(custom.SNP.SOR, nsmall = 1), "\" --filter-name \"SOR\"")
+  SNP.FS.string <- paste0(" -filter \"FS>", format(custom.SNP.FS, nsmall = 1), "\" --filter-name \"FS\"")
+  SNP.MQ.string <- paste0(" -filter \"MQ<", format(custom.SNP.MQ, nsmall = 1), "\" --filter-name \"MQ\"")
+  SNP.MQRankSum.string <- paste0(" -filter \"MQRankSum<", format(custom.SNP.MQRankSum, nsmall = 1), "\" --filter-name \"MQRankSum\"")
+  SNP.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", format(custom.SNP.ReadPosRankSum, nsmall = 1), "\" --filter-name \"ReadPosRankSum\"")
 
-  IN.QD.string <- paste0(" -filter \"QD<", custom.INDEL.QD, "\" --filter-name \"QD\"")
-  IN.QUAL.string <- paste0(" -filter \"QUAL<", custom.INDEL.QUAL, "\" --filter-name \"QUAL\"")
-  IN.FS.string <- paste0(" -filter \"FS>", custom.INDEL.FS, "\" --filter-name \"FS\"")
-  IN.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", custom.INDEL.ReadPosRankSum, "\" --filter-name \"ReadPosRankSum\"")
+  IN.QD.string <- paste0(" -filter \"QD<", format(custom.INDEL.QD, nsmall = 1), "\" --filter-name \"QD\"")
+  IN.QUAL.string <- paste0(" -filter \"QUAL<", format(custom.INDEL.QUAL, nsmall = 1), "\" --filter-name \"QUAL\"")
+  IN.FS.string <- paste0(" -filter \"FS>", format(custom.INDEL.FS, nsmall = 1), "\" --filter-name \"FS\"")
+  IN.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", format(custom.INDEL.ReadPosRankSum, nsmall = 1), "\" --filter-name \"ReadPosRankSum\"")
 
   ############################################################################################
   ########### Step 1 #########################################################################

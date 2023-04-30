@@ -80,7 +80,6 @@ genotypeSamples(
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
   use.base.recalibration = FALSE,
-  filtering.thresholds = "custom",
   custom.SNP.QD =  custom.SNP.QD,
   custom.SNP.QUAL =  custom.SNP.QUAL,
   custom.SNP.SOR =  custom.SNP.SOR,
