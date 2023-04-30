@@ -34,16 +34,16 @@
 #'
 #' @export
 
-variants.genotypeSamples = function(mapping.directory = "sample-mapping",
-                                    haplotype.caller.directory = "haplotype-caller",
-                                    output.directory = "sample-genotypes",
-                                    use.base.recalibration = FALSE,
-                                    filtering.thresholds = c("high", "medium", "low"),
-                                    gatk4.path = NULL,
-                                    threads = 1,
-                                    memory = 1,
-                                    overwrite = TRUE,
-                                    quiet = TRUE) {
+genotypeSamples = function(mapping.directory = "sample-mapping",
+                            haplotype.caller.directory = "haplotype-caller",
+                            output.directory = "sample-genotypes",
+                            use.base.recalibration = FALSE,
+                            filtering.thresholds = c("high", "medium", "low"),
+                            gatk4.path = NULL,
+                            threads = 1,
+                            memory = 1,
+                            overwrite = TRUE,
+                            quiet = TRUE) {
 
  #Debugging
   # #Home directoroies
