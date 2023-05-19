@@ -13,29 +13,34 @@
 #' @examples
 #'
 #' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' astral.data = astralPlane(
+#'   astral.tree = your.tree,
+#'   outgroups = c("species_one", "species_two"),
+#'   tip.length = 1
+#' )
 #'
 #' @export
 
 
-#Calculates informative sites
+# Calculates informative sites
 filterHeterozygosity = function(iupac.directory = NULL,
                                 output.directory = NULL,
                                 removed.directory = NULL,
                                 threshold = 0.05,
-                                overwrite = FALSE
-                                ) {
+                                threads = 1,
+                                memory = 1,
+                                overwrite = FALSE) {
 
-  setwd("/Volumes/LaCie/Mantellidae")
-  iupac.directory = "data-analysis/contigs/5_iupac-contigs"
-  removed.directory = "data-analysis/contigs/high-het-contigs"
-  output.directory = "data-analysis/contigs/filtered-contigs"
-  threshold = 0.05
-  overwrite = FALSE
-  gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # setwd("/Volumes/LaCie/Mantellidae")
+  # iupac.directory = "data-analysis/contigs/5_iupac-contigs"
+  # removed.directory = "data-analysis/contigs/6_removed-contigs"
+  # output.directory = "data-analysis/contigs/7_filtered-contigs"
+  # threshold = 0.05
+  # threads = 4
+  # memory = 20
+  # overwrite = FALSE
+
+  require(foreach)
 
   # Initial checks
   if (iupac.directory == output.directory) {
@@ -67,17 +72,20 @@ filterHeterozygosity = function(iupac.directory = NULL,
   } else {
     dir.create(removed.directory)
   }
-  
+
   # Gets contig file names
   file.names <- list.files(iupac.directory)
 
-  #Matching and processing for each sample
-  for (i in 1:length(file.names)) {
 
-    # Sets up working directories for each species
-    sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
+  # Sets up multiprocessing
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
 
-    #Reads in contigs
+  # Loops through each locus and does operations on them
+  foreach(i = seq_along(file.names), .packages = c("foreach", "Biostrings", "stringr", "PhyloProcessR")) %dopar% {
+
+    # Reads in contigs
     contigs = Biostrings::readDNAStringSet(paste0(iupac.directory, "/", file.names[i]), format = "fasta")
     # names(contigs) = paste0("contig_", stringr::str_pad(seq(1:length(contigs)), 6, pad = "0"))
 
@@ -88,19 +96,30 @@ filterHeterozygosity = function(iupac.directory = NULL,
       count = sum(stringr::str_count(temp.contig, pattern = c("R", "Y", "K", "M", "S", "W", "B", "D", "H", "V")))
       temp.prop = count / Biostrings::width(temp.contig)
       collect.count = append(collect.count, count)
-      collect.prop = append(collect.count, temp.prop)
-
+      collect.prop = append(collect.prop, temp.prop)
     }
 
-    sum(collect.count)
-    
+    too.high = collect.prop[collect.prop >= threshold]
 
-    # Finds probes that match to two or more contigs
-    # final.loci = as.list(as.character(contigs))
-    # writeFasta(sequences = final.loci, names = names(final.loci),
-    #           paste0(species.dir, "/", sample, "_renamed-contigs.fa"), nbchar = 1000000, as.string = T)
+    high.contigs = contigs[names(contigs) %in% names(too.high)]
+    low.contigs = contigs[!names(contigs) %in% names(too.high)]
 
-  }#end i loop
-    
+    # Saves below threshold contigs
+    final.loci = as.list(as.character(low.contigs))
+    PhyloProcessR::writeFasta(
+      sequences = final.loci, names = names(final.loci),
+      paste0(output.directory, "/", file.names[i]), nbchar = 1000000, as.string = TRUE
+    )
 
-}#end informative sites function
+    # Saves above threshold contigs
+    final.loci = as.list(as.character(high.contigs))
+    PhyloProcessR::writeFasta(
+      sequences = final.loci, names = names(final.loci),
+      paste0(removed.directory, "/", file.names[i]), nbchar = 1000000, as.string = TRUE
+    )
+  } # end i loop
+
+  snow::stopCluster(cl)
+
+} # end function
+

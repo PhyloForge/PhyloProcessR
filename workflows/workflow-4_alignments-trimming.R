@@ -9,28 +9,38 @@ setwd(working.directory)
 
 ##################################################################################################
 ##################################################################################################
-#################################################
-## Step 1: Match targets
-##################
 
-if (match.targets == TRUE) {
-  # match targets
-  matchTargets(
-    assembly.directory = "data-analysis/draft-assemblies",
-    target.file = target.file,
-    alignment.contig.name = paste0("data-analysis/", dataset.name),
-    output.directory = "data-analysis/match-targets",
-    min.match.percent = min.match.percent,
-    min.match.length = min.match.length,
-    min.match.coverage = min.match.coverage,
-    threads = threads,
-    memory = memory,
-    trim.target = trim.to.targets,
-    overwrite = overwrite,
-    quiet = quiet,
-    blast.path = blast.path,
-  )
-} # end if
+#Remove contigs with too much heterozygosity
+filterHeterozygosity(
+  iupac.directory = contig.directory,
+  output.directory = "data-analysis/contigs/7_filtered-contigs",
+  removed.directory = "data-analysis/contigs/6_removed-contigs",
+  threshold = heterozyote.filter.threshold,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite
+)
+
+
+# match targets
+matchTargets(
+  assembly.directory = "data-analysis/contigs/7_filtered-contigs",
+  target.file = target.file,
+  alignment.contig.name = paste0("data-analysis/", dataset.name),
+  output.directory = "data-analysis/match-targets",
+  min.match.percent = min.match.percent,
+  min.match.length = min.match.length,
+  min.match.coverage = min.match.coverage,
+  threads = threads,
+  memory = memory,
+  trim.target = trim.to.targets,
+  overwrite = overwrite,
+  quiet = quiet,
+  blast.path = blast.path,
+)
+
+
+
 
 #################################################
 ## Step 3: Align targets and trim

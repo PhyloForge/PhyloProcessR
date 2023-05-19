@@ -30,9 +30,9 @@ organizeReads = function(read.directory = NULL,
                         overwrite = FALSE) {
 
   #Debegging
-  # read.directory = "/Volumes/LaCie/Bufonidae/raw-reads"
-  # output.directory = "/Volumes/LaCie/Bufonidae/organized-reads"
-  # rename.file = "/Volumes/LaCie/Bufonidae/file_rename.csv"
+  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF14_Ultimate_FrogCap/Modern"
+  # output.directory = "/Volumes/LaCie/Microhylidae/organized-reads"
+  # rename.file = "/Users/chutter/Dropbox/Research/9_Paperwork/Arbor_Biosciences/HF-13/file_rename.csv"
   # overwrite = FALSE
 
   #Quick checks

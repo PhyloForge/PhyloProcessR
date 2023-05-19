@@ -42,6 +42,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
                         ambiguity.codes = TRUE,
                         threads = 1,
                         memory = 1,
+                        gatk4.path = NULL,
                         overwrite = TRUE,
                         quiet = TRUE) {
 
