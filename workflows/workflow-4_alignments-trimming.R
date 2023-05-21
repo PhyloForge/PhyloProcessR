@@ -39,69 +39,74 @@ annotateTargets(
   cdhit.path = cdhit.path
 )
 
-
-
-
-#################################################
-## Step 3: Align targets and trim
-##################
-
+#Create alignments folder
 dir.create("data-analysis/alignments")
 
-if (align.matching.targets == TRUE){
-  #align targets
-  alignTargets(targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
-               output.directory = "data-analysis/alignments/untrimmed_all-markers",
-               min.taxa = min.taxa.alignment,
-               subset.start = 0,
-               subset.end = 1,
-               threads = threads,
-               memory = memory,
-               overwrite = overwrite,
-               quiet = quiet,
-               mafft.path = mafft.path)
-}#end if
-
-#### Functions for separating into data types
-trimAlignmentTargets(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
-                     alignment.format = "phylip",
-                     target.file = target.file,
-                     target.direction = TRUE,
-                     output.directory = "data-analysis/alignments/untrimmed_no-flank",
-                     output.format = "phylip",
-                     min.alignment.length = 100,
-                     min.taxa.alignment = min.taxa.alignment,
-                     threads = threads,
-                     memory = memory,
-                     overwrite = overwrite,
-                     mafft.path = mafft.path)
-
-makeIntronAlignments(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
-                     alignment.format = "phylip",
-                     output.directory = "data-analysis/alignments/untrimmed_introns",
-                     output.format = "phylip",
-                     reference.type = "target",
-                     reference.path = target.file,
-                     target.direction = TRUE,
-                     concatenate.intron.flanks = TRUE,
-                     threads = threads,
-                     memory = memory,
-                     overwrite = overwrite,
-                     mafft.path = mafft.path)
+#Aligns files
+alignTargets(
+  targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
+  output.directory = "data-analysis/alignments/untrimmed_all-markers",
+  min.taxa = min.taxa.alignment,
+  algorithm = alignment.algorithm,
+  subset.start = subset.start,
+  subset.end = subset.end,
+  threads = threads,
+  memory = memory,
+  overwrite = overwrite,
+  quiet = quiet,
+  mafft.path = mafft.path
+)
 
 
-makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
-                    alignment.format = "phylip",
-                    output.directory = "data-analysis/alignments/untrimmed_UCE",
-                    output.format = "phylip",
-                    subset.reference = "blast",
-                    subset.fasta.file = "subset_uce-consensus.fa",
-                    subset.grep.string = NULL,
-                    subset.blast.targets = target.file,
-                    blast.path = blast.path,
-                    threads = threads,
-                    memory = memory,
-                    overwrite = overwrite)
+#### Trims alignments to target sequence leaving out flanks
+if (trim.to.targets == TRUE) {
+  trimAlignmentTargets(
+    alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.format = "phylip",
+    target.file = target.file,
+    target.direction = TRUE,
+    output.directory = "data-analysis/alignments/untrimmed_no-flank",
+    output.format = "phylip",
+    min.alignment.length = min.alignment.length,
+    min.taxa.alignment = min.taxa.alignment,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    mafft.path = mafft.path
+  )
+}
+
+# Trims alignments to only the flanks, leaving out the target marker
+if (trim.to.flanks == TRUE) {
+  # Trim out the target region leaving only the flanks.
+  makeFlankAlignments(
+    alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.format = "phylip",
+    output.directory = "data-analysis/alignments/untrimmed_only-flanks",
+    output.format = "phylip",
+    reference.type = "target",
+    reference.path = target.file,
+    target.direction = TRUE,
+    concatenate.intron.flanks = TRUE,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    mafft.path = mafft.path
+  )
+}
+
+# makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
+#                     alignment.format = "phylip",
+#                     output.directory = "data-analysis/alignments/untrimmed_UCE",
+#                     output.format = "phylip",
+#                     subset.reference = "blast",
+#                     subset.fasta.file = "subset_uce-consensus.fa",
+#                     subset.grep.string = NULL,
+#                     subset.blast.targets = target.file,
+#                     blast.path = blast.path,
+#                     threads = threads,
+#                     memory = memory,
+#                     overwrite = overwrite)
 
 
 if (trim.alignments == TRUE){

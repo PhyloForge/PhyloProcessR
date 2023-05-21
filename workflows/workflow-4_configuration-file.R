@@ -41,14 +41,31 @@ min.match.length = 40
 #The minimum match coverage, contig must overlap by X percent to target
 min.match.coverage = 50
 
-#Alignment trimming settings
+# Alignment settings
 #########################
-#TRUE = to run alignments for the matching targets from above
+# TRUE = to run alignments for the matching targets from above
 align.matching.targets = TRUE
+# localpair or globalpair, localpair slower but better
+alignment.algorithm = "localpair"
+# The minimum number of taxa to keep an alignment
+min.taxa.alignment = 4
+# subset alignments to run multiple instances, uses proportion of targets between 0-1
+subset.start = 0
+# example, 0, 0.25 to align first quarter, 0.25 to 0.5 to align second
+subset.end = 1
+
+# Alignment subsets
+#########################
+# Trims each alignment to the target marker, leaving out the flanks
+trim.to.targets = TRUE
+# Trims the target out of each alignment, leaving only the flanks (inverse of previous)
+trim.to.flanks = TRUE
+
+
+# Trimming alignment settings
+#########################
 #TRUE = to run alignment trimming function batchTrimAlignments
 trim.alignments = TRUE
-#The minimum number of taxa to keep an alignment
-min.taxa.alignment = 4
 #The minimum alignment basepairs to keep an alignment
 min.alignment.length = 100
 #The maximum gaps from throughout the entire alignment to keep an alignment
@@ -60,9 +77,7 @@ trim.column = TRUE
 #The percent of bases that must be present to keep a column
 min.column.gap.percent = 50
 #Resolves ambiguous sites to the same arbitrary base
-convert.ambiguous.sites = TRUE
-#TRUE = to output an alignment assessment spreadsheet and filter alignments
-alignment.assess = TRUE
+convert.ambiguous.sites = FALSE
 #TRUE = to externally trim alignment edges
 trim.external = TRUE
 #The minimum percent of bases that must be present to keep a column on the edges
@@ -73,6 +88,8 @@ trim.coverage = TRUE
 min.coverage.percent = 35
 #The minimum number of bases that must be present to keep a sample
 min.coverage.bp = 60
+# TRUE = to output an alignment assessment spreadsheet and filter alignments
+alignment.assess = TRUE
 
 #Program paths
 #########################
@@ -80,6 +97,7 @@ min.coverage.bp = 60
 ### e.g. fastp.path = "/conda/PhyloCap/bin
 conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 blast.path = conda.env
+cdhit.path = conda.env
 mafft.path = conda.env
 trimAl.path = conda.env
 julia.path = conda.env

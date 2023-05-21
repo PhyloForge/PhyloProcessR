@@ -1,4 +1,4 @@
-#' @title makeIntronAlignments
+#' @title makeFlankAlignments
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -58,7 +58,7 @@
 #'
 #' @export
 
-makeIntronAlignments = function(alignment.directory = NULL,
+makeFlankAlignments = function(alignment.directory = NULL,
                                 alignment.format = "phylip",
                                 output.directory = NULL,
                                 output.format = "phylip",

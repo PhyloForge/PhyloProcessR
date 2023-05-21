@@ -103,7 +103,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
+  foreach::foreach(i=1:length(align.files), .packages = c("PhyloProcessR", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
   #Loops through each locus and does operations on them
   #for (i in 1:length(align.files)){
     #Load in alignments
@@ -138,15 +138,17 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     #STEP 2: Runs MAFFT to add
     ##############
     #Aligns and then reverses back to correction orientation
-    alignment = runMafft(sequence.data = align,
-                         add.contigs = target.seq,
-                         save.name = paste0(output.directory, "/", align.files[i]),
-                         algorithm = "add",
-                         adjust.direction = TRUE,
-                         threads = 1,
-                         cleanup.files = T,
-                         quiet = TRUE,
-                         mafft.path = mafft.path)
+    alignment <- PhyloProcessR::runMafft(
+      sequence.data = align,
+      add.contigs = target.seq,
+      save.name = paste0(output.directory, "/", align.files[i]),
+      algorithm = "add",
+      adjust.direction = TRUE,
+      threads = 1,
+      cleanup.files = T,
+      quiet = TRUE,
+      mafft.path = mafft.path
+    )
 
     #Checks if you want to keep to target direction or not
     if (target.direction == TRUE){
@@ -217,10 +219,12 @@ trimAlignmentTargets = function(alignment.directory = NULL,
       aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
       #readies for saving
-      writePhylip(alignment = aligned.set,
-                  file=paste0(output.directory, "/", align.files[i]),
-                  interleave = F,
-                  strict = F)
+      PhyloProcessR::writePhylip(
+        alignment = aligned.set,
+        file = paste0(output.directory, "/", align.files[i]),
+        interleave = F,
+        strict = F
+      )
 
       #Deletes old files
       print(paste0(align.files[i], " alignment saved."))
