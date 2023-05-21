@@ -21,13 +21,12 @@ filterHeterozygosity(
   overwrite = overwrite
 )
 
-
-# match targets
-matchTargets(
+# annotates targets
+annotateTargets(
   assembly.directory = "data-analysis/contigs/7_filtered-contigs",
   target.file = target.file,
   alignment.contig.name = paste0("data-analysis/", dataset.name),
-  output.directory = "data-analysis/match-targets",
+  output.directory = "data-analysis/contigs/8_annotated-contigs",
   min.match.percent = min.match.percent,
   min.match.length = min.match.length,
   min.match.coverage = min.match.coverage,
@@ -37,6 +36,7 @@ matchTargets(
   overwrite = overwrite,
   quiet = quiet,
   blast.path = blast.path,
+  cdhit.path = cdhit.path
 )
 
 

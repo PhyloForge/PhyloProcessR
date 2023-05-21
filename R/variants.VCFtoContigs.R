@@ -46,16 +46,20 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
                         overwrite = TRUE,
                         quiet = TRUE) {
 
-  # #Debugging
-  # haplotype.caller.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/haplotype-caller"
-  # sample.mapping.directory <- "variant-calling/sample-mapping"
-  # output.directory = "variant-calling/final-contigs"
+  #Debugging
+  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
+  # genotype.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-genotypes"
+  # mapping.directory <- "variant-calling/sample-mapping"
+  # output.directory = "contigs/5_iupac-contigs"
   # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   # threads <- 4
   # memory <- 8
   # quiet <- FALSE
   # overwrite <- TRUE
+  # consensus.sequences = FALSE
+  # ambiguity.codes = TRUE
+  # vcf.file = "SNP"
 
   # Same adds to bbmap path
   require(foreach)
@@ -163,8 +167,19 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
       ))
     } # end if
 
+    contigs = Biostrings::readDNAStringSet(paste0(output.directory, "/", sample.names[i], ".fa"), format = "fasta")
+    names(contigs) = gsub(":.*", "", names(contigs))
+    names(contigs) = gsub(".* ", "", names(contigs))
+
     system(paste0("rm ", output.directory, "/", sample.names[i], ".fa.fai"))
     system(paste0("rm ", output.directory, "/", sample.names[i], ".dict"))
+
+    # Saves above threshold contigs
+    final.loci = as.list(as.character(contigs))
+    PhyloProcessR::writeFasta(
+      sequences = final.loci, names = names(final.loci),
+      paste0(output.directory, "/", sample.names[i], ".fa"), nbchar = 1000000, as.string = TRUE
+    )
 
   }#end i loop
 

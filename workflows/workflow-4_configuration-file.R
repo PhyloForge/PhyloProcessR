@@ -7,11 +7,10 @@
 # *** Full paths should be used whenever possible
 # The main working directory
 # working.directory = "/Path/to/where/the/stuff/is/at"
-working.directory <- "/Volumes/LaCie/Mantellidae"
+working.directory = "/Volumes/LaCie/Mantellidae"
+# the contig directory to make alignments from
+contig.directory = "/Volumes/LaCie/Mantellidae/data-analysis/contigs/5_iupac-contigs"
 # The sequence capture target marker file for extraction from contigs
-
-contig.directory = XX
-
 target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
 # The name for the dataset
 dataset.name = "Descriptive-Name"
@@ -19,9 +18,9 @@ dataset.name = "Descriptive-Name"
 #Global settings
 #########################
 #number of threads
-threads = 16
+threads = 4
 #Amount of memory to allocate in GB
-memory = 120
+memory = 40
 #Whether to overwrite previous runs
 overwrite = FALSE
 #Resume from previous runs (does not overwrite)
@@ -29,14 +28,10 @@ resume = TRUE
 #Print verbose output for each function
 quiet = TRUE
 
-
-
-heterozyote.filter.threshold
-
 #Target matching settings
 #########################
-#TRUE = to run target matching on contigs
-match.targets = TRUE
+#Filtering threshold to filter out potential paralogs
+heterozyote.filter.threshold = 0.05
 #whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
 trim.to.targets = FALSE
 #The minimum match percentage for a contig match to a target

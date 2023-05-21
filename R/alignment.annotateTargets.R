@@ -1,4 +1,4 @@
-#' @title matchTargets
+#' @title annotateTargets
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -44,42 +44,46 @@
 #'
 #' @export
 
-matchTargets = function(assembly.directory = NULL,
-                        target.file = NULL,
-                        alignment.contig.name = NULL,
-                        output.directory = "match-targets",
-                        min.match.percent = 50,
-                        min.match.length = 40,
-                        min.match.coverage = 50,
-                        trim.target = FALSE,
-                        threads = 1,
-                        memory = 1,
-                        blast.path = NULL,
-                        overwrite = FALSE,
-                        quiet = TRUE
-                        ) {
+annotateTargets = function(assembly.directory = NULL,
+                            target.file = NULL,
+                            alignment.contig.name = NULL,
+                            output.directory = "annotated-contigs",
+                            min.match.percent = 60,
+                            min.match.length = 60,
+                            min.match.coverage = 50,
+                            trim.target = FALSE,
+                            threads = 1,
+                            memory = 1,
+                            blast.path = NULL,
+                            cdhit.path = NULL,
+                            overwrite = FALSE,
+                            quiet = TRUE
+                            ) {
 #
   #Debug setup
- #Debugging
- setwd("/Volumes/LaCie/Mantellidae/")
- assembly.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/contigs/5_iupac-contigs"
- target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
- output.directory = "data-analysis/contigs/6_annotated-contigs"
- blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  #Debugging
+  # setwd("/Volumes/LaCie/Mantellidae/")
+  # assembly.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/contigs/7_filtered-contigs"
+  # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+  # output.directory = "data-analysis/contigs/8_annotated-contigs"
+  # blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # cdhit.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
-  #
-  # #Main settings
-  threads = 4
-  memory = 8
-  trim.target = FALSE
-  overwrite = FALSE
-  quiet = TRUE
-  #
-  # #tweak settings (make some statements to check these)
-  min.match.percent = 60
-  min.match.length = 50
-  min.match.coverage = 30
-  #
+  # #
+  # # #Main settings
+  # threads = 5
+  # memory = 40
+  # trim.target = FALSE
+  # overwrite = FALSE
+  # quiet = TRUE
+  # #
+  # # #tweak settings (make some statements to check these)
+  # min.match.percent = 60
+  # min.match.length = 70
+  # min.match.coverage = 35
+  # #
+
+  require(foreach)
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
@@ -88,6 +92,16 @@ matchTargets = function(assembly.directory = NULL,
       blast.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
   } else { blast.path = "" }
+
+  # Same adds to bbmap path
+  if (is.null(cdhit.path) == FALSE) {
+    b.string <- unlist(strsplit(cdhit.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      cdhit.path <- paste0(append(b.string, "/"), collapse = "")
+    } # end if
+  } else {
+    cdhit.path <- ""
+  }
 
   #Initial checks
   if (assembly.directory == output.directory){ stop("You should not overwrite the original contigs.") }
@@ -107,8 +121,16 @@ matchTargets = function(assembly.directory = NULL,
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
             "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
+ # Sets up multiprocessing
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
+  
+  #Loop for cd-hit est reductions
+  foreach::foreach(i = seq_along(file.names), .packages = c("foreach", "PhyloProcessR", "Biostrings", "data.table")) %dopar% {
+
   #Matching and processing for each sample
-  for (i in seq_along(file.names)) {
+  #for (i in seq_along(file.names)) {
 
     #Sets up working directories for each species
     sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
@@ -126,12 +148,35 @@ matchTargets = function(assembly.directory = NULL,
     }#end
 
     #########################################################################
-    #Part A: Blasting
+    # Part A: reduce redundancy
+    #########################################################################
+
+    system(paste0(
+      cdhit.path, "cd-hit-est -i ", assembly.directory, "/", file.names[i],
+      " -o ", species.dir, "/", sample, "_red.fa -p 0 -T 1",
+      " -n 5 -c 0.9 -M ", mem.cl * 100
+    ))
+
+    ### Read in data
+    all.data = Biostrings::readDNAStringSet(file = paste0(species.dir, "/", sample, "_red.fa"), format = "fasta")
+
+    names(all.data) = paste0("contig_", seq(seq_along(all.data)))
+
+    # Writes the final loci
+    final.loci = as.list(as.character(all.data))
+    PhyloProcessR::writeFasta(
+      sequences = final.loci, names = names(final.loci),
+      paste0(species.dir, "/", sample, "_rename.fa"),
+      nbchar = 1000000, as.string = TRUE, open = "w"
+    )
+
+    #########################################################################
+    #Part B: Blasting
     #########################################################################
 
     # Make blast database for the probe loci
     system(paste0(
-      blast.path, "makeblastdb -in ", assembly.directory, "/", file.names[i],
+      blast.path, "makeblastdb -in ", species.dir, "/", sample, "_rename.fa",
       " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"
     ), ignore.stdout = quiet)
 
@@ -140,7 +185,7 @@ matchTargets = function(assembly.directory = NULL,
       blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
       " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
       " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-      " -num_threads ", threads
+      " -num_threads 1"
     ))
 
     #Need to load in transcriptome for each species and take the matching transcripts to the database
@@ -166,7 +211,7 @@ matchTargets = function(assembly.directory = NULL,
     filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
     #Reads in contigs
-    contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", file.names[i]), format = "fasta")
+    contigs = all.data
 
     #########################################################################
     #Part B: Multiple sample contigs (tName) matching to one target (qName)
@@ -202,15 +247,6 @@ matchTargets = function(assembly.directory = NULL,
           new.data = rbind(new.data, sub.match[1,])
           next
         } #end if
-
-        #One match/
-        if (nrow(sub.match) == 1){
-          stop("herrr")
-        }
-
-        #Duplicate tName
-        if (length(unique(sub.match$tName)) == 1){ stop("herrr 1")  }
-
 
         ########
         #Saves if they are two separate contigs but non-overlapping on the same locus; N repair
@@ -265,8 +301,6 @@ matchTargets = function(assembly.directory = NULL,
             next
           }#end if
 
-          stop("herrr 2")
-
           #Sets up the new contig location
           #Cuts the node apart and saves separately
           sub.match$tEnd = sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
@@ -288,8 +322,6 @@ matchTargets = function(assembly.directory = NULL,
 
         }#end this if
 
-        stop("herrr 3")
-
         #Saves highest bitscore
         save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
         #Saves longest if equal bitscores
@@ -305,12 +337,12 @@ matchTargets = function(assembly.directory = NULL,
     } else { save.data = good.data }
 
     #########################################################################
-    #Part C: Multiple targets (qName) matching to one sample contig (tName)
+    #Part D: Multiple targets (qName) matching to one sample contig (tName)
     #########################################################################
 
-    red.contigs = contigs[names(contigs) %in% save.data$tName]
-    dup.contigs = save.data$tName[duplicated(save.data$tName)]
-    dup.match = save.data[save.data$tName %in% dup.contigs,]
+    #red.contigs = contigs[names(contigs) %in% filt.data$tName]
+    dup.contigs = filt.data$tName[duplicated(filt.data$tName)]
+    dup.match = filt.data[filt.data$tName %in% dup.contigs, ]
     dup.data = dup.match[order(dup.match$tName)]
 
     #Loops through each potential duplicate
@@ -334,7 +366,7 @@ matchTargets = function(assembly.directory = NULL,
         #Saves them if it is split up across the same locus
         if (length(unique(sub.data$tName)) == 1 && length(unique(sub.data$qName)) == 1){
           spp.seq = contigs[names(contigs) %in% sub.data$tName]
-          names(spp.seq) = paste0(sub.data$qName[1], "_:_", sub.data$tName[1], "_|_", sample)
+          names(spp.seq) = paste0(sub.data$qName[1], "_|_", sample)
           fix.seq = append(fix.seq, spp.seq)
           next
         }
@@ -364,7 +396,7 @@ matchTargets = function(assembly.directory = NULL,
           sub.data = sub.data[sub.data$bitscore == max(sub.data$bitscore),]
           ends = sub.data$tEnd
           starts = sub.data$tStart
-         # if (nrow(sub.data) != 1) { stop("ernor")}
+          # if (nrow(sub.data) != 1) { stop("ernor")}
         }
 
         #Collects new sequence fragments
@@ -387,7 +419,7 @@ matchTargets = function(assembly.directory = NULL,
         # save.contig<-DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
 
         #renames and saves
-        names(new.seq) = paste0(sub.data$qName, "_:_", sub.data$tName, "_|_", sample)
+        names(new.seq) = paste0(sub.data$qName,"_|_", sample)
         fix.seq = append(fix.seq, new.seq)
       } #end j loop
     }#end if
@@ -397,7 +429,7 @@ matchTargets = function(assembly.directory = NULL,
     base.loci = contigs[names(contigs) %in% base.data$tName]
     sort.data = base.data[match(names(base.loci), base.data$tName),]
     #Name and finalize
-    names(base.loci) = paste0(sort.data$qName, "_:_", sort.data$tName, "_|_", sample)
+    names(base.loci) = paste0(sort.data$qName, "_|_", sample)
     fin.loci = append(base.loci, fix.seq)
     fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
 
@@ -412,12 +444,18 @@ matchTargets = function(assembly.directory = NULL,
 
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(fin.loci))
-    writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(species.dir, "/", sample, "_matching-contigs.fa"), nbchar = 1000000, as.string = T)
+    PhyloProcessR::writeFasta(
+      sequences = final.loci, names = names(final.loci),
+      paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
+    )
+    
+    system(paste0("rm -r ", species.dir))
 
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
   }# end i loop
+
+  snow::stopCluster(cl)
 
   ########################################################################
   # Output a single file for alignment
@@ -427,7 +465,7 @@ matchTargets = function(assembly.directory = NULL,
   file.names = list.files(assembly.directory)
   samples = gsub(".fa$", "", file.names)
 
-  header.data = c("Sample", "noContigs", "dedupeContigs", "targetsMatched", "minLen", "maxLen", "meanLen")
+  header.data = c("Sample", "startContigs", "annotatedContigs", "minLen", "maxLen", "meanLen")
   save.data = data.table::data.table(matrix(as.double(0), nrow = length(samples), ncol = length(header.data)))
   data.table::setnames(save.data, header.data)
   save.data[, Sample:=as.character(samples)]
@@ -441,20 +479,16 @@ matchTargets = function(assembly.directory = NULL,
 
     #Gets length of contigs
     og.contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", samples[i], ".fa"))
-    dd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_dedupe.fa"))
+    cd.contigs = Biostrings::readDNAStringSet(paste0(output.directory, "/", samples[i], ".fa"))
 
     #Gets the saved matching targets
-    cd.contigs = Biostrings::readDNAStringSet(paste0(species.dir, "/", samples[i], "_matching-contigs.fa"))
     data.table::set(save.data, i =  match(samples[i], samples), j = match("Sample", header.data), value = samples[i] )
-    data.table::set(save.data, i = match(samples[i], samples), j = match("noContigs", header.data), value = length(og.contigs) )
-    data.table::set(save.data, i = match(samples[i], samples), j = match("dedupeContigs", header.data), value = length(dd.contigs) )
+    data.table::set(save.data, i = match(samples[i], samples), j = match("startContigs", header.data), value = length(og.contigs) )
+    data.table::set(save.data, i = match(samples[i], samples), j = match("annotatedContigs", header.data), value = length(cd.contigs) )
 
     data.table::set(save.data, i =  match(samples[i], samples), j = match("minLen", header.data), value = min(Biostrings::width(cd.contigs)) )
     data.table::set(save.data, i =  match(samples[i], samples), j = match("maxLen", header.data), value = max(Biostrings::width(cd.contigs)) )
     data.table::set(save.data, i =  match(samples[i], samples), j = match("meanLen", header.data), value = mean(Biostrings::width(cd.contigs)) )
-
-    #Gets contig data
-    data.table::set(save.data, i = match(samples[i], samples), j = match("targetsMatched", header.data), value = length(cd.contigs) )
 
     names(cd.contigs) = paste0(gsub("_:_.*", "", names(cd.contigs)), "_|_", samples[i])
     save.contigs = append(save.contigs, cd.contigs)
