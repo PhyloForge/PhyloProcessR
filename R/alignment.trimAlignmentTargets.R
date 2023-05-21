@@ -64,6 +64,8 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   # mafft.path = mafft.path
   # target.direction = TRUE
 
+  require(foreach)
+
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))

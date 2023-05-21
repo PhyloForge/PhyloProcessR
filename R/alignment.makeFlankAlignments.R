@@ -85,6 +85,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
 #   overwrite = overwrite
 #   mafft.path = mafft.path
 
+  require(foreach)
 
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
@@ -130,7 +131,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
+  foreach::foreach(i=1:length(align.files), .packages = c("PhyloProcessR", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
   #Loops through each locus and does operations on them
   #for (i in 1:length(align.files)) {
     #Load in alignments
@@ -168,7 +169,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       ref.align = Biostrings::readAAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
       ref.align = Biostrings::DNAStringSet(ref.align)
       #Gets consensus seq for trimming more
-      con.seq = makeConsensus(ref.align, method = "majority")
+      con.seq = PhyloProcessR::makeConsensus(ref.align, method = "majority")
       #Removes the edge gaps
       target.seq = Biostrings::DNAStringSet(gsub("\\+|-", "", as.character(con.seq)))
       names(target.seq) = "Reference_Locus"
@@ -183,16 +184,18 @@ makeFlankAlignments = function(alignment.directory = NULL,
     ##############
     #STEP 2: Runs MAFFT to add
     ##############
-    #Aligns and then reverses back to correction orientation
-    alignment = runMafft(sequence.data = align,
-                         add.contigs = target.seq,
-                         save.name = paste0(output.directory, "/", align.files[i]),
-                         algorithm = "add",
-                         adjust.direction = TRUE,
-                         threads = 1,
-                         cleanup.files = T,
-                         quiet = TRUE,
-                         mafft.path = mafft.path)
+    # Aligns and then reverses back to correction orientation
+    alignment <- PhyloProcessR::runMafft(
+      sequence.data = align,
+      add.contigs = target.seq,
+      save.name = paste0(output.directory, "/", align.files[i]),
+      algorithm = "add",
+      adjust.direction = TRUE,
+      threads = 1,
+      cleanup.files = T,
+      quiet = TRUE,
+      mafft.path = mafft.path
+    )
 
     #Checks for failed mafft run
     if (length(alignment) == 0){ return(NULL) }
@@ -307,11 +310,13 @@ makeFlankAlignments = function(alignment.directory = NULL,
         write.temp = strsplit(as.character(rem.align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
-        #readies for saving
-        writePhylip(alignment = aligned.set,
-                    file=paste0(output.directory, "/", align.files[i]),
-                    interleave = F,
-                    strict = F)
+        # readies for saving
+        PhyloProcessR::writePhylip(
+          alignment = aligned.set,
+          file = paste0(output.directory, "/", align.files[i]),
+          interleave = F,
+          strict = F
+        )
 
         #Deletes old files
         print(paste0(align.files[i], " alignment saved."))
