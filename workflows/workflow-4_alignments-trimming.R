@@ -39,10 +39,10 @@ annotateTargets(
   cdhit.path = cdhit.path
 )
 
-#Create alignments folder
+# Create alignments folder
 dir.create("data-analysis/alignments")
 
-#Aligns files
+# Aligns target markers from annotation files
 alignTargets(
   targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
   output.directory = "data-analysis/alignments/untrimmed_all-markers",
@@ -57,8 +57,7 @@ alignTargets(
   mafft.path = mafft.path
 )
 
-
-#### Trims alignments to target sequence leaving out flanks
+# Trims alignments to target sequence leaving out flanks
 if (trim.to.targets == TRUE) {
   trimAlignmentTargets(
     alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
@@ -109,32 +108,32 @@ if (trim.to.flanks == TRUE) {
 #                     overwrite = overwrite)
 
 
-if (trim.alignments == TRUE){
-  #Fix the installs for this
-  batchTrimAlignments(alignment.dir = "data-analysis/alignments/untrimmed_all-markers",
-                      alignment.format = "phylip",
-                      output.dir = "data-analysis/alignments/trimmed_all-markers",
-                      output.format = "phylip",
-                      overwrite = overwrite,
-                      TAPER = FALSE,
-                      TAPER.path = NULL,
-                      julia.path = julia.path,
-                      TrimAl = run.TrimAl,
-                      TrimAl.path = trimAl.path,
-                      trim.column = trim.column,
-                      convert.ambiguous.sites = convert.ambiguous.sites,
-                      alignment.assess = F,
-                      trim.external = trim.external,
-                      trim.coverage = trim.coverage,
-                      min.coverage.percent = min.coverage.percent,
-                      min.external.percent = min.external.percent,
-                      min.column.gap.percent = min.column.gap.percent,
-                      min.alignment.length = min.alignment.length,
-                      min.taxa.alignment = min.taxa.alignment,
-                      min.coverage.bp = min.coverage.bp,
-                      threads = threads,
-                      memory = memory)
-}#end if
+if (trim.alignments == TRUE) {
+  # Fix the installs for this
+  superTrimmer(
+    alignment.dir = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.format = "phylip",
+    output.dir = "data-analysis/alignments/trimmed_all-markers",
+    output.format = "phylip",
+    overwrite = overwrite,
+    julia.path = julia.path,
+    TrimAl = run.TrimAl,
+    TrimAl.path = trimAl.path,
+    trim.column = trim.column,
+    convert.ambiguous.sites = convert.ambiguous.sites,
+    alignment.assess = F,
+    trim.external = trim.external,
+    trim.coverage = trim.coverage,
+    min.coverage.percent = min.coverage.percent,
+    min.external.percent = min.external.percent,
+    min.column.gap.percent = min.column.gap.percent,
+    min.alignment.length = min.alignment.length,
+    min.taxa.alignment = min.taxa.alignment,
+    min.coverage.bp = min.coverage.bp,
+    threads = threads,
+    memory = memory
+  )
+} # end if
 
 
 ### End workflow

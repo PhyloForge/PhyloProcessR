@@ -1,4 +1,4 @@
-#' @title batchTrimAlignments
+#' @title superTrimmer
 #'
 #' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
 #'
@@ -58,31 +58,31 @@
 #'
 #' @export
 
-batchTrimAlignments = function(alignment.dir = NULL,
-                               alignment.format = "phylip",
-                               output.dir = NULL,
-                               output.format = "phylip",
-                               TAPER = FALSE,
-                               TAPER.path = NULL,
-                               julia.path = NULL,
-                               TrimAl = FALSE,
-                               TrimAl.path = NULL,
-                               trim.external = TRUE,
-                               min.external.percent = 50,
-                               trim.coverage = TRUE,
-                               min.coverage.percent = 50,
-                               trim.column = TRUE,
-                               min.column.gap.percent = 100,
-                               convert.ambiguous.sites = FALSE,
-                               alignment.assess = TRUE,
-                               min.coverage.bp = 0,
-                               min.alignment.length = 0,
-                               min.taxa.alignment = 0,
-                               max.alignment.gap.percent = 0,
-                               threads = 1,
-                               memory = 1,
-                               overwrite = FALSE,
-                               resume = TRUE) {
+superTrimmer = function(alignment.dir = NULL,
+                        alignment.format = "phylip",
+                        output.dir = NULL,
+                        output.format = "phylip",
+                        TAPER = FALSE,
+                        TAPER.path = NULL,
+                        julia.path = NULL,
+                        TrimAl = FALSE,
+                        TrimAl.path = NULL,
+                        trim.external = TRUE,
+                        min.external.percent = 50,
+                        trim.coverage = TRUE,
+                        min.coverage.percent = 50,
+                        trim.column = TRUE,
+                        min.column.gap.percent = 100,
+                        convert.ambiguous.sites = FALSE,
+                        alignment.assess = TRUE,
+                        min.coverage.bp = 0,
+                        min.alignment.length = 0,
+                        min.taxa.alignment = 0,
+                        max.alignment.gap.percent = 0,
+                        threads = 1,
+                        memory = 1,
+                        overwrite = FALSE,
+                        resume = TRUE) {
 
   # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
   # library(PhyloCap)
@@ -196,7 +196,7 @@ batchTrimAlignments = function(alignment.dir = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   #for (i in 1:length(align.files)){
     print(paste0(align.files[i], " Starting..."))
 

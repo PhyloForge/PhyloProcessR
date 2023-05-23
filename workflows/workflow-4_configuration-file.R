@@ -1,5 +1,5 @@
 #################################################
-## Configuration file for workflow -2: alignments and trimming
+## Configuration file for workflow 4: alignments and trimming
 #################################################
 
 # Directories and input files
