@@ -12,6 +12,8 @@ working.directory = "/Volumes/LaCie"
 contig.directory = "/Volumes/LaCie/Mantellidae/data-analysis/contigs/5_iupac-contigs"
 # The sequence capture target marker file for extraction from contigs
 target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+#feature gene name metadata file, column one: "Marker"; column: "Gene"
+feature.gene.names = "/Volumes/LaCie/data-analysis/gene_metadata.txt"
 # The name for the dataset
 dataset.name = "Descriptive-Name"
 
@@ -62,8 +64,8 @@ trim.to.targets = TRUE
 trim.to.flanks = TRUE
 # Concatenates exons from same gene
 concatenate.genes = TRUE
-# Gathers all unique alignments i.e. concatenated genes and single exon genes
-gather.unique = TRUE
+# Gathers all unlinked alignments i.e. concatenated genes and single exon genes and UCEs
+gather.unlinked = TRUE
 
 # Trimming alignment settings
 #########################

@@ -156,7 +156,7 @@ if (concatenate.genes == TRUE) {
   concatenateGenes(
     alignment.folder = "data-analysis/alignments/untrimmed_all-markers",
     output.folder = "data-analysis/alignments/untrimmed_genes",
-    feature.gene.names = NULL,
+    feature.gene.names = feature.gene.names,
     input.format = "phylip",
     output.format = "phylip",
     minimum.exons = 2,
@@ -167,14 +167,16 @@ if (concatenate.genes == TRUE) {
   )
 }#end if
 
-if (gather.unique == TRUE){
-
-
-
-
-
-  
-}
+if (gather.unlinked == TRUE){
+  # Gathers the unlinked markers (genes and single exons / UCEs)
+  gatherUnlinked(
+    gene.alignment.directory = "data-analysis/alignments/untrimmed_genes",
+    exon.alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
+    output.directory = "data-analysis/alignments/untrimmed_all-unlinked",
+    feature.gene.names = NULL,
+    overwrite = FALSE
+  )
+} # end unlinked
 
 # makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
 #                     alignment.format = "phylip",

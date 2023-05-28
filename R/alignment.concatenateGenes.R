@@ -38,20 +38,21 @@ concatenateGenes = function(alignment.folder = NULL,
                             output.format = c("phylip", "nexus", "fasta"),
                             minimum.exons = 2,
                             remove.reverse = FALSE,
+                            remove.duplicates = FALSE,
                             overwrite = FALSE,
                             threads = 1,
                             memory = 1) {
 
-  #Debug
-  # work.dir = "/Volumes/LaCie/Structure_maker"
+  # #Debug
+  # work.dir = "/Volumes/LaCie/data-analysis/alignments"
   # setwd(work.dir)
-  # alignment.folder = "trimmed_all-markers"
-  # output.folder = "trimmed_genes"
+  # alignment.folder = "untrimmed_all-markers"
+  # output.folder = "untrimmed_genes"
   # input.format = "phylip"
   # output.format = "phylip"
   # remove.reverse = FALSE
   # overwrite = FALSE
-  # feature.gene.names = "gene_metadata.txt"
+  # feature.gene.names = "/Volumes/LaCie/data-analysis/gene_metadata.txt"
   # minimum.exons = 2
   # threads = 8
   # memory = 24
@@ -96,7 +97,7 @@ concatenateGenes = function(alignment.folder = NULL,
   mem.cl = floor(memory/threads)
 
   foreach::foreach(i=1:length(gene.names), .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(gene.names)){
+ # for (i in 1:length(gene.names)){
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene %in% gene.names[i],]
     #Match to the files to obtain
@@ -137,8 +138,12 @@ concatenateGenes = function(alignment.folder = NULL,
       #Checks for duplicates
       dup.names <- exon.align[duplicated(names(exon.align)), ]
       if (length(dup.names) != 0) {
-        stop("DUPLICATE names found. Please check alignments.")
-      }
+        if (remove.duplicates == TRUE) {
+          next
+        } else {
+          stop("DUPLICATE names found. Please check alignments.")
+        }#end else
+      }#end if 
 
       #Gathers sample names
       exon.save = paste0(temp.dir, "/", gene.names[i], "-", y, ".phy")
@@ -153,6 +158,7 @@ concatenateGenes = function(alignment.folder = NULL,
     if (exon.count < minimum.exons){ 
       print(paste0("Below minimum exon count of ", minimum.exons, ". Skipped gene."))
       system(paste0("rm -r ", temp.dir))
+      #next
       return(NULL)
     }
 

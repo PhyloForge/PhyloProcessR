@@ -62,9 +62,6 @@ superTrimmer = function(alignment.dir = NULL,
                         alignment.format = "phylip",
                         output.dir = NULL,
                         output.format = "phylip",
-                        TAPER = FALSE,
-                        TAPER.path = NULL,
-                        julia.path = NULL,
                         TrimAl = FALSE,
                         TrimAl.path = NULL,
                         trim.external = TRUE,
@@ -110,9 +107,6 @@ superTrimmer = function(alignment.dir = NULL,
   # output.dir = "trimmed_alignments"
   # output.format = "phylip"
   # overwrite = FALSE
-  # TAPER = FALSE
-  # TAPER.path = NULL
-  # julia.path = NULL
   # TrimAl = TRUE
   # TrimAl.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
   # trim.column = TRUE
@@ -130,19 +124,7 @@ superTrimmer = function(alignment.dir = NULL,
   # threads = 8
   # memory = 24
 
-  if (is.null(TAPER.path) == FALSE){
-    b.string = unlist(strsplit(TAPER.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      TAPER.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { TAPER.path = NULL }
-
-  if (is.null(julia.path) == FALSE){
-    b.string = unlist(strsplit(julia.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      julia.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { julia.path = NULL }
+  require(foreach)
 
   if (is.null(TrimAl.path) == FALSE){
     b.string = unlist(strsplit(TrimAl.path, ""))
@@ -243,24 +225,6 @@ superTrimmer = function(alignment.dir = NULL,
     data.table::set(temp.data, i = as.integer(1), j = match("startBasepairs", header.data), value = gap.count[2] - gap.count[1])
     data.table::set(temp.data, i = as.integer(1), j = match("startGaps", header.data), value = gap.count[1])
     data.table::set(temp.data, i = as.integer(1), j = match("startPerGaps", header.data), value = gap.count[3])
-
-    # Run the TAPER
-    if (TAPER == TRUE && length(non.align) != 0){
-      #Runs the TAPER
-      taper.align = trimTAPER(alignment = non.align,
-                              TAPER.path = TAPER.path,
-                              julia.path = julia.path,
-                              quiet = F,
-                              delete.temp = T)
-      non.align = taper.align
-      #Saves the data
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirSamples", header.data), value = length(taper.align))
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirLength", header.data), value = Biostrings::width(taper.align)[1])
-      gap.count = countAlignmentGaps(non.align)
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirBasepairs", header.data), value = gap.count[2] - gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirGaps", header.data), value = gap.count[1])
-      data.table::set(temp.data, i = as.integer(1), j = match("tapirPerGaps", header.data), value = gap.count[3])
-    }#end if
 
     #Step 3. Trimal trimming
     if (TrimAl == TRUE && length(non.align) != 0){
