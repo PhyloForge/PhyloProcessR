@@ -36,44 +36,27 @@ concatenateGenes = function(alignment.folder = NULL,
                             feature.gene.names = NULL,
                             input.format = c("phylip", "nexus", "fasta"),
                             output.format = c("phylip", "nexus", "fasta"),
+                            minimum.exons = 2,
                             remove.reverse = FALSE,
                             overwrite = FALSE,
-                            resume = TRUE,
                             threads = 1,
                             memory = 1) {
 
   #Debug
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
-  # feature.gene.names = "/Volumes/Rodents/Murinae/Trimming/Mus_gene_metadata.csv"
-  # out.name = "Emily"
-  #
-  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # align.dir =  "/home/c111h652/scratch/Rodents/Alignments/Emily"
-  # feature.gene.names = "/home/c111h652/scratch/Rodents/Trimming/Mus_gene_metadata.csv"
-  # out.name = "Emily"
-  # threads = 1
-  # memory = 1
-  #
+  # work.dir = "/Volumes/LaCie/Structure_maker"
   # setwd(work.dir)
-  # alignment.folder = align.dir
-  # output.folder = paste0(out.name, "/genes_untrimmed")
-  # input.format = "fasta"
-  # output.format = "phylip"
-  # remove.reverse = TRUE
-  # overwrite = FALSE
-  # resume = TRUE
-#
-  # alignment.folder = alignment.path
-  # output.folder = out.dir
-  # feature.gene.names = paste0(work.dir, "/feature-gene-names.csv")
+  # alignment.folder = "trimmed_all-markers"
+  # output.folder = "trimmed_genes"
   # input.format = "phylip"
   # output.format = "phylip"
-  # remove.reverse = TRUE
-  # overwrite = F
+  # remove.reverse = FALSE
+  # overwrite = FALSE
+  # feature.gene.names = "gene_metadata.txt"
+  # minimum.exons = 2
   # threads = 8
   # memory = 24
-  # resume = T
+
+  require(foreach)
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -95,28 +78,29 @@ concatenateGenes = function(alignment.folder = NULL,
   }#end overwrite if
 
   #Gets list of alignments
-  align.files = list.files(alignment.folder, full.names = F, recursive = T)
-  exon.data = data.table::fread(file = feature.gene.names, header = T)
-  gene.names = unique(exon.data$gene_id)
+  align.files = list.files(alignment.folder, full.names = FALSE, recursive = TRUE)
+  exon.data = data.table::fread(file = feature.gene.names, header = TRUE)
+  gene.names = unique(exon.data$gene)
+  gene.names = gene.names[is.na(gene.names) != TRUE]
 
   #Skips files done already if resume = TRUE
-  if (resume == TRUE){
+  if (overwrite == FALSE){
     done.files = list.files(output.folder)
     done.genes = gsub(".phy$", "", done.files)
     gene.names = gene.names[!gene.names %in% done.genes]
   }
 
   # #Sets up multiprocessing
-   cl = parallel::makeCluster(threads, outfile = "")
-   doParallel::registerDoParallel(cl)
-   mem.cl = floor(memory/threads)
+  cl = parallel::makeCluster(threads, outfile = "")
+  doParallel::registerDoParallel(cl)
+  mem.cl = floor(memory/threads)
 
-  foreach::foreach(i=1:length(gene.names), .packages = c("PhyloCap", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
+  foreach::foreach(i=1:length(gene.names), .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
   #for (i in 1:length(gene.names)){
     #Find exon data for this gene
-    gene.data = exon.data[exon.data$gene_id %in% gene.names[i],]
+    gene.data = exon.data[exon.data$gene %in% gene.names[i],]
     #Match to the files to obtain
-    gene.exons = gene.data$file_name
+    gene.exons = gene.data$marker
 
     temp.dir = paste0(output.folder, "/temp-", gene.names[i])
     if (dir.exists(temp.dir) == TRUE){
@@ -126,12 +110,13 @@ concatenateGenes = function(alignment.folder = NULL,
 
     save.names = c()
     save.length = 0
+    exon.count = 0
     for (y in 1:length(gene.exons)){
-      #Finds alignment name
-      temp.exon = align.files[align.files %in% gene.exons[y]]
+      # Finds alignment name
+      temp.exon = align.files[gsub("\\..*", "", align.files) %in% gene.exons[y]]
 
       if (length(temp.exon) >= 2){
-        temp.exon = temp.exon[gsub("-mafft.fa", "", temp.exon) %in% gene.exons[y]]
+        stop("more than one exon matches to spreadsheet entry.")
       }
 
       if (length(temp.exon) == 0) {  next }
@@ -148,14 +133,28 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #Removes the reverse from mafft if present
       if (remove.reverse == TRUE){ names(exon.align) = gsub("^_R_", "", names(exon.align) ) }
+
+      #Checks for duplicates
+      dup.names <- exon.align[duplicated(names(exon.align)), ]
+      if (length(dup.names) != 0) {
+        stop("DUPLICATE names found. Please check alignments.")
+      }
+
       #Gathers sample names
       exon.save = paste0(temp.dir, "/", gene.names[i], "-", y, ".phy")
       save.names = append(save.names, exon.save)
       #Saves alignment as phylip
-      write.align = PhyloCap::alignmentConversion(input.alignment = exon.align, end.format = "matrix")
-      PhyloCap::writePhylip(write.align, file = exon.save, interleave = F )
+      write.align = PhyloProcessR::alignmentConversion(input.alignment = exon.align, end.format = "matrix")
+      PhyloProcessR::writePhylip(write.align, file = exon.save, interleave = F )
       save.length = save.length + Biostrings::width(exon.align)[1]
+      exon.count = exon.count + 1
     }#end y loop
+
+    if (exon.count < minimum.exons){ 
+      print(paste0("Below minimum exon count of ", minimum.exons, ". Skipped gene."))
+      system(paste0("rm -r ", temp.dir))
+      return(NULL)
+    }
 
     dup.names = exon.align[duplicated(names(exon.align)),]
     if (length(dup.names) != 0){ stop("DUPLICATE names found. Please check alignments.") }
@@ -265,7 +264,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #### SAVE AS FASTA
       ###################
-      if (output.format == "fasta" | output.format == "fa" | output.format == "fas"){
+      if (output.format == "fasta" || output.format == "fa" || output.format == "fas"){
         #Fasta easy
         fileConn = file(paste0(output.name, ".fa"), open = "a")
         #Saves each line
@@ -280,7 +279,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #### SAVE AS NEXUS
       ###################
-      if (output.format == "nexus" | output.format == "nex"){
+      if (output.format == "nexus" || output.format == "nex"){
 
         #Gets header information
         ntax = nrow(concat.data)
@@ -323,7 +322,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #### SAVE AS PHYLIP
       ###################
-      if (output.format == "phylip" | output.format == "phy"){
+      if (output.format == "phylip" || output.format == "phy"){
         #Now have to reformat
         ntax = nrow(concat.data)
         nchar = save.length
@@ -356,11 +355,8 @@ concatenateGenes = function(alignment.folder = NULL,
     rm()
     gc()
 
-   }#end i loop
+  }#end i loop
 
   parallel::stopCluster(cl)
 
- # system(paste0("rm -r ", output.folder, "/temp*"))
-
 }#end function
-

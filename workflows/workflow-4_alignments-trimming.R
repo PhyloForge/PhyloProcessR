@@ -21,41 +21,45 @@ filterHeterozygosity(
   overwrite = overwrite
 )
 
-# annotates targets
-annotateTargets(
-  assembly.directory = "data-analysis/contigs/7_filtered-contigs",
-  target.file = target.file,
-  alignment.contig.name = paste0("data-analysis/", dataset.name),
-  output.directory = "data-analysis/contigs/8_annotated-contigs",
-  min.match.percent = min.match.percent,
-  min.match.length = min.match.length,
-  min.match.coverage = min.match.coverage,
-  threads = threads,
-  memory = memory,
-  trim.target = trim.to.targets,
-  overwrite = overwrite,
-  quiet = quiet,
-  blast.path = blast.path,
-  cdhit.path = cdhit.path
-)
+if (annotate.targets == TRUE) {
+  # annotates targets
+  annotateTargets(
+    assembly.directory = "data-analysis/contigs/7_filtered-contigs",
+    target.file = target.file,
+    alignment.contig.name = paste0("data-analysis/", dataset.name),
+    output.directory = "data-analysis/contigs/8_annotated-contigs",
+    min.match.percent = min.match.percent,
+    min.match.length = min.match.length,
+    min.match.coverage = min.match.coverage,
+    threads = threads,
+    memory = memory,
+    trim.target = trim.to.targets,
+    overwrite = overwrite,
+    quiet = quiet,
+    blast.path = blast.path,
+    cdhit.path = cdhit.path
+  )
+}#end if
 
 # Create alignments folder
 dir.create("data-analysis/alignments")
 
-# Aligns target markers from annotation files
-alignTargets(
-  targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
-  output.directory = "data-analysis/alignments/untrimmed_all-markers",
-  min.taxa = min.taxa.alignment,
-  algorithm = alignment.algorithm,
-  subset.start = subset.start,
-  subset.end = subset.end,
-  threads = threads,
-  memory = memory,
-  overwrite = overwrite,
-  quiet = quiet,
-  mafft.path = mafft.path
-)
+if (align.targets == TRUE) {
+  # Aligns target markers from annotation files
+  alignTargets(
+    targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
+    output.directory = "data-analysis/alignments/untrimmed_all-markers",
+    min.taxa = min.taxa.alignment,
+    algorithm = alignment.algorithm,
+    subset.start = subset.start,
+    subset.end = subset.end,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    quiet = quiet,
+    mafft.path = mafft.path
+  )
+}#end if
 
 # Trims alignments to target sequence leaving out flanks
 if (trim.to.targets == TRUE) {
@@ -73,7 +77,34 @@ if (trim.to.targets == TRUE) {
     overwrite = overwrite,
     mafft.path = mafft.path
   )
-}
+
+  if (trim.alignments == TRUE) {
+    # Fix the installs for this
+    superTrimmer(
+      alignment.dir = "data-analysis/alignments/untrimmed_no-flank",
+      alignment.format = "phylip",
+      output.dir = "data-analysis/alignments/trimmed_no-flank",
+      output.format = "phylip",
+      overwrite = overwrite,
+      TrimAl = run.TrimAl,
+      TrimAl.path = trimAl.path,
+      trim.column = trim.column,
+      convert.ambiguous.sites = convert.ambiguous.sites,
+      alignment.assess = FALSE,
+      trim.external = trim.external,
+      trim.coverage = trim.coverage,
+      min.coverage.percent = min.coverage.percent,
+      min.external.percent = min.external.percent,
+      min.column.gap.percent = min.column.gap.percent,
+      min.alignment.length = min.alignment.length,
+      min.taxa.alignment = min.taxa.alignment,
+      min.coverage.bp = min.coverage.bp,
+      threads = threads,
+      memory = memory
+    )
+  } # end if
+
+}# end trim to targets
 
 # Trims alignments to only the flanks, leaving out the target marker
 if (trim.to.flanks == TRUE) {
@@ -92,6 +123,57 @@ if (trim.to.flanks == TRUE) {
     overwrite = overwrite,
     mafft.path = mafft.path
   )
+
+  if (trim.alignments == TRUE) {
+    # Fix the installs for this
+    superTrimmer(
+      alignment.dir = "data-analysis/alignments/untrimmed_only-flanks",
+      alignment.format = "phylip",
+      output.dir = "data-analysis/alignments/trimmed_only-flanks",
+      output.format = "phylip",
+      overwrite = overwrite,
+      TrimAl = run.TrimAl,
+      TrimAl.path = trimAl.path,
+      trim.column = trim.column,
+      convert.ambiguous.sites = convert.ambiguous.sites,
+      alignment.assess = FALSE,
+      trim.external = trim.external,
+      trim.coverage = trim.coverage,
+      min.coverage.percent = min.coverage.percent,
+      min.external.percent = min.external.percent,
+      min.column.gap.percent = min.column.gap.percent,
+      min.alignment.length = min.alignment.length,
+      min.taxa.alignment = min.taxa.alignment,
+      min.coverage.bp = min.coverage.bp,
+      threads = threads,
+      memory = memory
+    )
+  } # end if
+}# end trim to flanks
+
+if (concatenate.genes == TRUE) {
+  # Concatenates genes from the untrimmed-markers original alignments
+  concatenateGenes(
+    alignment.folder = "data-analysis/alignments/untrimmed_all-markers",
+    output.folder = "data-analysis/alignments/untrimmed_genes",
+    feature.gene.names = NULL,
+    input.format = "phylip",
+    output.format = "phylip",
+    minimum.exons = 2,
+    remove.reverse = FALSE,
+    overwrite = overwrite,
+    threads = threads,
+    memory = memory
+  )
+}#end if
+
+if (gather.unique == TRUE){
+
+
+
+
+
+  
 }
 
 # makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
@@ -116,12 +198,11 @@ if (trim.alignments == TRUE) {
     output.dir = "data-analysis/alignments/trimmed_all-markers",
     output.format = "phylip",
     overwrite = overwrite,
-    julia.path = julia.path,
     TrimAl = run.TrimAl,
     TrimAl.path = trimAl.path,
     trim.column = trim.column,
     convert.ambiguous.sites = convert.ambiguous.sites,
-    alignment.assess = F,
+    alignment.assess = FALSE,
     trim.external = trim.external,
     trim.coverage = trim.coverage,
     min.coverage.percent = min.coverage.percent,

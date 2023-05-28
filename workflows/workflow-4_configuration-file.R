@@ -7,7 +7,7 @@
 # *** Full paths should be used whenever possible
 # The main working directory
 # working.directory = "/Path/to/where/the/stuff/is/at"
-working.directory = "/Volumes/LaCie/Mantellidae"
+working.directory = "/Volumes/LaCie"
 # the contig directory to make alignments from
 contig.directory = "/Volumes/LaCie/Mantellidae/data-analysis/contigs/5_iupac-contigs"
 # The sequence capture target marker file for extraction from contigs
@@ -23,13 +23,13 @@ threads = 4
 memory = 40
 #Whether to overwrite previous runs
 overwrite = FALSE
-#Resume from previous runs (does not overwrite)
-resume = TRUE
 #Print verbose output for each function
 quiet = TRUE
 
-#Target matching settings
+#Target annotation settings
 #########################
+# TRUE to run target annotation
+annotate.targets = TRUE
 #Filtering threshold to filter out potential paralogs
 heterozyote.filter.threshold = 0.05
 #whether to trim to the targets losing flanking sequence (TRUE) or keep the entire contig (FALSE)
@@ -43,8 +43,8 @@ min.match.coverage = 50
 
 # Alignment settings
 #########################
-# TRUE = to run alignments for the matching targets from above
-align.matching.targets = TRUE
+# TRUE = to run alignments for the annotated targets from above
+align.targets = TRUE
 # localpair or globalpair, localpair slower but better
 alignment.algorithm = "localpair"
 # The minimum number of taxa to keep an alignment
@@ -60,7 +60,10 @@ subset.end = 1
 trim.to.targets = TRUE
 # Trims the target out of each alignment, leaving only the flanks (inverse of previous)
 trim.to.flanks = TRUE
-
+# Concatenates exons from same gene
+concatenate.genes = TRUE
+# Gathers all unique alignments i.e. concatenated genes and single exon genes
+gather.unique = TRUE
 
 # Trimming alignment settings
 #########################
