@@ -80,37 +80,18 @@ superTrimmer = function(alignment.dir = NULL,
                         memory = 1,
                         overwrite = FALSE,
                         resume = TRUE) {
-
-  # #devtools::install_github("chutter/PHYLOCAP", upgrade = "never")
-  # library(PhyloCap)
-  # library(foreach)
-  #
-  #
-  # #Save directory
-  # #work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # #align.dir = "/Volumes/Rodents/Murinae/Trimming/genes-untrimmed"
-  # #feat.gene.names = "/Volumes/Rodents/Murinae/Selected_Transcripts/Mus_gene_metadata.csv"
-  # #work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  #
-  # work.dir = "/home/c111h652/scratch/Rodents/Trimming"
-  # align.dir = "/home/c111h652/scratch/Rodents/Trimming/Emily/genes_untrimmed"
-  #
-  # work.dir = "/Volumes/Rodents/Murinae/Trimming"
-  # align.dir =  "/Volumes/Rodents/Murinae/Trimming/Emily/genes_untrimmed"
-  # out.name = "Emily"
-  #
-  #
+  
+  # work.dir = "/Volumes/LaCie"
   # setwd(work.dir)
-  # library(foreach)
-  # alignment.dir = "new_alignments"
+  # alignment.dir = "data-analysis/alignments/untrimmed_only-flanks"
   # alignment.format = "phylip"
-  # output.dir = "trimmed_alignments"
+  # output.dir = "data-analysis/alignments/trimmed_only-flanks"
   # output.format = "phylip"
   # overwrite = FALSE
   # TrimAl = TRUE
   # TrimAl.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
   # trim.column = TRUE
-  # convert.ambiguous.sites = TRUE
+  # convert.ambiguous.sites = FALSE
   # alignment.assess = F
   # trim.external = TRUE
   # trim.coverage = TRUE
@@ -158,13 +139,13 @@ superTrimmer = function(alignment.dir = NULL,
   #Data to collect
   header.data = c("Alignment", "Pass", "startSamples", "tapirSamples", "trimalSamples",
                   "edgeSamples", "columnSamples", "covSamples",
-                  "startLength", "tapirLength", "trimalLength",
+                  "startLength", "trimalLength",
                   "edgeLength", "columnLength", "covLength",
-                  "startBasepairs", "tapirBasepairs", "trimalBasepairs",
+                  "startBasepairs", "trimalBasepairs",
                   "edgeBasepairs", "columnBasepairs", "covBasepairs",
-                  "startGaps", "tapirGaps", "trimalGaps",
+                  "startGaps",  "trimalGaps",
                   "edgeGaps", "columnGaps", "covGaps",
-                  "startPerGaps", "tapirPerGaps", "trimalPerGaps",
+                  "startPerGaps", "trimalPerGaps",
                   "edgePerGaps", "columnPerGaps", "covPerGaps")
 
   save.data = data.table::data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))

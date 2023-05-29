@@ -118,6 +118,13 @@ alignTargets = function(targets.to.align = NULL,
     #STEP 2: Sets up fasta for aligning
     names(match.data) = gsub(pattern = ".*_\\|_", replacement = "", x = names(match.data))
 
+    # Checks for duplicates
+    dup.names = match.data[duplicated(names(match.data)), ]
+    if (length(dup.names) != 0) {
+      print(paste0(locus.names[i], " did not successfully align. Duplicate samples, likely paralog."))
+      next
+    } # end if
+
     #STEP 3: Runs MAFFT to align
     #Aligns and then reverses back to correction orientation
     alignment = runMafft(sequence.data = match.data,
