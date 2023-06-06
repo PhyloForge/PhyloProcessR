@@ -54,6 +54,8 @@ normalizeReads = function(input.reads = NULL,
   # overwrite = FALSE
   # quiet = TRUE
 
+  require(foreach)
+
   #Same adds to bbmap path
   if (is.null(orna.path) == FALSE){
     b.string = unlist(strsplit(orna.path, ""))
