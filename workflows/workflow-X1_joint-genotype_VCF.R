@@ -2,8 +2,8 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
-source("workflow-3_configuration-file.R")
+#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-X1_configuration-file.R")
+source("workflow-X1_configuration-file.R")
 
 setwd(working.directory)
 
@@ -20,10 +20,8 @@ if (file.exists(paste0("data-analysis/", dataset.name)) == FALSE) {
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
-  assembly.directory = assembly.directory,
   output.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   auto.readgroup = auto.readgroup,
-  check.assemblies = check.assemblies,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
@@ -34,10 +32,9 @@ prepareBAM(
 )
 
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
-mapReferenceSample(
+mapReferenceConsensus(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   assembly.directory = assembly.directory,
-  check.assemblies = check.assemblies,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,

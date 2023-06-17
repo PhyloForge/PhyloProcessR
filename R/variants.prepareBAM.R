@@ -36,9 +36,7 @@
 #' @export
 
 prepareBAM = function(read.directory = NULL,
-                      assembly.directory = NULL,
                       output.directory = "sample-mapping",
-                      check.assemblies = TRUE,
                       auto.readgroup = TRUE,
                       samtools.path = NULL,
                       bwa.path = NULL,
@@ -50,14 +48,13 @@ prepareBAM = function(read.directory = NULL,
  
   # library(PhyloCap)
   # library(doParallel)
-  # setwd("/Volumes/LaCie/Mantellidae")
-  # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  # output.directory <- "variant-discovery/sample-mapping"
-  # read.directory <- "/Volumes/LaCie/Mantellidae/reads"
+  # setwd("/Volumes/LaCie/Anax")
+  # output.directory <- "data-analysis/joint-genotyping/sample-mapping"
+  # read.directory <- "/Volumes/LaCie/Anax/reads"
 
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
+  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # samtools.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # bwa.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   # auto.readgroup <- T
   # threads <- 4
@@ -124,21 +121,6 @@ prepareBAM = function(read.directory = NULL,
   # Read in sample data **** sample is run twice?!
   reads <- list.files(read.directory, recursive = TRUE, full.names = TRUE)
   sample.names <- list.files(read.directory, recursive = FALSE, full.names = FALSE)
-
-  # Checks to see if assemblies match to reads
-  sample.files <- list.files(assembly.directory)
-
-  # Stops if TRUE
-  if (check.assemblies == TRUE) {
-    if (length(sample.files) != length(sample.names)) {
-      stop("Assembly count does not match raw read count. Ensure that all samples have been assembled or set check.assemblies == FALSE")
-    }
-  }
-
-  # Removes reads for missing assemblies if FALSE
-  if (check.assemblies == FALSE) {
-    sample.names <- sample.names[sample.names %in% gsub(".fa$|.fasta$", "", sample.files)]
-  }
 
   # Resumes file download
   if (overwrite == FALSE) {

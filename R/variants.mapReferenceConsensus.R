@@ -1,4 +1,4 @@
-#' @title mapReference
+#' @title mapReferenceConsensus
 #'
 #' @description Function for running the program spades to assemble short read sequencing data
 #'
@@ -34,23 +34,21 @@
 #'
 #' @export
 
-mapReference = function(mapping.directory = NULL,
-                        assembly.directory = NULL,
-                        check.assemblies = TRUE,
-                        samtools.path = NULL,
-                        bwa.path = NULL,
-                        gatk4.path = NULL,
-                        threads = 1,
-                        memory = 1,
-                        overwrite = FALSE,
-                        quiet = TRUE) {
+mapReferenceConsensus = function(mapping.directory = NULL,
+                                alignment.directory = NULL,
+                                samtools.path = NULL,
+                                bwa.path = NULL,
+                                gatk4.path = NULL,
+                                threads = 1,
+                                memory = 1,
+                                overwrite = FALSE,
+                                quiet = TRUE) {
   # Debugging
-  # library(PhyloCap)
-  # library(foreach)
-  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
-  # assembly.directory <- "/Volumes/LaCie/Mantellidae/expanded-assemblies"
-  # mapping.directory <- "variant-calling/sample-mapping"
-  # mapping.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-mapping"
+  # library(PhyloProcessR)
+  # setwd("/Volumes/LaCie/Anax/data-analysis")
+  # alignment.directory <- "/Volumes/LaCie/Anax/data-analysis/alignments/untrimmed_all-markers"
+  # mapping.directory <- "joint-genotyping/sample-mapping"
+
 
   # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # samtools.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
@@ -61,6 +59,8 @@ mapReference = function(mapping.directory = NULL,
   # memory <- 8
   # quiet <- FALSE
   # overwrite <- FALSE
+
+  require(foreach)
 
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
@@ -111,21 +111,6 @@ mapReference = function(mapping.directory = NULL,
   bam.files <- bam.files[grep("all_reads.bam$", bam.files)]
   sample.names <- list.dirs(mapping.directory, recursive = FALSE, full.names = FALSE)
 
-  #Checks to see if assemblies match to reads
-  sample.files <- list.files(assembly.directory)
-
-  #Stops if TRUE
-  if (check.assemblies == TRUE) {
-    if (length(sample.files) != length(sample.names)) {
-      stop("Assembly count does not match raw read count. Ensure that all samples have been assembled or set check.assemblies == FALSE")
-    }
-  }
-
-  #Removes reads for missing assemblies if FALSE
-  if (check.assemblies == FALSE) {
-    sample.names = sample.names[sample.names %in% gsub(".fa$|.fasta$", "", sample.files)]
-  }
-
   # Resumes file download
   if (overwrite == FALSE) {
     done.files <- list.files(mapping.directory, full.names = TRUE, recursive = TRUE)
@@ -141,38 +126,65 @@ mapReference = function(mapping.directory = NULL,
 
   ############################################################################################
   ########### Step 1 #########################################################################
-  ##### Index reference
+  ##### Create reference from alignment consensus
   ############################################################################################
 
-  dir.create(mapping.directory)
+  ref.path <- paste0("index")
+  if (dir.exists(ref.path) == T) {
+    system(paste0("rm -r ", ref.path))
+  }
+  dir.create(ref.path)
 
-  for (i in seq_along(sample.files)) {
-    # Creates output directory for the sample
-    sample.name <- gsub(".fa|.fasta", "", sample.files[i])
-    dir.create(paste0(mapping.directory, "/", sample.name))
-    dir.create(paste0(mapping.directory, "/", sample.name, "/index"))
+  #Gathers alignment locus names
+  locus.names = list.files(alignment.directory, full.names = TRUE)
 
-    system(paste0(
-      "cp ", assembly.directory, "/", sample.files[i], " ",
-      mapping.directory, "/", sample.name, "/index/reference.fa"
-    ))
+  # Sets up multiprocessing
+  cl <- snow::makeCluster(threads)
+  doParallel::registerDoParallel(cl)
+  mem.cl <- floor(memory / threads)
 
-    reference.location <- paste0(mapping.directory, "/", sample.name, "/index/reference.fa")
+  # Loops through each locus and does operations on them
+  out.data = foreach::foreach(i=1:length(locus.names), .combine = append, .packages = c("PhyloProcessR", "foreach", "Biostrings", "stringr")) %dopar% {
+    # Reads in files
+    red.align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = locus.names[i], format = "phylip"))
 
-    # Indexes the reference
-    system(paste0(bwa.path, "bwa index -a bwtsw ", reference.location),
-      ignore.stderr = quiet, ignore.stdout = quiet
-    )
+    if (length(red.align) == 0) {
+      next
+    }
 
-    # Also creates a samtools index
-    system(paste0(samtools.path, "samtools faidx ", reference.location))
+    # Get and save consensus sequence
+    con.seq = makeConsensus(red.align)
+    names(con.seq) = gsub("\\..*", "", gsub(".*/", "", locus.names[i]))
 
-    system(paste0(
-      gatk4.path, "gatk CreateSequenceDictionary --REFERENCE ", reference.location,
-      " --OUTPUT ", mapping.directory, "/", sample.name, "/index/reference.dict",
-      " --USE_JDK_DEFLATER true --USE_JDK_INFLATER true"
-    ))
-  } # end i loop for indexing reference
+    #final.con = append(final.con, con.seq)
+
+    as.list(as.character(con.seq))
+
+  } # end i loop
+
+  snow::stopCluster(cl)
+
+  # Saves final set
+  writeFasta(
+    sequences = out.data, names = names(out.data),
+    paste0(ref.path, "/reference.fa"), nbchar = 1000000, as.string = T
+  )
+
+  reference.location <- paste0("index/reference.fa")
+
+  # Indexes the reference
+  system(paste0(bwa.path, "bwa index -a bwtsw ", reference.location),
+    ignore.stderr = quiet, ignore.stdout = quiet
+  )
+
+  # Also creates a samtools index
+  system(paste0(samtools.path, "samtools faidx ", reference.location))
+
+  system(paste0(
+    gatk4.path, "gatk CreateSequenceDictionary --REFERENCE ", reference.location,
+    " --OUTPUT index/reference.dict",
+    " --USE_JDK_DEFLATER true --USE_JDK_INFLATER true"
+  ))
 
   ############################################################################################
   ########### Step 1 #########################################################################
@@ -216,7 +228,7 @@ mapReference = function(mapping.directory = NULL,
 
       # Piped verison
       tmp.dir <- paste0(lane.dir, "/tmp")
-      reference.location = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
+      
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
         " SamToFastq -I ", lane.dir, "/all_reads.bam -FASTQ /dev/stdout -TMP_DIR ", tmp.dir,
