@@ -36,6 +36,7 @@
 
 haplotypeCaller = function(mapping.directory = NULL,
                           output.directory = "haplotype-caller",
+                          reference.type = c("sample", "consensus"),
                           gatk4.path = NULL,
                           threads = 1,
                           memory = 1,
@@ -144,7 +145,13 @@ haplotypeCaller = function(mapping.directory = NULL,
 
     # Sets up merging of bams from different lanes
     input.string = paste0("-I ", sample.bams, collapse = " ")
-    reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    if (reference.type == "sample") {
+      reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    }
+
+    if (reference.type == "consensus") {
+      reference.path = paste0("index/reference.fa")
+    }
 
     if (length(sample.bams) != 1) {
 

@@ -2,7 +2,7 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-X1_configuration-file.R")
+source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-X1_configuration-file.R")
 source("workflow-X1_configuration-file.R")
 
 setwd(working.directory)
@@ -34,7 +34,7 @@ prepareBAM(
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 mapReferenceConsensus(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-  assembly.directory = assembly.directory,
+  alignment.directory = alignment.directory,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
@@ -48,6 +48,7 @@ mapReferenceConsensus(
 haplotypeCaller(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
+  reference.type = "consensus",
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,

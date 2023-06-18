@@ -80,7 +80,7 @@ consensus.sequences = TRUE
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
 ### *** Replace /PATH/TO/ with your system 
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
-conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
+conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
