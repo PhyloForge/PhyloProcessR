@@ -37,6 +37,14 @@ check.assemblies = FALSE
 base.recalibration = FALSE
 # TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
 use.base.recalibration = FALSE
+# TRUE to save unfiltered variant calling data (recommended)
+save.unfiltered = TRUE
+# TRUE to save SNPs vcf separately
+save.SNPs = TRUE
+# TRUE to save indels vcf separately
+save.indels = TRUE
+# TRUE to save a combined SNP and indels vcf separately
+save.combined = TRUE
 
 # Custom hard filtering thresholds
 #########################

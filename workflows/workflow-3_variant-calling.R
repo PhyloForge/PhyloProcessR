@@ -20,7 +20,6 @@ if (file.exists(paste0("data-analysis/", dataset.name)) == FALSE) {
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
-  assembly.directory = assembly.directory,
   output.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   auto.readgroup = auto.readgroup,
   check.assemblies = check.assemblies,
@@ -51,6 +50,7 @@ mapReferenceSample(
 haplotypeCaller(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
+  reference.type = "sample",
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,

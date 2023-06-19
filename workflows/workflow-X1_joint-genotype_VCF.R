@@ -73,11 +73,14 @@ if (base.recalibration == TRUE) {
 }#end if
 
 # Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs
-genotypeSamples(
-  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+jointGenotyping(
   haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
-  output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+  output.directory = paste0("data-analysis/", dataset.name, "/genotype-database"),
   use.base.recalibration = use.base.recalibration,
+  save.unfiltered = save.unfiltered,
+  save.SNPs = save.SNPS,
+  save.indels = save.indels,
+  save.combined = save.combined,
   custom.SNP.QD =  custom.SNP.QD,
   custom.SNP.QUAL =  custom.SNP.QUAL,
   custom.SNP.SOR =  custom.SNP.SOR,
@@ -96,38 +99,38 @@ genotypeSamples(
   quiet = quiet
 )
 
-if (consensus.sequences == TRUE) {
-  # Function that converts SNP files back into finished and SNP called contigs, choose format
-  VCFtoContigs(
-    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/contigs/4_consensus-contigs"),
-    vcf.file = vcf.file,
-    consensus.sequences = TRUE,
-    ambiguity.codes = FALSE,
-    gatk4.path = gatk4.path,
-    threads = threads,
-    memory = memory,
-    overwrite = overwrite,
-    quiet = quiet
-  )
-}
+# if (consensus.sequences == TRUE) {
+#   # Function that converts SNP files back into finished and SNP called contigs, choose format
+#   VCFtoContigs(
+#     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+#     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+#     output.directory = paste0("data-analysis/contigs/4_consensus-contigs"),
+#     vcf.file = vcf.file,
+#     consensus.sequences = TRUE,
+#     ambiguity.codes = FALSE,
+#     gatk4.path = gatk4.path,
+#     threads = threads,
+#     memory = memory,
+#     overwrite = overwrite,
+#     quiet = quiet
+#   )
+# }
 
-if (ambiguity.codes == TRUE) {
-  # Function that converts SNP files back into finished and SNP called contigs, choose format
-  VCFtoContigs(
-    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/contigs/5_iupac-contigs"),
-    vcf.file = vcf.file,
-    consensus.sequences = FALSE,
-    ambiguity.codes = TRUE,
-    gatk4.path = gatk4.path,
-    threads = threads,
-    memory = memory,
-    overwrite = overwrite,
-    quiet = quiet
-  )
-}
+# if (ambiguity.codes == TRUE) {
+#   # Function that converts SNP files back into finished and SNP called contigs, choose format
+#   VCFtoContigs(
+#     genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+#     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+#     output.directory = paste0("data-analysis/contigs/5_iupac-contigs"),
+#     vcf.file = vcf.file,
+#     consensus.sequences = FALSE,
+#     ambiguity.codes = TRUE,
+#     gatk4.path = gatk4.path,
+#     threads = threads,
+#     memory = memory,
+#     overwrite = overwrite,
+#     quiet = quiet
+#   )
+# }
 
 #END Workflow 3
