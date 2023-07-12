@@ -42,7 +42,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
                                       overwrite = FALSE,
                                       quiet = FALSE,
                                       bwa.path = NULL,
-                                      picard.path = NULL,
+                                      gatk4.path = NULL,
                                       samtools.path = NULL) {
 
   # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
@@ -51,7 +51,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
   #
   # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
   # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  # picard.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  # gatk4.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
   #
   # quiet = TRUE
   # overwrite = FALSE
@@ -77,12 +77,12 @@ analysis.sampleSpecificity = function(read.directory = NULL,
   } else { bwa.path = "" }
 
   #Same adds to bbmap path
-  if (is.null(picard.path) == FALSE){
-    b.string = unlist(strsplit(picard.path, ""))
+  if (is.null(gatk4.path) == FALSE){
+    b.string = unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
-      picard.path = paste0(append(b.string, "/"), collapse = "")
+      gatk4.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { picard.path = "" }
+  } else { gatk4.path = "" }
   ####################################################################
 
   #Quick checks
@@ -169,24 +169,26 @@ analysis.sampleSpecificity = function(read.directory = NULL,
                     " -o ", output.directory, "/", sample.names[i], "/paired.bam  -"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
-      system(paste0(picard.path, "picard -Xmx", memory, "g",
-                    " MarkDuplicates INPUT=", output.directory, "/", sample.names[i], "/paired.bam",
-                    " OUTPUT=", output.directory, "/", sample.names[i], "/dedup_paired.bam",
-                    " METRICS_FILE=", output.directory, "/", sample.names[i], "/metrics.txt",
-                    " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+                    " MarkDuplicates -I ", output.directory, "/", sample.names[i], "/paired.bam",
+                    " -O ", output.directory, "/", sample.names[i], "/dedup_paired.bam",
+                    " -M ", output.directory, "/", sample.names[i], "/metrics.txt",
+                    " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       system(paste0("mv ", output.directory, "/", sample.names[i], "/metrics.txt ",
                     output.directory, "/", sample.names[i], "/duplication_stats.txt"))
 
       #HERe again
-      system(paste0(picard.path, "picard -Xmx", memory, "g",
-                    " BuildBamIndex INPUT=", output.directory, "/", sample.names[i], "/paired.bam",
-                    " USE_JDK_DEFLATER=true USE_JDK_INFLATER=true"),
+      system(paste0(
+        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+                    " BuildBamIndex -I ", output.directory, "/", sample.names[i], "/paired.bam",
+                    " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       #Gets the genome coverage using bedtools
-      system(paste0(samtools.path, "samtools idxstats --threads ", threads, " ",
+      system(paste0(samtools.path, "samtools idxstats -@", threads, " ",
                     output.directory, "/", sample.names[i], "/paired.bam > ",
                     output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
 

@@ -142,7 +142,7 @@ fastpComplete = function(input.reads = NULL,
                     " --out1 ", outreads[1], " --out2 ", outreads[2],
                     " --length_required 60 --low_complexity_filter --complexity_threshold 30",
                     " --trim_poly_x --correction --detect_adapter_for_pe",
-                    " --dedup dup_calc_accracy 5",
+                    " --dedup dup_calc_accuracy 5",
                     " --html fastp-complete.html --json fastp-complete.json --compression 8",
                     " --report_title ", sample.reads[j]," --thread ", threads),
              ignore.stderr = quiet, ignore.stdout = quiet)
