@@ -189,7 +189,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
              ignore.stdout = quiet, ignore.stderr = quiet)
 
       #Gets the genome coverage using bedtools
-      system(paste0(samtools.path, "samtools idxstats -@", threads, " ",
+      system(paste0(samtools.path, "samtools idxstats ",
                     output.directory, "/", sample.names[i], "/paired.bam > ",
                     output.directory, "/", sample.names[i], "/samtools_idxstats.txt"))
 
