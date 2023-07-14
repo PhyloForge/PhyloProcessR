@@ -45,18 +45,18 @@ analysis.sampleSpecificity = function(read.directory = NULL,
                                       gatk4.path = NULL,
                                       samtools.path = NULL) {
 
-  # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
-  # target.file = "/Volumes/LaCie/VenomCap/input-seq.fasta"
-  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
-  #
-  # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  # gatk4.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  #
-  # quiet = TRUE
-  # overwrite = FALSE
-  # threads = 6
-  # memory = 6
+  read.directory = "/Users/chutter/Dropbox/VenomCap_test_data/cleaned-reads"
+  target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
+  output.directory = "/Users/chutter/Dropbox/VenomCap_test_data/sample-specificity"
+  
+  samtools.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+  bwa.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+  gatk4.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+  
+  quiet = TRUE
+  overwrite = FALSE
+  threads = 6
+  memory = 6
 
   ##### Program path check
   ####################################################################
@@ -184,6 +184,7 @@ analysis.sampleSpecificity = function(read.directory = NULL,
       system(paste0(
         gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
                     " BuildBamIndex -I ", output.directory, "/", sample.names[i], "/paired.bam",
+                    " -O ", output.directory, "/", sample.names[i], "/paired.bai",
                     " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
