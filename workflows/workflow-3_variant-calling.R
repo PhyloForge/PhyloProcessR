@@ -22,7 +22,6 @@ prepareBAM(
   read.directory = read.directory,
   output.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   auto.readgroup = auto.readgroup,
-  check.assemblies = check.assemblies,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,

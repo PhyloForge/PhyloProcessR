@@ -40,9 +40,9 @@ utility.checkFileSize = function(read.directory = NULL,
                                 overwrite = FALSE) {
 
   #Debug
-  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF13_Ancient_DNA"
+  # read.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF13_Ancient_DNA_2/Reads"
   # output.name = "read-fileSize"
-  # check.file = "/Volumes/Backup_Hub/Raw_Data/HF14_Ultimate_FrogCap/checkSize.txt"
+  # check.file = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF13_Ancient_DNA_2/checkSize.txt"
   # overwrite = TRUE
 
   #Quick checks

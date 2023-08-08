@@ -78,7 +78,7 @@ jointGenotyping(
   output.directory = paste0("data-analysis/", dataset.name, "/genotype-database"),
   use.base.recalibration = use.base.recalibration,
   save.unfiltered = save.unfiltered,
-  save.SNPs = save.SNPS,
+  save.SNPs = save.SNPs,
   save.indels = save.indels,
   save.combined = save.combined,
   custom.SNP.QD =  custom.SNP.QD,

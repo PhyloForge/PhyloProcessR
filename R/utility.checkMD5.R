@@ -41,10 +41,10 @@ utility.checkMD5 = function(read.directory = NULL,
                     overwrite = FALSE) {
 
   # #Debug
-  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF13_Ancient_DNA"
+  # read.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF14_Ultimate_FrogCap_Chan/Reads"
   # output.name = "md5-check"
   # md5.type = "many-files"
-  # md5.file.name = "MD5.txt"
+  # md5.file.name = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF14_Ultimate_FrogCap_Chan/MD5.txt"
   # overwrite = TRUE
 
   #Quick checks
