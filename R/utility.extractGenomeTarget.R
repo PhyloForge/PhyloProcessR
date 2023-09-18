@@ -84,9 +84,9 @@ extractGenomeTarget = function(genome.path = NULL,
   #todo: blast type
   #todo: names
 
-  # setwd("/Volumes/LaCie/Ultimate_FrogCap")
-  # genome.path = "/Volumes/LaCie/Reference_Genomes"
-  # input.file = "/Volumes/LaCie/Anolis/A_carolinensus_RELEC.fa"
+  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap")
+  # genome.path = "/Volumes/LaCie/Reference_Genomes/Amphibians/Frogs/Gastrophryne_carolinensis_GCA-027917425/GCA_027917425.1_aGasCar1.pri_genomic.fna.gz"
+  # input.file = "COGEDA_81_marker.fasta"
   # #input.file = "/Volumes/Armored/Anolis_UCE/Anolis_genome/Anolis_carolinensis_final-table.bed"
   # output.name = "amphibians"
   # input.type = "fasta"
@@ -95,15 +95,16 @@ extractGenomeTarget = function(genome.path = NULL,
   # bed.headers = TRUE
   # output.table = TRUE
   # duplicate.matches = "best"
-  # minimum.match.length = 100
-  # minimum.match.identity = 0.60
+  # minimum.match.length = 50
+  # minimum.match.identity = 0.50
+  # minimum.match.coverage = 0.5
   # add.flanks = 500
   # threads = 8
   # memory = 24
-  # overwrite = FALSE
+  # overwrite = TRUE
   # quiet = FALSE
   # merge.matches = TRUE
-  # blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # blast.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # genome.search.string = "_genomic.fna.gz"
 #
   # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Elapid_Probes/2_sea_snake_genomes")
@@ -248,7 +249,7 @@ extractGenomeTarget = function(genome.path = NULL,
       filt.data = filt.data[filt.data$pident >= minimum.match.identity,]
 
       #Make sure the hit is greater than 50% of the reference length
-      filt.data = filt.data[filt.data$matches >= ( (minimum.match.coverage/100) * filt.data$qLen),]
+      filt.data = filt.data[filt.data$matches >= ( (minimum.match.coverage) * filt.data$tLen),]
 
       #Skips if no matches
       if (nrow(filt.data) == 0) {
@@ -460,7 +461,7 @@ extractGenomeTarget = function(genome.path = NULL,
 
     #Writes the final loci
     final.loci = as.list(as.character(target.seqs))
-    PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
+    PhyloProcessR::writeFasta(sequences = final.loci, names = names(final.loci),
                paste0(species.dir, "/", sample, "_target-matches.fa"),
                nbchar = 1000000, as.string = T)
 
