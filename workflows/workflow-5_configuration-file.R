@@ -11,8 +11,6 @@ working.directory = "/PATH/TO/PROJECT/DIRECTORY"
 target.file = "marker-seqs.fa"
 #feature gene name metadata file, column one: "Marker"; column: "Gene"
 feature.gene.names = "/data-analysis/gene_metadata.txt"
-# The name for the dataset
-dataset.name = "Descriptive-Name"
 
 #Global settings
 #########################

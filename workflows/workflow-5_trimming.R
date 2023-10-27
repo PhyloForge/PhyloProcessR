@@ -21,7 +21,7 @@ if (trim.to.targets == TRUE) {
     output.directory = "data-analysis/alignments/untrimmed_no-flanks",
     output.format = "phylip",
     min.alignment.length = min.alignment.length,
-    min.taxa.alignment = min.taxa.alignment,
+    min.taxa.alignment = 4,
     threads = threads,
     memory = memory,
     overwrite = overwrite,

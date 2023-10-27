@@ -83,13 +83,13 @@ superTrimmer = function(alignment.dir = NULL,
   
   # work.dir = "/Volumes/LaCie"
   # setwd(work.dir)
-  # alignment.dir = "data-analysis/alignments/untrimmed_only-flanks"
+  # alignment.dir = "Test/alignments"
   # alignment.format = "phylip"
-  # output.dir = "data-analysis/alignments/trimmed_only-flanks"
+  # output.dir = "Test/trimmed"
   # output.format = "phylip"
   # overwrite = FALSE
   # TrimAl = TRUE
-  # TrimAl.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
+  # TrimAl.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # trim.column = TRUE
   # convert.ambiguous.sites = FALSE
   # alignment.assess = F
@@ -183,6 +183,10 @@ superTrimmer = function(alignment.dir = NULL,
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
 
+    if (length(align) < min.taxa.alignment) {
+      next
+    }
+
     temp.data = save.data[1,]
 
     # Runs the functions
@@ -274,7 +278,9 @@ superTrimmer = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
     }#end trim.external
 
-
+    if (length(non.align) < min.taxa.alignment) {
+      next
+    }
 
     #Step 6
     if (length(non.align) != 0){
