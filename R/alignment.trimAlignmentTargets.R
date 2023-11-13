@@ -51,10 +51,10 @@ trimAlignmentTargets = function(alignment.directory = NULL,
                                 overwrite = FALSE,
                                 mafft.path = NULL) {
 
-  # alignment.directory = "alignments/untrimmed_all-markers"
+  # alignment.directory = "data-analysis/alignments/untrimmed_all-markers"
   # alignment.format = "phylip"
   # target.file = target.file
-  # output.directory = "alignments/untrimmed_no-flank"
+  # output.directory = "data-analysis/alignments/untrimmed_no-flanks"
   # output.format = "phylip"
   # min.alignment.length = 100
   # min.taxa.alignment = min.taxa.alignment
@@ -107,7 +107,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   #Loops through each locus and does operations on them
   foreach::foreach(i=1:length(align.files), .packages = c("PhyloProcessR", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
   #Loops through each locus and does operations on them
-  #for (i in 1:length(align.files)){
+  for (i in 1:length(align.files)){
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
@@ -130,6 +130,10 @@ trimAlignmentTargets = function(alignment.directory = NULL,
 
     #Loads in a pulls out relevant target file
     target.seq = target.loci[names(target.loci) %in% save.name]
+    if (length(target.seq) == 0) { 
+      print("ALIGNMENT NOT FOUND IN TARGET MARKERS.") 
+      next
+    }
     names(target.seq) = "Reference_Locus"
 
     #Checks for correct target sequence amount
