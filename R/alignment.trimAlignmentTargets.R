@@ -131,9 +131,9 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     #Loads in a pulls out relevant target file
     target.seq = target.loci[names(target.loci) %in% save.name]
     if (length(target.seq) == 0) { 
-      print("ALIGNMENT NOT FOUND IN TARGET MARKERS.") 
-      next
+      return("ALIGNMENT NOT FOUND IN TARGET MARKERS.")
     }
+
     names(target.seq) = "Reference_Locus"
 
     #Checks for correct target sequence amount
