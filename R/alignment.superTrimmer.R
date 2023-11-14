@@ -104,26 +104,26 @@ superTrimmer = function(alignment.dir = NULL,
   # threads = 8
   # memory = 24
 
-  alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
-      alignment.format = "phylip"
-      output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked"
-      output.format = "phylip"
-      overwrite = overwrite
-      TrimAl = FALSE
-      TrimAl.path = trimAl.path
-      trim.column = FALSE
-      convert.ambiguous.sites = convert.ambiguous.sites
-      alignment.assess = FALSE
-      trim.external = FALSE
-      trim.coverage = trim.coverage
-      min.coverage.percent = min.coverage.percent
-      min.external.percent = min.external.percent
-      min.column.gap.percent = min.column.gap.percent
-      min.alignment.length = min.alignment.length
-      min.taxa.alignment = min.taxa.alignment
-      min.coverage.bp = min.coverage.bp
-      threads = threads
-      memory = memory
+  # alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
+  #     alignment.format = "phylip"
+  #     output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked"
+  #     output.format = "phylip"
+  #     overwrite = overwrite
+  #     TrimAl = FALSE
+  #     TrimAl.path = trimAl.path
+  #     trim.column = FALSE
+  #     convert.ambiguous.sites = convert.ambiguous.sites
+  #     alignment.assess = FALSE
+  #     trim.external = FALSE
+  #     trim.coverage = trim.coverage
+  #     min.coverage.percent = min.coverage.percent
+  #     min.external.percent = min.external.percent
+  #     min.column.gap.percent = min.column.gap.percent
+  #     min.alignment.length = min.alignment.length
+  #     min.taxa.alignment = min.taxa.alignment
+  #     min.coverage.bp = min.coverage.bp
+  #     threads = threads
+  #     memory = memory
   
 
   require(foreach)
