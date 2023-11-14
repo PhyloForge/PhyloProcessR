@@ -83,13 +83,12 @@ superTrimmer = function(alignment.dir = NULL,
   
   # work.dir = "/Volumes/LaCie"
   # setwd(work.dir)
-  # alignment.dir = "Test/alignments"
+  # alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
   # alignment.format = "phylip"
   # output.dir = "Test/trimmed"
   # output.format = "phylip"
   # overwrite = FALSE
   # TrimAl = TRUE
-  # TrimAl.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # trim.column = TRUE
   # convert.ambiguous.sites = FALSE
   # alignment.assess = F
@@ -104,6 +103,28 @@ superTrimmer = function(alignment.dir = NULL,
   # max.alignment.gap.percent = 50
   # threads = 8
   # memory = 24
+
+  alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
+      alignment.format = "phylip"
+      output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked"
+      output.format = "phylip"
+      overwrite = overwrite
+      TrimAl = FALSE
+      TrimAl.path = trimAl.path
+      trim.column = FALSE
+      convert.ambiguous.sites = convert.ambiguous.sites
+      alignment.assess = FALSE
+      trim.external = FALSE
+      trim.coverage = trim.coverage
+      min.coverage.percent = min.coverage.percent
+      min.external.percent = min.external.percent
+      min.column.gap.percent = min.column.gap.percent
+      min.alignment.length = min.alignment.length
+      min.taxa.alignment = min.taxa.alignment
+      min.coverage.bp = min.coverage.bp
+      threads = threads
+      memory = memory
+  
 
   require(foreach)
 
@@ -184,7 +205,7 @@ superTrimmer = function(alignment.dir = NULL,
     }#end phylip
 
     if (length(align) < min.taxa.alignment) {
-      next
+      return("too few taxa in alignment, skipping")
     }
 
     temp.data = save.data[1,]
@@ -279,7 +300,7 @@ superTrimmer = function(alignment.dir = NULL,
     }#end trim.external
 
     if (length(non.align) < min.taxa.alignment) {
-      next
+      return("too few taxa in alignment, skipping")
     }
 
     #Step 6
