@@ -107,7 +107,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   #Loops through each locus and does operations on them
   foreach::foreach(i=1:length(align.files), .packages = c("PhyloProcessR", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
   #Loops through each locus and does operations on them
-  for (i in 1:length(align.files)){
+  #for (i in 1:length(align.files)){
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
