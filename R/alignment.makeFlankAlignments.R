@@ -157,6 +157,9 @@ makeFlankAlignments = function(alignment.directory = NULL,
     if (reference.type == "target"){
       #Loads in a pulls out relevant target file
       target.seq = target.loci[names(target.loci) %in% save.name]
+      if (length(target.seq) == 0) { 
+        return("ALIGNMENT NOT FOUND IN TARGET MARKERS.")
+     }
       names(target.seq) = "Reference_Locus"
 
     }#end target if
