@@ -205,7 +205,8 @@ superTrimmer = function(alignment.dir = NULL,
     }#end phylip
 
     if (length(align) < min.taxa.alignment) {
-      return("too few taxa in alignment, skipping")
+      print("too few taxa in alignment, skipping")
+      return(NULL)
     }
 
     temp.data = save.data[1,]
@@ -300,7 +301,8 @@ superTrimmer = function(alignment.dir = NULL,
     }#end trim.external
 
     if (length(non.align) < min.taxa.alignment) {
-      return("too few taxa in alignment, skipping")
+      print("too few taxa in alignment, skipping")
+      return(NULL)
     }
 
     #Step 6
@@ -342,8 +344,11 @@ superTrimmer = function(alignment.dir = NULL,
 
   parallel::stopCluster(cl)
 
+  if (is.null(out.data) ==  TRUE){ return("No alignments were trimmed.") }
+
   #Print and save summary table
   write.csv(out.data, file = "alignment-trimming_summary.csv", row.names = F)
+
   #Saves log file of things
   if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
   fileConn = file(paste0(output.dir, ".log"), open = "w")
