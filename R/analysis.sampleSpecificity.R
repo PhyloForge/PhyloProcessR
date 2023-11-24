@@ -34,7 +34,7 @@
 #'
 #' @export
 
-analysis.sampleSpecificity = function(read.directory = NULL,
+sampleSpecificity = function(read.directory = NULL,
                                       target.file = NULL,
                                       output.directory = "sample-specificity",
                                       threads = 1,

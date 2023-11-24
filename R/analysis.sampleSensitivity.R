@@ -34,7 +34,7 @@
 #'
 #' @export
 
-analysis.sampleSensitivity = function(alignment.directory = NULL,
+sampleSensitivity = function(alignment.directory = NULL,
                                       target.file = NULL,
                                       output.directory = "sample-sensitivity",
                                       threads = 1,
