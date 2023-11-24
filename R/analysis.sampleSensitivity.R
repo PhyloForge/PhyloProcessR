@@ -117,7 +117,7 @@ sampleSensitivity = function(alignment.directory = NULL,
 
   #Loops through each locus and does operations on them
   #all.data = c()
-  all.data = foreach::foreach(i=1:length(marker.names),  .combine = rbind, .packages = c("PhyloCap", "foreach", "Biostrings","data.table", "ape", "stringr")) %dopar% {
+  all.data = foreach::foreach(i=1:length(marker.names),  .combine = rbind, .packages = c("PhyloProcessR", "foreach", "Biostrings","data.table", "ape", "stringr")) %dopar% {
   #Loops through each alignment
   #for (i in 1:length(marker.names)){
 
