@@ -209,6 +209,36 @@ if (concatenate.genes == TRUE) {
 } # end concatenate genes
 
 
+##################################################################################################
+## If no concatenated genes are needed
+##################################################################################################
+
+if (concatenate.genes == FALSE) {
+  # Trims the unlinked
+  superTrimmer(
+    alignment.dir = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.format = "phylip",
+    output.dir = "data-analysis/alignments/trimmed_all-markers",
+    output.format = "phylip",
+    overwrite = overwrite,
+    TrimAl = run.TrimAl,
+    TrimAl.path = trimAl.path,
+    trim.column = trim.column,
+    convert.ambiguous.sites = convert.ambiguous.sites,
+    alignment.assess = FALSE,
+    trim.external = trim.external,
+    trim.coverage = trim.coverage,
+    min.coverage.percent = min.coverage.percent,
+    min.external.percent = min.external.percent,
+    min.column.gap.percent = min.column.gap.percent,
+    min.alignment.length = min.alignment.length,
+    min.taxa.alignment = min.taxa.alignment,
+    min.coverage.bp = min.coverage.bp,
+    threads = threads,
+    memory = memory
+  )
+} # end concatenate genes
+
 
 # makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
 #                     alignment.format = "phylip",
