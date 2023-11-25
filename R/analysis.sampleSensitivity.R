@@ -44,14 +44,12 @@ sampleSensitivity = function(alignment.directory = NULL,
                                       quiet = FALSE) {
 
 
-  # read.directory = "/Volumes/LaCie/VenomCap/read-processing/cleaned-reads"
-  # target.file = "/Volumes/LaCie/VenomCap/input-seq.fasta"
-  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/sample-specificity"
-  #
-  # samtools.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  # bwa.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  # picard.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-  #
+  # alignment.directory = "/Volumes/LaCie/Anax/data-analysis/alignments/untrimmed_all-markers"
+  # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_May20-2023.fa"
+  # output.directory = "/Volumes/LaCie/Anax/data-analysis/sample-specificity"
+  
+  # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  
   # quiet = TRUE
   # overwrite = FALSE
   # threads = 6
@@ -130,14 +128,16 @@ sampleSensitivity = function(alignment.directory = NULL,
     names(temp.target) = "Reference_Marker"
 
     #Aligns and then reverses back to correction orientation
-    alignment = runMafft(sequence.data = align,
-                         add.contigs = temp.target,
-                         algorithm = "add",
-                         adjust.direction = TRUE,
-                         threads = 1,
-                         cleanup.files = T,
-                         quiet = quiet,
-                         mafft.path = mafft.path)
+    alignment <- PhyloProcessR::runMafft(
+      sequence.data = align,
+      add.contigs = temp.target,
+      algorithm = "add",
+      adjust.direction = TRUE,
+      threads = 1,
+      cleanup.files = T,
+      quiet = quiet,
+      mafft.path = mafft.path
+    )
 
     #Aligns and then reverses back to correction orientation
     reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
@@ -151,8 +151,10 @@ sampleSensitivity = function(alignment.directory = NULL,
     ref.finish = max(not.gaps)
     trim.align = Biostrings::subseq(alignment, ref.start, ref.finish)
 
-    trim.cols = trimAlignmentColumns(alignment = trim.align,
-                                     min.gap.percent = 50)
+    trim.cols = PhyloProcessR::trimAlignmentColumns(
+      alignment = trim.align,
+      min.gap.percent = 50
+    )
 
     #Gets lengths
     write.temp = strsplit(as.character(trim.cols), "")
