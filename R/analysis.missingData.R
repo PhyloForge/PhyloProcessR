@@ -1,4 +1,4 @@
-#' @title summary.sampleSpecificity
+#' @title summary.missingData
 #'
 #' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
 #'
@@ -34,7 +34,7 @@
 #'
 #' @export
 
-sampleSensitivity = function(alignment.directory = NULL,
+missingData = function(alignment.directory = NULL,
                                       target.file = NULL,
                                       output.directory = "sample-sensitivity",
                                       threads = 1,
@@ -44,15 +44,15 @@ sampleSensitivity = function(alignment.directory = NULL,
                                       quiet = FALSE) {
 
 
-  alignment.directory = "/Users/chutter/Dropbox/VenomCap_test_data/untrimmed_all-markers"
-  target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
-  output.directory = "/Volumes/LaCie/VenomCap/data-analysis/genetic-distance"
-  mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+    # alignment.directory = "/Users/chutter/Dropbox/VenomCap_test_data/untrimmed_all-markers"
+    # target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
+    # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/genetic-distance"
+    # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
-  quiet = TRUE
-  overwrite = FALSE
-  threads = 6
-  memory = 6
+    # quiet = TRUE
+    # overwrite = FALSE
+    # threads = 6
+    # memory = 6
 
   ####################################################################
   ##### Required program path check
@@ -152,7 +152,7 @@ sampleSensitivity = function(alignment.directory = NULL,
     # Finds weird gaps to fix
     temp.gaps <- as.numeric(1)
     for (k in 1:length(not.gaps) - 1) {
-      temp.gaps <- append(temp.gaps, not.gaps[k + 1] - not.gaps[k])
+        temp.gaps <- append(temp.gaps, not.gaps[k + 1] - not.gaps[k])
     }
     temp.gaps <- temp.gaps - 1
     names(temp.gaps) <- not.gaps
@@ -162,29 +162,29 @@ sampleSensitivity = function(alignment.directory = NULL,
 
     # Fix big gaps if there are any
     if (length(front.gaps) != 0) {
-      temp.change <- (max(as.numeric(names(front.gaps)) - ref.start)) - (max(front.gaps) - 1)
-      ref.start <- ref.start + temp.change
+        temp.change <- (max(as.numeric(names(front.gaps)) - ref.start)) - (max(front.gaps) - 1)
+        ref.start <- ref.start + temp.change
     } # end gap if
 
     # Fix big gaps if there are any
     if (length(end.gaps) != 0) {
-      add.bp <- length(temp.gaps) - min(end.gaps)
-      # add.bp<-(ref.finish-min(as.numeric(names(end.gaps))))
-      min.gaps <- temp.gaps[min(end.gaps)]
-      temp.change <- as.numeric(names(min.gaps)) - as.numeric(min.gaps)
-      ref.finish <- temp.change + add.bp
+        add.bp <- length(temp.gaps) - min(end.gaps)
+        # add.bp<-(ref.finish-min(as.numeric(names(end.gaps))))
+        min.gaps <- temp.gaps[min(end.gaps)]
+        temp.change <- as.numeric(names(min.gaps)) - as.numeric(min.gaps)
+        ref.finish <- temp.change + add.bp
     } # end gap if
 
     target.region <- Biostrings::subseq(alignment, ref.start, ref.finish)
 
-    # Removes the edge gaps
-    ref.aligned <- as.character(target.region["Reference_Marker"])
-    not.gaps <- stringr::str_locate_all(ref.aligned, pattern = "[^-]")[[1]][, 1]
-    ref.start <- min(not.gaps)
-    ref.finish <- max(not.gaps)
-    trim.align <- Biostrings::subseq(target.region, ref.start, ref.finish)
+    #Removes the edge gaps
+    ref.aligned = as.character(target.region['Reference_Marker'])
+    not.gaps = stringr::str_locate_all(ref.aligned, pattern = "[^-]")[[1]][,1]
+    ref.start = min(not.gaps)
+    ref.finish = max(not.gaps)
+    trim.align = Biostrings::subseq(target.region, ref.start, ref.finish)
 
-    trim.cols <- PhyloProcessR::trimAlignmentColumns(
+    trim.cols = PhyloProcessR::trimAlignmentColumns(
       alignment = trim.align,
       min.gap.percent = 50
     )
@@ -198,19 +198,24 @@ sampleSensitivity = function(alignment.directory = NULL,
     spp.sens = spp.len/Biostrings::width(temp.target)
     spp.sens[spp.sens > 1] = 1
     spp.sens = spp.sens[names(spp.sens) != "Reference_Marker"]
+    spp.sens = 1 - spp.sens
 
     #Sets up data to collect
-    header.all = c("sample" , "target_marker", "target_length", "sample_sensitivity")
-    sample.data = data.table::data.table(matrix(as.numeric(0), nrow = length(sample.names), ncol = length(header.all)))
+    header.all = c("sample" , "target_marker", "target_length", "missing_basepair_data", "missing_marker_data")
+    sample.data = data.table::data.table(matrix(as.numeric(-1), nrow = length(sample.names), ncol = length(header.all)))
     data.table::setnames(sample.data, header.all)
     sample.data[, sample:=as.character(sample.names)]
     sample.data[, target_marker:=as.character(target_marker)]
     sample.data[, target_marker:=as.character(marker.names[i])]
     sample.data[, target_length:=Biostrings::width(temp.target)]
 
-    data.table::set(sample.data, i = match(names(spp.sens), sample.data$sample), j = match("sample_sensitivity", header.all), value = spp.sens )
+    data.table::set(sample.data, i = match(names(spp.sens), sample.data$sample), j = match("missing_basepair_data", header.all), value = spp.sens)
+    
+    data.table::set(sample.data, i = match(names(spp.sens), sample.data$sample), j = match("missing_marker_data", header.all), value = spp.sens)
 
-    sample.data[sample.data$sample_sensitivity == 0]$sample_sensitivity = NA
+    sample.data[sample.data$missing_basepair_data == -1]$missing_basepair_data = NA
+    sample.data[sample.data$missing_marker_data >= 0]$missing_marker_data = 1
+    sample.data[sample.data$missing_marker_data == -1]$missing_marker_data = 0
 
     #Writes sample table
     #all.data = rbind(all.data, sample.data)
@@ -221,38 +226,61 @@ sampleSensitivity = function(alignment.directory = NULL,
   parallel::stopCluster(cl)
 
   #Writes final table
-  write.table(all.data, file = paste0(output.directory, "/sample-sensitivity_raw-data.txt"), sep = "\t", row.names = F)
+  write.table(all.data, file = paste0(output.directory, "/missing_basepair_data_raw-data.txt"), sep = "\t", row.names = F)
 
-  print(paste0("Saved raw data at ", output.directory, "/sample-sensitivity_raw-data.txt"))
+  print(paste0("Saved raw data at ", output.directory, "/missing_basepair_data_raw-data.txt"))
 
   ####################################################################
   ##### Summarizes the raw data previously collected into a summary table
   ####################################################################
 
   #Get stats
-  temp.min = unlist(lapply( split(all.data$sample_sensitivity, all.data$sample), min, na.rm = TRUE))
-  temp.max = unlist(lapply(split(all.data$sample_sensitivity, all.data$sample), max, na.rm = TRUE))
-  temp.mean = unlist(lapply(split(all.data$sample_sensitivity, all.data$sample), mean, na.rm = TRUE))
-  temp.median = unlist(lapply( split(all.data$sample_sensitivity, all.data$sample), median, na.rm = TRUE))
-  temp.sd = unlist(lapply(split(all.data$sample_sensitivity, all.data$sample), sd, na.rm = TRUE))
+  temp.min = unlist(lapply( split(all.data$missing_basepair_data, all.data$sample), min, na.rm = TRUE))
+  temp.max = unlist(lapply(split(all.data$missing_basepair_data, all.data$sample), max, na.rm = TRUE))
+  temp.mean = unlist(lapply(split(all.data$missing_basepair_data, all.data$sample), mean, na.rm = TRUE))
+  temp.median = unlist(lapply(split(all.data$missing_basepair_data, all.data$sample), median, na.rm = TRUE))
+  temp.sd = unlist(lapply(split(all.data$missing_basepair_data, all.data$sample), sd, na.rm = TRUE))
 
   #Sets up data to collect
-  header.summ = c("sample", "mean_sensitivity", "median_sensitivity",
-                 "min_sensitivity", "max_sensitivity", "sd_sensitivity")
+  header.summ = c("sample", "mean_missing_basepair_data", "median_missing_basepair_data",
+                 "min_missing_basepair_data", "max_missing_basepair_data", "sd_missing_basepair_data")
   summary.data = data.table::data.table(matrix(as.numeric(0), nrow = length(sample.names), ncol = length(header.summ)))
   data.table::setnames(summary.data, header.summ)
   summary.data[, sample:=as.character(sample)]
   summary.data[, sample:=as.character(sample.names)]
 
-  data.table::set(summary.data, i = match(names(temp.min), summary.data$sample), j = match("min_sensitivity", header.summ), value = temp.min )
-  data.table::set(summary.data, i = match(names(temp.max), summary.data$sample), j = match("max_sensitivity", header.summ), value = temp.max )
-  data.table::set(summary.data, i = match(names(temp.mean), summary.data$sample), j = match("mean_sensitivity", header.summ), value = temp.mean )
-  data.table::set(summary.data, i = match(names(temp.median), summary.data$sample), j = match("median_sensitivity", header.summ), value = temp.median )
-  data.table::set(summary.data, i = match(names(temp.sd), summary.data$sample), j = match("sd_sensitivity", header.summ), value = temp.sd )
+  data.table::set(summary.data, i = match(names(temp.min), summary.data$sample), j = match("min_missing_basepair_data", header.summ), value = temp.min)
+  data.table::set(summary.data, i = match(names(temp.max), summary.data$sample), j = match("max_missing_basepair_data", header.summ), value = temp.max)
+  data.table::set(summary.data, i = match(names(temp.mean), summary.data$sample), j = match("mean_missing_basepair_data", header.summ), value = temp.mean)
+  data.table::set(summary.data, i = match(names(temp.median), summary.data$sample), j = match("median_missing_basepair_data", header.summ), value = temp.median)
+  data.table::set(summary.data, i = match(names(temp.sd), summary.data$sample), j = match("sd_missing_basepair_data", header.summ), value = temp.sd)
 
-  write.table(summary.data, file = paste0(output.directory, "/sample-sensitivity_summary.txt"), sep = "\t", row.names = F)
+  write.table(summary.data, file = paste0(output.directory, "/missing_basepair_data_summary.txt"), sep = "\t", row.names = F)
 
-  print(paste0("Saved raw data at ", output.directory, "/sample-sensitivity_summary.txt"))
+  print(paste0("Saved raw data at ", output.directory, "/missing_basepair_data_summary.txt"))
+
+# Sets up data to collect for missing marker data
+##################################################
+
+temp.total <- unlist(lapply(split(all.data$missing_marker_data, all.data$sample), sum, na.rm = TRUE))
+
+header.summ <- c(
+    "sample", "total_markers", "missing_markers", "proportion_missing"
+)
+
+summary.data <- data.table::data.table(matrix(as.numeric(0), nrow = length(sample.names), ncol = length(header.summ)))
+data.table::setnames(summary.data, header.summ)
+summary.data[, sample := as.character(sample)]
+summary.data[, sample := as.character(sample.names)]
+
+data.table::set(summary.data, i = match(names(temp.min), summary.data$sample), j = match("total_markers", header.summ), value = temp.total)
+data.table::set(summary.data, i = match(names(temp.max), summary.data$sample), j = match("missing_markers", header.summ), value = length(alignment.files) - temp.total)
+data.table::set(summary.data, i = match(names(temp.mean), summary.data$sample), j = match("proportion_missing", header.summ), value = (length(alignment.files) - temp.total) / length(alignment.files))
+
+write.table(summary.data, file = paste0(output.directory, "/missing_marker_data_summary.txt"), sep = "\t", row.names = F)
+
+print(paste0("Saved raw data at ", output.directory, "/missing_marker_data_summary.txt"))
+
 
 }#end function
 

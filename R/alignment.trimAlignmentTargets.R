@@ -159,12 +159,12 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     #Checks if you want to keep to target direction or not
     if (target.direction == TRUE){
       #Aligns and then reverses back to correction orientation
-      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+      reversed = names(alignment)[grep(pattern = "^_R_", names(alignment))]
       if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     } else {
       #Regular fixes
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     }#end if
 
     # ##############
