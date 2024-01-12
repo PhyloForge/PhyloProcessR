@@ -44,15 +44,15 @@ sampleSensitivity = function(alignment.directory = NULL,
                                       quiet = FALSE) {
 
 
-  alignment.directory = "/Users/chutter/Dropbox/VenomCap_test_data/untrimmed_all-markers"
-  target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
-  output.directory = "/Volumes/LaCie/VenomCap/data-analysis/genetic-distance"
-  mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # alignment.directory = "/Users/chutter/Dropbox/VenomCap_test_data/untrimmed_all-markers"
+  # target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
+  # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/genetic-distance"
+  # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
-  quiet = TRUE
-  overwrite = FALSE
-  threads = 6
-  memory = 6
+  # quiet = TRUE
+  # overwrite = FALSE
+  # threads = 6
+  # memory = 6
 
   ####################################################################
   ##### Required program path check
