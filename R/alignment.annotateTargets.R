@@ -46,7 +46,7 @@
 
 annotateTargets = function(assembly.directory = NULL,
                             target.file = NULL,
-                            alignment.contig.name = NULL,
+                            alignment.contig.name = "annotated-contigs-all",
                             output.directory = "annotated-contigs",
                             min.match.percent = 60,
                             min.match.length = 60,
@@ -62,16 +62,16 @@ annotateTargets = function(assembly.directory = NULL,
 #
   #Debug setup
   #Debugging
-  # setwd("/Volumes/LaCie/Mantellidae/")
-  # assembly.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/contigs/7_filtered-contigs"
+  # setwd("/Volumes/LaCie/Microhylidae_test/")
+  # assembly.directory <- "/Volumes/LaCie/Microhylidae_test/data-analysis/contigs/7_filtered-contigs"
   # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
   # output.directory = "data-analysis/contigs/8_annotated-contigs"
   # blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # cdhit.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-
+  #
   # #
   # # #Main settings
-  # threads = 5
+  # threads = 8
   # memory = 40
   # trim.target = FALSE
   # overwrite = FALSE
@@ -125,7 +125,7 @@ annotateTargets = function(assembly.directory = NULL,
   cl <- snow::makeCluster(threads)
   doParallel::registerDoParallel(cl)
   mem.cl <- floor(memory / threads)
-  
+
   #Loop for cd-hit est reductions
   foreach::foreach(i = seq_along(file.names), .packages = c("foreach", "PhyloProcessR", "Biostrings", "data.table")) %dopar% {
 
@@ -209,6 +209,8 @@ annotateTargets = function(assembly.directory = NULL,
 
     #Make sure the hit is greater than 50% of the reference length
     filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
+
+    filt.data[filt.data$qName == "FrogCap_M24103",]
 
     #Reads in contigs
     contigs = all.data
@@ -448,7 +450,7 @@ annotateTargets = function(assembly.directory = NULL,
       sequences = final.loci, names = names(final.loci),
       paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
     )
-    
+
     system(paste0("rm -r ", species.dir))
 
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))

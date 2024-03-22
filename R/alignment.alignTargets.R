@@ -37,9 +37,11 @@
 #' @export
 
 alignTargets = function(targets.to.align = NULL,
+                        target.file = NULL,
                         output.directory = "alignments",
                         algorithm = c("localpair", "globalpair"),
                         min.taxa = 4,
+                        removal.threshold = 0.35,
                         subset.start = 0,
                         subset.end = 1,
                         adjust.direction = TRUE,
@@ -50,9 +52,10 @@ alignTargets = function(targets.to.align = NULL,
                         quiet = TRUE,
                         mafft.path = NULL) {
 
-  #Debug setup
-  # setwd("/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Shrew_Genome")
-  # targets.to.align = "shrews_match-targets_to-align.fa"
+  # #Debug setup
+  # setwd("/Volumes/LaCie/Microhylidae_test/")
+  # targets.to.align = "Microhylidae_to-align.fa"
+  # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
   # output.directory = "alignments"
   #
   # #Main settings
@@ -65,9 +68,12 @@ alignTargets = function(targets.to.align = NULL,
   # resume = FALSE
   # quiet = TRUE
   # adjust.direction = TRUE
+  # algorithm = "localpair"
+  # remove.reverse.tag = TRUE
+  # removal.threshold = 0.35
   #
   # #program paths
-  # mafft.path = "/usr/local/bin"
+  # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
@@ -90,6 +96,8 @@ alignTargets = function(targets.to.align = NULL,
   #Load sample file from probe matching step
   all.data = Biostrings::readDNAStringSet(targets.to.align)   # loads up fasta file
   locus.names = unique(gsub("_\\|_.*", "", names(all.data)))
+
+  target.seqs = Biostrings::readDNAStringSet(target.file)   # loads up fasta file
 
   #Checks for alignments already done and removes from the to-do list
   if (overwrite == FALSE){
@@ -118,6 +126,11 @@ alignTargets = function(targets.to.align = NULL,
     #STEP 2: Sets up fasta for aligning
     names(match.data) = gsub(pattern = ".*_\\|_", replacement = "", x = names(match.data))
 
+    #Gets reference locus
+    ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = names(target.seqs))]
+    names(ref.locus) = paste("Reference_Locus")
+    final.loci = append(match.data, ref.locus)
+
     # Checks for duplicates
     dup.names = match.data[duplicated(names(match.data)), ]
     if (length(dup.names) != 0) {
@@ -127,7 +140,7 @@ alignTargets = function(targets.to.align = NULL,
 
     #STEP 3: Runs MAFFT to align
     #Aligns and then reverses back to correction orientation
-    alignment = runMafft(sequence.data = match.data,
+    alignment = runMafft(sequence.data = final.loci,
                          save.name = paste0(output.directory, "/", locus.names[i]),
                          algorithm = algorithm,
                          adjust.direction = adjust.direction,
@@ -146,8 +159,45 @@ alignTargets = function(targets.to.align = NULL,
       names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     }#end if
 
+
+    #Gets the divergence to make sure not crazy
+    diff = pairwiseDistanceTarget(alignment, "Reference_Locus")
+    bad.seqs = names(diff)[which(diff >= 0.35)]
+    rem.align = alignment[!names(alignment) %in% bad.seqs]
+
+    # Moves onto next loop in there are no good sequences
+    if (length(rem.align) <= as.numeric(min.taxa)){
+      #Deletes old files
+      print(paste(locus.names[i], " had too few taxa", sep = ""))
+      next }
+
+    ### realign if bad seqs removed
+    if (length(bad.seqs) != 0){
+
+      alignment = runMafft(sequence.data = rem.align,
+                           save.name = paste0(output.directory, "/", locus.names[i]),
+                           algorithm = algorithm,
+                           adjust.direction = adjust.direction,
+                           threads = threads,
+                           cleanup.files = T,
+                           quiet = quiet,
+                           mafft.path = mafft.path)
+
+      #Checks for failed mafft run
+      if (length(alignment) == 0){
+        print(paste0(locus.names[i], " did not successfully align."))
+        next }
+
+      #Removes the reverse name
+      if (remove.reverse.tag == TRUE){
+        names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
+      }#end if
+
+    } # end bad.seqs if
+
     #Saves prelim exon file
-    new.align = strsplit(as.character(alignment), "")
+    red.align = alignment[!names(alignment) %in% "Reference_Locus"]
+    new.align = strsplit(as.character(red.align), "")
     aligned.set = as.matrix(ape::as.DNAbin(new.align))
 
     #readies for saving

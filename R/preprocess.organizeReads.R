@@ -35,6 +35,12 @@ organizeReads = function(read.directory = NULL,
   # rename.file = "/Users/chutter/Dropbox/Research/9_Paperwork/Arbor_Biosciences/HF-13/file_rename.csv"
   # overwrite = FALSE
 
+  #Debegging
+ # read.directory = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/raw_reads"
+#  output.directory = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/organized-reads"
+ # rename.file = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/file_rename.csv"
+#  overwrite = FALSE
+
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(read.directory) == TRUE){ stop("Please provide a directory of raw reads.") }
@@ -69,7 +75,7 @@ organizeReads = function(read.directory = NULL,
   for (i in seq_along(sample.names)){
 
     temp.data = sample.data[sample.data$Sample %in% sample.names[i], ]
-    
+
     for (j in 1:nrow(temp.data)) {
       #################################################
       ### Part A: prepare for loading and checks

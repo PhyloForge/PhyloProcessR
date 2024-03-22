@@ -27,7 +27,7 @@ quiet = TRUE
 
 #Target annotation settings
 #########################
-# TRUE to run target annotation
+# TRUE to run target annotation, FALSE if its already been done to skip
 annotate.targets = TRUE
 #Filtering threshold to filter out potential paralogs
 heterozyote.filter.threshold = 0.05
@@ -46,6 +46,8 @@ align.targets = TRUE
 alignment.algorithm = "localpair"
 # The minimum number of taxa to keep an alignment
 min.taxa.alignment = 4
+# The pairwise difference threshold from reference for removal
+removal.threshold = 0.35
 # subset alignments to run multiple instances, uses proportion of targets between 0-1
 subset.start = 0
 # example, 0, 0.25 to align first quarter, 0.25 to 0.5 to align second

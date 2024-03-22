@@ -34,6 +34,7 @@
 concatenateGenes = function(alignment.folder = NULL,
                             output.folder = NULL,
                             feature.gene.names = NULL,
+                            find.exon.names = FALSE,
                             input.format = c("phylip", "nexus", "fasta"),
                             output.format = c("phylip", "nexus", "fasta"),
                             minimum.exons = 2,
@@ -63,7 +64,7 @@ concatenateGenes = function(alignment.folder = NULL,
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
   if(is.null(output.folder) == TRUE){ stop("Error: an output file name is needed.") }
   if(length(output.format) != 1){ stop("Error: please select a single output format or 'all' to save files in all formats.") }
-  if(is.null(feature.gene.names) == TRUE){ stop("Error: a table associating each exon with a gene is needed.") }
+  if(is.null(feature.gene.names) == TRUE && find.exon.names == FALSE){ stop("Error: a table associating each exon with a gene is needed.") }
 
   #Check if files exist or not
   if (dir.exists(alignment.folder) == F){
@@ -143,7 +144,7 @@ concatenateGenes = function(alignment.folder = NULL,
         } else {
           stop("DUPLICATE names found. Please check alignments.")
         }#end else
-      }#end if 
+      }#end if
 
       #Gathers sample names
       exon.save = paste0(temp.dir, "/", gene.names[i], "-", y, ".phy")
@@ -155,7 +156,7 @@ concatenateGenes = function(alignment.folder = NULL,
       exon.count = exon.count + 1
     }#end y loop
 
-    if (exon.count < minimum.exons){ 
+    if (exon.count < minimum.exons){
       print(paste0("Below minimum exon count of ", minimum.exons, ". Skipped gene."))
       system(paste0("rm -r ", temp.dir))
       #next

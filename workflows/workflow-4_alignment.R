@@ -50,8 +50,10 @@ if (align.targets == TRUE) {
   # Aligns target markers from annotation files
   alignTargets(
     targets.to.align = paste0("data-analysis/", dataset.name, "_to-align.fa"),
+    target.file = target.file,
     output.directory = "data-analysis/alignments/untrimmed_all-markers",
     min.taxa = min.taxa.alignment,
+    removal.threshold = removal.threshold,
     algorithm = alignment.algorithm,
     subset.start = subset.start,
     subset.end = subset.end,
