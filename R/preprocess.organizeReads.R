@@ -35,11 +35,11 @@ organizeReads = function(read.directory = NULL,
   # rename.file = "/Users/chutter/Dropbox/Research/9_Paperwork/Arbor_Biosciences/HF-13/file_rename.csv"
   # overwrite = FALSE
 
-  #Debegging
- # read.directory = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/raw_reads"
-#  output.directory = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/organized-reads"
- # rename.file = "/Volumes/Extreme_SSD/Swine_Analysis/WGS/file_rename.csv"
-#  overwrite = FALSE
+  # #Debegging
+  # read.directory = "/Volumes/Extreme_SSD/Unusual_Hosts/raw_reads"
+  # output.directory = "/Volumes/Extreme_SSD/Unusual_Hosts/organized-reads"
+  # rename.file = "/Volumes/Extreme_SSD/Unusual_Hosts/sample_names.csv"
+  # overwrite = FALSE
 
   #Quick checks
   options(stringsAsFactors = FALSE)

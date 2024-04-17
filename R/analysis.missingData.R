@@ -48,7 +48,6 @@ missingData = function(alignment.directory = NULL,
     # target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
     # output.directory = "/Volumes/LaCie/VenomCap/data-analysis/genetic-distance"
     # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-
     # quiet = TRUE
     # overwrite = FALSE
     # threads = 6
@@ -210,7 +209,7 @@ missingData = function(alignment.directory = NULL,
     sample.data[, target_length:=Biostrings::width(temp.target)]
 
     data.table::set(sample.data, i = match(names(spp.sens), sample.data$sample), j = match("missing_basepair_data", header.all), value = spp.sens)
-    
+
     data.table::set(sample.data, i = match(names(spp.sens), sample.data$sample), j = match("missing_marker_data", header.all), value = spp.sens)
 
     sample.data[sample.data$missing_basepair_data == -1]$missing_basepair_data = NA

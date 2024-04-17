@@ -29,6 +29,8 @@ quiet = TRUE
 #########################
 # TRUE to run target annotation, FALSE if its already been done to skip
 annotate.targets = TRUE
+#whether to run heterozygote flter
+heterozygote.filter = TRUE
 #Filtering threshold to filter out potential paralogs
 heterozyote.filter.threshold = 0.05
 #The minimum match percentage for a contig match to a target
@@ -37,6 +39,8 @@ min.match.percent = 60
 min.match.length = 40
 #The minimum match coverage, contig must overlap by X percent to target
 min.match.coverage = 50
+#retain rather than remove potential paralogs from the dataset. Only one is retained.
+retain.paralogs = FALSE
 
 # Alignment settings
 #########################

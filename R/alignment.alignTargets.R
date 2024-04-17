@@ -53,9 +53,9 @@ alignTargets = function(targets.to.align = NULL,
                         mafft.path = NULL) {
 
   # #Debug setup
-  # setwd("/Volumes/LaCie/Microhylidae_test/")
-  # targets.to.align = "Microhylidae_to-align.fa"
-  # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
+  # setwd("/Users/chutter/Dropbox/SharewithCarl")
+  # targets.to.align = "Venom-Markers-Nov23_to-align.fa"
+  # target.file = "venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
   # output.directory = "alignments"
   #
   # #Main settings
@@ -127,7 +127,7 @@ alignTargets = function(targets.to.align = NULL,
     names(match.data) = gsub(pattern = ".*_\\|_", replacement = "", x = names(match.data))
 
     #Gets reference locus
-    ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = names(target.seqs))]
+    ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = gsub("_\\|_.*", "", names(target.seqs) ) )]
     names(ref.locus) = paste("Reference_Locus")
     final.loci = append(match.data, ref.locus)
 
@@ -162,7 +162,7 @@ alignTargets = function(targets.to.align = NULL,
 
     #Gets the divergence to make sure not crazy
     diff = pairwiseDistanceTarget(alignment, "Reference_Locus")
-    bad.seqs = names(diff)[which(diff >= 0.35)]
+    bad.seqs = names(diff)[which(diff >= removal.threshold)]
     rem.align = alignment[!names(alignment) %in% bad.seqs]
 
     # Moves onto next loop in there are no good sequences

@@ -52,6 +52,7 @@ annotateTargets = function(assembly.directory = NULL,
                             min.match.length = 60,
                             min.match.coverage = 50,
                             trim.target = FALSE,
+                            retain.paralogs = FALSE,
                             threads = 1,
                             memory = 1,
                             blast.path = NULL,
@@ -66,22 +67,33 @@ annotateTargets = function(assembly.directory = NULL,
   # assembly.directory <- "/Volumes/LaCie/Microhylidae_test/data-analysis/contigs/7_filtered-contigs"
   # target.file = "/Volumes/LaCie/Ultimate_FrogCap/Final_Files/FINAL_marker-seqs_Mar14-2023.fa"
   # output.directory = "data-analysis/contigs/8_annotated-contigs"
-  # blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-  # cdhit.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-  #
-  # #
-  # # #Main settings
-  # threads = 8
-  # memory = 40
-  # trim.target = FALSE
-  # overwrite = FALSE
-  # quiet = TRUE
-  # #
-  # # #tweak settings (make some statements to check these)
-  # min.match.percent = 60
-  # min.match.length = 70
-  # min.match.coverage = 35
-  # #
+
+#
+#   blast.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+#   cdhit.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+#
+#
+#   # #Debug setup
+#   setwd("/Users/chutter/Dropbox/SharewithCarl")
+#   assembly.directory <- "/Users/chutter/Dropbox/SharewithCarl/renamed_contigs"
+#   targets.to.align = "Venom-Markers-Nov23_to-align.fa"
+#   target.file = "venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
+#   output.directory = "annotated_paralogs"
+#
+#   #
+#   # #Main settings
+#   threads = 4
+#   memory = 20
+#   trim.target = FALSE
+#   overwrite = FALSE
+#   quiet = TRUE
+#   retain.paralogs = TRUE
+#
+#   # #tweak settings (make some statements to check these)
+#   min.match.percent = 60
+#   min.match.length = 70
+#   min.match.coverage = 35
+#   #
 
   require(foreach)
 
@@ -210,13 +222,11 @@ annotateTargets = function(assembly.directory = NULL,
     #Make sure the hit is greater than 50% of the reference length
     filt.data = filt.data[filt.data$matches >= ( (min.match.coverage/100) * filt.data$qLen),]
 
-    filt.data[filt.data$qName == "FrogCap_M24103",]
-
     #Reads in contigs
     contigs = all.data
 
     #########################################################################
-    #Part B: Multiple sample contigs (tName) matching to one target (qName)
+    #Part D: Multiple sample contigs (tName) matching to one target (qName)
     #########################################################################
     #Pulls out
     contig.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
@@ -338,8 +348,10 @@ annotateTargets = function(assembly.directory = NULL,
       save.data = rbind(good.data, new.data)
     } else { save.data = good.data }
 
+    fix.seq.para = fix.seq
+
     #########################################################################
-    #Part D: Multiple targets (qName) matching to one sample contig (tName)
+    #Part C: Multiple targets (qName) matching to one sample contig (tName)
     #########################################################################
 
     #red.contigs = contigs[names(contigs) %in% filt.data$tName]
@@ -350,6 +362,7 @@ annotateTargets = function(assembly.directory = NULL,
     #Loops through each potential duplicate
     dup.loci = unique(dup.data$tName)
 
+    fix.seq = Biostrings::DNAStringSet()
     if (length(dup.loci) != 0){
       for (j in 1:length(dup.loci)){
         #pulls out data that matches to multiple contigs
@@ -426,13 +439,84 @@ annotateTargets = function(assembly.directory = NULL,
       } #end j loop
     }#end if
 
+    #########################################################################
+    #Part C: Keep paralogs or no
+    #########################################################################
+
+    #Keeps potential paralogs
+    if (retain.paralogs == TRUE){
+
+      contig.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
+
+      #Saves non duplicated data
+      good.data = filt.data[!filt.data$qName %in% contig.names,]
+
+      save.data = c()
+      for (j in 1:length(contig.names)){
+
+        temp.data = filt.data[filt.data$qName %in% contig.names[j],]
+        temp.save = temp.data[temp.data$bitscore == max(temp.data$bitscore),][1,]
+        save.data = rbind(save.data, temp.save)
+      }
+
+      #Name and finalize
+      comb.data = rbind(good.data, save.data)
+      #base.loci = contigs[match(base.data$tName, names(contigs))]
+      #names(base.loci) = paste0(base.data$qName, "_|_", sample)
+
+      #fin.loci = append(base.loci, fix.seq)
+      #fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
+      #sort.data = base.data[match(names(base.loci), base.data$tName),]
+
+
+      base.data = comb.data[!comb.data$qName %in% gsub("_\\|_.*", "", names(fix.seq)),]
+      base.loci = contigs[names(contigs) %in% base.data$tName]
+      sort.data = base.data[match(names(base.loci), base.data$tName),]
+      #Name and finalize
+      names(base.loci) = paste0(sort.data$qName, "_|_", sample)
+      fin.loci = append(base.loci, fix.seq)
+      fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
+
+      #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
+      temp = fin.loci[duplicated(names(fin.loci)) == T]
+      if(length(temp) != 0){
+
+        dup.names = unique(names(temp))
+        save.temp = Biostrings::DNAStringSet()
+        for (j in 1:length(dup.names)){
+
+          temp.data = fin.loci[names(fin.loci) %in% dup.names[j]]
+          best.temp = temp.data[Biostrings::width(temp.data) == max(Biostrings::width(temp.data))][1]
+          save.temp = append(save.temp, best.temp)
+        }# end j loop
+
+        temp.fin = fin.loci[!names(fin.loci) %in% names(temp)]
+        fin.loci = append(temp.fin, save.temp)
+      }#end duplicate if
+
+      #Finds probes that match to two or more contigs
+      final.loci = as.list(as.character(fin.loci))
+      PhyloProcessR::writeFasta(
+        sequences = final.loci, names = names(final.loci),
+        paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
+      )
+
+      system(paste0("rm -r ", species.dir))
+
+      print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
+
+      next
+
+    }#end if statement
+
     #Writes the base loci
-    base.data = save.data[!save.data$qName %in% gsub("_\\:_.*", "", names(fix.seq)),]
+    fix.seq.final = append(fix.seq, fix.seq.para)
+    base.data = save.data[!save.data$qName %in% gsub("_\\|_.*", "", names(fix.seq.final)),]
     base.loci = contigs[names(contigs) %in% base.data$tName]
     sort.data = base.data[match(names(base.loci), base.data$tName),]
     #Name and finalize
     names(base.loci) = paste0(sort.data$qName, "_|_", sample)
-    fin.loci = append(base.loci, fix.seq)
+    fin.loci = append(base.loci, fix.seq.final)
     fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
 
     #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
