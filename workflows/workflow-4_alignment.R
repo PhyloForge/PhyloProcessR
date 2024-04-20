@@ -12,6 +12,8 @@ setwd(working.directory)
 ## Annotation and paralog filtering
 ##################################################################################################
 
+if (file.exists("data-analysis/contigs") == FALSE){ dir.create("data-analysis/contigs") }
+
 if (heterozygote.filter == TRUE){
   #Remove contigs with too much heterozygosity
   filterHeterozygosity(

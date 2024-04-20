@@ -77,7 +77,7 @@ annotateTargets = function(assembly.directory = NULL,
 #   setwd("/Users/chutter/Dropbox/SharewithCarl")
 #   assembly.directory <- "/Users/chutter/Dropbox/SharewithCarl/renamed_contigs"
 #   targets.to.align = "Venom-Markers-Nov23_to-align.fa"
-#   target.file = "venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
+#   target.file = "/Users/chutter/Dropbox/SharewithCarl/venom_loci_updated_April17-2024.fa"
 #   output.directory = "annotated_paralogs"
 #
 #   #
@@ -118,6 +118,7 @@ annotateTargets = function(assembly.directory = NULL,
   #Initial checks
   if (assembly.directory == output.directory){ stop("You should not overwrite the original contigs.") }
   if (is.null(target.file) == TRUE){ stop("A fasta file of targets to match to assembly contigs is needed.") }
+  if (file.exists(target.file) == FALSE){ stop("Target file not found. Please check path / use full path.") }
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
@@ -214,7 +215,8 @@ annotateTargets = function(assembly.directory = NULL,
 
     if (nrow(filt.data) == 0) {
       print(paste0(sample, " had no matches. Skipping"))
-      next }
+      return(NULL)
+      }
 
     #Sorting: exon name, contig name, bitscore higher first, evalue
     data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
@@ -505,7 +507,7 @@ annotateTargets = function(assembly.directory = NULL,
 
       print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
-      next
+      return(NULL)
 
     }#end if statement
 
