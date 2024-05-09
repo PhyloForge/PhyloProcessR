@@ -41,15 +41,16 @@ utility.checkMD5 = function(read.directory = NULL,
                     overwrite = FALSE) {
 
   # #Debug
-  # read.directory = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF14_Ultimate_FrogCap_Chan/Reads"
+  # read.directory = "/Volumes/Main_Data/Sequence_Capture/HF15_Ultimate_FrogCap"
   # output.name = "md5-check"
   # md5.type = "many-files"
-  # md5.file.name = "/Users/chutter/Dropbox/Research/3_Sequence-Database/Raw-Reads/HF14_Ultimate_FrogCap_Chan/MD5.txt"
+  # md5.file.name = NULL
   # overwrite = TRUE
 
   #Quick checks
   if (is.null(read.directory) == TRUE){ stop("Please provide input reads.") }
-  if (is.null(md5.file.name) == TRUE) {
+
+  if (is.null(md5.file.name) == TRUE && md5.type == "single-file") {
     stop("Please provide MD5 file of hashes in the first column and file name in the second.")
   }
 
@@ -61,6 +62,7 @@ utility.checkMD5 = function(read.directory = NULL,
   #Read in sample data **** sample is run twice?!
   files = list.files(read.directory, recursive = T, full.names = T)
   reads = files[grep("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", files)]
+  reads = reads[grep("MD5.txt|.md5$", reads, invert = T)]
 
   if (md5.type == "single-file") {
     check.md5 = read.table(md5.file.name, header = FALSE)
@@ -69,6 +71,8 @@ utility.checkMD5 = function(read.directory = NULL,
   if (md5.type == "many-files") {
 
     hash.files = files[grep("MD5.txt", files)]
+
+    if (length(hash.files) == 0){ hash.files = files[grep(".md5$", files)] }
 
     check.md5 = c()
     for (i in seq_along(hash.files)){

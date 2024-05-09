@@ -33,13 +33,14 @@ concatenateAlignments = function(alignment.folder = NULL,
                                  overwrite = FALSE) {
 
   #Debug
- # setwd("/Volumes/Rodents/Shrew_Project/Alignments")
-#  alignment.folder = "/Volumes/Rodents/Shrew_Project/Alignments/uce-to-genes"
- # output.name = "test-dataset"
+#  alignment.folder = paste0(output.directory, "/alignments/")
+# output.name = "test-dataset"
 #  overwrite = FALSE
- # partition.file = TRUE
-#  output.format = "all"
+# partition.file = TRUE
+#  output.format = "fasta"
 #  partition.format = "all"
+
+  require(data.table)
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }

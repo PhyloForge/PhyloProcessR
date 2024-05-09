@@ -60,22 +60,22 @@ geneFamilyStats = function(assembly.directory = NULL,
 
 
   #Debug setup
-  assembly.directory = "/Users/chutter/Dropbox/SharewithCarl/renamed_contigs"
-  output.directory = "/Users/chutter/Dropbox/SharewithCarl/gene-family-stats"
-  target.file = "/Users/chutter/Dropbox/SharewithCarl/venom_loci_March4-2023.fa"
-  gene.family.file = "/Users/chutter/Dropbox/SharewithCarl/family_file.csv"
-  blast.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
-
-  quiet = TRUE
-  overwrite = FALSE
-  threads = 6
-  memory = 6
-
-  # #tweak settings (make some statements to check these)
-   min.match.percent = 50
-   min.match.length = 50
-   min.match.coverage = 50
-   max.match.copy = 100
+  # assembly.directory = "/Users/chutter/Dropbox/SharewithCarl/renamed_contigs"
+  # output.directory = "/Users/chutter/Dropbox/SharewithCarl/gene-family-stats"
+  # target.file = "/Users/chutter/Dropbox/SharewithCarl/venom_loci_updated_April17-2024.fa"
+  # gene.family.file = "/Users/chutter/Dropbox/SharewithCarl/family_file.csv"
+  # blast.path = "/Users/chutter/Bioinformatics/anaconda3/envs/mitocap/bin/"
+  #
+  # quiet = TRUE
+  # overwrite = FALSE
+  # threads = 6
+  # memory = 6
+  #
+  # # #tweak settings (make some statements to check these)
+  #  min.match.percent = 50
+  #  min.match.length = 50
+  #  min.match.coverage = 50
+  #  max.match.copy = 100
 
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){

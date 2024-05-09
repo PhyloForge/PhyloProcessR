@@ -148,7 +148,7 @@ mapReferenceSample = function(mapping.directory = NULL,
 
   for (i in seq_along(sample.files)) {
     # Creates output directory for the sample
-    sample.name <- gsub(".fa|.fasta", "", sample.files[i])
+    sample.name <- gsub(".fa$|.fasta$", "", sample.files[i])
     dir.create(paste0(mapping.directory, "/", sample.name))
     dir.create(paste0(mapping.directory, "/", sample.name, "/index"))
 

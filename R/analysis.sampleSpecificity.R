@@ -45,18 +45,18 @@ sampleSpecificity = function(read.directory = NULL,
                                       gatk4.path = NULL,
                                       samtools.path = NULL) {
 
-  # read.directory = "/Users/chutter/Dropbox/VenomCap_test_data/cleaned-reads"
-  # target.file = "/Users/chutter/Dropbox/VenomCap_test_data/venom_loci_updated_Mar12_cdhit95_duplicate_exons_renamed_Feb2023_FINAL.fa"
-  # output.directory = "/Users/chutter/Dropbox/VenomCap_test_data/sample-specificity"
-  
-  # samtools.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
-  # bwa.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
-  # gatk4.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
-  
-  # quiet = TRUE
-  # overwrite = FALSE
-  # threads = 6
-  # memory = 6
+  #read.directory = "/Users/chutter/Dropbox/SharewithCarl/cleaned-reads"
+  #target.file = "/Users/chutter/Dropbox/SharewithCarl/Weinell_TargetLoci_Snakes_Final_18April2019.fa"
+  #output.directory = "/Users/chutter/Dropbox/SharewithCarl/sample-specificity"
+
+  #samtools.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+  #bwa.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+  #gatk4.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin/"
+
+  #quiet = TRUE
+  #overwrite = FALSE
+  #threads = 6
+  #memory = 6
 
   ##### Program path check
   ####################################################################
