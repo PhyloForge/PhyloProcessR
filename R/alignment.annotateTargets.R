@@ -74,10 +74,9 @@ annotateTargets = function(assembly.directory = NULL,
 #
 #
 #   # #Debug setup
-#   setwd("/Users/chutter/Dropbox/SharewithCarl")
-#   assembly.directory <- "/Users/chutter/Dropbox/SharewithCarl/renamed_contigs"
-#   targets.to.align = "Venom-Markers-Nov23_to-align.fa"
-#   target.file = "/Users/chutter/Dropbox/SharewithCarl/venom_loci_updated_April17-2024.fa"
+#   setwd("/Users/chutter/Downloads")
+#   assembly.directory <- "/Users/chutter/Downloads/5_iupac-contigs"
+#   target.file = "/Users/chutter/Dropbox/Research/1_Main-Projects/0_Working-Projects/Anura_Phylogeny/Final_Files/FINAL_marker-seqs_May20-2023.fa"
 #   output.directory = "annotated_paralogs"
 #
 #   #
@@ -87,13 +86,13 @@ annotateTargets = function(assembly.directory = NULL,
 #   trim.target = FALSE
 #   overwrite = FALSE
 #   quiet = TRUE
-#   retain.paralogs = TRUE
+#   retain.paralogs = FALSE
 #
 #   # #tweak settings (make some statements to check these)
 #   min.match.percent = 60
 #   min.match.length = 70
 #   min.match.coverage = 35
-#   #
+  #
 
   require(foreach)
 
@@ -585,7 +584,7 @@ annotateTargets = function(assembly.directory = NULL,
 
   #Finds probes that match to two or more contigs
   final.loci = as.list(as.character(save.contigs))
-  writeFasta(sequences = final.loci, names = names(final.loci),
+  PhyloProcessR::writeFasta(sequences = final.loci, names = names(final.loci),
              paste0(alignment.contig.name, "_to-align.fa"), nbchar = 1000000, as.string = T)
 
   #Saves combined, final dataset

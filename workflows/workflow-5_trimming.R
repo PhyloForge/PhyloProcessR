@@ -3,6 +3,7 @@ devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencie
 library(PhyloProcessR)
 
 #source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-5_configuration-file.R")
+
 source("workflow-5_configuration-file.R")
 setwd(working.directory)
 
@@ -124,7 +125,7 @@ if (trim.to.flanks == TRUE) {
     feature.gene.names = feature.gene.names,
     overwrite = overwrite
   )
-  
+
   if (trim.alignments == TRUE) {
     # Fix the installs for this
     superTrimmer(

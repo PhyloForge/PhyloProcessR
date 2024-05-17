@@ -80,12 +80,12 @@ superTrimmer = function(alignment.dir = NULL,
                         memory = 1,
                         overwrite = FALSE,
                         resume = TRUE) {
-  
-  # work.dir = "/Volumes/LaCie"
-  # setwd(work.dir)
-  # alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
+
+
+  # TrimAl.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
+  # alignment.dir = "/Users/chutter/Downloads/untrimmed_all-markers_new"
   # alignment.format = "phylip"
-  # output.dir = "Test/trimmed"
+  # output.dir = "/Users/chutter/Downloads/trimmed_all-markers_new"
   # output.format = "phylip"
   # overwrite = FALSE
   # TrimAl = TRUE
@@ -101,30 +101,29 @@ superTrimmer = function(alignment.dir = NULL,
   # min.taxa.alignment = 4
   # min.coverage.bp = 60
   # max.alignment.gap.percent = 50
-  # threads = 8
+  # threads = 6
   # memory = 24
-
-  # alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked"
-  #     alignment.format = "phylip"
-  #     output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked"
-  #     output.format = "phylip"
-  #     overwrite = overwrite
-  #     TrimAl = FALSE
-  #     TrimAl.path = trimAl.path
-  #     trim.column = FALSE
-  #     convert.ambiguous.sites = convert.ambiguous.sites
-  #     alignment.assess = FALSE
-  #     trim.external = FALSE
-  #     trim.coverage = trim.coverage
-  #     min.coverage.percent = min.coverage.percent
-  #     min.external.percent = min.external.percent
-  #     min.column.gap.percent = min.column.gap.percent
-  #     min.alignment.length = min.alignment.length
-  #     min.taxa.alignment = min.taxa.alignment
-  #     min.coverage.bp = min.coverage.bp
-  #     threads = threads
-  #     memory = memory
-  
+#
+  # alignment.dir = "data-analysis/alignments/untrimmed_only-flanks-unlinked"
+  # alignment.format = "phylip"
+  # output.dir = "data-analysis/alignments/trimmed_only-flanks-unlinked"
+  # output.format = "phylip"
+  # overwrite = overwrite
+  # TrimAl = run.TrimAl
+  # TrimAl.path = trimAl.path
+  # trim.column = trim.column
+  # convert.ambiguous.sites = convert.ambiguous.sites
+  # alignment.assess = FALSE
+  # trim.external = trim.external
+  # trim.coverage = trim.coverage
+  # min.coverage.percent = min.coverage.percent
+  # min.external.percent = min.external.percent
+  # min.column.gap.percent = min.column.gap.percent
+  # min.alignment.length = min.alignment.length
+  # min.taxa.alignment = min.taxa.alignment
+  # min.coverage.bp = min.coverage.bp
+  # threads = threads
+  # memory = memory
 
   require(foreach)
 
@@ -206,6 +205,7 @@ superTrimmer = function(alignment.dir = NULL,
 
     if (length(align) < min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
+      #next
       return(NULL)
     }
 
@@ -302,6 +302,13 @@ superTrimmer = function(alignment.dir = NULL,
 
     if (length(non.align) < min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
+      #next
+      return(NULL)
+    }
+
+    if (unique(Biostrings::width(non.align)) < min.alignment.length) {
+      print("alignment below minimum length, skipping")
+      #next
       return(NULL)
     }
 
