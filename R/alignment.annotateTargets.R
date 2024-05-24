@@ -155,7 +155,8 @@ annotateTargets = function(assembly.directory = NULL,
     if (overwrite == FALSE){
       if (file.exists(paste0(species.dir, "/", sample, "_matching-contigs.fa")) == T){
         print(paste0(sample, " already finished, skipping. Set overwrite to T if you want to overwrite."))
-        next
+        #next
+        return(NULL)
       }
     }#end
 
