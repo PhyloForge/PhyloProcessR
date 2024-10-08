@@ -9,7 +9,7 @@
 working.directory = "/Path/to/where/the/stuff/will/happen"
 # The read directory desired for mapping, recommended "decontaminated-reads". Default shown.
 read.directory = "processed-reads/decontaminated-reads"
-# The assembly directory desired to have variants called on. Default shown. 
+# The assembly directory desired to have variants called on. Default shown.
 assembly.directory = "data-analysis/contigs/3_target-contigs"
 # The name for the dataset
 dataset.name = "variant-calling"
@@ -37,11 +37,13 @@ check.assemblies = FALSE
 base.recalibration = FALSE
 # TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
 use.base.recalibration = FALSE
+# Set ploidy level
+ploidy = 2
 
 # Custom hard filtering thresholds
 #########################
 # Default GATK4 recommended values are shown here
-# For filter explanations see: 
+# For filter explanations see:
 #   https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
 # Quality score
 custom.SNP.QUAL = 30
@@ -78,7 +80,7 @@ consensus.sequences = TRUE
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
-### *** Replace /PATH/TO/ with your system 
+### *** Replace /PATH/TO/ with your system
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
 conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env
