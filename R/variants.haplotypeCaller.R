@@ -38,6 +38,7 @@ haplotypeCaller = function(mapping.directory = NULL,
                           output.directory = "haplotype-caller",
                           reference.type = c("sample", "consensus"),
                           gatk4.path = NULL,
+                          ploidy = 2,
                           threads = 1,
                           memory = 1,
                           overwrite = TRUE,
@@ -64,7 +65,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
   # Same adds to bbmap path
   require(foreach)
-  
+
   # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
@@ -218,6 +219,7 @@ haplotypeCaller = function(mapping.directory = NULL,
       " -R ", reference.path, " -O ", sample.dir, "/gatk4-haplotype-caller.g.vcf.gz",
       " -I ", input.bam,
       " -ERC GVCF",
+      " -ploidy ", ploidy,
       " -bamout ", sample.dir, "/gatk4-haplotype-caller.bam"
     ))
 
