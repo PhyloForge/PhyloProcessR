@@ -116,7 +116,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Genotype haplotype caller results
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " GenotypeGVCFs -R ", reference.path,
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-haplotype-caller.g.vcf.gz",
       " --use-new-qual-calculator true -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf"
@@ -124,7 +124,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Selects only the SNPs from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " SelectVariants",
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf",
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf",
@@ -133,7 +133,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     #Selects only the indels from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " SelectVariants",
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf",
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf",
@@ -142,7 +142,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Applies filters to SNPs
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf",
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf",
@@ -157,7 +157,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Applies filters to indels
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf",
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf",
@@ -169,7 +169,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Combine them into a single VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " SortVcf",
       " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf",
       " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf",
@@ -177,7 +177,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " SelectVariants",
       " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-combined.vcf",
       " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-rem-filtered-combined.vcf",
@@ -197,7 +197,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     #Applies base recalibration to the original bam file
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " BaseRecalibrator",
       " -I ", read.bam, "/final-mapped-all.bam",
       " -R ", reference.path,
@@ -209,7 +209,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     # Applies the recalibration and creates a new bam file
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " ApplyBQSR",
       " -I ", read.bam, "/final-mapped-all.bam",
       " -R ", reference.path,
@@ -219,7 +219,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
    # Starts to finally look for Haplotypes! *here
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " HaplotypeCaller",
       " -R ", reference.path,
       " -I ", recal.bam,

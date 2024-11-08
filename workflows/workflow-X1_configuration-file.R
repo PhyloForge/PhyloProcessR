@@ -9,8 +9,10 @@
 working.directory = "/Volumes/LaCie/Anax"
 # The read directory desired for mapping, recommended "decontaminated-reads". Default shown.
 read.directory = "/Volumes/LaCie/Anax/reads"
-# The alignment directory desired to have variants called on. Default shown. 
+# The alignment directory desired to have variants called on. Default shown.
 alignment.directory = "/Volumes/LaCie/Anax/data-analysis/alignments/untrimmed_all-markers"
+# Temporary directory where temporary files are saved
+temp.directory = working.directory
 # The name for the dataset
 dataset.name = "joint-genotyping"
 
@@ -49,7 +51,7 @@ save.combined = TRUE
 # Custom hard filtering thresholds
 #########################
 # Default GATK4 recommended values are shown here
-# For filter explanations see: 
+# For filter explanations see:
 #   https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
 # Quality score
 custom.SNP.QUAL = 30
@@ -86,7 +88,7 @@ consensus.sequences = TRUE
 #Program paths
 #########################
 ### *** When installing the pipeline requirements via anaconda, only the path is needed to the conda bin directory
-### *** Replace /PATH/TO/ with your system 
+### *** Replace /PATH/TO/ with your system
 ### Otherwise, if installed other ways, modify any of these to their path if R is not detecting system paths
 conda.env = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 gatk4.path = conda.env

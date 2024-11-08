@@ -11,6 +11,8 @@ working.directory = "/Path/to/where/the/stuff/will/happen"
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. Default shown.
 assembly.directory = "data-analysis/contigs/3_target-contigs"
+# Temporary directory where temporary files are saved
+temp.directory = working.directory
 # The name for the dataset
 dataset.name = "variant-calling"
 

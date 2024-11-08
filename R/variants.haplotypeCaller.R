@@ -38,6 +38,7 @@ haplotypeCaller = function(mapping.directory = NULL,
                           output.directory = "haplotype-caller",
                           reference.type = c("sample", "consensus"),
                           gatk4.path = NULL,
+                          temp.directory = NULL,
                           ploidy = 2,
                           threads = 1,
                           memory = 1,
@@ -94,6 +95,11 @@ haplotypeCaller = function(mapping.directory = NULL,
       dir.create(output.directory)
     }
   } # end else
+
+  if (is.null(temp.directory) == TRUE){
+    temp.directory = getwd()
+  }
+
 
   #Read in sample data
   bam.files = list.files(mapping.directory, recursive = T, full.names = T)
@@ -161,7 +167,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Next combine .bam files together!
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " MergeSamFiles",
         " ", input.string, " -O ", merge.dir, "/final-mapped-merge.bam",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
@@ -169,7 +175,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Sort by coordinate for input into MarkDuplicates
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SortSam",
         " -INPUT ", merge.dir, "/final-mapped-merge.bam",
         " -OUTPUT ", merge.dir, "/final-mapped-sort.bam",
@@ -179,7 +185,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Marks duplicate reads
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " MarkDuplicates",
         " -INPUT ", merge.dir, "/final-mapped-sort.bam",
         " -OUTPUT ", merge.dir, "/final-mapped-dup.bam",
@@ -189,12 +195,12 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Sorts and stuff
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SortSam",
         " -INPUT ", merge.dir, "/final-mapped-dup.bam",
         " -OUTPUT /dev/stdout -SORT_ORDER coordinate",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SetNmAndUqTags",
         " -INPUT /dev/stdin -OUTPUT ", merge.dir, "/final-mapped-all.bam",
         " -CREATE_INDEX true -R ", reference.path,
@@ -214,7 +220,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
     #Starts to finally look for Haplotypes! *here
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
       " HaplotypeCaller",
       " -R ", reference.path, " -O ", sample.dir, "/gatk4-haplotype-caller.g.vcf.gz",
       " -I ", input.bam,

@@ -43,9 +43,10 @@ prepareBAM = function(read.directory = NULL,
                       gatk4.path = NULL,
                       threads = 1,
                       memory = 1,
+                      temp.directory = NULL,
                       overwrite = FALSE,
                       quiet = TRUE) {
- 
+
   # library(PhyloCap)
   # library(doParallel)
   # setwd("/Volumes/LaCie/Anax")
@@ -101,6 +102,10 @@ prepareBAM = function(read.directory = NULL,
 
   if (file.exists(read.directory) == FALSE) {
     stop("Input reads not found.")
+  }
+
+  if (is.null(temp.directory) == TRUE){
+    temp.directory = getwd()
   }
 
   # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
@@ -204,7 +209,7 @@ prepareBAM = function(read.directory = NULL,
       ############################
       # convert fastqs to a sam file
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " FastqToSam -FASTQ ", lane.reads[1], " -FASTQ2 ", lane.reads[2],
         " -OUTPUT ", lane.dir, "/fastqsam.bam",
         " -SAMPLE_NAME ", sample.names[i],
@@ -213,7 +218,7 @@ prepareBAM = function(read.directory = NULL,
 
       # Revert the sam to a bam file. Cleans and compresses
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " RevertSam -I ", lane.dir, "/fastqsam.bam -O ", lane.dir, "/revertsam.bam",
         " -SANITIZE true -MAX_DISCARD_FRACTION 0.005",
         " -ATTRIBUTE_TO_CLEAR XT -ATTRIBUTE_TO_CLEAR XN -ATTRIBUTE_TO_CLEAR AS",
@@ -238,7 +243,7 @@ prepareBAM = function(read.directory = NULL,
 
         # Read groups are assigned
         system(paste0(
-          gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+          gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
           " AddOrReplaceReadGroups -I ", lane.dir, "/revertsam.bam -O ", lane.dir, "/all_reads.bam",
           " -RGSM ", sample.names[i], " -RGPU ", RGPU, " -RGID ", RGID,
           " -RGLB LIB-", sample.names[i], " -RGPL ILLUMINA",
@@ -247,7 +252,7 @@ prepareBAM = function(read.directory = NULL,
       } else {
         # Assign read groups all the same
         system(paste0(
-          gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+          gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
           " AddOrReplaceReadGroups -I ", lane.dir, "/revertsam.bam -O ", lane.dir, "/all_reads.bam",
           " -RGSM ", sample.names[i], " -RGPU FLOWCELL1.LANE", j, ".", sample.names[i], " -RGID FLOWCELL1.LANE", j,
           " -RGLB LIB-", sample.names[i], " -RGPL ILLUMINA",

@@ -2,7 +2,7 @@
 devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
 library(PhyloProcessR)
 
-source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-X1_configuration-file.R")
+#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-X1_configuration-file.R")
 source("workflow-X1_configuration-file.R")
 
 setwd(working.directory)
@@ -25,6 +25,7 @@ prepareBAM(
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
+  temp.directory = temp.directory,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
@@ -38,6 +39,7 @@ mapReferenceConsensus(
   samtools.path = samtools.path,
   bwa.path = bwa.path,
   gatk4.path = gatk4.path,
+  temp.directory = temp.directory,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
@@ -50,9 +52,11 @@ haplotypeCaller(
   output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
   reference.type = "consensus",
   gatk4.path = gatk4.path,
+  temp.directory = temp.directory,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
+  temp.directory = temp.directory,
   quiet = quiet
 )
 
@@ -63,10 +67,12 @@ if (base.recalibration == TRUE) {
     haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
     gatk4.path = gatk4.path,
+    temp.directory = temp.directory,
     threads = threads,
     memory = memory,
     clean.up = clean.up,
     overwrite = overwrite,
+    temp.directory = temp.directory,
     quiet = quiet
   )
 
@@ -91,11 +97,13 @@ jointGenotyping(
   custom.INDEL.QD =  custom.INDEL.QD,
   custom.INDEL.QUAL =  custom.INDEL.QUAL,
   custom.INDEL.FS =  custom.INDEL.FS,
-  custom.INDEL.ReadPosRankSum =  custom.INDEL.ReadPosRankSum,  
+  custom.INDEL.ReadPosRankSum =  custom.INDEL.ReadPosRankSum,
   gatk4.path = gatk4.path,
+  temp.directory = temp.directory,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
+  temp.directory = temp.directory,
   quiet = quiet
 )
 

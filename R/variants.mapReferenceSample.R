@@ -42,6 +42,7 @@ mapReferenceSample = function(mapping.directory = NULL,
                               gatk4.path = NULL,
                               threads = 1,
                               memory = 1,
+                              temp.directory = NULL,
                               overwrite = FALSE,
                               quiet = TRUE) {
   # Debugging
@@ -100,6 +101,11 @@ mapReferenceSample = function(mapping.directory = NULL,
   if (file.exists(mapping.directory) == FALSE) {
     stop("BAM folder not found.")
   }
+
+  if (is.null(temp.directory) == TRUE){
+    temp.directory = getwd()
+  }
+
 
   # Creates output directory
   if (dir.exists("logs") == FALSE) {
@@ -185,10 +191,10 @@ mapReferenceSample = function(mapping.directory = NULL,
     ### Part A: prepare for loading and checks
     #################################################
     sample.dir <- paste0(mapping.directory, "/", sample.names[i])
-    
+
     # Gets the reads for the sample
     sample.bams <- bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
-    
+
     # Checks the Sample column in case already renamed
     if (length(sample.bams) == 0) {
       sample.bams <- sample.bams[grep(pattern = sample.names[i], x = sample.bams)]
@@ -206,7 +212,7 @@ mapReferenceSample = function(mapping.directory = NULL,
     }
 
     for (j in seq_along(sample.bams)) {
-      
+
       # Gets lane names
       lane.name <- paste0("Lane_", j)
       lane.dir <- paste0(sample.dir, "/", lane.name)
@@ -218,13 +224,13 @@ mapReferenceSample = function(mapping.directory = NULL,
       tmp.dir <- paste0(lane.dir, "/tmp")
       reference.location = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SamToFastq -I ", lane.dir, "/all_reads.bam -FASTQ /dev/stdout -TMP_DIR ", tmp.dir,
         " -CLIPPING_ATTRIBUTE XT -CLIPPING_ACTION 2 -INTERLEAVE true -NON_PF true",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
         bwa.path, "bwa mem -M -p -t ", threads, " ",
         reference.location, " /dev/stdin | ",
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " MergeBamAlignment -ALIGNED_BAM /dev/stdin -UNMAPPED_BAM ", lane.dir, "/all_reads.bam",
         " -OUTPUT ", lane.dir, "/cleaned_final.bam",
         " -R ", reference.location, " -CREATE_INDEX true -ADD_MATE_CIGAR true",
@@ -248,7 +254,7 @@ mapReferenceSample = function(mapping.directory = NULL,
 
       # Sort by coordinate for input into MarkDuplicates
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SortSam -INPUT ", lane.dir, "/cleaned_final.bam",
         " -OUTPUT ", lane.dir, "/cleaned_final_sort.bam",
         " -CREATE_INDEX true -SORT_ORDER coordinate",
@@ -257,7 +263,7 @@ mapReferenceSample = function(mapping.directory = NULL,
 
       # Marks duplicate reads
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " MarkDuplicates -INPUT ", lane.dir, "/cleaned_final_sort.bam",
         " -OUTPUT ", lane.dir, "/cleaned_final_md.bam",
         " -CREATE_INDEX true -METRICS_FILE ", report.path, "/duplicate_metrics.txt",
@@ -266,10 +272,10 @@ mapReferenceSample = function(mapping.directory = NULL,
 
       # Sorts and stuff
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SortSam -INPUT ", lane.dir, "/cleaned_final_md.bam",
         " -OUTPUT /dev/stdout -SORT_ORDER coordinate | ",
-        gatk4.path, "gatk --java-options \"-Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
         " SetNmAndUqTags -INPUT /dev/stdin -OUTPUT ", lane.dir, "/final-mapped-all.bam",
         " -CREATE_INDEX true -R ", reference.location,
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
@@ -288,5 +294,5 @@ mapReferenceSample = function(mapping.directory = NULL,
 
     print(paste0(sample.names[i], " completed read mapping to reference!"))
   } # end i loop
-  
+
 } # end function
