@@ -68,7 +68,7 @@ fastpComplete = function(input.reads = NULL,
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
 
-  #Read in sample data **** sample is run twice?!
+  #Read in sample data
   reads = list.files(input.reads, recursive = T, full.names = T)
   sample.names = list.dirs(input.reads, recursive = F, full.names = F)
 

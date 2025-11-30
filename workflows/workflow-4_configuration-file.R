@@ -8,7 +8,7 @@
 # The main working directory
 working.directory = "/PATH/TO/PROJECT/DIRECTORY"
 # the contig directory to make alignments from
-contig.directory = "/data-analysis/contigs/5_iupac-contigs"
+contig.directory = "data-analysis/contigs/5_iupac-contigs"
 # The sequence capture target marker file for extraction from contigs, full path
 target.file = "/PATH/TO/marker-seqs.fa"
 # The name for the dataset

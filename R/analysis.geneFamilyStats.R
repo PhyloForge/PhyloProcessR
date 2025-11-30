@@ -151,7 +151,7 @@ geneFamilyStats = function(assembly.directory = NULL,
 
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(contigs))
-    PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
+    PhyloProcessR::writeFasta(sequences = final.loci, names = names(final.loci),
                paste0(species.dir, "/", sample, "_renamed-contigs.fa"), nbchar = 1000000, as.string = T)
 
     #Make blast database for the probe loci
@@ -212,7 +212,7 @@ geneFamilyStats = function(assembly.directory = NULL,
       names(para.contigs) = paste0(sample, "_|_", paralog.loci[j], "-p", seq(1:length(para.contigs)))
       all.paralogs = append(all.paralogs, para.contigs)
       para.count = append(para.count, length(para.contigs))
-    }
+    }# end j loop here
 
     if (is.null(para.count) == TRUE){ para.count = 0 }
 
