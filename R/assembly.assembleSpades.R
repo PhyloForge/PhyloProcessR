@@ -47,7 +47,13 @@
 #'
 #' @param save.corrected.reads logical; if \code{FALSE} (default) the
 #'   \code{corrected/} subdirectory produced by SPAdes is deleted after assembly
-#'   to save disk space. Default: \code{FALSE}.
+#'   to save disk space. Ignored when \code{clean.up.spades = TRUE}. Default:
+#'   \code{FALSE}.
+#'
+#' @param clean.up.spades logical; if \code{TRUE} the entire SPAdes working
+#'   directory for each sample is deleted after scaffolds are copied, keeping
+#'   only the final \code{.fa} file in \code{assembly.directory}. Overrides
+#'   \code{save.corrected.reads}. Default: \code{FALSE}.
 #'
 #' @param quiet logical; if \code{TRUE} SPAdes screen output is suppressed.
 #'   Default: \code{TRUE}.
@@ -68,6 +74,7 @@ assembleSpades = function(input.reads = NULL,
                           memory = 4,
                           overwrite = FALSE,
                           save.corrected.reads = FALSE,
+                          clean.up.spades = FALSE,
                           quiet = TRUE) {
 
   # #debug
@@ -177,7 +184,7 @@ assembleSpades = function(input.reads = NULL,
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.names[i], " does not have any reads present. Sample folder may be empty. ")
+      stop(samples[i], " does not have any reads present. Sample folder may be empty. ")
     } #end if statement
 
     #Run SPADES on sample
@@ -202,10 +209,15 @@ assembleSpades = function(input.reads = NULL,
       lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", lib.reads)]
 
       #Checks for different read lengths
-      if (length(lib.read1) == 1){ read.string = paste0("--s1 ", lib.read1, " ") }
-      if (length(lib.read2) == 1){ read.string = paste0("--pe", j,"-1 ", lib.read1,
-                                                        " --pe", j, "-2 ", lib.read2, " ") }
-      if (length(lib.read3) == 1){ read.string = paste0(read.string, "--pe", j , "-m ", lib.read3, " ") }
+      read.string = ""
+      if (length(lib.read1) == 1 && length(lib.read2) == 0) {
+        read.string = paste0("--s1 ", lib.read1, " ")
+      } else if (length(lib.read1) == 1 && length(lib.read2) == 1) {
+        read.string = paste0("--pe", j, "-1 ", lib.read1, " --pe", j, "-2 ", lib.read2, " ")
+      }
+      if (length(lib.read3) == 1) {
+        read.string = paste0(read.string, "--pe", j, "-m ", lib.read3, " ")
+      }
       final.read.string = paste0(final.read.string, read.string)
     }#end j loop
 
@@ -220,7 +232,7 @@ assembleSpades = function(input.reads = NULL,
     system(paste0(spades.path, "spades.py ", final.read.string,
                   "-o ", save.assem, " -k ", k.val, " ", mismatch.string,
                   "-t ", threads, " -m ", memory),
-           ignore.stdout = quiet)
+           ignore.stdout = quiet, ignore.stderr = quiet)
 
     #Crashes function if spades failed, also copies new assemblies to assembly.directory
     if (file.exists(paste0(save.assem, "/scaffolds.fasta")) == TRUE ){
@@ -228,12 +240,14 @@ assembleSpades = function(input.reads = NULL,
                     "/", samples[i], ".fa"))
     } else { stop(paste0("spades error for ", samples[i], ", check spades.log file in spades-assembly folder.")) }
 
-    if (save.corrected.reads == FALSE) {
-      #copies to contigs folder
-      system(paste0("rm -r ", save.assem, "/corrected"))
-    } # end if
-
-    system(paste0("rm -r ", save.assem, "/tmp"))
+    if (clean.up.spades == TRUE) {
+      system(paste0("rm -rf ", save.assem))
+    } else {
+      if (save.corrected.reads == FALSE) {
+        system(paste0("rm -rf ", save.assem, "/corrected"))
+      }
+      system(paste0("rm -rf ", save.assem, "/tmp"))
+    }
     print(paste0(samples[i], " Completed Spades asssembly!"))
 
   }#end sample loop

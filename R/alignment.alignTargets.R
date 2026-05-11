@@ -100,7 +100,7 @@ alignTargets = function(targets.to.align = NULL,
     if (b.string[length(b.string)] != "/") {
       mafft.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { mafft.path = NULL }
+  } else { mafft.path = "" }
 
   #Initial checks
   if (is.null(targets.to.align) == T){ stop("A fasta file of targets is needed for alignment.") }
@@ -123,7 +123,7 @@ alignTargets = function(targets.to.align = NULL,
     done = list.files(output.directory)
     locus.names = locus.names[!locus.names %in% gsub(".phy$", "", done)]
   }
-  if (length(locus.names) == 0){ quit() }
+  if (length(locus.names) == 0){ return(invisible(NULL)) }
 
   #Figures out start and end of subset
   sub.start = floor(subset.start * length(locus.names))
@@ -137,7 +137,7 @@ alignTargets = function(targets.to.align = NULL,
     match.data = all.data[grep(pattern = paste0(locus.names[i], "_"), x = names(all.data))]
 
     #STEP 1: Throw out loci if there are too few taxa
-    if (length(names(match.data)) <= min.taxa){
+    if (length(names(match.data)) < min.taxa){
       print(paste0(locus.names[i], " had too few taxa"))
       next
     }
@@ -185,7 +185,7 @@ alignTargets = function(targets.to.align = NULL,
     rem.align = alignment[!names(alignment) %in% bad.seqs]
 
     # Moves onto next loop in there are no good sequences
-    if (length(rem.align) <= as.numeric(min.taxa)){
+    if (length(rem.align) < as.numeric(min.taxa)){
       #Deletes old files
       print(paste(locus.names[i], " had too few taxa", sep = ""))
       next }

@@ -34,7 +34,7 @@ mergePairedEndReads = function(input.reads = NULL,
                                fastp.path = NULL,
                                threads = 1,
                                mem = 8,
-                               overwrite = TRUE,
+                               overwrite = FALSE,
                                quiet = TRUE) {
 
   #Debegging

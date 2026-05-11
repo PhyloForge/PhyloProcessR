@@ -55,7 +55,7 @@ plotOccupancy = function(species.tree = NULL,
                          custom.order = NULL,
                          exclude.taxa = NULL,
                          proportion = TRUE,
-                         overwrite = TRUE) {
+                         overwrite = FALSE) {
 
 
   #Debug

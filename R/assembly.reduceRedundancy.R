@@ -88,21 +88,26 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   file.names = list.files(assembly.directory)
   
-  if (similarity >= 0.7) {
+  if (similarity >= 0.9) {
+    n.val = 8
+  } else if (similarity >= 0.88) {
+    n.val = 7
+  } else if (similarity >= 0.85) {
+    n.val = 6
+  } else if (similarity >= 0.80) {
     n.val = 5
-  }
-
-  if (similarity < 0.7 && similarity >= 0.6) {
-    n.val <- 4
-  }
-
-  if (similarity < 0.6) {
-    stop("similarity too small for cd-hit est. Must be greater than 0.6")
+  } else if (similarity >= 0.75) {
+    n.val = 4
+  } else if (similarity >= 0.6) {
+    n.val = 3
+  } else {
+    stop("similarity too small for cd-hit-est. Must be >= 0.6.")
   }
   
   # Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads)
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl))
   mem.cl <- floor(memory / threads)
   
   #Loop for cd-hit est reductions
@@ -111,7 +116,7 @@ reduceRedundancy = function(assembly.directory = NULL,
     system(paste0(
       cdhit.path, "cd-hit-est -i ", assembly.directory, "/", file.names[i],
       " -o ", output.directory, "/", file.names[i], " -p 0 -T 1",
-      " -n ", n.val, " -c ", similarity, " -M ", mem.cl * 100
+      " -n ", n.val, " -c ", similarity, " -M ", mem.cl * 1000
     ))
 
     ### Read in data
@@ -131,7 +136,7 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   }#end iterations if
 
-snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   ##########################
 }#end function

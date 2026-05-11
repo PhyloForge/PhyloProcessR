@@ -49,7 +49,7 @@ haplotypeCaller = function(mapping.directory = NULL,
                           ploidy = 2,
                           threads = 1,
                           memory = 1,
-                          overwrite = TRUE,
+                          overwrite = FALSE,
                           quiet = TRUE) {
 
   #Debugging
@@ -129,8 +129,9 @@ haplotypeCaller = function(mapping.directory = NULL,
   ##### Start up loop for each sample
   ############################################################################################
   #Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
@@ -145,8 +146,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
     #Gets the reads for the sample
     sample.bams = bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
-    #Checks the Sample column in case already renamed
-    if (length(sample.bams) == 0){ sample.bams = sample.bams[grep(pattern = sample.names[i], x = sample.bams)] }
+    if (length(sample.bams) == 0){ sample.bams = bam.files[grep(pattern = sample.names[i], x = bam.files)] }
 
     #Returns an error if reads are not found
     if (length(sample.bams) == 0 ){
@@ -174,7 +174,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Next combine .bam files together!
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
         " MergeSamFiles",
         " ", input.string, " -O ", merge.dir, "/final-mapped-merge.bam",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
@@ -182,7 +182,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Sort by coordinate for input into MarkDuplicates
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
         " SortSam",
         " -INPUT ", merge.dir, "/final-mapped-merge.bam",
         " -OUTPUT ", merge.dir, "/final-mapped-sort.bam",
@@ -192,7 +192,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Marks duplicate reads
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
         " MarkDuplicates",
         " -INPUT ", merge.dir, "/final-mapped-sort.bam",
         " -OUTPUT ", merge.dir, "/final-mapped-dup.bam",
@@ -202,12 +202,12 @@ haplotypeCaller = function(mapping.directory = NULL,
 
       # Sorts and stuff
       system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
         " SortSam",
         " -INPUT ", merge.dir, "/final-mapped-dup.bam",
         " -OUTPUT /dev/stdout -SORT_ORDER coordinate",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
         " SetNmAndUqTags",
         " -INPUT /dev/stdin -OUTPUT ", merge.dir, "/final-mapped-all.bam",
         " -CREATE_INDEX true -R ", reference.path,
@@ -227,7 +227,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
     #Starts to finally look for Haplotypes! *here
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " HaplotypeCaller",
       " -R ", reference.path, " -O ", sample.dir, "/gatk4-haplotype-caller.g.vcf.gz",
       " -I ", input.bam,
@@ -240,7 +240,7 @@ haplotypeCaller = function(mapping.directory = NULL,
 
   }# end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
 
 }#end function

@@ -51,7 +51,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
                         threads = 1,
                         memory = 1,
                         gatk4.path = NULL,
-                        overwrite = TRUE,
+                        overwrite = FALSE,
                         quiet = TRUE) {
 
   #Debugging
@@ -126,7 +126,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
 
   # Resumes file download
   if (overwrite == FALSE) {
-    done.files <- list.files(output.directory, full.names = TRUE, recursive = TRUE)
+    done.files <- list.files(output.directory, full.names = FALSE)
     done.names <- gsub(".fa$", "", done.files)
     sample.names <- sample.names[!sample.names %in% done.names]
   }
@@ -141,8 +141,9 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   ############################################################################################
 
   #Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
@@ -191,7 +192,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
 
   }#end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
 }#end function
 

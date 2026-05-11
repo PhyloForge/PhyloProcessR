@@ -31,9 +31,9 @@ quiet = FALSE
 spades.kmer.values = c(33, 55, 77, 99, 127)
 #Whether to use mismatch corrector (requires a lot of RAM and resources, recommended if possible)
 spades.mismatch.corrector = TRUE
-#Whether to save the corrected reads
+#Whether to save the error-corrected reads produced by SPAdes (ignored if clean.up.spades = TRUE)
 save.corrected.reads = FALSE
-#Clean up large files 
+#TRUE to delete the entire SPAdes working directory for each sample after assembly, keeping only the final .fa file
 clean.up.spades = FALSE
 # the similarity threshold for redundancy reduction
 similarity = 0.95

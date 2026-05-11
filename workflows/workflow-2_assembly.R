@@ -28,6 +28,7 @@ assembleSpades(
   memory = memory,
   overwrite = overwrite,
   save.corrected.reads = save.corrected.reads,
+  clean.up.spades = clean.up.spades,
   quiet = quiet,
   spades.path = spades.path
 )

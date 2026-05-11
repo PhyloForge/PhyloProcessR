@@ -109,7 +109,7 @@ alignDirectory = function(marker.directory = NULL,
     done = list.files(output.directory)
     locus.names = locus.names[!locus.names %in% gsub(".phy$", "", done)]
   }
-  if (length(locus.names) == 0){ quit() }
+  if (length(locus.names) == 0){ return(invisible(NULL)) }
 
   #Figures out start and end of subset
   sub.start = floor(subset.start * length(locus.names))

@@ -31,9 +31,6 @@
 #' @param min.match.coverage minimum proportion of the target sequence length that must be
 #' covered by the BLAST hit (expressed as a percentage). Default 50.
 #'
-#' @param trim.target logical. If TRUE, contigs are trimmed to match the coordinates of the
-#' target sequence. Default FALSE.
-#'
 #' @param retain.paralogs logical. If TRUE, potential paralogs (multiple contigs matching
 #' the same target) are retained by keeping the highest-bitscore hit. If FALSE, the
 #' best-scoring contig is selected. Default FALSE.
@@ -66,7 +63,6 @@ annotateTargets = function(assembly.directory = NULL,
                             min.match.percent = 60,
                             min.match.length = 60,
                             min.match.coverage = 50,
-                            trim.target = FALSE,
                             retain.paralogs = FALSE,
                             threads = 1,
                             memory = 1,
@@ -149,8 +145,9 @@ annotateTargets = function(assembly.directory = NULL,
             "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
  # Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loop for cd-hit est reductions
@@ -182,7 +179,7 @@ annotateTargets = function(assembly.directory = NULL,
     system(paste0(
       cdhit.path, "cd-hit-est -i ", assembly.directory, "/", file.names[i],
       " -o ", species.dir, "/", sample, "_red.fa -p 0 -T 1",
-      " -n 5 -c 0.9 -M ", mem.cl * 100
+      " -n 8 -c 0.9 -M ", mem.cl * 1000
     ))
 
     ### Read in data
@@ -335,17 +332,17 @@ annotateTargets = function(assembly.directory = NULL,
           sub.match$tEnd = sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
           sub.contigs = contigs[names(contigs) %in% sub.match$qName]
 
-          join.contigs<-DNAStringSet()
+          join.contigs<-Biostrings::DNAStringSet()
           for (k in 1:(nrow(sub.match)-1)){
             join.contigs<-append(join.contigs, sub.contigs[k])
             n.pad<-sub.match$tStart[k+1]-sub.match$tEnd[k]
-            join.contigs<-append(join.contigs, DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
+            join.contigs<-append(join.contigs, Biostrings::DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
           }
           join.contigs<-append(join.contigs, sub.contigs[length(sub.contigs)])
-          save.contig<-DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
+          save.contig<-Biostrings::DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
 
           #Saves final sequence
-          names(save.contig)<-paste(loci.names[j], "_|_", sample, sep = "")
+          names(save.contig)<-paste(contig.names[j], "_|_", sample, sep = "")
           fix.seq<-append(fix.seq, save.contig)
 
 
@@ -558,7 +555,7 @@ annotateTargets = function(assembly.directory = NULL,
 
   }# end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   ########################################################################
   # Output a single file for alignment

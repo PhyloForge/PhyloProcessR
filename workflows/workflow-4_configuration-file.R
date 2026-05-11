@@ -32,7 +32,7 @@ annotate.targets = TRUE
 #whether to run heterozygote flter
 heterozygote.filter = TRUE
 #Filtering threshold to filter out potential paralogs
-heterozyote.filter.threshold = 0.05
+heterozygote.filter.threshold = 0.05
 #The minimum match percentage for a contig match to a target
 min.match.percent = 60
 #The minimum match length in basepairs for a contig match to a target

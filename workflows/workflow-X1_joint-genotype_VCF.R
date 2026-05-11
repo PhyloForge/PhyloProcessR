@@ -56,7 +56,6 @@ haplotypeCaller(
   threads = threads,
   memory = memory,
   overwrite = overwrite,
-  temp.directory = temp.directory,
   quiet = quiet
 )
 
@@ -72,7 +71,6 @@ if (base.recalibration == TRUE) {
     memory = memory,
     clean.up = clean.up,
     overwrite = overwrite,
-    temp.directory = temp.directory,
     quiet = quiet
   )
 
@@ -103,7 +101,6 @@ jointGenotyping(
   threads = threads,
   memory = memory,
   overwrite = overwrite,
-  temp.directory = temp.directory,
   quiet = quiet
 )
 

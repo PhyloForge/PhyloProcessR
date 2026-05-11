@@ -38,15 +38,14 @@ if (organize.reads == TRUE) {
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.directory }
 
-# if (summary.fastq == TRUE){
-#   #This function creates a summary of the fastq files per sample for number of reads
-#   fastqStats(read.directory = input.reads,
-#              output.name = "fastq-stats",
-#              read.length = 150,
-#              threads = threads,
-#              mem = memory,
-#              overwrite = overwrite)
-# }#end summary.fastq if
+if (summary.fastq == TRUE){
+  fastqStats(read.directory = input.reads,
+             output.name = "fastq-stats",
+             read.length = 150,
+             threads = threads,
+             mem = memory,
+             overwrite = overwrite)
+}#end summary.fastq if
 
 #The complete processing through fastp at once. +++ for speed.
 if (fastp.complete == TRUE) {
@@ -129,19 +128,6 @@ if (decontamination == TRUE){
                       overwrite.reference = overwrite,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/decontaminated-reads")
-}
-
-# Normalizes reads
-if (normalize.reads == TRUE) {
-  #Normalizes reads using ORNA
-  normalizeReads(input.reads = input.reads,
-                 output.directory = paste0(processed.reads, "/normalized-reads"),
-                 orna.path = orna.path,
-                 threads = threads,
-                 memory = memory,
-                 overwrite = overwrite,
-                 quiet = quiet)
-  input.reads = paste0(processed.reads, "/normalized-reads")
 }
 
 #merge paired-end reads

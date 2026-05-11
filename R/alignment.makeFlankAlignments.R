@@ -100,6 +100,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
@@ -180,10 +181,10 @@ makeFlankAlignments = function(alignment.directory = NULL,
       #Aligns and then reverses back to correction orientation
       reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
       if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     } else {
       #Regular fixes
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     }#end if
 
     # ##############

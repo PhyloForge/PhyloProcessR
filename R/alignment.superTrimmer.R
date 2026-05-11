@@ -149,7 +149,7 @@ superTrimmer = function(alignment.dir = NULL,
   if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
 
   #Data to collect
-  header.data = c("Alignment", "Pass", "startSamples", "tapirSamples", "trimalSamples",
+  header.data = c("Alignment", "Pass", "startSamples", "trimalSamples",
                   "edgeSamples", "columnSamples", "covSamples",
                   "startLength", "trimalLength",
                   "edgeLength", "columnLength", "covLength",
@@ -168,6 +168,7 @@ superTrimmer = function(alignment.dir = NULL,
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
@@ -290,6 +291,11 @@ superTrimmer = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("covBasepairs", header.data), value = gap.count[2] - gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("covGaps", header.data), value = gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("covPerGaps", header.data), value = gap.count[3])
+
+      # Remove gap-only columns created by sample removal
+      if (length(non.align) != 0) {
+        non.align = trimAlignmentColumns(alignment = non.align, min.gap.percent = 100)
+      }
     }#end trim.external
 
     if (length(non.align) < min.taxa.alignment) {
@@ -298,7 +304,7 @@ superTrimmer = function(alignment.dir = NULL,
       return(NULL)
     }
 
-    if (unique(Biostrings::width(non.align)) < min.alignment.length) {
+    if (length(non.align) == 0 || unique(Biostrings::width(non.align)) < min.alignment.length) {
       print("alignment below minimum length, skipping")
       #next
       return(NULL)
@@ -322,14 +328,14 @@ superTrimmer = function(alignment.dir = NULL,
           write.temp = strsplit(as.character(non.align), "")
           aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
           #readies for saving
-          writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+          PhyloProcessR::writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
         }#end else test result
       } else {
         #If no alignment assessing is done, saves
         write.temp = strsplit(as.character(non.align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
         #readies for saving
-        writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+        PhyloProcessR::writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
       }#end else
     }#outer if
 
@@ -387,29 +393,17 @@ superTrimmer = function(alignment.dir = NULL,
   writeLines(paste0("Mean gap percentage: ",
                     mean(out.data$startPerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
-  writeLines(paste0("hmmCleaner:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$startSamples - out.data$hmmSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$startLength - out.data$hmmLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$startBasepairs - out.data$hmmBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$startGaps - out.data$hmmGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$startPerGaps - out.data$hmmPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
   writeLines(paste0("Trimal:"), fileConn)
   writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$hmmSamples - out.data$trimalSamples)), fileConn)
+                    mean(out.data$startSamples - out.data$trimalSamples)), fileConn)
   writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$hmmLength - out.data$trimalLength)), fileConn)
+                    mean(out.data$startLength - out.data$trimalLength)), fileConn)
   writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$hmmBasepairs - out.data$trimalBasepairs)), fileConn)
+                    mean(out.data$startBasepairs - out.data$trimalBasepairs)), fileConn)
   writeLines(paste0("Mean gap change: ",
-                    mean(out.data$hmmGaps - out.data$trimalGaps)), fileConn)
+                    mean(out.data$startGaps - out.data$trimalGaps)), fileConn)
   writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$hmmPerGaps - out.data$trimalPerGaps)), fileConn)
+                    mean(out.data$startPerGaps - out.data$trimalPerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("External Trimming:"), fileConn)
   writeLines(paste0("Mean samples removed: ",

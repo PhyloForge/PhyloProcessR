@@ -91,7 +91,7 @@ concatenateGenes = function(alignment.folder = NULL,
     if (file.exists(paste0(output.folder)) == TRUE){ system(paste0("rm -r ", output.folder)) }
     dir.create(output.folder)
   } else {
-    dir.create(output.folder)
+    if (!dir.exists(output.folder)) { dir.create(output.folder) }
   }#end overwrite if
 
   #Gets list of alignments
@@ -110,6 +110,7 @@ concatenateGenes = function(alignment.folder = NULL,
   # #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   foreach::foreach(i=1:length(gene.names), .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {

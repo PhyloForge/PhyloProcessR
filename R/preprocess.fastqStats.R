@@ -57,8 +57,8 @@ fastqStats = function(read.directory = NULL,
     }
   }#end else
 
-  #Read in sample data **** sample is run twice?!
   reads = list.files(read.directory, recursive = T, full.names = T)
+  reads = reads[grep("\\.fastq\\.gz$|\\.fq\\.gz$|\\.fastq$|\\.fq$", reads)]
   if (is.null(sub.directory) != TRUE) {
     reads = reads[grep(paste0(sub.directory, "/"), reads)]
     sample.names = gsub(paste0("/", sub.directory, "/.*"), "", reads)
@@ -117,7 +117,7 @@ fastqStats = function(read.directory = NULL,
       } else { read3.count = 0 }
 
       scale.factor = (read1.count + read2.count + read3.count) / 1000000
-      if (read1.count == read2.count){ read.pairs = read1.count } else { read.pairs = "PairsUnequal"}
+      if (read1.count == read2.count){ read.pairs = read1.count } else { read.pairs = NA_real_ }
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Read1_Count = read1.count,
@@ -126,7 +126,7 @@ fastqStats = function(read.directory = NULL,
                                Total_Reads = read1.count + read2.count,
                                Read_Pairs = read.pairs,
                                Read_Length = read.length,
-                               MegaBasePairs = (read.length * read.pairs * 2)/1000000,
+                               MegaBasePairs = (read.length * read.pairs * 2) / 1000000,
                                Reads_Per_Million = scale.factor)
 
       summary.data = rbind(summary.data, temp.remove)

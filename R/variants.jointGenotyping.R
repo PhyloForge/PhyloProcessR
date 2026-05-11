@@ -75,7 +75,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
                           temp.directory = NULL,
                           threads = 1,
                           memory = 1,
-                          overwrite = TRUE,
+                          overwrite = FALSE,
                           quiet = TRUE) {
 
  #Debugging
@@ -195,10 +195,6 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     return("no samples available to analyze.")
   }
 
-  if (length(sample.names) == 0) {
-    return("no samples available to analyze.")
-  }
-
   if (use.base.recalibration == TRUE) {
     sample.names = sample.names[grep("gatk4-bqsr-haplotype-caller.g.vcf.gz$", sample.names)]
     if (length(sample.names) == 0) {
@@ -218,8 +214,9 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
   vcf.files = paste0(sample.datasets, collapse = " ")
 
   # Sets up multiprocessing
-  cl = snow::makeCluster(threads)
+  cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory / threads)
 
   # Loops through each locus and does operations on them
@@ -229,7 +226,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Genotype haplotype caller results
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " GenomicsDBImport ", vcf.files,
       " --genomicsdb-workspace-path ", output.directory, "/", loci.names[i],
       " --intervals ", loci.names[i]
@@ -237,7 +234,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Genotype haplotype caller results
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " GenotypeGVCFs -R ", reference.path,
       " -V gendb://", output.directory, "/", loci.names[i],
       " --use-new-qual-calculator true",
@@ -246,7 +243,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Selects only the SNPs from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/unfiltered-all/", loci.names[i], ".vcf",
       " -O ", output.directory, "/unfiltered-snps/", loci.names[i], ".vcf",
@@ -255,7 +252,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Selects only the indels from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/unfiltered-all/", loci.names[i], ".vcf",
       " -O ", output.directory, "/unfiltered-indels/", loci.names[i], ".vcf",
@@ -270,7 +267,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     #########################
     # Applies filters to SNPs
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", output.directory, "/unfiltered-snps/", loci.names[i], ".vcf",
       " -O ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
@@ -285,7 +282,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Applies filters to indels
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", output.directory, "/unfiltered-indels/", loci.names[i], ".vcf",
       " -O ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
@@ -301,7 +298,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
     # Combine them into a single VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SortVcf",
       " -I ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
       " -I ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
@@ -309,7 +306,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/unfiltered-all/", loci.names[i], "_filter.vcf",
       " -O ", output.directory, "/filtered-all/", loci.names[i], ".vcf",
@@ -317,7 +314,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
       " -O ", output.directory, "/filtered-snps/", loci.names[i], ".vcf",
@@ -325,7 +322,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
       " -O ", output.directory, "/filtered-indels/", loci.names[i], ".vcf",
@@ -337,7 +334,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
 
   }#end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   #Datasets to save
   #Save SNPs

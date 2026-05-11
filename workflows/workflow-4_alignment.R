@@ -20,7 +20,7 @@ if (heterozygote.filter == TRUE){
     iupac.directory = contig.directory,
     output.directory = "data-analysis/contigs/7_filtered-contigs",
     removed.directory = "data-analysis/contigs/6_removed-contigs",
-    threshold = heterozyote.filter.threshold,
+    threshold = heterozygote.filter.threshold,
     threads = threads,
     memory = memory,
     overwrite = overwrite
@@ -43,7 +43,6 @@ if (annotate.targets == TRUE) {
     retain.paralogs = retain.paralogs,
     threads = threads,
     memory = memory,
-    trim.target = trim.to.targets,
     overwrite = overwrite,
     quiet = quiet,
     blast.path = blast.path,

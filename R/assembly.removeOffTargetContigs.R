@@ -90,7 +90,15 @@ removeOffTargetContigs = function(assembly.directory = NULL,
   }
 
   file.names = list.files(assembly.directory)
- 
+
+  # Build BLAST database once from target markers (shared across all samples)
+  blast.db.dir = file.path(output.directory, "blast_db")
+  dir.create(blast.db.dir, showWarnings = FALSE)
+  system(paste0(
+    blast.path, "makeblastdb -in ", target.markers,
+    " -parse_seqids -dbtype nucl -out ", blast.db.dir, "/nucl-blast_db"
+  ), ignore.stdout = quiet)
+
   #############################
   ## Target matching loop start
   #############################
@@ -109,15 +117,9 @@ removeOffTargetContigs = function(assembly.directory = NULL,
       dir.create(species.dir)
     }
 
-    # Make blast database for the probe loci
-    system(paste0(
-      blast.path, "makeblastdb -in ", target.markers,
-      " -parse_seqids -dbtype nucl -out ", species.dir, "/nucl-blast_db"
-    ), ignore.stdout = quiet)
-
     # Matches samples to loci
     system(paste0(
-      blast.path, "blastn -task dc-megablast -db ", species.dir, "/nucl-blast_db -evalue 0.001",
+      blast.path, "blastn -task dc-megablast -db ", blast.db.dir, "/nucl-blast_db -evalue 0.001",
       " -query ", assembly.directory, "/", file.names[i], " -out ", species.dir, "/target-blast-match.txt",
       " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
       " -num_threads ", threads
@@ -131,8 +133,8 @@ removeOffTargetContigs = function(assembly.directory = NULL,
 
     # Matches need to be greater than 12
     filt.data = match.data[match.data$matches > 60, ]
-    # Percent identitiy must match 50% or greater
-    filt.data = filt.data[filt.data$pident >= 0.6, ]
+    # Percent identity must be >= 60%
+    filt.data = filt.data[filt.data$pident >= 60, ]
 
     # Make sure the hit is greater than 50% of the target.markers length
     filt.data = filt.data[filt.data$matches >= ((30 / 100) * filt.data$tLen), ]
@@ -186,5 +188,6 @@ removeOffTargetContigs = function(assembly.directory = NULL,
     system(paste0("rm -r ", species.dir))
   } # end iterations if
 
-  ##########################
+  system(paste0("rm -rf ", blast.db.dir))
+
 }#end function

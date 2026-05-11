@@ -164,9 +164,12 @@ mapReferenceSample = function(mapping.directory = NULL,
   dir.create(mapping.directory)
 
   for (i in seq_along(sample.files)) {
-    # Creates output directory for the sample
     sample.name <- gsub(".fa$|.fasta$", "", sample.files[i])
-    dir.create(paste0(mapping.directory, "/", sample.name))
+    # Skip samples already completed in resume mode
+    if (!sample.name %in% sample.names) next
+    # Skip if index already exists
+    if (dir.exists(paste0(mapping.directory, "/", sample.name, "/index"))) next
+    dir.create(paste0(mapping.directory, "/", sample.name), showWarnings = FALSE)
     dir.create(paste0(mapping.directory, "/", sample.name, "/index"))
 
     system(paste0(
@@ -206,12 +209,10 @@ mapReferenceSample = function(mapping.directory = NULL,
     # Gets the reads for the sample
     sample.bams <- bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
 
-    # Checks the Sample column in case already renamed
     if (length(sample.bams) == 0) {
-      sample.bams <- sample.bams[grep(pattern = sample.names[i], x = sample.bams)]
+      sample.bams <- bam.files[grep(pattern = sample.names[i], x = bam.files)]
     }
 
-    # Returns an error if reads are not found
     if (length(sample.bams) == 0) {
       stop(sample.names[i], " does not have any reads present for files ")
     } # end if statement
@@ -228,11 +229,8 @@ mapReferenceSample = function(mapping.directory = NULL,
       lane.name <- paste0("Lane_", j)
       lane.dir <- paste0(sample.dir, "/", lane.name)
 
-      # Run BWA Mem
-      system("set -o pipefail")
-
-      # Piped verison
       tmp.dir <- paste0(lane.dir, "/tmp")
+      dir.create(tmp.dir, showWarnings = FALSE)
       reference.location = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
       system(paste0(
         gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
@@ -251,7 +249,7 @@ mapReferenceSample = function(mapping.directory = NULL,
         " -TMP_DIR ", tmp.dir
       ))
 
-      system(paste0("rm -r ", tmp.dir))
+      system(paste0("rm -rf ", tmp.dir))
       #system(paste0(samtools.path, "samtools view -H ", lane.dir, "/cleaned_final.bam | grep '@RG'"))
 
       ############################################################################################

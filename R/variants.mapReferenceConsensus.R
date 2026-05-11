@@ -144,18 +144,20 @@ mapReferenceConsensus = function(mapping.directory = NULL,
   ############################################################################################
 
   ref.path <- paste0("index")
-  if (dir.exists(ref.path) == T) {
-    system(paste0("rm -r ", ref.path))
+  if (overwrite == TRUE) {
+    if (dir.exists(ref.path) == TRUE) { system(paste0("rm -r ", ref.path)) }
+    dir.create(ref.path)
+  } else {
+    if (!dir.exists(ref.path)) { dir.create(ref.path) }
   }
-  dir.create(ref.path)
 
   #Gathers alignment locus names
   locus.names = list.files(alignment.directory, full.names = TRUE)
 
   # Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
-  mem.cl <- floor(memory / threads)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
 
   # Loops through each locus and does operations on them
   out.data = foreach::foreach(i=1:length(locus.names), .combine = append, .packages = c("PhyloProcessR", "foreach", "Biostrings", "stringr")) %dopar% {
@@ -163,7 +165,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
     red.align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = locus.names[i], format = "phylip"))
 
     if (length(red.align) == 0) {
-      next
+      return(NULL)
     }
 
     # Get and save consensus sequence
@@ -176,7 +178,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
 
   } # end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
   # Saves final set
   writeFasta(
@@ -217,7 +219,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
 
     # Checks the Sample column in case already renamed
     if (length(sample.bams) == 0) {
-      sample.bams <- sample.bams[grep(pattern = sample.names[i], x = sample.bams)]
+      sample.bams <- bam.files[grep(pattern = sample.names[i], x = bam.files)]
     }
 
     # Returns an error if reads are not found
@@ -237,11 +239,9 @@ mapReferenceConsensus = function(mapping.directory = NULL,
       lane.name <- paste0("Lane_", j)
       lane.dir <- paste0(sample.dir, "/", lane.name)
 
-      # Run BWA Mem
-      system("set -o pipefail")
-
-      # Piped verison
+      # Piped version
       tmp.dir <- paste0(lane.dir, "/tmp")
+      dir.create(tmp.dir, showWarnings = FALSE)
 
       system(paste0(
         gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",

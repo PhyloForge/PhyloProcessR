@@ -120,27 +120,13 @@ removeContamination = function(input.reads = "cleaned-reads",
   if (dir.exists("ref-index") == TRUE && overwrite.reference == TRUE){ system(paste0("rm -rf ref-index")) }
 
   if (dir.exists("ref-index") == FALSE){
-    #Create combined reference
-    reference.list = list.files(decontamination.path)
-    combined.ref = Biostrings::DNAStringSet()
-    for (j in 1:length(reference.list)){
-      ref.seq = Biostrings::readDNAStringSet(paste0(decontamination.path, "/", reference.list[j]))   # loads up fasta file
-      ref.seq = ref.seq[Biostrings::width(ref.seq) >= 100]
-      names(ref.seq) = paste0(gsub(".fa$", "", reference.list[j]), "_seq-", rep(1:length(ref.seq)))
-      combined.ref = append(combined.ref, ref.seq)
-    }#end j loop
-    #Save reference
     dir.create("ref-index")
-    ref.save = as.list(as.character(combined.ref))
-    writeFasta(sequences = ref.save,
-               names = names(ref.save),
-               file.out = "ref-index/reference.fa")
+    reference.list = list.files(decontamination.path, full.names = TRUE)
+    system(paste0("cat ", paste(shQuote(reference.list), collapse = " "),
+                  " | zcat -f > ref-index/reference.fa"))
+    system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"),
+           ignore.stderr = quiet, ignore.stdout = quiet)
   }#end dir exists false
-
-  #To do: check if already exists
-  #Indexes the reference
-  system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"),
-         ignore.stderr = quiet, ignore.stdout = quiet)
 
   #Creates the summary log
   summary.data =  data.frame(Sample = as.character(),
@@ -196,7 +182,7 @@ removeContamination = function(input.reads = "cleaned-reads",
       outreads[2] = paste0(out.path, "/", lane.name, "_READ2.fastq.gz")
 
       #BWA mapping
-      system(paste0(bwa.path, "bwa mem -M -E -0 -k 100 -w 4 -L 100",
+      system(paste0(bwa.path, "bwa mem -M",
                     " -t ", threads, " ref-index/reference ",
                     lane.reads[1], " ", lane.reads[2], " | ", samtools.path ,"samtools sort -@ ", threads,
                     " -o ", out.path, "/decontam-all.bam"),  ignore.stderr = quiet, ignore.stdout = quiet)

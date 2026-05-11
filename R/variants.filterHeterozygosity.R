@@ -89,8 +89,9 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
 
   # Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   # Loops through each locus and does operations on them
@@ -110,10 +111,11 @@ filterHeterozygosity = function(iupac.directory = NULL,
       collect.prop = append(collect.prop, temp.prop)
     }
 
-    too.high = collect.prop[collect.prop >= threshold]
+    names(collect.prop) = names(contigs)
+    too.high = names(collect.prop[collect.prop >= threshold])
 
-    high.contigs = contigs[names(contigs) %in% names(too.high)]
-    low.contigs = contigs[!names(contigs) %in% names(too.high)]
+    high.contigs = contigs[names(contigs) %in% too.high]
+    low.contigs = contigs[!names(contigs) %in% too.high]
 
     # Saves below threshold contigs
     final.loci = as.list(as.character(low.contigs))
@@ -130,7 +132,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
     )
   } # end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
 } # end function
 

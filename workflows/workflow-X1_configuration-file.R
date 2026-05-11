@@ -1,5 +1,5 @@
 #################################################
-## Configuration file for PhyloProcessR Workflow 3 - Variant Calling
+## Configuration file for PhyloProcessR Workflow X1 - Joint Genotyping
 #################################################
 
 # Directories and input files

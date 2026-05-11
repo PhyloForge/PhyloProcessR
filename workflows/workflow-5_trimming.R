@@ -22,7 +22,7 @@ if (trim.to.targets == TRUE) {
     output.directory = "data-analysis/alignments/untrimmed_no-flanks",
     output.format = "phylip",
     min.alignment.length = min.alignment.length,
-    min.taxa.alignment = 4,
+    min.taxa.alignment = min.taxa.alignment,
     threads = threads,
     memory = memory,
     overwrite = overwrite,
@@ -53,19 +53,18 @@ if (trim.to.targets == TRUE) {
   )
 
   if (trim.alignments == TRUE) {
-    # Fix the installs for this
     superTrimmer(
       alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked",
       alignment.format = "phylip",
       output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked",
       output.format = "phylip",
       overwrite = overwrite,
-      TrimAl = FALSE,
+      TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,
-      trim.column = FALSE,
+      trim.column = trim.column,
       convert.ambiguous.sites = convert.ambiguous.sites,
       alignment.assess = FALSE,
-      trim.external = FALSE,
+      trim.external = trim.external,
       trim.coverage = trim.coverage,
       min.coverage.percent = min.coverage.percent,
       min.external.percent = min.external.percent,

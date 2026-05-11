@@ -121,6 +121,7 @@ summary.sampleGeneticDistance = function(alignment.directory = NULL,
   #Sets up multiprocessing
   cl = parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them

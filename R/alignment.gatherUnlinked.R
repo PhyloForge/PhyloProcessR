@@ -68,7 +68,7 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
   #Checks output overwrite
   if (overwrite == TRUE){
     if (file.exists(paste0(output.directory)) == TRUE) {
-      system(paste0("rm -r ", output.folder))
+      system(paste0("rm -r ", output.directory))
     }
     dir.create(output.directory)
   } else {

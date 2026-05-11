@@ -35,7 +35,7 @@ organize.reads = TRUE
 read.directory = "/Path/to/where/the/raw/reads/are"
 #The name for the processed reads folder
 processed.reads = "processed-reads"
-# TRUE to save a summary csv file of the raw sequence data (currently not working)
+# TRUE to save a summary csv file of the raw sequence data
 summary.fastq = FALSE
 
 # For downloading reads from dropbox
@@ -63,8 +63,6 @@ error.correction = TRUE
 
 #Other read processing tasks
 ############################
-#normalizes read depth to facilitate assembly
-normalize.reads = TRUE
 #Merge paired end reads, helps with assembly
 merge.pe.reads = TRUE
 # Trims low quality ends off of reads (not recommended, hurts assembly)
@@ -94,5 +92,4 @@ fastp.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
 spades.path = conda.env
-orna.path = conda.env
 blast.path = conda.env

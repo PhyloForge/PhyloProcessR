@@ -78,7 +78,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
                             temp.directory = NULL,
                             threads = 1,
                             memory = 1,
-                            overwrite = TRUE,
+                            overwrite = FALSE,
                             quiet = TRUE) {
 
  #Debugging
@@ -176,9 +176,6 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
     return("no samples available to analyze.")
   }
 
-  if (length(sample.names) == 0){ return("no samples available to analyze.") }
-
-
   SNP.QD.string <- paste0(" -filter \"QD<", format(custom.SNP.QD, nsmall = 1), "\" --filter-name \"QD\"")
   SNP.QUAL.string <- paste0(" -filter \"QUAL<", format(custom.SNP.QUAL, nsmall = 1), "\" --filter-name \"QUAL\"")
   SNP.SOR.string <- paste0(" -filter \"SOR>", format(custom.SNP.SOR, nsmall = 1), "\" --filter-name \"SOR\"")
@@ -198,8 +195,9 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   ############################################################################################
 
   # Sets up multiprocessing
-  cl <- snow::makeCluster(threads)
+  cl <- parallel::makeCluster(threads, outfile = "")
   doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
@@ -227,7 +225,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     # Genotype haplotype caller results
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " GenotypeGVCFs -R ", reference.path,
       " -V ", haplocaller.file,
       " --use-new-qual-calculator true -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf"
@@ -235,7 +233,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     # Selects only the SNPs from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
@@ -244,7 +242,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     #Selects only the indels from the VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-genotypes.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
@@ -259,7 +257,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
     #########################
     # Applies filters to SNPs
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-snps.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
@@ -274,7 +272,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     # Applies filters to indels
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " VariantFiltration -R ", reference.path,
       " -V ", output.directory, "/", sample.names[i], "/gatk4-unfiltered-indels.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
@@ -290,7 +288,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     # Combine them into a single VCF
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SortVcf",
       " -I ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
       " -I ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
@@ -298,7 +296,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-genotypes.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-final-genotypes.vcf",
@@ -306,7 +304,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-snps.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-final-snps.vcf",
@@ -314,7 +312,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
     ))
 
     system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
+      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
       " SelectVariants",
       " -V ", output.directory, "/", sample.names[i], "/gatk4-filtered-indels.vcf",
       " -O ", output.directory, "/", sample.names[i], "/gatk4-final-indels.vcf",
@@ -325,7 +323,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
   }#end i loop
 
-  snow::stopCluster(cl)
+  parallel::stopCluster(cl)
 
 }#end function
 
