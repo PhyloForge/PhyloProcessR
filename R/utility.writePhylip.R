@@ -1,24 +1,28 @@
 #' @title writePhylip
 #'
-#' @description Function for writing alignments in R to phylip format
+#' @description Writes a multiple sequence alignment to phylip format. The
+#'   alignment is expected to be a matrix-like object with row names used as
+#'   taxon labels. Supports both sequential and interleaved output, and optionally
+#'   truncates taxon names to 10 characters in strict phylip mode.
 #'
-#' @param alignment summary data file from filterSummary
+#' @param alignment a matrix or matrix-convertible object (e.g. a DNAbin or
+#'   character matrix) where rows are taxa and columns are alignment positions.
+#'   Row names are used as taxon labels.
 #'
-#' @param file summary data file from alignmentSummary
+#' @param file path to the output phylip file; if an empty string (""), the
+#'   phylip text is printed to the console instead.
 #'
-#' @param interleave folder of alignments to be filtered
+#' @param interleave logical or integer; if FALSE (default) sequences are
+#'   written sequentially. If an integer, sequences are interleaved with that
+#'   number of characters per block.
 #'
-#' @param strict save format for alignments
+#' @param strict logical; if TRUE taxon names are truncated to 10 characters and
+#'   padded with asterisks to produce strict phylip format. A warning is issued
+#'   if truncation creates duplicate names. If FALSE names are padded with
+#'   spaces to the length of the longest name plus 3.
 #'
-#' @return saves the alignment as a phylip file
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes the alignment to file in phylip format, or prints
+#'   to the console if file is "".
 #'
 #' @export
 

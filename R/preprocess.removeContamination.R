@@ -1,36 +1,46 @@
 #' @title removeContamination
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Removes reads that map to a set of contaminant genomes (e.g.
+#'   human, mouse, or vector sequences) using BWA-MEM and samtools. A combined
+#'   BWA index is built from all FASTA files in decontamination.path, reads are
+#'   mapped against it, and only the unmapped (non-contaminant) read pairs are
+#'   retained and saved. Per-contaminant read counts are written to the logs
+#'   directory.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param input.reads path to a directory of adapter-trimmed paired-end reads
+#'   in fastq.gz format, organised in per-sample sub-directories.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where decontaminated reads
+#'   will be saved (one sub-directory per sample).
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param decontamination.path path to a directory of contaminant reference
+#'   genome FASTA files (e.g. produced by createContaminantDB()).
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param map.match numeric; minimum mapping identity threshold (currently
+#'   passed for reference but filtering is handled by samtools flags rather than
+#'   this value directly).
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param samtools.path system path to the directory containing the samtools
+#'   executable; NULL searches the system PATH.
 #'
-#' @param threads number of computation processing threads
+#' @param bwa.path system path to the directory containing the bwa executable;
+#'   NULL searches the system PATH.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of CPU threads for BWA and samtools.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param mem amount of RAM in GB (currently reserved).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param quiet TRUE to supress screen output
+#' @param overwrite.reference logical; if TRUE an existing BWA index in
+#'   ref-index/ is deleted and rebuilt.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
+#' @param quiet logical; if TRUE BWA and samtools stdout/stderr are suppressed.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes decontaminated fastq.gz files to output.directory,
+#'   per-sample contamination counts to logs/, and a CSV summary to
+#'   logs/removeContamination_summary.csv.
 #'
 #' @export
 

@@ -1,30 +1,34 @@
 #' @title genomeStats
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Computes assembly quality statistics for every genome FASTA file
+#'   in a directory. Reported metrics include: total assembly size in gigabases,
+#'   number of contigs/scaffolds, mean and median contig length, maximum and
+#'   minimum contig length, N50, L50, N90, L90, and contig counts above
+#'   size thresholds of 1 KB, 10 KB, 100 KB, 500 KB, 1 MB, 10 MB, and 100 MB.
+#'   All results are written to a single CSV file.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param genome.directory path to a directory of genome FASTA files, one file
+#'   per assembly.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param output.directory path to the directory where the output CSV will be
+#'   written. Default: \code{"alignments"}.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param threads number of CPU threads (not currently used). Default: \code{1}.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param memory RAM in GB (not currently used). Default: \code{1}.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param resume logical; if \code{TRUE} already-completed samples are skipped.
+#'   Cannot be \code{TRUE} when \code{overwrite} is \code{TRUE}. Default:
+#'   \code{TRUE}.
 #'
-#' @param resume TRUE to supress mafft screen output
+#' @param quiet logical; reserved for future use. Default: \code{TRUE}.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<output.directory>/Spades_assembly_stats.csv} with one row per
+#'   genome assembly.
 #'
 #' @export
 

@@ -1,38 +1,55 @@
 #' @title setupCheck
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Verifies that the required external bioinformatics programs are
+#'   accessible on the system. Checks for fastp, samtools, bwa, spades.py,
+#'   bbmap.sh, bbnorm.sh, blastn, makeblastdb, mafft, iqtree2, and trimal. If
+#'   an anaconda.environment path is provided all tool paths are automatically
+#'   set to that environment's bin/ directory before checking. Prints a FOUND or
+#'   NOT FOUND message for each program and returns a logical indicating overall
+#'   pass/fail.
 #'
-#' @param anaconda.environment path to a folder of adaptor trimmed reads in fastq format.
+#' @param anaconda.environment path to a conda environment directory (e.g.
+#'   "~/miniconda3/envs/PhyloCap"). If provided, all individual path arguments
+#'   are overridden and set to anaconda.environment/bin. Set to NULL to supply
+#'   paths individually.
 #'
-#' @param fastp.path the new directory to save the adaptor trimmed sequences
+#' @param fastp.path system path to the directory containing fastp; NULL skips
+#'   this check.
 #'
-#' @param samtools.path directory of genomes contaminants to scan samples
+#' @param samtools.path system path to the directory containing samtools; NULL
+#'   skips this check.
 #'
-#' @param spades.path system path to samtools in case it can't be found
+#' @param bwa.path system path to the directory containing bwa; NULL skips this
+#'   check.
 #'
-#' @param bbmap.path system path to bwa in case it can't be found
+#' @param spades.path system path to the directory containing spades.py; NULL
+#'   skips this check.
 #'
-#' @param blast.path number of computation processing threads
+#' @param bbmap.path system path to the directory containing bbmap.sh; NULL
+#'   skips this check.
 #'
-#' @param mafft.path amount of system memory to use
+#' @param bbnorm.path system path to the directory containing bbnorm.sh; NULL
+#'   skips this check.
 #'
-#' @param iqtree.path TRUE to skip samples already completed
+#' @param blast.path system path to the directory containing blastn and
+#'   makeblastdb; NULL skips this check.
 #'
-#' @param trimAl.path TRUE to overwrite a folder of samples with output.dir
+#' @param mafft.path system path to the directory containing mafft; NULL skips
+#'   this check.
 #'
-#' @param julia.path TRUE to supress screen output
+#' @param iqtree.path system path to the directory containing iqtree2; NULL
+#'   skips this check.
 #'
-#' @param taper.path TRUE to supress screen output
+#' @param trimAl.path system path to the directory containing trimal; NULL skips
+#'   this check.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
+#' @param julia.path system path to the directory containing julia; NULL skips
+#'   this check (currently not checked by the function body).
 #'
-#' @examples
+#' @param taper.path system path to the directory containing taper; NULL skips
+#'   this check (currently not checked by the function body).
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return logical TRUE if all checked programs were found, FALSE otherwise.
 #'
 #' @export
 

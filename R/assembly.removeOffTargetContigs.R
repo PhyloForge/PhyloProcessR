@@ -1,50 +1,42 @@
 #' @title removeOffTargetContigs
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Filters each sample's assembly to retain only contigs that have
+#'   a BLAST match to the provided target markers. For each sample a BLAST
+#'   database is built from the target markers and the assembly is queried
+#'   against it (dc-megablast). Hits are filtered by alignment length (>60 bp),
+#'   percent identity (>=0.6), and coverage (>=30% of the target length).
+#'   Surviving contigs are renamed to match their best target and saved as a
+#'   single FASTA per sample in the output directory. Contigs matching the same
+#'   target in multiple samples are deduplicated by keeping the best-scoring
+#'   contig per target per sample.
 #'
-#' @param input.reads path to a folder of raw reads in fastq format.
+#' @param assembly.directory path to a directory of assembly FASTA files (.fa),
+#'   one per sample.
 #'
-#' @param target.markers a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
+#' @param target.markers path to a FASTA file of target marker sequences used
+#'   as the BLAST reference database.
 #'
-#' @param output.name the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where filtered per-sample FASTA
+#'   files will be written. Default: \code{"target-contigs"}.
 #'
-#' @param mapper "Sample" to run on a single sample or "Directory" to run on a directory of samples
+#' @param blast.path path to the directory containing \code{makeblastdb} and
+#'   \code{blastn}. If \code{NULL} expected on the system PATH. Default:
+#'   \code{NULL}.
 #'
-#' @param min.iterations system path to fastp in case it can't be found
+#' @param memory not currently used; reserved for future use. Default: \code{1}.
 #'
-#' @param max.iterations system path to fastp in case it can't be found
+#' @param threads number of CPU threads passed to \code{blastn}. Default:
+#'   \code{1}.
 #'
-#' @param min.length system path to fastp in case it can't be found
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param max.length system path to fastp in case it can't be found
+#' @param quiet logical; if \code{TRUE} \code{makeblastdb} screen output is
+#'   suppressed. Default: \code{TRUE}.
 #'
-#' @param min.ref.id system path to fastp in case it can't be found
-#'
-#' @param spades.path system path to fastp in case it can't be found
-#'
-#' @param bbmap.path system path to fastp in case it can't be found
-#'
-#' @param cap3.path system path to fastp in case it can't be found
-#'
-#' @param threads number of computation processing threads
-#'
-#' @param mem amount of system memory to use
-#'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes one filtered FASTA file per sample
+#'   to \code{output.directory}, with contigs renamed to match their target
+#'   marker names.
 #'
 #' @export
 

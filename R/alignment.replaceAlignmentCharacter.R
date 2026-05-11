@@ -1,21 +1,14 @@
 #' @title replaceAlignmentCharacter
 #'
-#' @description Function for replacing a character with another in a multiple sequence alignment
+#' @description Replaces all occurrences of a specified character with another character in every sequence of a DNAStringSet alignment. A common use is converting N characters to gap characters ("-") before trimming.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet containing the aligned sequences to modify
 #'
-#' @param char.find the character to find
+#' @param char.find the character to search for and replace in all sequences
 #'
-#' @param char.replace the character to replace "char.find" with
+#' @param char.replace the character to substitute in place of char.find
 #'
-#' @return returns DNAStringSet of alignment with replaced characters
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with all occurrences of char.find replaced by char.replace
 #'
 #' @export
 

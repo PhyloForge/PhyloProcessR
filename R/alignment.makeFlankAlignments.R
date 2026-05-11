@@ -1,60 +1,32 @@
 #' @title makeFlankAlignments
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Extracts intron flank regions from a directory of whole-marker alignments by aligning a reference sequence (from a target fasta or a reference alignment directory) to each alignment with MAFFT, identifying the coordinates of the reference, and cutting out the flanking intronic sequence on either side. Flanks can be saved as two separate files or concatenated into a single alignment. Runs in parallel using foreach/doParallel.
 #'
-#' @param alignment.directory path to a folder of sequence alignments
+#' @param alignment.directory path to a folder of input sequence alignments
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignments; currently "phylip" or "fasta"
 #'
-#' @param output.directory new alignment directory where the trimmed output files are saved
+#' @param output.directory path to the directory where flank alignments will be saved
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignments; currently "phylip"
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param reference.type whether to use a "target" fasta file or an "alignment" directory as the reference for locating the exon coordinates
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param reference.path path to the reference target fasta file (when reference.type = "target") or a directory of reference alignments (when reference.type = "alignment")
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param target.direction if TRUE, output alignments are oriented to match the direction of the reference sequence
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param concatenate.intron.flanks if TRUE, the left and right flanking regions are concatenated into a single alignment file; if FALSE they are saved as separate files with "_1" and "_2" suffixes
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param threads number of parallel processing threads
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param memory total memory in GB to allocate across threads
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param overwrite if TRUE, overwrite existing output files; if FALSE, skip alignments already present in the output directory
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param mafft.path system path to the MAFFT executable directory; NULL to use the system PATH
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves flank alignments to output.directory in phylip format; nothing is returned to R
 #'
 #' @export
 

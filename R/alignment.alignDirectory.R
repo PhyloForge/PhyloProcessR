@@ -1,38 +1,51 @@
 #' @title alignDirectory
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Aligns each FASTA file found in a directory using MAFFT (local pair
+#' algorithm by default) and saves the resulting alignments in phylip format. Loci with
+#' fewer than \code{min.taxa} sequences are skipped. A subset of loci can be processed
+#' by specifying fractional start and end positions. Optionally renames sequences by
+#' stripping everything after a pipe-delimited sample tag and removes the MAFFT reverse-
+#' complement prefix from sequence names.
 #'
-#' @param targets.to.align path to a folder of sequence alignments in phylip format.
+#' @param marker.directory path to the directory containing unaligned FASTA files, one per locus.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param input.format format of the input sequence files. Currently "fasta" is supported.
 #'
-#' @param min.taxa contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where phylip alignments will be saved.
+#' Default "alignments".
 #'
-#' @param subset.start available output formats: phylip
+#' @param min.taxa minimum number of sequences required for a locus to be aligned. Loci
+#' with fewer sequences are skipped. Default 4.
 #'
-#' @param subset.end algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param subset.start fractional position (0 to 1) in the list of loci at which to begin
+#' processing. Useful for splitting a run across multiple jobs. Default 0.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param subset.end fractional position (0 to 1) in the list of loci at which to stop
+#' processing. Default 1 (process all loci).
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param adjust.direction logical. If TRUE, MAFFT adjusts sequence direction before
+#' aligning. Default TRUE.
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param remove.reverse.tag logical. If TRUE, the leading \code{_R_} tag added by MAFFT
+#' to reverse-complemented sequences is stripped from sequence names. Default TRUE.
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param sample.rename controls renaming of sequences before alignment. "none" leaves
+#' names unchanged; "space" trims everything after the first space; "_|_" trims everything
+#' before and including the pipe delimiter. Default "none".
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param threads number of threads passed to MAFFT. Default 1.
 #'
-#' @param mafft.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param memory not currently used; reserved for future parallelisation. Default 1.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param overwrite logical. If TRUE, previously completed alignments are overwritten;
+#' if FALSE, they are skipped. Default FALSE.
 #'
-#' @examples
+#' @param quiet logical. If TRUE, suppresses MAFFT screen output. Default TRUE.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param mafft.path path to the directory containing the MAFFT executable. If NULL, MAFFT
+#' is expected to be on the system PATH.
 #'
+#' @return Writes phylip alignment files to \code{output.directory}. No value is returned to R.
 #'
 #' @export
 

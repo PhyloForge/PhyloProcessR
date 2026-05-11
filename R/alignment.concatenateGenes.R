@@ -1,33 +1,48 @@
 #' @title concatenateGenes
 #'
-#' @description Function for concatenating a large number of alignments
+#' @description Concatenates exon-level alignments into gene-level alignments using a
+#' metadata table that maps each exon (marker) to a gene. For each gene, all matching
+#' exon alignments are joined in order, with missing taxa filled in with N characters.
+#' Genes represented by fewer than \code{minimum.exons} present exon alignments are
+#' skipped. Output alignments are written in the chosen format and processing is
+#' parallelised across genes.
 #'
-#' @param alignment.folder folder that contains aligmnents to be concatenated
+#' @param alignment.folder path to the directory containing per-exon alignment files.
 #'
-#' @param output.folder output file name
+#' @param output.folder path to the directory where concatenated gene alignment files
+#' will be saved.
 #'
-#' @param exon.gene.names output file name
+#' @param feature.gene.names path to a tab-delimited metadata file with at minimum columns
+#' named \code{marker} and \code{gene}, mapping each exon alignment name to a gene name.
 #'
-#' @param input.format input file format. Save three types: phylip, nexus, and fasta
+#' @param find.exon.names logical. If TRUE, exon-to-gene associations are inferred
+#' automatically rather than read from \code{feature.gene.names}. Default FALSE.
 #'
-#' @param output.format output file format. Save three types: phylip, nexus, and fasta
+#' @param input.format format of the input exon alignment files. Accepted values: "phylip",
+#' "nexus", or "fasta".
 #'
-#' @param remove.reverse TRUE to remove "_R_" placed before reversed sequences in some alignments. Default FALSE.
+#' @param output.format format for the output gene alignment files. Accepted values:
+#' "phylip", "nexus", or "fasta".
 #'
-#' @param overwrite TRUE to overwrite file. Default FALSE.
+#' @param minimum.exons minimum number of exon alignments that must be present for a gene
+#' to be concatenated and saved. Genes with fewer exons are skipped. Default 2.
 #'
-#' @param threads TRUE to overwrite file. Default FALSE.
+#' @param remove.reverse logical. If TRUE, the leading \code{_R_} tag added by MAFFT to
+#' reverse-complemented sequences is stripped from sequence names before processing.
+#' Default FALSE.
 #'
-#' @param memory TRUE to overwrite file. Default FALSE.
+#' @param remove.duplicates logical. If TRUE, exon alignments containing duplicate sample
+#' names are skipped rather than causing an error. Default FALSE.
 #'
-#' @return saves to file concatenated alignments and partition files delimiting the coordinates of each indidividual marker
+#' @param overwrite logical. If TRUE, previously completed gene alignments are overwritten;
+#' if FALSE, they are skipped. Default FALSE.
 #'
-#' @examples
+#' @param threads number of parallel threads to use. Default 1.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param memory total memory (in GB) to allocate across all threads. Default 1.
+#'
+#' @return Writes concatenated gene alignment files to \code{output.folder}. No value is
+#' returned to R.
 #'
 #' @export
 

@@ -4,21 +4,24 @@
 #'
 #' @param alignment alignment in DNAStringSet Format
 #'
-#' @param max.alignment.gap.percent minimum percentage of gaps allowed for an alignment to pass
+#' @param max.alignment.gap.percent maximum percentage of gaps (including N and ?) permitted
+#' across the whole alignment for it to pass. Alignments at or above this threshold fail.
 #'
-#' @param min.taxa.count minimum number of taxa allowed for an alignment to pass
+#' @param min.taxa.alignment minimum number of sequences required for the alignment to pass.
+#' Alignments with this many or fewer sequences fail.
 #'
-#' @param min.align.length minimum alignment length (width) allowed for an alignment to pass
+#' @param min.alignment.length minimum alignment length (width in bp) required to pass.
+#' Alignments at or below this length fail.
 #'
 #' @return a logical value, TRUE or FALSE, if your alignment passes (TRUE) or fails (FALSE) the filters
 #'
 #' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' \dontrun{
+#' pass <- alignmentAssess(alignment = my.alignment,
+#'                         max.alignment.gap.percent = 50,
+#'                         min.taxa.alignment = 4,
+#'                         min.alignment.length = 100)
+#' }
 #'
 #' @export
 

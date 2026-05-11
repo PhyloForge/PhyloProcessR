@@ -1,36 +1,39 @@
 #' @title summarizeDepth
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Aggregates per-sample locus depth data produced by
+#'   \code{readDepth} into group-level and marker-level RPKM summaries.
+#'   For each sample, locus RPKM values are summarised (mean, median, SD, min,
+#'   max). Across samples, marker-level RPKM statistics are computed per group.
+#'   Group-level dot plots and box plots of sample and marker RPKM are saved as
+#'   PDFs using ggplot2.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param depth.directory path to a directory of per-sample depth subdirectories
+#'   produced by \code{readDepth}, each containing
+#'   \code{species_summary_data.txt}.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param sub.directory optional subdirectory within each sample folder that
+#'   contains the summary file. Default: \code{NULL}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.directory path to the directory where summary CSVs and PDF
+#'   plots will be written. Default: \code{"depth-summary"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param sample.groups path to a CSV file with columns \code{Group} and
+#'   \code{Sample} (or similar two-column layout) mapping samples to groups.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param remove.samples character vector of sample names to exclude from the
+#'   analysis. Default: \code{NULL}.
 #'
-#' @param threads number of computation processing threads
+#' @param threads not currently used. Default: \code{1}.
 #'
-#' @param mem amount of system memory to use
+#' @param mem not currently used. Default: \code{1}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes \code{sample_rpkm-summary.csv}
+#'   (per-sample RPKM statistics), \code{marker_rpkm-summary.csv} (per-marker
+#'   RPKM statistics by group), and several PDF comparison plots to
+#'   \code{output.directory}.
 #'
 #' @export
 

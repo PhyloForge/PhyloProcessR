@@ -1,40 +1,51 @@
 #' @title runSpades
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Assembles short reads using SPAdes. Supports single-end,
+#'   paired-end, and paired-end with merged reads (1, 2, or 3 read files).
+#'   If assembly fails for the full set of k-mer values, the largest k-mer is
+#'   progressively removed and SPAdes is re-run until assembly succeeds or all
+#'   k-mer values are exhausted. The assembled scaffolds (preferred) or contigs
+#'   are optionally read back into R and/or saved to a file.
 #'
-#' @param read.paths path to a folder of sequence alignments in phylip format.
+#' @param read.paths character vector of 1, 2, or 3 paths to the input fastq.gz
+#'   read files (READ1, READ2, and optionally merged READ3).
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param full.path.spades system path to the directory containing spades.py;
+#'   NULL searches the system PATH.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param mismatch.corrector logical; if TRUE passes --careful to SPAdes to
+#'   enable the mismatch correction module. Cannot be used with isolate = TRUE.
 #'
-#' @param isolate algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param isolate logical; if TRUE passes --isolate to SPAdes, which is
+#'   optimised for high-coverage isolate data. Cannot be used with
+#'   mismatch.corrector = TRUE.
 #'
-#' @param read.contigs TRUE applies the adjust sequence direction function of MAFFT
+#' @param kmer.values integer vector of k-mer sizes to try; if the largest
+#'   k-mer causes failure it is dropped and SPAdes is rerun with the remaining
+#'   values.
 #'
-#' @param save.file if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param read.contigs logical; if TRUE the assembled scaffolds (or contigs if
+#'   no scaffold file exists) are read into R and returned as a DNAStringSet.
 #'
-#' @param save.name if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param save.name base name (without extension) for an output FASTA file
+#'   where the assembly is copied; NULL skips file saving.
 #'
-#' @param threads number of computation processing threads
+#' @param clean logical; if TRUE the spades/ working directory is deleted after
+#'   assembly.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of CPU threads to pass to SPAdes.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory amount of RAM in GB to allocate to SPAdes.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE an existing spades/ directory is deleted
+#'   before running.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical; if TRUE SPAdes stdout is suppressed.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return if read.contigs is TRUE, a DNAStringSet of assembled sequences; if
+#'   save.name is provided, a character string "Contigs were saved to file.";
+#'   otherwise "Nothing was saved.". An empty DNAStringSet is returned if no
+#'   k-mer values succeed.
 #'
 #' @export
 

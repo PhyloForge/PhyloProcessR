@@ -1,28 +1,20 @@
 #' @title trimPreQual
 #'
-#' @description wrapper function for running HmmCleaner. Must be installed.
+#' @description Wrapper function for running HmmCleaner (via HmmCleaner.pl) on a single alignment. The alignment is written to a temporary fasta file, HmmCleaner is called with the selected options, and the cleaned alignment is read back and passed through trimAlignmentColumns to remove any fully-gap columns introduced by HmmCleaner. If HmmCleaner fails or produces no output the original alignment is returned unchanged. HmmCleaner must be installed and accessible.
 #'
-#' @param alignment alignment in DNAStringSet format
+#' @param alignment a DNAStringSet containing the aligned sequences to clean
 #'
-#' @param specificity TRUE to enable to more sensitive but slower "specificity" hmmCleaner option
+#' @param specificity if TRUE, run HmmCleaner with the --specificity flag for more sensitive but slower cleaning
 #'
-#' @param large TRUE to enable the faster "large" dataset option for large datasets. Will not run "large" if alignment has less than 50 sequences
+#' @param large if TRUE and the alignment has 50 or more sequences, run HmmCleaner with the --large flag for faster processing
 #'
-#' @param hmmcleaner.path Absolute path to hmmCleaner if R cannot find it in your path
+#' @param hmmcleaner.path path to the HmmCleaner.pl script or the directory containing it; defaults to "prequal"
 #'
-#' @param quiet TRUE to supress HmmCleaner screen output
+#' @param quiet if TRUE, suppress HmmCleaner screen output
 #'
-#' @param delete.temp TRUE to delete temporary files made by HmmCleaner
+#' @param delete.temp if TRUE, delete the temporary fasta files created during the HmmCleaner run
 #'
-#' @return returns a data.table with the raw summary statistics calculated for each alignment in the alignment.path. A csv file can optionally be saved by giving a file name to file.export
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a DNAStringSet of the HmmCleaner-cleaned alignment with all-gap columns removed; returns the original alignment unchanged if HmmCleaner produces no output
 #'
 #' @export
 

@@ -1,36 +1,47 @@
 #' @title readDepth
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Maps paired-end reads for each sample to its per-sample
+#'   assembled contigs using BWA mem, marks duplicates with Picard, and
+#'   computes per-base and per-locus depth statistics using samtools depth and
+#'   samtools idxstats. For each locus, reports locus length, mapped read count,
+#'   RPKM, and mean, median, SD, min, and max read depth. Results are written to
+#'   per-sample subdirectories inside \code{output.name}.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to a directory where each subdirectory corresponds
+#'   to one sample and contains paired FASTQ files.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param sub.directory optional subdirectory within each sample folder that
+#'   contains the relevant FASTQ files. Default: \code{NULL}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.name name of the top-level output directory. Default:
+#'   \code{"read-depth"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param output.binned logical; reserved for future use (binned output not yet
+#'   implemented). Default: \code{FALSE}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param threads number of CPU threads for BWA and samtools. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param memory RAM in GB passed to Picard via \code{-Xmx}. Default: \code{1}.
 #'
-#' @param mem amount of system memory to use
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param quiet logical; if \code{TRUE} BWA and samtools screen output is
+#'   suppressed. Default: \code{TRUE}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param samtools.path path to the directory containing \code{samtools}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param quiet TRUE to supress screen output
+#' @param bwa.path path to the directory containing \code{bwa}. If \code{NULL}
+#'   expected on the system PATH. Default: \code{NULL}.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
+#' @param picard.path path to the directory containing \code{picard}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes per-sample
+#'   \code{species_summary_data.txt} files (one row per locus) and
+#'   \code{samtools_perbase_depth.txt} / \code{samtools_idxstats.txt}
+#'   intermediate files to \code{<output.name>/<sample>/}.
 #'
 #' @export
 

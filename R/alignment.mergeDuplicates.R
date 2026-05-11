@@ -1,60 +1,28 @@
 #' @title mergeDuplicates
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Processes a directory of alignments to handle samples that appear more than once (duplicate sequence names). When method is "merge-sample", duplicate sequences for the same sample are merged column by column: identical characters are kept, gap/N/? characters are resolved to the non-gap character when possible, and samples with irresolvable conflicts between their duplicate sequences are dropped. When method is "delete-shortest", the shorter duplicate is removed (not yet fully implemented). Runs in parallel using foreach/doParallel.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to a folder of input sequence alignments
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignments; "phylip" or "fasta"
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where merged alignments will be saved
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignments; currently "phylip"
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param method how to handle duplicate sample names: "merge-sample" to merge duplicate sequences column by column, or "delete-shortest" to remove the shorter duplicate
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param threads number of parallel processing threads
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param memory total memory in GB to allocate across threads
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param overwrite if TRUE, delete and recreate the output directory; if FALSE, stop if the directory already exists
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param quiet if TRUE, suppress progress messages
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param mafft.path system path to the MAFFT executable directory; NULL to use the system PATH
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
-#'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves merged alignments to output.directory in phylip format; nothing is returned to R
 #'
 #' @export
 

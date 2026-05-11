@@ -1,36 +1,44 @@
 #' @title VCFtoContigs
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Converts per-sample VCF variant files into FASTA contig
+#'   sequences using GATK4 FastaAlternateReferenceMaker. For each sample the
+#'   chosen VCF (SNPs, indels, or both) is applied to the sample's reference
+#'   FASTA to produce either IUPAC ambiguity-coded sequences or straight
+#'   consensus sequences. Samples are processed in parallel.
 #'
-#' @param read.directory directory of processed reads
+#' @param genotype.directory path to the directory containing per-sample
+#'   genotype sub-directories (output of genotypeSamples()).
 #'
-#' @param output.directory save name for the output directory
+#' @param mapping.directory path to the directory containing per-sample
+#'   reference index sub-directories (output of mapReferenceSample() or
+#'   mapReferenceConsensus()), used to locate each sample's reference.fa.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where output FASTA contig
+#'   files (one per sample) will be saved.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param vcf.file character; which variant type to apply: "SNP" uses the
+#'   SNP-only VCF, "Indel" uses the indel-only VCF, "Both" uses the combined
+#'   genotype VCF.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param consensus.sequences logical; if TRUE GATK produces a consensus
+#'   sequence (majority allele). Cannot be TRUE when ambiguity.codes is TRUE.
 #'
-#' @param threads number of computation processing threads
+#' @param ambiguity.codes logical; if TRUE GATK produces IUPAC ambiguity codes
+#'   at heterozygous sites (--use-iupac-sample). Cannot be TRUE when
+#'   consensus.sequences is TRUE.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory total RAM in GB; divided equally across threads.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param overwrite logical; if TRUE already-completed samples are reprocessed.
 #'
-#' @examples
+#' @param quiet logical; currently unused.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes one FASTA file per sample to output.directory.
 #'
 #' @export
 

@@ -1,21 +1,16 @@
 #' @title trimSampleSimilarity
 #'
-#' @description Function for trimming out divergent sample sequence segments in an alignment
+#' @description Removes entire samples from an alignment that are too divergent from the majority-rule consensus sequence. A consensus is computed from the alignment, pairwise distances from the consensus are calculated for each sample, and any sample whose distance meets or exceeds the similarity.threshold is removed. If any samples are removed and realign.mafft is TRUE, the remaining sequences are realigned with MAFFT (localpair). Alignments with two or fewer sequences are returned unmodified.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet containing the aligned sequences to filter
 #'
-#' @param similarity.threshold divergence threshold from consensus to remove a sample
+#' @param similarity.threshold pairwise distance threshold (0-1): samples with a distance from the consensus at or above this value are removed
 #'
-#' @param realign.mafft TRUE to realign alignment with mafft after removing samples
+#' @param realign.mafft if TRUE and samples were removed, realign the remaining sequences with MAFFT (localpair algorithm) before returning
 #'
-#' @return returns DNAStringSet of trimmed alignment
+#' @param mafft.path system path to the MAFFT executable directory; NULL to use the system PATH
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with overly divergent samples removed, optionally realigned with MAFFT
 #'
 #' @export
 

@@ -1,30 +1,25 @@
 #' @title assemblyStats
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Computes basic summary statistics for a directory of genome or
+#'   contig assembly FASTA files. For each sample, reports total nucleotides,
+#'   total megabases, total contig count, and mean, median, maximum, and minimum
+#'   contig lengths. Results are written to a tab-delimited summary file in the
+#'   output directory.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param assembly.directory path to a directory containing assembly FASTA files
+#'   (.fa or .fasta), one file per sample.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param output.directory path to the directory where the summary file
+#'   \code{sample-assembly-summary.txt} will be written. Created if it does not
+#'   exist. Default: \code{"assembly-stats"}.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated before running. Default: \code{FALSE}.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @param resume TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<output.directory>/sample-assembly-summary.txt}, a tab-delimited
+#'   table with one row per sample and columns for total nucleotides, total
+#'   megabases, total contigs, and contig length statistics.
 #'
 #' @export
 

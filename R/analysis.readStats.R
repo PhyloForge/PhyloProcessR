@@ -1,30 +1,26 @@
 #' @title readStats
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Counts reads and nucleotides in paired-end FASTQ files for each
+#'   sample in a directory. For each sample, all sequencing lanes are detected
+#'   automatically. Per-lane counts of read pairs, total reads, total
+#'   nucleotides, and gigabases are computed with
+#'   \code{ShortRead::countFastq} and then summed across lanes into a
+#'   per-sample summary. Per-lane data are written to per-sample subdirectories
+#'   and an overall summary is written to the output directory.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param read.directory path to a directory where each subdirectory corresponds
+#'   to one sample and contains paired FASTQ files (gzipped or uncompressed).
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param output.directory path to the directory where per-sample subdirectories
+#'   and the overall summary file will be written. Default: \code{"read-stats"}.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @param resume TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<output.directory>/sample-read-summary.txt} (one row per sample)
+#'   and \code{<output.directory>/<sample>/sample_reads_raw-data.txt} (one row
+#'   per lane) for each sample.
 #'
 #' @export
 

@@ -1,30 +1,48 @@
-#' @title genomeCoverage
+#' @title genomeCoverageSimulator
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Simulates read-depth coverage across a range of sequencing
+#'   library sizes (in gigabases) by subsampling a real FASTQ dataset using
+#'   bbmap reformat.sh. For each simulated library size, reads are mapped to the
+#'   genome with BWA, depth is estimated with mosdepth over a random subset of
+#'   contigs, and coverage statistics (mean/median depth, proportion of bases at
+#'   1x–20x) are recorded. All results are written to a CSV file.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param genome.directory not used in the current implementation; the genome
+#'   file path is set internally. Included for interface consistency.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param read.directory path to the directory containing the real paired FASTQ
+#'   files used for subsampling.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where subsampled reads, BAM
+#'   files, mosdepth output, and the coverage summary CSV will be written.
+#'   Created if absent.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param threads number of CPU threads for BWA and samtools. Default: \code{1}.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param memory RAM in GB passed to picard via \code{-Xmx}. Default: \code{1}.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param resume TRUE to supress mafft screen output
+#' @param resume logical; if \code{TRUE} already-completed samples are skipped.
+#'   Cannot be \code{TRUE} when \code{overwrite} is \code{TRUE}. Default:
+#'   \code{TRUE}.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical; if \code{TRUE} BWA and samtools screen output is
+#'   suppressed. Default: \code{TRUE}.
 #'
-#' @examples
+#' @param samtools.path path to the directory containing \code{samtools} and
+#'   \code{mosdepth}. If \code{NULL} expected on the system PATH.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param bwa.path path to the directory containing \code{bwa}. If \code{NULL}
+#'   expected on the system PATH.
 #'
+#' @param picard.path path to the directory containing \code{picard}. If
+#'   \code{NULL} expected on the system PATH.
+#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<sample_name>_coverage-summary.csv} to \code{output.directory} with
+#'   one row per simulated library size.
 #'
 #' @export
 

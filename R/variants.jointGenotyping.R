@@ -1,36 +1,55 @@
 #' @title jointGenotyping
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Performs joint genotyping across all samples at each locus
+#'   using GATK4. For each locus, all per-sample GVCFs are combined into a
+#'   GenomicsDB, then GenotypeGVCFs genotypes the combined data. SNPs and
+#'   indels are separated, hard-filtered with user-specified thresholds, merged
+#'   back, and written to per-locus VCF files in subdirectories. Loci are
+#'   processed in parallel. The function optionally removes unfiltered and/or
+#'   SNP/indel-specific VCF directories at the end.
 #'
-#' @param read.directory directory of processed reads
+#' @param haplotype.caller.directory path to the directory of per-sample
+#'   haplotype caller GVCF files (output of haplotypeCaller()).
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path where the genotype database and per-locus VCF
+#'   subdirectories (filtered-all, filtered-snps, filtered-indels, and their
+#'   unfiltered counterparts) will be created.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param use.base.recalibration logical; if TRUE the BQSR-recalibrated GVCFs
+#'   are used as input.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param save.unfiltered logical; if FALSE unfiltered VCF subdirectories are
+#'   deleted after filtering.
+#' @param save.SNPs logical; if FALSE SNP-specific VCF subdirectories are
+#'   deleted.
+#' @param save.indels logical; if FALSE indel-specific VCF subdirectories are
+#'   deleted.
+#' @param save.combined logical; if FALSE the combined (all variants) VCF
+#'   subdirectories are deleted.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param custom.SNP.QD,custom.SNP.QUAL,custom.SNP.SOR,custom.SNP.FS,custom.SNP.MQ,custom.SNP.MQRankSum,custom.SNP.ReadPosRankSum
+#'   numeric hard-filter thresholds for SNPs (see GATK VariantFiltration
+#'   documentation for field definitions).
+#' @param custom.INDEL.QD,custom.INDEL.QUAL,custom.INDEL.FS,custom.INDEL.ReadPosRankSum
+#'   numeric hard-filter thresholds for indels.
 #'
-#' @param threads number of computation processing threads
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param mem amount of system memory to use
+#' @param temp.directory path to a GATK JVM temp directory; NULL uses the
+#'   current working directory.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param threads number of loci to process in parallel.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @examples
+#' @param quiet logical; currently unused.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes per-locus VCF files to output.directory
+#'   subdirectories.
 #'
 #' @export
 

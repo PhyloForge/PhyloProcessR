@@ -1,36 +1,40 @@
-#' @title summary.geneticDistance
+#' @title geneticDistance
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Calculates pairwise genetic distances between samples for each
+#'   marker in a directory of phylip-format alignments. Each alignment is
+#'   trimmed to the reference sequence region using MAFFT, alignment columns
+#'   with excessive gaps are removed, and raw pairwise distances are computed
+#'   with \code{ape::dist.dna}. Raw per-marker distances and per-sample summary
+#'   statistics (mean, median, min, max, SD) are saved to the output directory.
+#'   Processing is parallelised across markers.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param alignment.directory path to a directory of phylip alignment files
+#'   (.phy), one file per marker.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param target.file path to a FASTA file of reference/target sequences whose
+#'   names correspond to alignment file names (without the .phy extension).
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.directory path to the directory where output files will be
+#'   written. Default: \code{"genetic-distance"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param threads number of parallel workers to use. Default: \code{1}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param memory total RAM (GB) to allocate across workers. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param overwrite logical; if \code{TRUE} the output directory is removed and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param mem amount of system memory to use
+#' @param quiet logical; if \code{TRUE} MAFFT screen output is suppressed.
+#'   Default: \code{FALSE}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param mafft.path path to the directory containing the \code{mafft}
+#'   executable. If \code{NULL} MAFFT is expected on the system PATH.
+#'   Default: \code{NULL}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{genetic_distance_raw-data.txt} (one row per sample-marker
+#'   combination) and \code{genetic_distance_summary.txt} (one row per sample
+#'   with distance summary statistics) to \code{output.directory}.
 #'
 #' @export
 

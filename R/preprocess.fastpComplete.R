@@ -1,30 +1,34 @@
 #' @title fastpComplete
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Runs a comprehensive fastp cleaning step on raw paired-end
+#'   Illumina reads. In a single pass, performs adapter detection and trimming,
+#'   length filtering (minimum 60 bp), low-complexity filtering, poly-X
+#'   trimming, overlap-based base correction, and deduplication. Intended as an
+#'   all-in-one alternative to running the individual preprocess steps
+#'   separately.
 #'
-#' @param input.reads path to a folder of raw reads in fastq format.
+#' @param input.reads path to a directory of raw reads. Each sample may be
+#'   organised in its own sub-directory or identified by a shared filename
+#'   prefix containing "_L00".
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where cleaned reads will be
+#'   saved (one sub-directory per sample).
 #'
-#' @param fastp.path system path to fastp in case it can't be found
+#' @param fastp.path system path to the directory containing the fastp
+#'   executable; NULL searches the system PATH.
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of CPU threads to pass to fastp.
 #'
-#' @param mem amount of system memory to use
+#' @param mem amount of RAM in GB (currently unused by fastp directly, reserved
+#'   for future use).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param quiet TRUE to supress screen output
+#' @param quiet logical; if TRUE fastp stdout and stderr are suppressed.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes cleaned fastq.gz files to output.directory and a
+#'   CSV summary to logs/fastpComplete_summary.csv.
 #'
 #' @export
 

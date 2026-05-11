@@ -1,36 +1,33 @@
-#' @title summarizeDepth
+#' @title binnedDepth
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Placeholder for a binned-depth analysis function. The
+#'   implementation is under development; the function body is currently
+#'   commented out. When complete, this function will map reads to per-sample
+#'   assembled contigs, divide each contig into a fixed number of equal-width
+#'   bins, compute median read depth per bin using samtools and mosdepth, and
+#'   write per-sample binned-depth tables for downstream visualisation.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to the directory of processed reads.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param sub.directory optional subdirectory within each sample folder that
+#'   contains the relevant reads. Default: \code{NULL}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.name name of the output directory. Default:
+#'   \code{"binned-depth"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param number.bins number of bins to divide each contig into. Default:
+#'   \code{100}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param sample.groups path to a CSV file mapping samples to groups.
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of CPU threads. Default: \code{1}.
 #'
-#' @param mem amount of system memory to use
+#' @param mem RAM in GB. Default: \code{1}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite logical; if \code{TRUE} existing output is overwritten.
+#'   Default: \code{FALSE}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Not yet implemented.
 #'
 #' @export
 

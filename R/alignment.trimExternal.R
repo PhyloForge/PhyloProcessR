@@ -1,21 +1,14 @@
 #' @title trimExternal
 #'
-#' @description Function for externally trimming at the edges in an alignment
+#' @description Trims ragged ends from a multiple sequence alignment by removing leading and trailing columns that are covered by fewer than a minimum number of sequences. The trimmed range is defined as the outermost columns at which at least min.n.seq sequences have informative (non-gap) data. Optionally adjusts the start position to preserve codon triplet boundaries. Returns 0 (integer) if no column reaches the minimum coverage threshold.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet containing the aligned sequences to trim
 #'
-#' @param min.n.seq minimum number of sequences needed to keep external colums
+#' @param min.n.seq minimum number of sequences that must have informative data at a column for that column to be retained at the alignment edges
 #'
-#' @param codon.trim trim in triplets to avoid harming reading frame
+#' @param codon.trim if TRUE, adjust the trimmed start position forward so that it falls on a codon boundary (position modulo 3 equals zero)
 #'
-#' @return returns DNAStringSet of externally trimmed alignment
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet of the edge-trimmed alignment, or 0 if no column meets the minimum coverage threshold
 #'
 #' @export
 

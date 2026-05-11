@@ -14,7 +14,6 @@ dependencies:
   - r-seqinr=4.2_30
   - r-stringr=1.5.0
   - r-foreach=1.5.2
-  - r-biomartr=1.0.2
   - r-devtools=2.4.5
   - orna=2.0
   - cd-hit=4.8.1

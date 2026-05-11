@@ -1,34 +1,51 @@
 #' @title assembleRNASpades
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Runs rnaSPAdes (\code{spades.py --rna}) on a directory of
+#'   processed reads to produce de novo transcriptome assemblies. Each sample
+#'   subdirectory under \code{input.reads} is assembled independently with
+#'   support for multi-lane and paired/single-end read configurations. The
+#'   resulting \code{transcripts.fasta} file from each sample is copied to
+#'   \code{assembly.directory} as \code{<sample>.fa}. Samples for which a
+#'   \code{.fa} file already exists in \code{assembly.directory} are skipped
+#'   unless \code{overwrite = TRUE}.
 #'
-#' @param read.directory directory of processed reads
+#' @param input.reads path to a directory of processed reads. Each sample must
+#'   occupy its own subdirectory containing FASTQ files whose names encode read
+#'   number (e.g. \code{_READ1}, \code{_READ2}).
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path to the directory where per-sample rnaSPAdes
+#'   working directories will be written. Default:
+#'   \code{"processed-reads/rnaspades-assembly"}.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param assembly.directory path to the directory where the final transcript
+#'   FASTA files (.fa) are copied after assembly. Default:
+#'   \code{"draft-transcripts"}.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param spades.path path to the directory containing \code{spades.py}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param threads number of computation processing threads
+#' @param kmer.values integer vector of k-mer sizes passed to rnaSPAdes with
+#'   \code{-k}. Default: \code{c(21, 33, 55, 77, 99, 127)}.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of CPU threads passed to rnaSPAdes with \code{-t}.
+#'   Default: \code{1}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory RAM in GB passed to rnaSPAdes with \code{-m}. Default:
+#'   \code{4}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if \code{TRUE} existing output and assembly
+#'   directories are deleted and recreated and all samples are rerun. Default:
+#'   \code{FALSE}.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param save.corrected.reads logical; if \code{FALSE} (default) the
+#'   \code{corrected/} subdirectory produced by rnaSPAdes is deleted after
+#'   assembly to save disk space. Default: \code{FALSE}.
 #'
-#' @examples
+#' @param quiet logical; if \code{TRUE} rnaSPAdes screen output is suppressed.
+#'   Default: \code{TRUE}.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Assembled transcripts for each sample are
+#'   saved as \code{<assembly.directory>/<sample>.fa}.
 #'
 #' @export
 

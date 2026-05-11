@@ -1,36 +1,27 @@
-#' @title reads.checkFileSize
+#' @title utility.checkFileSize
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Verifies the integrity of raw read files by comparing each
+#'   file's actual size on disk against expected sizes recorded in a reference
+#'   size file. Produces a PASS/FAIL report per file and writes the results to
+#'   a CSV.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to the directory containing the fastq.gz read
+#'   files to be checked.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param check.file.name path to a two-column whitespace-delimited text file
+#'   where column 1 is the expected file size in bytes and column 2 is the file
+#'   name. Typically produced by running \code{ls -l} or a similar command on
+#'   the source server.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.name base name (without extension) for the output CSV
+#'   containing PASS/FAIL results.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param overwrite logical; if TRUE an existing output CSV is deleted before
+#'   writing.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
-#'
-#' @param threads number of computation processing threads
-#'
-#' @param mem amount of system memory to use
-#'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a data frame with columns File_Name, Read_fileSize (measured),
+#'   Read_checkSize (expected), and checkSize_Pass (PASS or FAIL). Also written
+#'   to output.name.csv.
 #'
 #' @export
 

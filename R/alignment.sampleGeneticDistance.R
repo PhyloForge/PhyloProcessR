@@ -1,36 +1,26 @@
-#' @title summary.sampleSpecificity
+#' @title summary.sampleGeneticDistance
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Calculates pairwise genetic distances between each sample and a reference sequence (either a supplied target fasta or a per-locus consensus) for every marker alignment in a directory. For "reference" mode the target sequence is added to the alignment with MAFFT, trimmed to the target region, and then column-filtered; for "consensus" mode a majority-rule consensus of the alignment is used directly. Raw per-sample per-marker distances and a per-sample summary table (mean, median, min, max, sd) are written to the output directory. Runs in parallel using foreach/doParallel.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param alignment.directory path to a directory of phylip alignment files (one per marker)
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.name name of the output directory where result tables will be saved
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param target.type how to construct the reference sequence for distance calculation: "reference" uses a provided target fasta aligned to the marker, "consensus" uses a majority-rule consensus of the alignment itself
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param target.fasta path to a fasta file of target/reference marker sequences; required when target.type is "reference"
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param threads number of parallel processing threads
 #'
-#' @param threads number of computation processing threads
+#' @param memory total memory in GB to allocate across threads
 #'
-#' @param mem amount of system memory to use
+#' @param mafft.path system path to the MAFFT executable directory; NULL to use the system PATH
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite if TRUE, delete and recreate the output directory; if FALSE, add to existing output
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param quiet if TRUE, suppress MAFFT screen output
 #'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves two tab-delimited text files to output.name: one with raw per-sample per-marker distances and one with per-sample summary statistics; nothing is returned to R
 #'
 #' @export
 

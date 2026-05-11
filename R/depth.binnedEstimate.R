@@ -1,36 +1,41 @@
 #' @title depth.binnedEstimate
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Reads per-base depth files (\code{samtools_perbase_depth.txt})
+#'   and per-locus index stats (\code{samtools_idxstats.txt}) produced by
+#'   \code{readDepth} and computes binned RPKM values for each locus. Each
+#'   locus's per-base depth data are divided into \code{number.bins} equal-sized
+#'   windows and the maximum depth within each window is normalised by locus
+#'   length and total mapped reads (RPKM). The binned RPKM table is written to
+#'   each sample's depth directory as \code{rpkm-binned-data.txt}. Processing
+#'   is parallelised across samples.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param depth.directory path to a directory of per-sample depth subdirectories
+#'   produced by \code{readDepth}.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param sub.directory optional subdirectory within each sample folder that
+#'   contains the depth files. Default: \code{NULL}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.name name used for the output directory (currently not used for
+#'   output; files are written inside \code{depth.directory}). Default:
+#'   \code{"binned-depth"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param number.bins number of equal-sized bins to divide each locus into.
+#'   Default: \code{100}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param sample.groups path to a CSV file with columns mapping samples to
+#'   groups (required but used only for group-level filtering).
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of parallel workers. Default: \code{1}.
 #'
-#' @param mem amount of system memory to use
+#' @param memory total RAM in GB to divide across workers. Default: \code{1}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite logical; if \code{TRUE} an existing output directory is
+#'   deleted and recreated. Default: \code{FALSE}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<depth.directory>/<sample>/rpkm-binned-data.txt} for each sample, a
+#'   tab-delimited table with \code{number.bins} rows and one column per locus
+#'   containing binned RPKM values.
 #'
 #' @export
 

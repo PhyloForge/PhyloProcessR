@@ -1,21 +1,16 @@
 #' @title trimSampleSegments
 #'
-#' @description Function for trimming out divergent sample sequence segments in an alignment
+#' @description Masks divergent segments within individual sequences by sliding a window of fixed size across the alignment and replacing segments that are too divergent from a reference sequence with gaps. For each window, pairwise distance from the reference is computed for every sample; samples whose window distance exceeds the threshold have that window replaced by gaps. The reference is either a user-supplied sequence (by name) or a majority-rule consensus computed from the alignment. Samples with fewer non-gap bases than slice.size.bp after masking are removed. Alignments with three or fewer sequences are returned unmodified.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet containing the aligned sequences to process
 #'
-#' @param slice.size.bp size of each sliding window to calculate divergence
+#' @param reference.name name of a sequence already in the alignment to use as the reference; if NULL a majority-rule consensus is computed and used
 #'
-#' @param threshold pair-wise distance threshold from consensus to trim out segment
+#' @param slice.size.bp width of the sliding window in base pairs used to compute local pairwise distances
 #'
-#' @return returns DNAStringSet of trimmed alignment
+#' @param threshold pairwise distance threshold (0-1): windows with a distance from the reference at or above this value are replaced with gaps
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with divergent sequence segments masked as gaps and near-empty sequences removed
 #'
 #' @export
 

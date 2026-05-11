@@ -1,60 +1,76 @@
 #' @title extractGenomeTarget
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Extracts genomic sequences from one or more genome assemblies
+#'   that correspond to a set of target loci. Targets can be provided either as
+#'   a FASTA file (matched via dc-megablast) or as a BED coordinate file.
+#'   Matching genomic regions are extracted with optional flanking sequence and
+#'   saved as per-genome FASTA files. Optionally also writes BED and match-table
+#'   CSV outputs.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param genome.path path to a single genome FASTA file or to a directory of
+#'   genome files to process.
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param input.file path to the target sequence file; either a multi-sequence
+#'   FASTA (when input.type = "fasta") or a BED coordinate file (when
+#'   input.type = "bed").
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param input.type character; "fasta" to BLAST targets against each genome,
+#'   or "bed" to extract coordinates directly from a BED file.
 #'
-#' @param output.format available output formats: phylip
+#' @param output.name name of the output directory where results are saved.
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param output.bed logical; if TRUE a BED file of matched coordinates is
+#'   written for each genome.
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param bed.headers logical; if TRUE the BED file is treated as having a
+#'   header row (only relevant when input.type = "bed").
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param name.bed.names logical; reserved for naming BED entries from the
+#'   target name column.
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param output.table logical; if TRUE a CSV table of BLAST match statistics
+#'   is written for each genome.
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param match.by.chr logical; reserved for filtering matches to chromosome-
+#'   level sequences only.
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param duplicate.matches character; how to handle cases where multiple
+#'   targets match the same genomic contig: "best" keeps the highest-scoring
+#'   match, "all" keeps all matches, "none" discards duplicates.
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param merge.matches logical; if TRUE, multiple BLAST hits from different
+#'   parts of the same target to the same contig are merged into a single
+#'   coordinate span before extraction.
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param minimum.match.length integer minimum number of aligned bases required
+#'   to retain a BLAST match.
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param minimum.match.identity numeric minimum percent identity (0-100) for a
+#'   BLAST match to be retained.
 #'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
+#' @param minimum.match.coverage numeric minimum proportion of the target length
+#'   that must be covered by the BLAST match.
 #'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param add.flanks integer number of base pairs to add upstream and downstream
+#'   of each matched region when extracting sequences.
 #'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
+#' @param genome.search.string optional character string to filter files in a
+#'   genome directory by name (e.g. "_genomic.fna.gz").
 #'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
+#' @param threads number of CPU threads to pass to blastn.
 #'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
+#' @param memory amount of RAM in GB (currently reserved).
 #'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param overwrite logical; if TRUE existing output directories are deleted and
+#'   recreated.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param quiet logical; if TRUE BLAST stdout is suppressed.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param blast.path system path to the directory containing blastn and
+#'   makeblastdb; NULL searches the system PATH.
 #'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; extracted FASTA sequences are written to per-genome
+#'   sub-directories inside output.name.
 #'
 #' @export
 

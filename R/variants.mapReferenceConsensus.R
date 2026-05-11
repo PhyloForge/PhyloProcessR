@@ -1,36 +1,44 @@
 #' @title mapReferenceConsensus
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Builds a shared consensus reference from a directory of phylip
+#'   alignments (one consensus sequence per locus), indexes it with BWA and
+#'   GATK, then maps per-sample pre-processed BAM files (from prepareBAM())
+#'   against this shared reference using the GATK best-practices pipeline
+#'   (SamToFastq | bwa mem | MergeBamAlignment | SortSam | MarkDuplicates |
+#'   SetNmAndUqTags). Used for joint genotyping workflows where all samples
+#'   share the same reference.
 #'
-#' @param read.directory directory of processed reads
+#' @param mapping.directory path to the directory containing per-sample
+#'   sub-directories with pre-processed BAM files (all_reads.bam) created by
+#'   prepareBAM().
 #'
-#' @param mapping.directory save name for the output directory
+#' @param alignment.directory path to a directory of phylip-format multiple
+#'   sequence alignments; one consensus sequence per file is extracted to
+#'   build the shared reference.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param samtools.path system path to the directory containing samtools; NULL
+#'   searches the system PATH.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param bwa.path system path to the directory containing bwa; NULL searches
+#'   the system PATH.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param threads number of computation processing threads
+#' @param temp.directory path to a GATK JVM temp directory; NULL uses the
+#'   current working directory.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of CPU threads for BWA and GATK operations.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if FALSE samples that already have a
+#'   final-mapped-all.bam are skipped.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical; if TRUE BWA and samtools stdout/stderr are suppressed.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes final-mapped-all.bam files to per-sample lane
+#'   sub-directories in mapping.directory, and a shared BWA index to index/.
 #'
 #' @export
 

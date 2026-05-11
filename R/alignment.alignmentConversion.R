@@ -9,12 +9,10 @@
 #' @return returns a new alignment from the desired format
 #'
 #' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' \dontrun{
+#' # Convert a DNAStringSet alignment to a DNAbin matrix
+#' dnabin.align <- alignmentConversion(input.alignment = my.stringset, end.format = "DNAbin")
+#' }
 #'
 #' @export
 

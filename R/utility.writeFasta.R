@@ -1,28 +1,31 @@
 #' @title writeFasta
 #'
-#' @description Function for writing sequences or alignment in R to fasta format
+#' @description Writes one or more DNA sequences to a FASTA-formatted file.
+#'   Sequences can be supplied as a list of character strings or as a single
+#'   character string. Long sequences are wrapped at nbchar characters per line.
+#'   The file connection can be kept open for appending additional sequences.
 #'
-#' @param sequences the sequences in some format to do
+#' @param sequences a list of character strings, each element being one
+#'   sequence, or a single character string when writing only one sequence.
 #'
-#' @param names names from the sequences
+#' @param names character vector of sequence names corresponding to sequences;
+#'   used as FASTA headers (written as ">name").
 #'
-#' @param file.out name of the file to be saved
+#' @param file.out path to the output FASTA file to create or append to.
 #'
-#' @param open keep the connection open = a to append, or 'w" to write once
+#' @param open character; file connection mode passed to file(). Use "w" to
+#'   write (overwrite), "a" to append to an existing file.
 #'
-#' @param nbchar number of characters per line if interleaving
+#' @param nbchar integer; number of sequence characters per line when wrapping
+#'   long sequences. Use a very large value (e.g. 1000000) to write each
+#'   sequence on a single line.
 #'
-#' @param as.string save as a string or not
+#' @param as.string logical; if TRUE each sequence element is treated as a
+#'   single character string and converted to a character vector via seqinr::s2c
+#'   before writing; if FALSE sequences are expected to already be character
+#'   vectors.
 #'
-#' @return saves the alignment as a fasta file
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes sequences to file.out in FASTA format.
 #'
 #' @export
 

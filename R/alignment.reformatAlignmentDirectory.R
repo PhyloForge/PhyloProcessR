@@ -1,26 +1,18 @@
 #' @title reformatAlignmentFolder
 #'
-#' @description Function for easily converting alignments between different R alignment classes
+#' @description Converts all alignments in a directory from one file format to another. Supported input formats are "phylip", "nexus", and "fasta". Supported output formats are "phylip", "nexus", and "fasta". Each alignment is read with the appropriate ape reader and written in the target format to the output directory.
 #'
-#' @param alignment.path a folder of individual alignments in nexus or phylip format
+#' @param alignment.path path to a directory containing the input alignment files
 #'
-#' @param out.dir the name of the new directory with reformatted alignments
+#' @param out.dir path to the output directory where reformatted alignment files will be saved
 #'
-#' @param overwrite if TRUE overwrites file if it exists; FALSE the dataset is skipped
+#' @param overwrite if TRUE, delete and recreate the output directory before writing; if FALSE, return early if the output directory already exists
 #'
-#' @param from.format the format to convert the alignment from (phylip, nexus, fasta)
+#' @param from.format the format of the input alignments: "phylip", "nexus", or "fasta"
 #'
-#' @param to.format the format to convert the alignment to (phylip, nexus, fasta)
+#' @param to.format the desired output format: "phylip", "nexus", or "fasta"
 #'
-#' @return saves to file a folder of alignments for the desired format
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves reformatted alignment files to out.dir; nothing is returned to R
 #'
 #' @export
 

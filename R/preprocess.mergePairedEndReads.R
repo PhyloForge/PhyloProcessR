@@ -1,32 +1,31 @@
 #' @title mergePairedEndReads
 #'
-#' @description Function for merging paired-end reads from processed Illumina sequence data using the program fastp
+#' @description Merges overlapping paired-end reads using fastp's --merge mode.
+#'   Read pairs that overlap are combined into a single merged read (saved as
+#'   READ3/merged), while non-overlapping pairs are kept as READ1 and READ2.
+#'   Adapter trimming, quality filtering, and length filtering are disabled so
+#'   that only the merging step is performed.
 #'
-#' @param input.reads path to a folder of processed reads in fastq format.
+#' @param input.reads path to a directory of processed paired-end reads in
+#'   fastq.gz format, organised in per-sample sub-directories.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where merged read files will
+#'   be saved (one sub-directory per sample).
 #'
-#' @param fastp.path system path to fastp in case it can't be found
+#' @param fastp.path system path to the directory containing the fastp
+#'   executable; NULL searches the system PATH.
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of CPU threads to pass to fastp.
 #'
-#' @param mem amount of system memory to use
+#' @param mem amount of RAM in GB (currently reserved).
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param quiet logical; if TRUE fastp stdout and stderr are suppressed.
 #'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes merged fastq.gz files to output.directory and a
+#'   CSV summary to logs/mergePairedEndReads_summary.csv.
 #'
 #' @export
 

@@ -1,27 +1,34 @@
 #' @title dropboxDownload
 #'
-#' @description Function for downloading data off your dropbox account
+#' @description Downloads paired-end fastq.gz read files from a Dropbox account
+#'   using the rdrop2 package and the Dropbox API v2. A sample spreadsheet maps
+#'   source file names to desired sample names and the function renames files to
+#'   the standard convention (SampleName_L00N_READ1/2.fastq.gz) on download.
+#'   A file_rename_dropbox.csv is written on completion for use in downstream
+#'   functions.
 #'
-#' @param sample.spreadsheet spreadsheet path or table of file names to download
+#' @param sample.spreadsheet path to a CSV file with at least two columns: File
+#'   (the file name prefix in Dropbox to search for) and Sample (the desired
+#'   output sample name). Multiple rows per sample are treated as separate
+#'   sequencing lanes.
 #'
-#' @param dropbox.directory the directory that contains these target files
+#' @param dropbox.directory the Dropbox path (starting with /) to the directory
+#'   to search for read files.
 #'
-#' @param dropbox.token your dropbox token path, created the first time you run the function but needs interactivity for log-in. Can be done once on your computer and the token can be moved around.
+#' @param dropbox.token path to an RDS file containing a saved Dropbox OAuth2
+#'   token produced by rdrop2::drop_auth(). If NULL, the function attempts to
+#'   retrieve a token from the rdrop2 cache.
 #'
-#' @param output.directory the directory to save the files you are downloading
+#' @param output.directory local path where downloaded files will be saved.
 #'
-#' @param skip.not.found the directory to save the files you are downloading
+#' @param skip.not.found logical; if TRUE samples whose files cannot be located
+#'   in Dropbox are silently skipped. If FALSE an error is raised.
 #'
-#' @param overwrite whether to overwrite or not
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before downloading.
 #'
-#' @return saves dropbox files to output directory
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return invisibly; writes downloaded fastq.gz files to output.directory and
+#'   a file_rename_dropbox.csv in the working directory.
 #'
 #' @export
 
@@ -103,10 +110,13 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     
       sample.reads = all.reads[grep(paste0(as.character(temp.data$File[j]), "_"), all.reads)]
 
-      # Skip not found or crash
       if (length(sample.reads) == 0) {
-      sample.reads = all.reads[grep(paste0(as.character(temp.data$File[j]), "-"), all.reads)]
-      } # end if
+        sample.reads = all.reads[grep(paste0(as.character(temp.data$File[j]), "-"), all.reads)]
+      }
+
+      if (length(sample.reads) == 0) {
+        sample.reads = all.reads[grep(as.character(temp.data$File[j]), all.reads, fixed = TRUE)]
+      }
 
       if (file.exists(paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ1.fastq.gz")) == TRUE) {
         temp.sample.data <- data.frame(File = paste0(temp.data$Sample[j], "_L00", j), Sample = temp.data$Sample[j])

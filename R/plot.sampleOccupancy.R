@@ -1,34 +1,47 @@
 #' @title plotOccupancy
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Creates a bar plot showing the number (or proportion) of
+#'   alignment files in which each sample is present. Samples are read from the
+#'   tip labels of a species tree and their presence/absence is scored across all
+#'   phylip alignment files in \code{file.directory}. The bar plot is saved as a
+#'   PDF and the ggplot2 object is returned invisibly.
 #'
-#' @param species.tree path to a folder of sequence alignments in phylip format.
+#' @param species.tree path to a Newick tree file whose tip labels are the
+#'   expected sample names.
 #'
-#' @param file.directory available input alignment formats: fasta or phylip
+#' @param file.directory path to a directory of phylip alignment files (.phy).
+#'   Each file is scanned for the presence of each sample.
 #'
-#' @param type contigs are added into existing alignment if algorithm is "add"
+#' @param type character; type of input files. Accepted values are
+#'   \code{"alignment"} and \code{"tree"} (currently only alignment is
+#'   implemented). Default: \code{c("alignment", "tree")}.
 #'
-#' @param out.name available output formats: phylip
+#' @param out.name base name (without extension) used for the output PDF file.
+#'   Default: \code{"species-occupancy"}.
 #'
-#' @param sample.order algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param sample.order character; how to order samples on the x-axis. One of
+#'   \code{"value"} (ascending occupancy), \code{"alphabetical"}, or
+#'   \code{"custom"} (uses \code{custom.order}). Default:
+#'   \code{c("value", "alphabetical", "custom")}.
 #'
-#' @param custom.order TRUE applies the adjust sequence direction function of MAFFT
+#' @param save.width width of the saved PDF in inches. Default: \code{10}.
 #'
-#' @param exclude.taxa if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param save.height height of the saved PDF in inches. Default: \code{8}.
 #'
-#' @param proportion path to a folder of sequence alignments in phylip format.
+#' @param custom.order character vector giving the desired sample order when
+#'   \code{sample.order = "custom"}. Default: \code{NULL}.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param exclude.taxa character vector of sample names to exclude from the
+#'   plot. Default: \code{NULL}.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param proportion logical; if \code{TRUE} values are expressed as a
+#'   proportion of the maximum occupancy rather than raw counts. Default:
+#'   \code{TRUE}.
 #'
-#' @examples
+#' @param overwrite logical; reserved for future use. Default: \code{TRUE}.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Returns the ggplot2 plot object invisibly. Also saves a PDF named
+#'   \code{<out.name>_occupancy-plot.pdf} in the working directory.
 #'
 #' @export
 

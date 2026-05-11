@@ -1,24 +1,30 @@
 #' @title makeFileRename
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Scans a directory of raw fastq files and generates a CSV
+#'   rename table mapping file names to sample names. The resulting CSV can be
+#'   supplied to organizeReads() or renameReads() to standardise file naming.
+#'   Duplicate file entries are detected and flagged as errors.
 #'
-#' @param read.directory path to a folder of raw reads in fastq format.
+#' @param read.directory path to a directory containing raw fastq or fastq.gz
+#'   files, either flat or in per-sample sub-folders.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.name file name (including .csv extension) for the rename table
+#'   to be written.
 #'
-#' @param rename.file "Sample" to run on a single sample or "Directory" to run on a directory of samples
+#' @param name.samples character; either "folder" to derive sample names from
+#'   the immediate parent folder of each read file, or "file" to derive sample
+#'   names by stripping read-pair suffixes (_R1, _R2, etc.) from the file name
+#'   itself.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param subfolder logical; if TRUE and name.samples is "folder" or "file",
+#'   the leading folder component of the path is stripped before extracting the
+#'   file name, allowing one level of sub-directory nesting.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
+#' @param overwrite logical; if TRUE an existing output.name CSV is deleted
+#'   before writing.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes a two-column CSV with columns File and Sample to
+#'   output.name.
 #'
 #' @export
 

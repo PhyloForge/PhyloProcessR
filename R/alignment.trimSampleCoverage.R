@@ -1,21 +1,16 @@
 #' @title trimSampleCoverage
 #'
-#' @description Function for trimming out low coverage (i.e. high gap) samples from alignment
+#' @description Removes samples from an alignment whose sequence coverage falls below minimum thresholds. Coverage can be measured relative to the total alignment length ("alignment") or relative to the longest sample in the alignment ("sample"). Samples are removed if they have fewer than min.coverage.bp non-gap base pairs or if their non-gap base pair count is less than min.coverage.percent of the reference width. Alignments with three or fewer sequences or where min.coverage.bp exceeds the alignment length are returned unmodified.
 #'
-#' @param alignment folder that contains an alignment in DNAStringSet format
+#' @param alignment a DNAStringSet containing the aligned sequences to filter
 #'
-#' @param min.coverage.percent minimum percent sequence data present for each sample out of the total alignment length
+#' @param min.coverage.percent minimum percentage of the reference width (alignment or longest sample) that each sample must cover in non-gap base pairs to be retained
 #'
-#' @param min.sample.bp minimum number of base pairs a sample needs to be kept
+#' @param min.coverage.bp minimum absolute number of non-gap base pairs a sample must have to be retained
 #'
-#' @return returns sample coverage trimmed alignment. Alignment will be returned unmodified if the min.sample.bp is less than the alignment length.
+#' @param relative.width whether the percentage threshold is calculated relative to "alignment" (total alignment width) or "sample" (the length of the longest sample in the alignment)
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with low-coverage samples removed
 #'
 #' @export
 

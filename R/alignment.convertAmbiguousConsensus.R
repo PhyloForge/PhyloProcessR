@@ -1,37 +1,39 @@
 #' @title convertAmbiguousConsensus
 #'
-#' @description Function for trimming out alignment columns with too many gaps
+#' @description Converts IUPAC ambiguity codes in a DNAStringSet alignment to specific
+#' unambiguous bases. Each ambiguity code has a corresponding parameter specifying which
+#' base to substitute. This is useful for programs that do not accept ambiguous characters.
+#' Note: parameter values supplied by the caller are currently overridden inside the
+#' function body by fixed defaults (A or T priority).
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet (or coercible list) containing the sequences to convert.
 #'
-#' @param convert.r converts ambiguous base pair R to A or G
+#' @param convert.r replacement base for the ambiguity code R (A or G). Default c("A", "G").
 #'
-#' @param convert.y converts ambiguous base pair Y to C or T
+#' @param convert.y replacement base for the ambiguity code Y (C or T). Default c("C", "T").
 #'
-#' @param convert.s converts ambiguous base pair S to G or C
+#' @param convert.s replacement base for the ambiguity code S (G or C). Default c("G", "C").
 #'
-#' @param convert.w converts ambiguous base pair W to A or T
+#' @param convert.w replacement base for the ambiguity code W (A or T). Default c("A", "T").
 #'
-#' @param convert.k converts ambiguous base pair K to G or T
+#' @param convert.k replacement base for the ambiguity code K (G or T). Default c("G", "T").
 #'
-#' @param convert.m converts ambiguous base pair M to A or C
+#' @param convert.m replacement base for the ambiguity code M (A or C). Default c("A", "C").
 #'
-#' @param convert.b converts ambiguous base pair B to C, G, or T
+#' @param convert.b replacement base for the ambiguity code B (C, G, or T).
+#' Default c("C", "G", "T").
 #'
-#' @param convert.d converts ambiguous base pair D to A, G, or T
+#' @param convert.d replacement base for the ambiguity code D (A, G, or T).
+#' Default c("A", "G", "T").
 #'
-#' @param convert.h converts ambiguous base pair H to A, C, or T
+#' @param convert.h replacement base for the ambiguity code H (A, C, or T).
+#' Default c("A", "C", "T").
 #'
-#' @param convert.v converts ambiguous base pair V to A, C, or G
+#' @param convert.v replacement base for the ambiguity code V (A, C, or G).
+#' Default c("A", "C", "G").
 #'
-#' @return returns DNAStringSet of column trimmed alignment
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with all specified ambiguity codes replaced by their chosen
+#' unambiguous bases.
 #'
 #' @export
 

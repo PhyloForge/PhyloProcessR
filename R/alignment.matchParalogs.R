@@ -1,46 +1,38 @@
-#' @title matchTargets
+#' @title matchParalogs
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description For each sample assembly in assembly.directory, uses BLAST (dc-megablast) to identify contigs that match a provided set of paralog target sequences. Matching contigs are extracted and saved per sample as a fasta file of candidate paralog sequences, enabling downstream paralog detection and filtering.
 #'
-#' @param assembly.directory path to a folder of sequence alignments in phylip format.
+#' @param assembly.directory path to a directory of per-sample assembly fasta files (one file per sample)
 #'
-#' @param target.file available input alignment formats: fasta or phylip
+#' @param target.file path to a fasta file of paralog target sequences to match against each assembly
 #'
-#' @param alignment.contig.name contigs are added into existing alignment if algorithm is "add"
+#' @param alignment.contig.name label prefix used for naming the output contig alignment files
 #'
-#' @param output.directory available output formats: phylip
+#' @param output.directory path to the directory where per-sample paralog output files will be saved
 #'
-#' @param min.match.percent algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.match.percent minimum BLAST percent identity required to retain a contig match
 #'
-#' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
+#' @param min.match.length minimum number of matching base pairs required to retain a BLAST hit
 #'
-#' @param min.match.coverage if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param min.match.coverage minimum percent of the query length that must be covered by a BLAST hit
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param trim.target if TRUE, trim target sequences before matching (currently unused placeholder)
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param threads number of CPU threads to pass to BLAST
 #'
-#' @param trim.target TRUE to supress mafft screen output
+#' @param memory total memory in GB (currently unused, reserved for future use)
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param overwrite if TRUE, redo and overwrite samples already completed; if FALSE, skip them
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param resume if TRUE, skip samples whose output files already exist
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param quiet if TRUE, suppress BLAST screen output
 #'
-#' @param blast.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param blast.path system path to the directory containing BLAST executables; NULL to use the system PATH
 #'
-#' @param bbmap.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param bbmap.path system path to the directory containing BBMap executables; NULL to use the system PATH
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves per-sample fasta files of matching paralog contigs to output.directory; nothing is returned to R
 #'
 #' @export
 

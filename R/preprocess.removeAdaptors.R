@@ -1,32 +1,31 @@
 #' @title removeAdaptors
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Removes Illumina adapter sequences from raw paired-end reads
+#'   using fastp with automatic adapter detection (--detect_adapter_for_pe).
+#'   Also applies a minimum length filter (30 bp), low-complexity filtering,
+#'   and poly-X tail trimming. Quality-based filtering is not applied here.
 #'
-#' @param input.reads path to a folder of raw reads in fastq format.
+#' @param input.reads path to a directory of raw paired-end reads in fastq.gz
+#'   format. Samples may be in per-sample sub-directories or identified by a
+#'   shared filename prefix.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where adapter-trimmed reads
+#'   will be saved (one sub-directory per sample).
 #'
-#' @param fastp.path system path to fastp in case it can't be found
+#' @param fastp.path system path to the directory containing the fastp
+#'   executable; NULL searches the system PATH.
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of CPU threads to pass to fastp.
 #'
-#' @param mem amount of system memory to use
+#' @param mem amount of RAM in GB (currently reserved).
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param quiet logical; if TRUE fastp stdout and stderr are suppressed.
 #'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes adapter-trimmed fastq.gz files to output.directory
+#'   and a CSV summary to logs/removeAdaptors_summary.csv.
 #'
 #' @export
 

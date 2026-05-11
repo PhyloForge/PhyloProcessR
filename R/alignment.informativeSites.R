@@ -1,24 +1,31 @@
 #' @title informativeSites
 #'
-#' @description Calculates the number or proportion of parsimony informative sites in an alignment
+#' @description Counts or calculates the proportion of parsimony-informative sites in an
+#' alignment. A site is parsimony-informative if at least two different character states
+#' each appear in at least two sequences, excluding gap (\code{-}), missing (\code{?}),
+#' and N characters (and optionally IUPAC ambiguity codes). The function operates on an
+#' alignment in DNAbin matrix format.
 #'
-#' @param alignment alignment in ape DNABin or a matrix format
+#' @param alignment alignment in ape DNAbin matrix format (rows = taxa, columns = sites).
 #'
-#' @param count Whethe to return the count of parsimoney informative sites (TRUE) or the proportion (FALSE)
+#' @param count logical. If TRUE (default), returns the integer count of parsimony-
+#' informative sites. If FALSE, returns the proportion of informative sites relative to
+#' alignment length.
 #'
-#' @param ambiguities Whether to consider ambiguities (TRUE) or not (FALSE)
+#' @param variable.sites logical. Currently passed to the function but the implementation
+#' always computes parsimony-informative sites. Included for future extension. Default FALSE.
 #'
-#' @param variable.sites TRUE to calculate variable sites instead of parsimony informative
+#' @param ambiguities logical. If TRUE (default), IUPAC ambiguity codes are treated as
+#' valid characters. If FALSE, ambiguity codes are added to the exclusion list and not
+#' counted.
 #'
-#' @return plots the phylogenetic tree and selected data associated with an AstralPlane object. Can optionally be saved to file as a PDF by giving save.file a file name.
+#' @return an integer count (if \code{count = TRUE}) or a numeric proportion rounded to
+#' three decimal places (if \code{count = FALSE}) of parsimony-informative sites.
 #'
 #' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' \dontrun{
+#' n.pis <- informativeSites(alignment = as.matrix(ape::as.DNAbin(my.align)))
+#' }
 #'
 #' @export
 

@@ -1,32 +1,36 @@
 #' @title runCap3
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Assembles or merges a set of DNA contigs using CAP3. Input can
+#'   be either a path to an existing FASTA file or a DNAStringSet object (which
+#'   is written to a temporary file). Assembled contigs and optionally singlet
+#'   sequences are concatenated into a single output file. The function also
+#'   supports reading the assembled contigs back into R as a DNAStringSet.
 #'
-#' @param contigs path to a folder of sequence alignments in phylip format.
+#' @param contigs either a character string giving the path to an input FASTA
+#'   file, or a DNAStringSet of sequences to assemble.
 #'
-#' @param output.name contigs are added into existing alignment if algorithm is "add"
+#' @param output.name output file name for the merged contigs (assembled +
+#'   singlets). If NULL, no output file is saved.
 #'
-#' @param cap3.path contigs are added into existing alignment if algorithm is "add"
+#' @param cap3.path system path to the directory containing the cap3 executable;
+#'   NULL searches the system PATH.
 #'
-#' @param z algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param read.R logical; if TRUE the assembled contigs are read back into R and
+#'   returned as a DNAStringSet.
 #'
-#' @param o TRUE applies the adjust sequence direction function of MAFFT
+#' @param include.singlets logical; if TRUE and read.R is TRUE, unassembled
+#'   singlet sequences are appended to the returned DNAStringSet.
 #'
-#' @param e if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param a,b,c,d,e,f,g,h,i,j,k,m,n,o,p,r,s,t,u,v,y,z numeric CAP3 algorithm
+#'   parameters passed directly to the command line. See the CAP3 manual for
+#'   definitions (defaults match CAP3 built-in defaults). Key parameters: o is
+#'   the minimum overlap length (default 40), p is the minimum percent identity
+#'   (default 90), s is the overlap similarity score cutoff (default 900), and
+#'   z is the minimum number of good reads at a clipping position (default 3).
 #'
-#' @param s if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return if read.R is TRUE, a DNAStringSet of assembled (and optionally
+#'   singlet) sequences; otherwise the function returns invisibly after writing
+#'   output files.
 #'
 #' @export
 

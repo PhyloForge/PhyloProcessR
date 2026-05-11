@@ -1,46 +1,52 @@
 #' @title paralogStats
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Uses BLAST (dc-megablast) to identify putative paralogs in a
+#'   directory of sample assemblies relative to a set of target sequences.
+#'   Contigs are renamed, a per-sample BLAST database is built, and targets are
+#'   queried against it. Hits passing percent-identity, length, and coverage
+#'   thresholds are grouped by target locus; loci with more than one matching
+#'   contig are considered paralogous. Summary statistics including the number
+#'   of unique paralogs, total paralog copies, and copy-number distributions
+#'   are recorded for each sample.
 #'
-#' @param assembly.directory path to a folder of sequence alignments in phylip format.
+#' @param assembly.directory path to a directory of assembly FASTA files (.fa),
+#'   one file per sample.
 #'
-#' @param target.file available input alignment formats: fasta or phylip
+#' @param target.file path to a FASTA file of target sequences to BLAST against
+#'   the assemblies.
 #'
-#' @param alignment.contig.name contigs are added into existing alignment if algorithm is "add"
+#' @param alignment.contig.name optional label used internally; not currently
+#'   applied to outputs. Default: \code{NULL}.
 #'
-#' @param output.directory available output formats: phylip
+#' @param output.directory path to the directory where per-sample subdirectories
+#'   and the summary table will be written. Default: \code{"paralog-stats"}.
 #'
-#' @param min.match.percent algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.match.percent minimum BLAST percent identity to retain a hit.
+#'   Default: \code{65}.
 #'
-#' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
+#' @param min.match.length minimum alignment length (bp) to retain a hit.
+#'   Default: \code{60}.
 #'
-#' @param min.match.coverage if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param min.match.coverage minimum proportion of the query length that must be
+#'   covered (expressed as a percentage) to retain a hit. Default: \code{35}.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param threads number of CPU threads to pass to BLAST. Default: \code{1}.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param memory not currently used; reserved for future use. Default: \code{1}.
 #'
-#' @param trim.target TRUE to supress mafft screen output
+#' @param overwrite logical; if \code{TRUE} existing per-sample directories are
+#'   removed and recomputed. Default: \code{FALSE}.
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param quiet logical; if \code{TRUE} BLAST screen output is suppressed.
+#'   Default: \code{TRUE}.
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param blast.path path to the directory containing BLAST executables. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param blast.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param bbmap.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<output.directory>/sample-paralog-summary.txt}, a tab-delimited table
+#'   with one row per sample containing paralog counts and contig length
+#'   statistics.
 #'
 #' @export
 

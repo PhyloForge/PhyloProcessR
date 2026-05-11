@@ -1,19 +1,14 @@
 #' @title trimAlignmentColumns
 #'
-#' @description Function for trimming out alignment columns with too many gaps
+#' @description Removes columns from a multiple sequence alignment where the proportion of gap characters ("-"), and optionally N and "?" characters, meets or exceeds a specified threshold. Alignments with two or fewer sequences are returned unmodified.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet (or compatible format) containing the aligned sequences
 #'
-#' @param min.gap.percent minimum threshold gap percentage allowed to trim column
+#' @param min.gap.percent percentage threshold (0-100): columns where gap/N/? characters comprise at least this percentage of sequences are removed
 #'
-#' @return returns DNAStringSet of column trimmed alignment
+#' @param count.n if TRUE, count "N" and "?" characters as gaps when computing the gap percentage; if FALSE, only "-" and "?" are counted
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a DNAStringSet with high-gap columns removed
 #'
 #' @export
 

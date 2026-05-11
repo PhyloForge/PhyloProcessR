@@ -1,30 +1,27 @@
 #' @title makeUniqueFastaHeaders
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Resolves duplicate FASTA sequence headers in a single file.
+#'   Duplicate entries are detected and either renamed by appending a numeric
+#'   suffix ("append-number") or replaced with sequential Sequence_N names
+#'   ("rename"). The deduplicated sequences are saved to a new FASTA file using
+#'   writeFasta().
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param fasta.file path to the input FASTA file that may contain duplicate
+#'   sequence headers.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param output.name path or file name for the output FASTA file with unique
+#'   headers.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param type character; "append-number" to append a numeric suffix to
+#'   duplicate header names, or "rename" to replace all headers with
+#'   zero-padded sequential names (Sequence_0001, Sequence_0002, ...).
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param overwrite logical; if TRUE an existing output file is deleted before
+#'   writing.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param quiet logical; currently unused, reserved for future output control.
 #'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @param resume TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; the deduplicated sequences are written to output.name.
 #'
 #' @export
 

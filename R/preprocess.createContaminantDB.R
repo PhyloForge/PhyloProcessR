@@ -1,26 +1,37 @@
 #' @title createContaminantDB
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Builds a local directory of contaminant reference genomes to be
+#'   used by removeContamination(). Downloads genomes from GenBank via the
+#'   biomartr package based on a user-supplied CSV, optionally adds the human
+#'   genome, NCBI UniVec vector sequences, additional GenBank accessions, or a
+#'   custom FASTA file.
 #'
-#' @param decontamination.list path to a folder of adaptor trimmed reads in fastq format.
+#' @param decontamination.list path to a CSV file with at least two columns:
+#'   Genome (a short display name) and GenBank_Accession (the GenBank accession
+#'   to download). Rows whose Genome matches "Human", "Homo", etc. can be
+#'   excluded via include.human.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where contaminant genome files
+#'   will be saved.
 #'
-#' @param include.human the new directory to save the adaptor trimmed sequences
+#' @param include.human logical; if FALSE, rows associated with human genomes
+#'   are removed from decontamination.list before downloading.
 #'
-#' @param include.mouse directory of genomes contaminants to scan samples
+#' @param include.univec logical; if TRUE, the NCBI UniVec vector/adaptor
+#'   sequence database is downloaded and added to the contaminant directory.
 #'
-#' @param overwrite system path to samtools in case it can't be found
+#' @param include.genbank character vector of additional GenBank organism names
+#'   to download and include; NULL skips this step.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
+#' @param include.fasta path to an existing FASTA file to copy directly into
+#'   the contaminant directory; NULL skips this step.
 #'
-#' @examples
+#' @param overwrite logical; if TRUE an existing output.directory is deleted
+#'   and recreated. If FALSE and the directory already exists the function
+#'   returns early with a message.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; side effect is a populated output.directory containing
+#'   compressed genome FASTA files ready for use as a decontamination reference.
 #'
 #' @export
 
@@ -67,47 +78,70 @@ createContaminantDB = function(decontamination.list = NULL,
     system(paste0("cp ", include.fasta, " ", output.directory, "/manually-included-data.fa"))
   }#end if
 
-  if (is.null(include.genbank) != T){
-
-    for (i in 1:length(include.genbank)){
-
-      biomartr::getGenome(db = "genbank",
-                          organism = include.genbank[i],
-                          path = output.directory,
-                          reference = FALSE)
-
-      new.name = paste0("include-genbank_", include.genbank[i])
-
-      file.list = list.files(output.directory)
-      sample.files = file.list[grep(include.genbank[i], file.list)]
-      old.name = sample.files[grep(".fna.gz|.fa$", sample.files)]
-
-      system(paste0("mv ", output.directory, "/", old.name, " ", output.directory, "/", new.name))
-    }#end i
-
-  }#end is.null
-
-  if (include.univec == TRUE){
-   system(paste0("wget -c https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec -O ", output.directory, "/UniVec.fa"))
+  # Downloads a genome by accession using the NCBI Datasets API (GCA/GCF) or
+  # Entrez efetch (nucleotide accessions like NC_*), saves as a gzipped FASTA.
+  .download_accession = function(accession, out.path) {
+    is.assembly = grepl("^GC[AF]_", accession)
+    if (is.assembly) {
+      zip.file = tempfile(fileext = ".zip")
+      url = paste0(
+        "https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession/",
+        accession,
+        "/download?include_annotation_type=GENOME_FASTA"
+      )
+      download.file(url, destfile = zip.file, quiet = TRUE, mode = "wb")
+      tmp.dir = tempfile()
+      dir.create(tmp.dir)
+      utils::unzip(zip.file, exdir = tmp.dir)
+      fna.file = list.files(tmp.dir, pattern = "\\.fna$", recursive = TRUE, full.names = TRUE)
+      if (length(fna.file) == 0) stop(paste("No .fna found in NCBI zip for", accession))
+      system(paste0("gzip -c ", fna.file[1], " > ", shQuote(out.path)))
+      unlink(zip.file); unlink(tmp.dir, recursive = TRUE)
+    } else {
+      # Nucleotide accession (NC_*, AY_*, etc.) via Entrez efetch
+      url = paste0(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+        "?db=nucleotide&id=", accession, "&rettype=fasta&retmode=text"
+      )
+      fa.file = tempfile(fileext = ".fa")
+      download.file(url, destfile = fa.file, quiet = TRUE)
+      system(paste0("gzip -c ", shQuote(fa.file), " > ", shQuote(out.path)))
+      unlink(fa.file)
+    }
   }
-  sample.data = sample.data[!sample.data$Genome %in% c("univec", "UniVec", "UNIVEC", "Univec"),]
 
+  if (is.null(include.genbank) != TRUE) {
+    for (i in 1:length(include.genbank)) {
+      out.path = file.path(output.directory, paste0("include-genbank_", include.genbank[i], ".fna.gz"))
+      message("Downloading include.genbank: ", include.genbank[i])
+      tryCatch(
+        .download_accession(include.genbank[i], out.path),
+        error = function(e) warning("Could not download ", include.genbank[i], ": ", conditionMessage(e))
+      )
+    }
+  }
 
-  for (i in 1:nrow(sample.data)){
-    biomartr::getGenome(db = "genbank",
-                        organism = sample.data$GenBank_Accession[i],
-                        path = output.directory,
-                        reference = FALSE)
+  if (include.univec == TRUE) {
+    download.file(
+      "https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec",
+      destfile = file.path(output.directory, "UniVec.fa"),
+      quiet = TRUE
+    )
+  }
+  sample.data = sample.data[!sample.data$Genome %in% c("univec", "UniVec", "UNIVEC", "Univec"), ]
 
-    new.name = paste0(sample.data$Genome[i], "-", sample.data$GenBank_Accession[i], ".fna.gz")
-
-    file.list = list.files(output.directory)
-    sample.files = file.list[grep(sample.data$GenBank_Accession[i], file.list)]
-    old.name = sample.files[grep(".fna.gz|.fa$", sample.files)]
-
-    system(paste0("mv ", output.directory, "/", old.name, " ", output.directory, "/", new.name))
-
-  }#end i loop
+  for (i in 1:nrow(sample.data)) {
+    accession = trimws(sample.data$GenBank_Accession[i])
+    # Skip rows whose accession column contains a URL (handled elsewhere)
+    if (grepl("^https?://", accession)) next
+    out.path = file.path(output.directory,
+                         paste0(sample.data$Genome[i], "-", accession, ".fna.gz"))
+    message("Downloading ", sample.data$Genome[i], " (", accession, ")")
+    tryCatch(
+      .download_accession(accession, out.path),
+      error = function(e) warning("Could not download ", accession, ": ", conditionMessage(e))
+    )
+  }
 
   file.list = list.files(output.directory)
   del.files = file.list[grep(".fna.gz|.fa$", file.list, invert = T)]

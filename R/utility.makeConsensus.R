@@ -1,26 +1,34 @@
 #' @title makeConsensus
 #'
-#' @description Function for making a consensus sequence from alignment
+#' @description Derives a consensus sequence from a multiple sequence alignment
+#'   stored as a DNAStringSet. Four methods are available: majority rule,
+#'   threshold-based, IUPAC ambiguity codes, or a positional frequency profile.
+#'   Gap characters are optionally removed from the consensus.
 #'
-#' @param alignment alignment in DNAStringSet format
+#' @param alignment a DNAStringSet containing an aligned set of sequences (all
+#'   must have equal length).
 #'
-#' @param method method to apply; majority = majority consensus, threshold = consensus from threshold percent of column; IUPAC and profile
+#' @param method character; the consensus algorithm to apply. "majority" assigns
+#'   the most frequent base at each column; "threshold" assigns a base only when
+#'   it exceeds the specified frequency threshold; "IUPAC" uses seqinr::bma to
+#'   produce IUPAC ambiguity codes; "profile" returns a positional frequency
+#'   matrix rather than a sequence.
 #'
-#' @param threshold threshold to use for "threshold" method
+#' @param threshold numeric (0-1); the minimum column frequency required to call
+#'   a base when method = "threshold".
 #'
-#' @param warn.non.IUPAC warn if characters are not IUPAC
+#' @param warn.non.IUPAC logical; if TRUE a warning is issued for non-IUPAC
+#'   characters (only used when method = "IUPAC").
 #'
-#' @param type DNA or RNA sequence data
+#' @param remove.gaps logical; if TRUE gap characters ("-") are removed from
+#'   the final consensus sequence.
 #'
-#' @return returns a data.table with the raw summary statistics calculated for each alignment in the alignment.path. A csv file can optionally be saved by giving a file name to file.export
+#' @param type character; "DNA" or "RNA", passed to seqinr::bma when method =
+#'   "IUPAC".
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a DNAStringSet of length 1 named "Consensus_Sequence" containing the
+#'   consensus sequence. When method = "profile" a frequency matrix is returned
+#'   instead.
 #'
 #' @export
 

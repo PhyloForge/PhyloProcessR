@@ -1,27 +1,29 @@
-#' @title dropboxDownload
+#' @title renameReads
 #'
-#' @description Function for downloading data off your dropbox account
+#' @description Renames and copies raw fastq.gz read files to a new directory
+#'   using a sample spreadsheet that maps old names to new names. Supports
+#'   samples spread across multiple lanes by specifying lane label strings via
+#'   lane.names. Output files are named using the convention
+#'   NewName_L00N_READ1/2.fastq.gz.
 #'
-#' @param sample.spreadsheet spreadsheet path or table of file names to download
+#' @param sample.spreadsheet path to a CSV file with columns Old_Name and
+#'   New_Name specifying the renaming mapping.
 #'
-#' @param dropbox.directory the directory that contains these target files
+#' @param output.directory path to the directory where renamed files will be
+#'   copied.
 #'
-#' @param dropbox.token your dropbox token path, created the first time you run the function but needs interactivity for log-in. Can be done once on your computer and the token can be moved around.
+#' @param skip.not.found logical; if TRUE samples in the spreadsheet whose
+#'   files cannot be located are silently skipped rather than raising an error.
 #'
-#' @param output.directory the directory to save the files you are downloading
+#' @param lane.names character vector of lane label substrings (e.g. c("s2",
+#'   "s3")) used to distinguish reads from different lanes when a sample has
+#'   multiple lanes; NULL assumes a single lane per sample.
 #'
-#' @param skip.not.found the directory to save the files you are downloading
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before copying files.
 #'
-#' @param overwrite whether to overwrite or not
-#'
-#' @return saves dropbox files to output directory
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return invisibly; side effect is renamed fastq.gz files written to
+#'   output.directory.
 #'
 #' @export
 

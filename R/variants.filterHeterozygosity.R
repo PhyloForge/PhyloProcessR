@@ -1,23 +1,34 @@
 #' @title filterHeterozygosity
 #'
-#' @description Calculates the number or proportion of parsimony informative sites in an alignment
+#' @description Filters per-sample FASTA contig files based on the proportion
+#'   of IUPAC ambiguity codes (heterozygous sites). Contigs whose proportion of
+#'   ambiguous bases equals or exceeds the threshold are moved to a separate
+#'   "removed" directory; those below the threshold are written to the output
+#'   directory. Samples are processed in parallel.
 #'
-#' @param alignment alignment in ape DNABin or a matrix format
+#' @param iupac.directory path to the directory of input FASTA files containing
+#'   IUPAC-coded sequences (e.g. output of VCFtoContigs() with
+#'   ambiguity.codes = TRUE).
 #'
-#' @param count Whethe to return the count of parsimoney informative sites (TRUE) or the proportion (FALSE)
+#' @param output.directory path to the directory where contigs passing the
+#'   heterozygosity filter will be saved.
 #'
-#' @param ambiguities Whether to consider ambiguities (TRUE) or not (FALSE)
+#' @param removed.directory path to the directory where contigs exceeding the
+#'   heterozygosity threshold will be saved.
 #'
-#' @return plots the phylogenetic tree and selected data associated with an AstralPlane object. Can optionally be saved to file as a PDF by giving save.file a file name.
+#' @param threshold numeric (0-1); the maximum allowed proportion of IUPAC
+#'   ambiguity characters (R, Y, K, M, S, W, B, D, H, V) per contig. Contigs
+#'   at or above this proportion are removed.
 #'
-#' @examples
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(
-#'   astral.tree = your.tree,
-#'   outgroups = c("species_one", "species_two"),
-#'   tip.length = 1
-#' )
+#' @param memory total RAM in GB; divided equally across threads.
+#'
+#' @param overwrite logical; if TRUE existing output and removed directories are
+#'   deleted and recreated before processing.
+#'
+#' @return invisibly; writes filtered FASTA files to output.directory and
+#'   high-heterozygosity FASTA files to removed.directory.
 #'
 #' @export
 

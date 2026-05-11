@@ -1,36 +1,34 @@
 #' @title flankDepthSummary
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Summarises and visualises binned RPKM depth data (produced by
+#'   \code{depth.binnedEstimate}) across samples grouped by a sample-group CSV,
+#'   and then uses alignment data and target sequences to estimate where exon
+#'   and intron regions begin and end within each marker. Binned depth is
+#'   separated into exon-region and flanking-intron-region components per locus,
+#'   and summary statistics (mean, median, SD) are reported for each. Group-
+#'   level bar plots (median binned RPKM with SD error bars) are saved as PDFs.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param depth.directory path to a directory of per-sample depth subdirectories,
+#'   each containing an \code{rpkm-binned-data.txt} file.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where PDF plots and summary
+#'   tables will be written. Default: \code{"flank-depth-summary"}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param target.file path to a FASTA file of target/bait sequences (used to
+#'   estimate exon boundaries within alignments). Default: \code{NULL}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param sample.groups path to a CSV file whose first column is the group name
+#'   and second column is the sample name.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param threads not currently used. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param memory not currently used. Default: \code{1}.
 #'
-#' @param mem amount of system memory to use
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Saves group-level binned RPKM PDF plots
+#'   and per-locus exon/intron depth summary tables to \code{output.directory}.
 #'
 #' @export
 

@@ -17,11 +17,14 @@
 #' @return saves to file concatenated alignments and partition files delimiting the coordinates of each indidividual marker
 #'
 #' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' \dontrun{
+#' concatenateAlignments(alignment.folder = "alignments/trimmed",
+#'                       output.name = "concatenated_dataset",
+#'                       partition.file = TRUE,
+#'                       output.format = "phylip",
+#'                       partition.format = "raxml",
+#'                       overwrite = TRUE)
+#' }
 #'
 #' @export
 

@@ -1,30 +1,35 @@
 #' @title haploContigsToIUPAC
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Converts phased haplotype alignments (where each taxon is represented by
+#' two sequences distinguished by a \code{_0} / \code{_1} suffix) into single-sequence
+#' alignments using IUPAC ambiguity codes. For each taxon, the two haplotype sequences
+#' are merged into a consensus using \code{makeConsensus} with the IUPAC method. The
+#' resulting alignments are saved in phylip format. Processing is parallelised across
+#' alignment files.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to the directory containing haplotype alignment files.
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignment files. Accepted values: "phylip"
+#' or "fasta".
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where IUPAC consensus alignment files
+#' will be saved.
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignment files. Currently "phylip" is
+#' supported.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param threads number of parallel threads to use. Default 1.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param memory total memory (in GB) to allocate across all threads. Default 1.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param overwrite logical. If TRUE, the output directory is deleted and recreated before
+#' processing. If FALSE and the output directory already exists, the function stops with an
+#' error. Default FALSE.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical. If TRUE, suppresses per-file progress messages. Default FALSE.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Writes IUPAC consensus alignment files in phylip format to
+#' \code{output.directory}. No value is returned to R.
 #'
 #' @export
 

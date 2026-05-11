@@ -1,36 +1,43 @@
 #' @title haplotypeCaller
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Runs GATK4 HaplotypeCaller in GVCF mode (-ERC GVCF) on
+#'   per-sample BAM files. When a sample has multiple lanes, the lane BAMs are
+#'   first merged, sorted, and deduplicated with GATK MergeSamFiles,
+#'   MarkDuplicates, and SetNmAndUqTags before calling haplotypes. The reference
+#'   can be a per-sample assembly or a shared consensus reference. Samples are
+#'   processed in parallel.
 #'
-#' @param read.directory directory of processed reads
+#' @param mapping.directory path to the directory of per-sample BAM files and
+#'   reference indices (output of mapReferenceSample() or
+#'   mapReferenceConsensus()).
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path to the directory where per-sample GVCF files
+#'   will be saved.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param reference.type character; "sample" to use each sample's own reference
+#'   FASTA (located at mapping.directory/sample/index/reference.fa), or
+#'   "consensus" to use a shared reference at index/reference.fa in the working
+#'   directory.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param temp.directory path to a temporary directory for GATK JVM temp files;
+#'   NULL uses the current working directory.
 #'
-#' @param threads number of computation processing threads
+#' @param ploidy integer ploidy to pass to HaplotypeCaller (-ploidy).
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical; currently unused.
 #'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes per-sample GVCF (.g.vcf.gz) files and realigned
+#'   BAM files to output.directory.
 #'
 #' @export
 

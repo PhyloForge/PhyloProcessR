@@ -1,37 +1,50 @@
 #' @title prepareBAM
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Converts processed paired-end fastq.gz read files into
+#'   unmapped BAM files with correctly assigned read groups, following the GATK
+#'   best-practices pre-processing pipeline. For each sample lane, GATK
+#'   FastqToSam creates an unmapped BAM, RevertSam cleans it, and
+#'   AddOrReplaceReadGroups assigns read group metadata. When auto.readgroup is
+#'   TRUE, read group information (flowcell ID and lane) is parsed automatically
+#'   from the Illumina fastq headers. Samples are processed in parallel.
+#'   The resulting all_reads.bam files are inputs to mapReferenceSample() or
+#'   mapReferenceConsensus().
 #'
-#' @param read.directory directory of processed reads
+#' @param read.directory path to a directory of processed paired-end fastq.gz
+#'   read files, organised in per-sample sub-directories.
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path to the directory where per-sample per-lane
+#'   unmapped BAM sub-directories will be created.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param auto.readgroup logical; if TRUE read group fields (RGID, RGPU) are
+#'   automatically extracted from the Illumina fastq header of the first read.
+#'   If FALSE generic read group labels are assigned using the lane index.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param samtools.path system path to the directory containing samtools; NULL
+#'   searches the system PATH.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param bwa.path system path to the directory containing bwa; NULL searches
+#'   the system PATH (currently unused in this step but reserved for pipeline
+#'   consistency).
 #'
-#' @param threads number of computation processing threads
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param mem amount of system memory to use
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param temp.directory path to a GATK JVM temp directory; NULL uses the
+#'   current working directory.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated. If FALSE samples that already have a final-mapped-all.bam are
+#'   skipped.
 #'
-#' @examples
+#' @param quiet logical; currently unused.
 #'
-#' your.tree <- ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data <- astralPlane(
-#'   astral.tree = your.tree,
-#'   outgroups = c("species_one", "species_two"),
-#'   tip.length = 1
-#' )
+#' @return invisibly; writes per-sample per-lane all_reads.bam files to
+#'   output.directory.
 #'
 #' @export
 

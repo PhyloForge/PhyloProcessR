@@ -1,36 +1,33 @@
 #' @title fastqStats
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Counts reads in fastq.gz files and computes summary statistics
+#'   for each sample, including per-read-file counts, total reads, read pairs,
+#'   megabase pairs sequenced, and reads per million. Results are written to a
+#'   CSV file and returned as a data frame.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to the top-level directory containing sample
+#'   read files or sample sub-directories.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param sub.directory optional sub-directory name within each sample folder
+#'   to restrict which reads are counted (e.g. "cleaned-reads-snp"); NULL uses
+#'   the top-level directory structure.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.name base name (without extension) for the output CSV file.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param read.length expected read length in base pairs, used to calculate
+#'   megabase pairs (MegaBasePairs = read.length * read.pairs * 2 / 1e6).
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param threads number of CPU threads (currently reserved; not parallelised
+#'   internally).
 #'
-#' @param threads number of computation processing threads
+#' @param mem amount of RAM in GB (currently reserved).
 #'
-#' @param mem amount of system memory to use
+#' @param overwrite logical; if TRUE an existing output CSV is deleted before
+#'   writing.
 #'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a data frame with columns Sample, Read1_Count, Read2_Count,
+#'   Read3_Count, Total_Reads, Read_Pairs, Read_Length, MegaBasePairs, and
+#'   Reads_Per_Million. Also written to output.name.csv.
 #'
 #' @export
 

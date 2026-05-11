@@ -1,19 +1,12 @@
 #' @title pairwiseDistanceTarget
 #'
-#' @description Function for trimming out divergent sample sequence segments in an alignment
+#' @description Computes the pairwise genetic distance between each sequence in an alignment and a single target (reference) sequence. Distance is calculated as the proportion of sites that differ between the sample and the reference, counting only positions where both sequences have non-gap, non-N, non-? data.
 #'
-#' @param alignment alignment in DNAbin, DNAStringSet, list, and matrix formats
+#' @param alignment a DNAStringSet containing the aligned sequences to compare
 #'
-#' @param target a single sequence or reference aligned to alignment (or the name in the alignment) to pairwise compare each sample
+#' @param target either a DNAStringSet with a single reference sequence to append to the alignment, or a character string giving the name of a sequence already present in the alignment to use as the reference
 #'
-#' @return returns DNAStringSet of trimmed alignment
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return a named numeric vector of pairwise distances (proportion of differing sites) for every sequence in the alignment including the target; names correspond to sequence names
 #'
 #' @export
 

@@ -1,36 +1,47 @@
-#' @title summary.sampleSpecificity
+#' @title sampleSpecificity
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Measures per-sample specificity — the proportion of cleaned
+#'   reads that can be mapped to the target marker sequences. For each sample,
+#'   paired reads are mapped to the target sequences with BWA mem, duplicates
+#'   are marked with GATK4 MarkDuplicates, and read counts per target marker
+#'   are obtained via \code{samtools idxstats}. Specificity is computed as the
+#'   fraction of total read pairs that map to at least one target. Per-marker
+#'   raw data and an overall per-sample summary (including mapped counts,
+#'   unmapped counts, mean RPKM, and specificity) are written to the output
+#'   directory.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to a directory where each subdirectory corresponds
+#'   to one sample and contains paired FASTQ files.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param target.file path to a FASTA file of target marker sequences.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.directory path to the directory where per-sample subdirectories
+#'   and the summary file will be written. Default: \code{"sample-specificity"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param threads number of CPU threads for BWA. Default: \code{1}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param memory RAM in GB passed to GATK4 via \code{-Xmx}. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param overwrite logical; if \code{TRUE} the output directory is removed and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param mem amount of system memory to use
+#' @param quiet logical; if \code{TRUE} BWA and samtools screen output is
+#'   suppressed. Default: \code{FALSE}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param bwa.path path to the directory containing \code{bwa}. If \code{NULL}
+#'   expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param gatk4.path path to the directory containing the \code{gatk}
+#'   executable. If \code{NULL} expected on the system PATH. Default:
+#'   \code{NULL}.
 #'
-#' @param quiet TRUE to supress screen output
+#' @param samtools.path path to the directory containing \code{samtools}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes
+#'   \code{<output.directory>/sample-specificity_summary.txt} (one row per
+#'   sample) and per-sample \code{sample_specificity_raw-data.txt} files inside
+#'   each sample subdirectory.
 #'
 #' @export
 

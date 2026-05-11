@@ -1,36 +1,61 @@
 #' @title genotypeSamples
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Performs per-sample genotyping and variant filtering using
+#'   GATK4. For each sample, GenotypeGVCFs converts a haplotype caller GVCF
+#'   to a genotyped VCF, SelectVariants separates SNPs and indels, and
+#'   VariantFiltration applies user-specified hard filters. Final filtered VCFs
+#'   for SNPs, indels, and their combination are saved per sample. Samples are
+#'   processed in parallel.
 #'
-#' @param read.directory directory of processed reads
+#' @param mapping.directory path to the directory containing per-sample
+#'   reference index sub-directories.
 #'
-#' @param output.directory save name for the output directory
+#' @param haplotype.caller.directory path to the directory of per-sample
+#'   haplotype caller GVCF files (output of haplotypeCaller()).
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path where per-sample genotype VCF sub-directories
+#'   will be saved.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param use.base.recalibration logical; if TRUE the BQSR-recalibrated GVCF
+#'   (gatk4-bqsr-haplotype-caller.g.vcf.gz) is used as input; if FALSE the
+#'   standard GVCF (gatk4-haplotype-caller.g.vcf.gz) is used.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param custom.SNP.QD numeric QD filter threshold for SNPs (variant is
+#'   filtered if QD < this value).
+#' @param custom.SNP.QUAL numeric QUAL filter threshold for SNPs.
+#' @param custom.SNP.SOR numeric SOR filter threshold for SNPs (filtered if
+#'   SOR > this value).
+#' @param custom.SNP.FS numeric FS filter threshold for SNPs (filtered if
+#'   FS > this value).
+#' @param custom.SNP.MQ numeric MQ filter threshold for SNPs (filtered if
+#'   MQ < this value).
+#' @param custom.SNP.MQRankSum numeric MQRankSum filter threshold for SNPs
+#'   (filtered if MQRankSum < this value).
+#' @param custom.SNP.ReadPosRankSum numeric ReadPosRankSum filter threshold for
+#'   SNPs (filtered if ReadPosRankSum < this value).
+#' @param custom.INDEL.QD numeric QD filter threshold for indels.
+#' @param custom.INDEL.QUAL numeric QUAL filter threshold for indels.
+#' @param custom.INDEL.FS numeric FS filter threshold for indels.
+#' @param custom.INDEL.ReadPosRankSum numeric ReadPosRankSum filter threshold
+#'   for indels.
 #'
-#' @param threads number of computation processing threads
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param mem amount of system memory to use
+#' @param temp.directory path to a temporary directory for GATK JVM temp files;
+#'   NULL uses the current working directory.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @examples
+#' @param quiet logical; currently unused.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes filtered VCF files to per-sample sub-directories
+#'   in output.directory.
 #'
 #' @export
 

@@ -1,36 +1,43 @@
-#' @title summary.missingData
+#' @title missingData
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Quantifies missing data for each sample across a set of
+#'   phylip-format alignments relative to a reference target file. For each
+#'   marker, the alignment is re-aligned with MAFFT using the target sequence as
+#'   a reference, trimmed to the target region, and gap columns are removed.
+#'   Missing basepair data (proportion of the target not recovered) and missing
+#'   marker data (whether the marker is absent entirely) are recorded per
+#'   sample. Processing is parallelised across markers. Two summary files are
+#'   written: one for missing basepair data and one for missing marker data.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param alignment.directory path to a directory of phylip alignment files
+#'   (.phy), one file per marker.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param target.file path to a FASTA file of reference/target sequences whose
+#'   names correspond to alignment file names (without the .phy extension).
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param output.directory path to the directory where output files will be
+#'   written. Default: \code{"sample-sensitivity"}.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param threads number of parallel workers to use. Default: \code{1}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param memory total RAM (GB) to allocate across workers. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param mafft.path path to the directory containing the \code{mafft}
+#'   executable. If \code{NULL} MAFFT is expected on the system PATH.
+#'   Default: \code{NULL}.
 #'
-#' @param mem amount of system memory to use
+#' @param overwrite logical; if \code{TRUE} the output directory is removed and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param quiet logical; if \code{TRUE} MAFFT screen output is suppressed.
+#'   Default: \code{FALSE}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes three files to
+#'   \code{output.directory}: \code{missing_basepair_data_raw-data.txt} (raw
+#'   per-sample per-marker values), \code{missing_basepair_data_summary.txt}
+#'   (per-sample summary statistics for missing basepair data), and
+#'   \code{missing_marker_data_summary.txt} (per-sample counts of missing
+#'   markers).
 #'
 #' @export
 

@@ -1,46 +1,61 @@
 #' @title annotateTargets
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Annotates assembly contigs by matching them to a set of target marker
+#' sequences using BLAST. For each sample, contigs are first deduplicated with CD-HIT-EST,
+#' then BLASTed against the target file. BLAST hits are filtered by percent identity,
+#' match length, and coverage. Contigs that span multiple targets or targets that span
+#' multiple contigs are handled by trimming or joining with N padding. The annotated
+#' contigs for each sample are saved as a per-sample FASTA file in \code{output.directory}.
+#' A combined FASTA file suitable for downstream alignment (named
+#' \code{alignment.contig.name_to-align.fa}) and a summary CSV are written to the working
+#' directory.
 #'
-#' @param assembly.directory path to a folder of sequence alignments in phylip format.
+#' @param assembly.directory path to the directory containing per-sample contig FASTA files
+#' (one file per sample, named \code{sampleName.fa}).
 #'
-#' @param target.file available input alignment formats: fasta or phylip
+#' @param target.file path to the FASTA file of target marker sequences used for BLAST
+#' matching.
 #'
-#' @param alignment.contig.name contigs are added into existing alignment if algorithm is "add"
+#' @param alignment.contig.name base name (without extension) used for the combined output
+#' FASTA and summary CSV files. Default "annotated-contigs-all".
 #'
-#' @param output.directory available output formats: phylip
+#' @param output.directory path to the directory where per-sample annotated contig files
+#' will be saved. Default "annotated-contigs".
 #'
-#' @param min.match.percent algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.match.percent minimum BLAST percent identity required to retain a hit.
+#' Default 60.
 #'
-#' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
+#' @param min.match.length minimum BLAST alignment length (in bp) required to retain a hit.
+#' Default 60.
 #'
-#' @param min.match.coverage if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param min.match.coverage minimum proportion of the target sequence length that must be
+#' covered by the BLAST hit (expressed as a percentage). Default 50.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param trim.target logical. If TRUE, contigs are trimmed to match the coordinates of the
+#' target sequence. Default FALSE.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param retain.paralogs logical. If TRUE, potential paralogs (multiple contigs matching
+#' the same target) are retained by keeping the highest-bitscore hit. If FALSE, the
+#' best-scoring contig is selected. Default FALSE.
 #'
-#' @param trim.target TRUE to supress mafft screen output
+#' @param threads number of parallel threads to use. Default 1.
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param memory total memory (in GB) to allocate across all threads. Default 1.
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param blast.path path to the directory containing BLAST executables. If NULL, BLAST
+#' tools are expected to be on the system PATH.
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param cdhit.path path to the directory containing the CD-HIT-EST executable. If NULL,
+#' CD-HIT-EST is expected to be on the system PATH.
 #'
-#' @param blast.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param overwrite logical. If TRUE, previously completed samples are reprocessed;
+#' if FALSE, they are skipped. Default FALSE.
 #'
-#' @param bbmap.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param quiet logical. If TRUE, suppresses BLAST screen output. Default TRUE.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Writes per-sample annotated FASTA files to \code{output.directory}, a combined
+#' FASTA file for alignment, and a summary CSV to the working directory. No value is
+#' returned to R.
 #'
 #' @export
 

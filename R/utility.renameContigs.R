@@ -1,27 +1,34 @@
 #' @title renameContigs
 #'
-#' @description Function for downloading data off your dropbox account
+#' @description Renames contig FASTA files by copying them from a source
+#'   directory to a new directory with names taken from a rename spreadsheet.
+#'   The spreadsheet maps current file names to desired sample names. The
+#'   function supports custom column header names for the source and destination
+#'   name columns.
 #'
-#' @param sample.spreadsheet spreadsheet path or table of file names to download
+#' @param rename.spreadsheet path to a CSV file mapping existing contig file
+#'   names to new sample names. By default the first column is used as the
+#'   source name and the second as the new name; this is controlled by headers.
 #'
-#' @param dropbox.directory the directory that contains these target files
+#' @param contig.directory path to the directory containing the input contig
+#'   FASTA files (.fa or .fasta).
 #'
-#' @param dropbox.token your dropbox token path, created the first time you run the function but needs interactivity for log-in. Can be done once on your computer and the token can be moved around.
+#' @param output.directory path to the directory where renamed contig files
+#'   will be saved.
 #'
-#' @param output.directory the directory to save the files you are downloading
+#' @param skip.not.found logical; if TRUE samples in the spreadsheet that cannot
+#'   be located in contig.directory are silently skipped. If FALSE an error is
+#'   raised.
 #'
-#' @param skip.not.found the directory to save the files you are downloading
+#' @param headers character vector of length 2 specifying the column names in
+#'   rename.spreadsheet to use as source and destination names respectively
+#'   (e.g. c("File", "Sample")). NULL uses the first and second columns.
 #'
-#' @param overwrite whether to overwrite or not
+#' @param overwrite logical; if TRUE the output directory must not exist (the
+#'   function raises an error if it does and overwrite is FALSE); if TRUE the
+#'   directory is deleted and recreated.
 #'
-#' @return saves dropbox files to output directory
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return invisibly; copies renamed contig FASTA files to output.directory.
 #'
 #' @export
 

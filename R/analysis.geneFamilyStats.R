@@ -1,46 +1,56 @@
-#' @title paralogStats
+#' @title geneFamilyStats
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Uses BLAST to match a set of target sequences to sample
+#'   assemblies and summarises copy-number statistics broken down by gene family.
+#'   For each sample, contigs are renamed, a BLAST database is built, and target
+#'   sequences are queried against it. Hits are filtered by percent identity,
+#'   match length, and coverage. Loci with more than \code{max.match.copy} hits
+#'   are excluded. Per-sample and per-gene-family summary tables are written to
+#'   the output directory.
 #'
-#' @param assembly.directory path to a folder of sequence alignments in phylip format.
+#' @param assembly.directory path to a directory of assembly FASTA files (.fa),
+#'   one file per sample.
 #'
-#' @param target.file available input alignment formats: fasta or phylip
+#' @param target.file path to a FASTA file of target sequences to BLAST against
+#'   the assemblies.
 #'
-#' @param alignment.contig.name contigs are added into existing alignment if algorithm is "add"
+#' @param gene.family.file path to a CSV file with columns \code{target_name}
+#'   and \code{gene_family} that maps each target to a gene-family label.
 #'
-#' @param output.directory available output formats: phylip
+#' @param output.directory path to the directory where per-sample subdirectories
+#'   and summary files will be written. Default: \code{"gene-family-stats"}.
 #'
-#' @param min.match.percent algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.match.percent minimum BLAST percent identity required to retain a
+#'   hit. Default: \code{50}.
 #'
-#' @param min.match.length TRUE applies the adjust sequence direction function of MAFFT
+#' @param min.match.length minimum alignment length (bp) required to retain a
+#'   hit. Default: \code{60}.
 #'
-#' @param min.match.coverage if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param min.match.coverage minimum percentage of the query length that must be
+#'   covered by the alignment to retain a hit. Default: \code{50}.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param max.match.copy maximum number of contig hits allowed per target locus
+#'   before the locus is discarded. Default: \code{100}.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param threads number of CPU threads to pass to BLAST. Default: \code{1}.
 #'
-#' @param trim.target TRUE to supress mafft screen output
+#' @param memory not currently used; reserved for future use. Default: \code{1}.
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param overwrite logical; if \code{TRUE} existing per-sample directories are
+#'   removed and recomputed. Default: \code{FALSE}.
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param quiet logical; if \code{TRUE} BLAST screen output is suppressed.
+#'   Default: \code{TRUE}.
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param blast.path path to the directory containing BLAST executables
+#'   (\code{makeblastdb}, \code{blastn}). If \code{NULL} the executables are
+#'   expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param blast.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param bbmap.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Writes three summary files to
+#'   \code{output.directory}: \code{sample_summary.txt} (one row per sample),
+#'   \code{gene-family_summary_short.txt} (copy counts per family per sample),
+#'   and \code{gene-family_summary_long.txt} (detailed per-sample per-family
+#'   statistics). Individual per-sample files are written to subdirectories.
 #'
 #' @export
 

@@ -1,26 +1,18 @@
 #' @title trimTAPER
 #'
-#' @description wrapper function for running TAPER Must be installed.
+#' @description Wrapper function for running TAPER (via its Julia script correction.jl) on a single alignment. The alignment is written to a temporary fasta file, the TAPER Julia script is called to mask low-quality sequence regions (replacing them with N), and the corrected alignment is read back. All-gap columns introduced by TAPER are then removed with trimAlignmentColumns. If TAPER produces no output the original alignment is returned unchanged. TAPER and Julia must be installed and accessible.
 #'
-#' @param alignment alignment in DNAStringSet format
+#' @param alignment a DNAStringSet containing the aligned sequences to clean
 #'
-#' @param TAPER.path Absolute path to TAPER if R cannot find it in your path
+#' @param TAPER.path path to the TAPER correction.jl Julia script; defaults to "correction.jl"
 #'
-#' @param julia.path Absolute path to julia if R cannot find it in your path
+#' @param julia.path path to the julia executable; defaults to "julia"
 #'
-#' @param quiet TRUE to supress TAPER screen output
+#' @param quiet if TRUE, suppress TAPER screen output
 #'
-#' @param delete.temp TRUE to delete temporary files made by TAPIR
+#' @param delete.temp if TRUE, delete the temporary fasta files created during the TAPER run
 #'
-#' @return returns a data.table with the raw summary statistics calculated for each alignment in the alignment.path. A csv file can optionally be saved by giving a file name to file.export
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a DNAStringSet of the TAPER-cleaned alignment with all-gap columns removed; returns the original alignment unchanged if TAPER produces no output
 #'
 #' @export
 

@@ -1,40 +1,32 @@
 #' @title trimAlignmentTargets
 #'
-#' @description Function to trim a set of alignments to a provided target. The function operates across a directory of alignments that correspond to a single fasta file of capture targets
+#' @description Trims each alignment in a directory to the region spanned by a corresponding target sequence from a reference fasta file. For each alignment, the matching target sequence is added to the alignment with MAFFT, the target's aligned coordinates are identified, large internal gaps in the target are corrected, and the alignment is subsetted to the target region before saving. Alignments that are too short or have too few taxa after trimming are discarded. Runs in parallel using foreach/doParallel.
 #'
-#' @param alignment.directory path to a folder of sequence alignments
+#' @param alignment.directory path to a directory of input sequence alignments
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignments; "phylip" or "fasta"
 #'
-#' @param output.directory new alignment directory where the trimmed output files are saved
+#' @param output.directory path to the directory where target-trimmed alignments will be saved
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignments; currently "phylip"
 #'
-#' @param target.file path to the fasta file with the target sequences. These should be the entire marker, not the probe.
+#' @param target.file path to a fasta file containing the target/reference sequences; each sequence name must match the corresponding alignment file name (without extension)
 #'
-#' @param target.direction TRUE ensures output alignments are the same direction as the targets
+#' @param target.direction if TRUE, output alignments are oriented to match the direction of the target sequence
 #'
-#' @param min.alignment.length minimum alignment length to save in bp (default: 100)
+#' @param min.alignment.length minimum alignment length in bp required to save an alignment after trimming
 #'
-#' @param min.taxa.alignment mininum number of taxa to save alignment (default: 4)
+#' @param min.taxa.alignment minimum number of sequences required to save an alignment after trimming
 #'
-#' @param threads number of CPU threads / processes
+#' @param threads number of parallel processing threads
 #'
-#' @param memory memory in GB
+#' @param memory total memory in GB to allocate across threads
 #'
-#' @param overwrite TRUE to overwrite output files with the same name
+#' @param overwrite if TRUE, overwrite an existing output directory; if FALSE, skip alignments already present in the output directory
 #'
-#' @param mafft.path system path to the mafft program
+#' @param mafft.path system path to the MAFFT executable directory; NULL to use the system PATH
 #'
-#' @return a new output directory with the trimmed alignments
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves target-trimmed alignment files to output.directory; nothing is returned to R
 #'
 #' @export
 

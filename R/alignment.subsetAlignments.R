@@ -1,60 +1,32 @@
 #' @title makeAlignmentSubset
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Selects a subset of alignments from alignment.directory and copies them to output.directory. The subset can be defined in three ways: by matching alignment file names to names in a reference fasta file ("fasta"), by grepping for a pattern in alignment file names ("grep"), or by using BLAST to match alignment names against a set of target sequences ("blast"). This allows flexible subsetting of large alignment directories by locus type or identity.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to the directory of input alignment files
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignments; "phylip" or "fasta"
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where the subset alignment files will be copied
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for output alignments (currently informational; files are copied directly)
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param subset.reference method used to define the subset: "fasta" matches alignment names to sequence names in a fasta file, "grep" matches alignment file names to a pattern string, "blast" uses BLAST similarity to a set of target sequences
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param subset.fasta.file path to a fasta file whose sequence names are used to select alignments (required when subset.reference is "fasta")
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param subset.grep.string a regular expression pattern passed to grep to select alignment files by name (required when subset.reference is "grep")
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param subset.blast.targets path to a fasta file of query sequences used as BLAST queries against a database built from subset.fasta.file (required when subset.reference is "blast")
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param blast.path system path to the directory containing BLAST executables; NULL to use the system PATH
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param threads number of CPU threads to pass to BLAST
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param memory total memory in GB (currently reserved for future use)
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param overwrite if TRUE, overwrite an existing output directory; if FALSE, keep existing files
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return copies the selected alignment files to output.directory; nothing is returned to R
 #'
 #' @export
 

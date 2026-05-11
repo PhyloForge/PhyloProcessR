@@ -7,11 +7,10 @@
 #' @return returns a named vector of the number of gaps, total number of basepairs, and percent gaps in an entire alignment
 #'
 #' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' \dontrun{
+#' gap.stats <- countAlignmentGaps(alignment = my.alignment)
+#' # returns a named vector: gaps, alignment (total sites), percent_gaps
+#' }
 #'
 #' @export
 

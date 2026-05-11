@@ -1,24 +1,16 @@
 #' @title trimTrimal
 #'
-#' @description wrapper function for the program TrimAl that corrects for NAs introduced from TrimAl removing samples from the alignment
+#' @description Wrapper function for running TrimAl on a single alignment. The alignment is written to a temporary fasta file, TrimAl is called in automated mode (-automated1), and the trimmed alignment is read back. Sample names are restored from the original alignment to correct any truncation introduced by TrimAl. If TrimAl produces no output the original alignment is returned unchanged. Alignments with three or fewer sequences are returned unmodified. TrimAl must be installed and accessible.
 #'
-#' @param alignment path to a folder of sequence alignments in phylip format.
+#' @param alignment a DNAStringSet containing the aligned sequences to trim
 #'
-#' @param trimal.path provide system absolute path to trimal if R cannot find it
+#' @param trimal.path system path to the directory containing the trimal executable; NULL to use the system PATH
 #'
-#' @param method trimming method, "auto" is automated. Other options coming soon.
+#' @param method trimming method to use; currently only "auto" (automated1) is implemented
 #'
-#' @param quiet TRUE to supress TrimAl screen output
+#' @param quiet if TRUE, suppress TrimAl screen output
 #'
-#' @return returns an alignment in DNAStringSet format
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a DNAStringSet of the TrimAl-trimmed alignment with original sample names restored; returns the original alignment unchanged if TrimAl produces no output
 #'
 #' @export
 

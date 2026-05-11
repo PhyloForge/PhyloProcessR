@@ -1,36 +1,31 @@
 #' @title normalizeReads
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Normalises read depth across paired-end fastq files using ORNA
+#'   (Optimised Read Normalisation Algorithm) with k-mer sorting. This reduces
+#'   coverage biases and can improve downstream assembly quality. Samples are
+#'   processed in parallel using the foreach/doParallel framework.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param input.reads path to a directory of processed paired-end reads in
+#'   fastq.gz format, organised in per-sample sub-directories.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where normalised read files
+#'   will be saved (one sub-directory per sample).
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param orna.path system path to the directory containing the ORNA executable;
+#'   NULL searches the system PATH.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param threads number of CPU threads; controls both the doParallel cluster
+#'   size and the per-thread memory allocation.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param memory total RAM in GB available; divided equally across threads.
 #'
-#' @param threads number of computation processing threads
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before processing.
 #'
-#' @param memory amount of system memory to use
+#' @param quiet logical; if TRUE ORNA stdout and stderr are suppressed.
 #'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes normalised fastq.gz files to output.directory and
+#'   a CSV summary to logs/normalizeReads_summary.csv.
 #'
 #' @export
 

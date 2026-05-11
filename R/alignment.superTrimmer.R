@@ -1,60 +1,52 @@
 #' @title superTrimmer
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Applies a configurable pipeline of trimming steps to every alignment in a directory and saves the trimmed alignments to an output directory. Steps are applied in this order: (1) replace N with gap; (2) optionally convert ambiguous sites; (3) optionally run TrimAl (automated mode); (4) optionally trim external (edge) columns; (5) optionally trim high-gap columns; (6) optionally remove low-coverage samples. After trimming, alignments can optionally be assessed against minimum length and minimum taxa thresholds before saving. A per-alignment summary CSV and a log file are written to disk. Runs in parallel using foreach/doParallel.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.dir path to the directory of input alignment files
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignments; "phylip" or "fasta"
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.dir path to the directory where trimmed alignments will be saved
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignments; currently "phylip"
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param TrimAl if TRUE, run TrimAl (automated1 mode) as a trimming step
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param TrimAl.path system path to the directory containing the trimal executable; NULL to use the system PATH
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param trim.external if TRUE, trim poorly covered columns from the external (5' and 3') ends of the alignment
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param min.external.percent minimum percentage of sequences that must have data at a column for it to be retained during external trimming
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param trim.coverage if TRUE, remove samples whose sequence coverage falls below the minimum thresholds
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param min.coverage.percent minimum percentage of the alignment (or the longest sample) that each sample must cover to be retained
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param trim.column if TRUE, remove alignment columns where the gap percentage meets or exceeds min.column.gap.percent
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param min.column.gap.percent gap percentage threshold (0-100) at or above which a column is removed
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param convert.ambiguous.sites if TRUE, convert ambiguous (IUPAC) bases to gaps before trimming
 #'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
+#' @param alignment.assess if TRUE, apply final minimum length and minimum taxa filters and record pass/fail status in the summary table
 #'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param min.coverage.bp minimum number of non-gap base pairs a sample must have to be retained during sample coverage trimming
 #'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
+#' @param min.alignment.length minimum alignment length in bp required to save an alignment
 #'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
+#' @param min.taxa.alignment minimum number of sequences required to save an alignment
 #'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
+#' @param max.alignment.gap.percent maximum overall gap percentage allowed for an alignment to pass the assessment step
 #'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param threads number of parallel processing threads
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param memory total memory in GB to allocate across threads
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param overwrite if TRUE, delete and recreate the output directory; if FALSE, keep existing trimmed files and skip them
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param resume if TRUE, skip alignments whose trimmed output files already exist in the output directory
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return saves trimmed alignment files to output.dir, writes a summary CSV (alignment-trimming_summary.csv) and a log file; nothing is returned to R
 #'
 #' @export
 

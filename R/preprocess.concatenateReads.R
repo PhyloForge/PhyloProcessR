@@ -1,42 +1,45 @@
 #' @title concatenateReads
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Concatenates multi-lane fastq reads for a sample, splits them
+#'   into chunks using fastqsplitter, assembles each chunk with SPAdes, and
+#'   iteratively merges the resulting contigs with CAP3. Designed to handle
+#'   large datasets by processing reads in parallel chunks.
 #'
-#' @param input.reads directory of processed reads
+#' @param input.reads path to a directory of processed reads in fastq format,
+#'   expected to contain READ1, READ2, and optionally READ3 files.
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path for the directory where chunked reads and
+#'   per-chunk SPAdes assemblies will be saved.
 #'
-#' @param assembly.directory save name for the output directory
+#' @param assembly.directory path for the directory where merged contig files
+#'   will be saved.
 #'
-#' @param spades.path contigs are added into existing alignment if algorithm is "add"
+#' @param spades.path system path to the spades.py executable; NULL searches
+#'   the system PATH.
 #'
-#' @param fastqsplitter.path contigs are added into existing alignment if algorithm is "add"
+#' @param fastqsplitter.path system path to the fastqsplitter executable; NULL
+#'   searches the system PATH.
 #'
-#' @param number.chunks contigs are added into existing alignment if algorithm is "add"
+#' @param number.chunks integer number of chunks to split the reads into before
+#'   running SPAdes on each chunk independently.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param mismatch.corrector logical; if TRUE passes the --careful flag to
+#'   SPAdes to enable mismatch correction (slower but more accurate).
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param kmer.values integer vector of k-mer sizes to pass to SPAdes.
 #'
-#' @param threads number of computation processing threads
+#' @param threads number of CPU threads to use for SPAdes.
 #'
-#' @param memory amount of system memory to use
+#' @param memory amount of RAM in GB to allocate to SPAdes.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE existing output and assembly directories
+#'   are deleted and recreated before running.
 #'
-#' @param save.corrected.reads TRUE to overwrite a folder of samples with output.dir
+#' @param save.all.files logical; if FALSE intermediate per-chunk SPAdes
+#'   directories are deleted after each chunk is processed.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; side effect is the production of merged contig files in
+#'   assembly.directory.
 #'
 #' @export
 

@@ -1,24 +1,16 @@
 #' @title renameAlignmentSamples
 #'
-#' @description Function for easily renaming the samples of a multiple sequence alignment within a directory, or a single alignment
+#' @description Renames sample sequences within phylip alignment files in a directory (and optionally sub-directories) using a two-column lookup table. Each alignment is read, any sample names found in the lookup table are replaced with the corresponding new name, and the file is overwritten in place.
 #'
-#' @param align.directory the directory of alignments to have their samples renamed
+#' @param align.directory path to the directory containing alignment files to be renamed
 #'
-#' @param align.extension the file extension of your alignment files to be named
+#' @param align.extension file extension used to identify alignment files (e.g. ".phy")
 #'
-#' @param rename.file a tab delimited text file with two columns named Old_Name and New_Name for the current and new name of the target sample
+#' @param rename.file path to a tab-delimited text file with a header row; must contain columns named "Old_Name" and "New_Name" specifying the current and replacement sample names
 #'
-#' @param recursive TRUE to recursively rename within sub-directories or FALSE just for the main directory
+#' @param recursive if TRUE, search align.directory recursively to rename alignments in sub-directories as well; if FALSE, only rename alignments directly in align.directory
 #'
-#' @return overwrites alignments in directory with renamed sample alignments
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return overwrites each alignment file in place with the renamed sequences; nothing is returned to R
 #'
 #' @export
 

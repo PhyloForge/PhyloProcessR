@@ -1,36 +1,31 @@
-#' @title checkMD5
+#' @title utility.checkMD5
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Verifies the integrity of raw read files by computing their MD5
+#'   hash and comparing against expected hashes provided in one or more MD5
+#'   checksum files. Supports a single combined checksum file or a set of
+#'   per-directory MD5.txt files. Results are returned as a data frame and
+#'   written to a CSV.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param read.directory path to the directory containing the fastq.gz read
+#'   files to be checked.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param md5.file.name path to a whitespace-delimited file with expected MD5
+#'   hashes in column 1 and file names in column 2; required when md5.type is
+#'   "single-file".
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param md5.type character; either "single-file" (one MD5 file covers all
+#'   reads) or "many-files" (each sub-directory contains its own MD5.txt or
+#'   .md5 file).
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param output.name base name (without extension) for the output CSV
+#'   containing PASS/FAIL results.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param overwrite logical; if TRUE an existing output CSV is deleted before
+#'   writing.
 #'
-#' @param threads number of computation processing threads
-#'
-#' @param mem amount of system memory to use
-#'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return a data frame with columns File_Name, Read_actualMD5 (expected hash),
+#'   Read_checkMD5 (computed hash), and MD5check_Pass (PASS or FAIL). Also
+#'   written to output.name.csv.
 #'
 #' @export
 

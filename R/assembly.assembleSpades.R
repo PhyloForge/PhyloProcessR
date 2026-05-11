@@ -1,34 +1,59 @@
 #' @title assembleSpades
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Runs SPAdes (\code{spades.py}) on a directory of processed reads
+#'   to produce de novo genome assemblies. Each sample subdirectory under
+#'   \code{input.reads} is assembled independently with support for multi-lane
+#'   and mixed paired/single-end/merged read configurations. The
+#'   \code{scaffolds.fasta} output from each sample is copied to
+#'   \code{assembly.directory} as \code{<sample>.fa}. Samples for which a
+#'   \code{.fa} file already exists in \code{assembly.directory} are skipped
+#'   unless \code{overwrite = TRUE}. The \code{--careful} and \code{--isolate}
+#'   SPAdes modes cannot be used simultaneously.
 #'
-#' @param read.directory directory of processed reads
+#' @param input.reads path to a directory of processed reads. Each sample must
+#'   occupy its own subdirectory containing FASTQ files whose names encode read
+#'   number and pair identity.
 #'
-#' @param output.directory save name for the output directory
+#' @param output.directory path to the directory where per-sample SPAdes working
+#'   directories will be written. Default:
+#'   \code{"processed-reads/spades-assembly"}.
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param assembly.directory path to the directory where the final scaffold
+#'   FASTA files (.fa) are copied after assembly. Default:
+#'   \code{"draft-assemblies"}.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param spades.path path to the directory containing \code{spades.py}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param mismatch.corrector logical; if \code{TRUE} passes \code{--careful} to
+#'   SPAdes to reduce mismatches and indels in the assembly. Cannot be \code{TRUE}
+#'   when \code{isolate = TRUE}. Default: \code{TRUE}.
 #'
-#' @param threads number of computation processing threads
+#' @param isolate logical; if \code{TRUE} passes \code{--isolate} to SPAdes,
+#'   recommended for highly covered isolate genomes. Cannot be \code{TRUE} when
+#'   \code{mismatch.corrector = TRUE}. Default: \code{FALSE}.
 #'
-#' @param mem amount of system memory to use
+#' @param kmer.values integer vector of k-mer sizes passed to SPAdes with
+#'   \code{-k}. Default: \code{c(33, 55, 77, 99, 127)}.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param threads number of CPU threads passed to SPAdes with \code{-t}.
+#'   Default: \code{1}.
 #'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param memory RAM in GB passed to SPAdes with \code{-m}. Default: \code{4}.
 #'
-#' @examples
+#' @param overwrite logical; if \code{TRUE} existing output and assembly
+#'   directories are deleted and recreated and all samples are rerun. Default:
+#'   \code{FALSE}.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param save.corrected.reads logical; if \code{FALSE} (default) the
+#'   \code{corrected/} subdirectory produced by SPAdes is deleted after assembly
+#'   to save disk space. Default: \code{FALSE}.
 #'
+#' @param quiet logical; if \code{TRUE} SPAdes screen output is suppressed.
+#'   Default: \code{TRUE}.
+#'
+#' @return Invisibly returns nothing. Assembled scaffolds for each sample are
+#'   saved as \code{<assembly.directory>/<sample>.fa}.
 #'
 #' @export
 

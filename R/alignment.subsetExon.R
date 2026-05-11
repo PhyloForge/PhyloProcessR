@@ -1,60 +1,8 @@
 #' @title makeExonAlignments
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Placeholder documentation for a function that is currently entirely commented out. The intended purpose was to extract exon-only alignments from whole-marker alignments by identifying open reading frames and trimming to codon boundaries, but the function body is disabled pending reimplementation.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
-#'
-#' @param alignment.format available input alignment formats: fasta or phylip
-#'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
-#'
-#' @param output.format available output formats: phylip
-#'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
-#'
-#' @param trim.external give a save name if you wnat to save the summary to file.
-#'
-#' @param min.external.percent TRUE to supress mafft screen output
-#'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
-#'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
-#'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return this function currently has no active code and produces no output
 #'
 #' @export
 

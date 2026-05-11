@@ -1,34 +1,47 @@
-#' @title plotOccupancy
+#' @title plotSupportGrid
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Produces a support-value heatmap (using \code{heatmap}) that
+#'   compares node support across multiple tree files and analysis types (ASTRAL,
+#'   concatenation, jackknife, SVDquartets). For each tree file and each
+#'   user-defined set of taxa, monophyly is tested and the corresponding node
+#'   support is extracted. Support values are binned into colour categories
+#'   (not recovered = black, <50 = blue, 50–69 = orange, 70–94 = yellow,
+#'   >=95 = red) and plotted in a grid with rows for analyses and columns for
+#'   taxon sets. Row colours reflect the analysis type.
 #'
-#' @param species.tree path to a folder of sequence alignments in phylip format.
+#' @param species.tree not used in the current implementation; included for
+#'   interface consistency with \code{plotOccupancy}. Default: \code{NULL}.
 #'
-#' @param file.directory available input alignment formats: fasta or phylip
+#' @param file.directory not used in the current implementation; tree directory
+#'   is set internally. Default: \code{NULL}.
 #'
-#' @param type contigs are added into existing alignment if algorithm is "add"
+#' @param type character; type of input. Default:
+#'   \code{c("alignment", "tree")}.
 #'
-#' @param out.name available output formats: phylip
+#' @param out.name base name for output files. Default:
+#'   \code{"species-occupancy"}.
 #'
-#' @param sample.order algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param sample.order character; sample ordering option (not used in this
+#'   function). Default: \code{c("value", "alphabetical", "custom")}.
 #'
-#' @param custom.order TRUE applies the adjust sequence direction function of MAFFT
+#' @param save.width not used in the current implementation. Default: \code{10}.
 #'
-#' @param exclude.taxa if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param save.height not used in the current implementation. Default: \code{8}.
 #'
-#' @param proportion path to a folder of sequence alignments in phylip format.
+#' @param custom.order not used in the current implementation. Default:
+#'   \code{NULL}.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param exclude.taxa not used in the current implementation. Default:
+#'   \code{NULL}.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param proportion not used in the current implementation. Default:
+#'   \code{TRUE}.
 #'
-#' @examples
+#' @param overwrite not used in the current implementation. Default:
+#'   \code{TRUE}.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Displays a heatmap in the active graphics
+#'   device showing node support values across analyses and taxon sets.
 #'
 #' @export
 

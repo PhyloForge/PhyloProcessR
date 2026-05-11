@@ -1,33 +1,28 @@
 #' @title gatherUnlinked
 #'
-#' @description Function for concatenating a large number of alignments
+#' @description Assembles a mixed set of gene-level and exon-level alignments for use in
+#' unlinked analysis (e.g. coalescent methods). For each gene that has a concatenated gene
+#' alignment, that file is copied to the output directory. For genes represented by only a
+#' single exon (and therefore absent from the gene alignment directory), the corresponding
+#' exon alignment is copied instead. The result is one alignment per locus, avoiding
+#' redundancy between gene and exon alignments.
 #'
-#' @param alignment.folder folder that contains aligmnents to be concatenated
+#' @param gene.alignment.directory path to the directory containing gene-level concatenated
+#' alignment files (produced by, e.g., \code{concatenateGenes}).
 #'
-#' @param output.folder output file name
+#' @param exon.alignment.directory path to the directory containing individual exon
+#' alignment files.
 #'
-#' @param exon.gene.names output file name
+#' @param output.directory path to the directory where the combined set of alignment files
+#' will be saved.
 #'
-#' @param input.format input file format. Save three types: phylip, nexus, and fasta
+#' @param feature.gene.names path to a tab-delimited metadata file with at minimum columns
+#' named \code{marker} and \code{gene}, mapping each exon alignment name to a gene name.
 #'
-#' @param output.format output file format. Save three types: phylip, nexus, and fasta
+#' @param overwrite logical. If TRUE, the output directory is removed and recreated before
+#' copying; if FALSE, files are added to an existing directory. Default FALSE.
 #'
-#' @param remove.reverse TRUE to remove "_R_" placed before reversed sequences in some alignments. Default FALSE.
-#'
-#' @param overwrite TRUE to overwrite file. Default FALSE.
-#'
-#' @param threads TRUE to overwrite file. Default FALSE.
-#'
-#' @param memory TRUE to overwrite file. Default FALSE.
-#'
-#' @return saves to file concatenated alignments and partition files delimiting the coordinates of each indidividual marker
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @return Copies alignment files to \code{output.directory}. No value is returned to R.
 #'
 #' @export
 

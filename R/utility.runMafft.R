@@ -1,32 +1,44 @@
 #' @title runMafft
 #'
-#' @description Function for gather summary statistics on your alignment. Can be used for filtering or summarizing data.
+#' @description Aligns sequences using MAFFT. Supports local-pair, global-pair,
+#'   and "add" modes. In "add" mode, new sequences (add.contigs) are inserted
+#'   into an existing alignment (sequence.data) without re-aligning all
+#'   sequences. All other modes perform a full multiple sequence alignment of
+#'   sequence.data. Temporary FASTA files are written and optionally cleaned up
+#'   after alignment.
 #'
-#' @param sequence.data path to a folder of sequence alignments in phylip format.
+#' @param sequence.data a DNAStringSet of sequences to align (or the existing
+#'   alignment when algorithm = "add").
 #'
-#' @param add.contigs contigs are added into existing alignment if algorithm is "add"
+#' @param add.contigs a DNAStringSet of sequences to add to the alignment when
+#'   algorithm = "add"; ignored for other algorithms.
 #'
-#' @param algorithm algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param algorithm character; the MAFFT alignment strategy to use. "localpair"
+#'   and "globalpair" perform a full alignment of sequence.data. "add" adds
+#'   add.contigs to sequence.data without realigning existing sequences.
 #'
-#' @param adjust.direction TRUE applies the adjust sequence direction function of MAFFT
+#' @param dna.type character; sequence type passed to MAFFT (e.g. "nuc" for
+#'   nucleotide, "amino" for protein).
 #'
-#' @param save.name if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param adjust.direction logical; if TRUE passes --adjustdirection to MAFFT
+#'   to automatically reverse-complement sequences that align better in the
+#'   reverse orientation.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param save.name base name used for the temporary FASTA files written for
+#'   MAFFT; if NULL a random five-letter string is generated.
 #'
-#' @param cleanup.files give a save name if you wnat to save the summary to file.
+#' @param threads integer number of CPU threads to pass to MAFFT (used for
+#'   non-"add" algorithms).
 #'
-#' @param quiet TRUE to supress mafft screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param cleanup.files logical; if TRUE the temporary FASTA file produced by
+#'   MAFFT is deleted after reading the alignment.
 #'
-#' @examples
+#' @param mafft.path system path to the directory containing the mafft
+#'   executable; NULL searches the system PATH.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param quiet logical; if TRUE MAFFT stderr is suppressed.
 #'
+#' @return a DNAStringSet containing the aligned sequences.
 #'
 #' @export
 

@@ -1,38 +1,57 @@
 #' @title alignTargets
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Aligns per-locus sequences extracted from a combined FASTA file using MAFFT,
+#' guided by a reference target sequence for each locus. Sequences that diverge from the
+#' reference by more than \code{removal.threshold} (pairwise distance) are removed and the
+#' locus is realigned. Loci with too few sequences or with duplicate sample names are
+#' skipped. Alignments are saved in phylip format, with the reference sequence excluded
+#' from the final output. A fractional subset of loci can be processed for parallelisation
+#' across jobs.
 #'
-#' @param targets.to.align path to a folder of sequence alignments in phylip format.
+#' @param targets.to.align path to a FASTA file containing all sequences to be aligned,
+#' with names in the format \code{locusName_|_sampleName}.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param target.file path to a FASTA file of reference target sequences, one per locus,
+#' used as a guide during alignment and for divergence filtering.
 #'
-#' @param min.taxa contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where phylip alignments will be saved.
+#' Default "alignments".
 #'
-#' @param subset.start available output formats: phylip
+#' @param algorithm MAFFT alignment algorithm to use. Accepted values: "localpair" or
+#' "globalpair". Default "localpair".
 #'
-#' @param subset.end algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param min.taxa minimum number of sequences required for a locus to be aligned. Loci
+#' with this many or fewer sequences are skipped. Default 4.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param removal.threshold maximum pairwise distance from the reference sequence allowed
+#' for a sample sequence to be retained. Sequences exceeding this threshold are removed
+#' before a second alignment pass. Default 0.35.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param subset.start fractional position (0 to 1) in the sorted list of loci at which
+#' to begin processing. Default 0.
 #'
-#' @param overwrite path to a folder of sequence alignments in phylip format.
+#' @param subset.end fractional position (0 to 1) in the sorted list of loci at which to
+#' stop processing. Default 1 (process all loci).
 #'
-#' @param resume contigs are added into existing alignment if algorithm is "add"
+#' @param adjust.direction logical. If TRUE, MAFFT adjusts sequence direction before
+#' aligning. Default TRUE.
 #'
-#' @param quiet algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param remove.reverse.tag logical. If TRUE, the leading \code{_R_} tag added by MAFFT
+#' to reverse-complemented sequences is stripped from sequence names. Default TRUE.
 #'
-#' @param mafft.path algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param threads number of threads passed to MAFFT. Default 1.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param memory not currently used; reserved for future parallelisation. Default 1.
 #'
-#' @examples
+#' @param overwrite logical. If TRUE, previously completed alignments are overwritten;
+#' if FALSE, they are skipped. Default FALSE.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param quiet logical. If TRUE, suppresses MAFFT screen output. Default TRUE.
 #'
+#' @param mafft.path path to the directory containing the MAFFT executable. If NULL, MAFFT
+#' is expected to be on the system PATH.
+#'
+#' @return Writes phylip alignment files to \code{output.directory}. No value is returned to R.
 #'
 #' @export
 

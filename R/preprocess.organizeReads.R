@@ -1,26 +1,28 @@
 #' @title organizeReads
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Copies raw fastq files from a source directory into a
+#'   standardised per-sample directory structure, renaming files to a
+#'   consistent convention (SampleName_L00N_READ1/2.fastq.gz). Sample-to-file
+#'   mapping is provided by a two-column CSV (File, Sample) such as that
+#'   produced by makeFileRename(). Each row in the CSV represents one
+#'   paired-end lane for a sample; multiple rows for the same sample generate
+#'   multiple lanes.
 #'
-#' @param read.directory path to a folder of raw reads in fastq format.
+#' @param read.directory path to the directory containing the raw fastq or
+#'   fastq.gz files to be organised.
 #'
-#' @param output.dir the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where the reorganised reads
+#'   will be saved. A sub-directory is created for each unique sample name.
 #'
-#' @param rename.file "Sample" to run on a single sample or "Directory" to run on a directory of samples
+#' @param rename.file path to a CSV file with at least two columns: File
+#'   (partial or full file name used to locate the reads) and Sample (the
+#'   desired output sample name).
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated. Completed samples are skipped when overwrite is FALSE.
 #'
-#' @param resume TRUE to overwrite a folder of samples with output.dir
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; side effect is a populated output.directory with one
+#'   sub-directory per sample containing renamed fastq.gz read pairs.
 #'
 #' @export
 

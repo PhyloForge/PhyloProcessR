@@ -1,60 +1,65 @@
 #' @title integrateLegacy
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Integrates legacy (e.g. Sanger or GenBank) sequence alignments into a set
+#' of sequence-capture alignments. For each legacy alignment, a consensus sequence is
+#' generated and BLASTed against a reference target file to identify the corresponding
+#' capture locus. The legacy sequences are then added to the matching capture alignment
+#' using MAFFT. Optionally, legacy alignments for loci absent from the capture dataset can
+#' be included as stand-alone alignments. When \code{combine.same.sample} is TRUE, samples
+#' appearing in both the legacy and capture alignments are merged column-by-column,
+#' preferring non-gap characters. Results are written to two output directories:
+#' \code{output.directory-only} (legacy-integrated alignments only) and, if
+#' \code{include.all.together} is TRUE, \code{output.directory-all} (full merged dataset).
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to the directory containing the existing sequence-capture
+#' alignment files.
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the sequence-capture alignment files. Accepted values:
+#' "phylip" or "fasta".
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory base path for output directories. Two directories are created:
+#' \code{output.directory-only} and \code{output.directory-all}.
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignment files. Currently "phylip" is
+#' supported.
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param legacy.directory path to the directory containing the legacy alignment files to
+#' be integrated.
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param legacy.format format of the legacy alignment files. Accepted values: "phylip" or
+#' "fasta".
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param target.markers path to the FASTA file of reference target sequences used to
+#' match each legacy alignment to the correct capture locus via BLAST.
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param combine.same.sample logical. If TRUE, sequences from the same sample present in
+#' both the legacy and capture alignments are merged into a single sequence, preferring
+#' non-gap and non-N characters at each site. Default TRUE.
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param include.uncaptured.legacy logical. If TRUE, legacy alignments for loci not found
+#' in the capture dataset are saved to the output as stand-alone alignments. Default FALSE.
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param include.all.together logical. If TRUE, all capture alignments are copied to
+#' \code{output.directory-all} and updated with legacy-integrated versions where available.
+#' Default FALSE.
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param threads number of threads passed to BLAST. Default 1.
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param memory not currently used; reserved for future parallelisation. Default 1.
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param overwrite logical. If TRUE, the output directories are deleted and recreated;
+#' if FALSE and they already exist, the function stops with an error. Default FALSE.
 #'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
+#' @param quiet logical. If TRUE, suppresses BLAST screen output. Default FALSE.
 #'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param mafft.path path to the directory containing the MAFFT executable. If NULL, MAFFT
+#' is expected to be on the system PATH.
 #'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
+#' @param blast.path path to the directory containing BLAST executables. If NULL, BLAST
+#' tools are expected to be on the system PATH.
 #'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Writes integrated alignment files to \code{output.directory-only} and
+#' optionally \code{output.directory-all}. No value is returned to R.
 #'
 #' @export
 

@@ -1,50 +1,55 @@
 #' @title expandMissingAssembly
 #'
-#' @description Function for removing adaptor sequences from raw Illumina sequence data using the program fastp
+#' @description Attempts to recover target loci that are missing or poorly
+#'   assembled in existing assemblies by (1) identifying which reference targets
+#'   were not matched in each sample assembly via BLAST, (2) mapping the
+#'   sample's raw reads to those missing targets with HISAT2, (3) extracting
+#'   the mapped reads with samtools, (4) merging paired-end reads with fastp,
+#'   and (5) assembling de novo with SPAdes. Newly assembled contigs are BLASTed
+#'   back against the missing reference targets and, if passing thresholds, are
+#'   combined with the original matching contigs into an expanded assembly saved
+#'   to \code{expanded-assemblies/}.
 #'
-#' @param input.reads path to a folder of raw reads in fastq format.
+#' @param assembly.directory path to a directory of existing per-sample assembly
+#'   FASTA files (.fa), one per sample.
 #'
-#' @param reference a csv file with a "File" and "Sample" columns, where "File" is the file name and "Sample" is the desired renamed file
+#' @param read.directory path to a directory of per-sample read subdirectories
+#'   containing the original paired FASTQ files.
 #'
-#' @param output.name the new directory to save the adaptor trimmed sequences
+#' @param reference path to the FASTA file of reference/target sequences.
 #'
-#' @param mapper "Sample" to run on a single sample or "Directory" to run on a directory of samples
+#' @param output.directory path to the directory where intermediate per-sample
+#'   working files will be written. Default: \code{"expand-missing-assembly"}.
 #'
-#' @param min.iterations system path to fastp in case it can't be found
+#' @param mapper character; read mapper to use. Currently \code{"bwa"} and
+#'   \code{"hisat2"} are accepted (HISAT2 is used in the implementation).
 #'
-#' @param max.iterations system path to fastp in case it can't be found
+#' @param memory RAM in MB passed to SPAdes and fastp. Default: \code{1}.
 #'
-#' @param min.length system path to fastp in case it can't be found
+#' @param threads number of CPU threads for HISAT2, samtools, and SPAdes.
+#'   Default: \code{1}.
 #'
-#' @param max.length system path to fastp in case it can't be found
+#' @param spades.path path to the directory containing \code{spades.py}. If
+#'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param min.ref.id system path to fastp in case it can't be found
+#' @param hisat2.path path to the directory containing \code{hisat2} and
+#'   \code{hisat2-build}. If \code{NULL} expected on the system PATH. Default:
+#'   \code{NULL}.
 #'
-#' @param spades.path system path to fastp in case it can't be found
+#' @param bwa.path path to the directory containing \code{bwa}. If \code{NULL}
+#'   expected on the system PATH. Default: \code{NULL}.
 #'
-#' @param bbmap.path system path to fastp in case it can't be found
+#' @param cap3.path path to the directory containing \code{cap3} (not currently
+#'   used). Default: \code{NULL}.
 #'
-#' @param cap3.path system path to fastp in case it can't be found
+#' @param overwrite logical; if \code{TRUE} already-completed samples in
+#'   \code{expanded-assemblies/} are overwritten. Default: \code{FALSE}.
 #'
-#' @param threads number of computation processing threads
+#' @param quiet logical; if \code{TRUE} tool screen output is suppressed.
+#'   Default: \code{TRUE}.
 #'
-#' @param mem amount of system memory to use
-#'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Expanded assemblies are saved as
+#'   \code{expanded-assemblies/<sample>.fa} in the working directory.
 #'
 #' @export
 

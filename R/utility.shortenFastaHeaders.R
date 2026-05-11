@@ -1,30 +1,28 @@
 #' @title shortenFastaHeaders
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Truncates FASTA sequence headers to a maximum number of
+#'   characters for all FASTA files in a directory. This is useful when
+#'   downstream tools (e.g. some alignment or tree programs) impose a header
+#'   length limit. Each input file is read, headers are trimmed with
+#'   strtrim(), and the result is saved to the output directory under the same
+#'   file name.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param fasta.directory path to a directory containing FASTA files whose
+#'   headers should be shortened.
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param output.directory path to the directory where files with shortened
+#'   headers will be saved.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param number.characters integer maximum number of characters to retain in
+#'   each sequence header (headers longer than this are truncated).
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before writing.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param quiet logical; currently unused, reserved for future output control.
 #'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @param resume TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes FASTA files with shortened headers to
+#'   output.directory.
 #'
 #' @export
 

@@ -1,36 +1,39 @@
 #' @title baseRecalibration
 #'
-#' @description Function for running the program spades to assemble short read sequencing data
+#' @description Performs GATK4 base quality score recalibration (BQSR) as a
+#'   two-pass procedure. In pass 1, an initial round of genotyping and hard
+#'   filtering is run on each sample's existing haplotype caller GVCF to
+#'   produce a set of "known variants". In pass 2, GATK BaseRecalibrator and
+#'   ApplyBQSR use those variants to recalibrate the base quality scores in the
+#'   original BAM file. A final HaplotypeCaller run then produces a new GVCF
+#'   from the recalibrated BAM. Samples are processed in parallel.
 #'
-#' @param read.directory directory of processed reads
+#' @param haplotype.caller.directory path to the directory containing per-sample
+#'   sub-directories of initial haplotype caller GVCF files (output of
+#'   haplotypeCaller()).
 #'
-#' @param output.directory save name for the output directory
+#' @param mapping.directory path to the directory containing per-sample BAM
+#'   files and reference indices (output of mapReferenceSample() or
+#'   mapReferenceConsensus()).
 #'
-#' @param full.path.spades contigs are added into existing alignment if algorithm is "add"
+#' @param gatk4.path system path to the directory containing the gatk
+#'   executable; NULL searches the system PATH.
 #'
-#' @param mismatch.corrector algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param threads number of parallel samples to process simultaneously.
 #'
-#' @param kmer.values if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param memory total RAM in GB to allocate; used per-thread as a JVM heap
+#'   (-Xmx).
 #'
-#' @param threads number of computation processing threads
+#' @param clean.up logical; if TRUE intermediate VCF files generated during the
+#'   first-pass genotyping and filtering steps are deleted after the BQSR run.
 #'
-#' @param mem amount of system memory to use
+#' @param overwrite logical; if TRUE samples that already have a BQSR GVCF are
+#'   reprocessed.
 #'
-#' @param resume TRUE to skip samples already completed
+#' @param quiet logical; currently unused.
 #'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return invisibly; writes recalibrated GVCFs to haplotype.caller.directory
+#'   and recalibrated BAMs to mapping.directory.
 #'
 #' @export
 

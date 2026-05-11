@@ -1,60 +1,45 @@
-#' @title addTaxaAlignments
+#' @title addContigsAlignments
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Adds new sample contigs into an existing set of alignments using BLAST to
+#' match contigs to consensus sequences derived from each alignment, followed by MAFFT to
+#' add the matched sequences. Optionally copies alignments for which no new contigs were
+#' found. Duplicate sample entries within an alignment can be resolved by merging, keeping
+#' the longest sequence, or keeping the original sequence.
 #'
-#' @param alignment.dir path to a folder of sequence alignments in phylip format.
+#' @param alignment.directory path to the directory containing existing alignment files.
 #'
-#' @param alignment.format available input alignment formats: fasta or phylip
+#' @param alignment.format format of the input alignment files. Accepted values: "phylip" or "fasta".
 #'
-#' @param output.dir contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where updated alignments will be saved.
 #'
-#' @param output.format available output formats: phylip
+#' @param output.format format for the output alignment files. Currently "phylip" is supported.
 #'
-#' @param HmmCleaner algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param sample.contigs path to the directory containing contig FASTA files for the samples to be added.
 #'
-#' @param HmmCleaner.path TRUE applies the adjust sequence direction function of MAFFT
+#' @param copy.all logical. If TRUE, alignments for which no new contigs were found are copied
+#' unchanged to the output directory. Default TRUE.
 #'
-#' @param TrimAl if a file name is provided, save.name will be used to save aligment to file as a fasta
+#' @param duplicate.handling how to resolve duplicate sample names that arise after adding contigs.
+#' Options: "merge" (combine columns, preferring non-gap characters), "longest" (keep the sequence
+#' with the most non-gap bases), or "original" (keep the first occurrence). Default "merge".
 #'
-#' @param TrimAl.path path to a folder of sequence alignments in phylip format.
+#' @param threads number of parallel threads to use. Default 1.
 #'
-#' @param trim.external give a save name if you wnat to save the summary to file.
+#' @param memory total memory (in GB) to allocate across all threads. Default 1.
 #'
-#' @param min.external.percent TRUE to supress mafft screen output
+#' @param overwrite logical. If TRUE, the output directory is deleted and recreated before
+#' processing. Default FALSE.
 #'
-#' @param trim.coverage path to a folder of sequence alignments in phylip format.
+#' @param quiet logical. If TRUE, suppress printed progress messages. Default FALSE.
 #'
-#' @param min.coverage.percent contigs are added into existing alignment if algorithm is "add"
+#' @param mafft.path path to the directory containing the MAFFT executable. If NULL, MAFFT
+#' is expected to be on the system PATH.
 #'
-#' @param trim.column algorithm to use: "add" add sequences with "add.contigs"; "localpair" for local pair align. All others available
+#' @param blast.path path to the directory containing BLAST executables. If NULL, BLAST
+#' tools are expected to be on the system PATH.
 #'
-#' @param min.column.gap.percent TRUE applies the adjust sequence direction function of MAFFT
-#'
-#' @param alignment.assess if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param min.sample.bp path to a folder of sequence alignments in phylip format.
-#'
-#' @param min.alignment.length give a save name if you wnat to save the summary to file.
-#'
-#' @param min.taxa.alignment TRUE to supress mafft screen output
-#'
-#' @param min.gap.percent if a file name is provided, save.name will be used to save aligment to file as a fasta
-#'
-#' @param threads path to a folder of sequence alignments in phylip format.
-#'
-#' @param memory give a save name if you wnat to save the summary to file.
-#'
-#' @param overwrite TRUE to supress mafft screen output
-#'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Writes updated alignment files in phylip format to \code{output.directory}. No
+#' value is returned to R.
 #'
 #' @export
 

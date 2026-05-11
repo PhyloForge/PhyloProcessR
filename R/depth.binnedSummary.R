@@ -1,36 +1,32 @@
-#' @title summarizeDepth
+#' @title binnedDepthSummary
 #'
-#' @description Function for removing contamination from other organisms from adaptor trimmed Illumina sequence data using BWA
+#' @description Summarises and visualises binned RPKM depth data produced by
+#'   \code{depth.binnedEstimate} across samples, grouped by a user-supplied
+#'   sample-group CSV. For each group, the median binned RPKM across all
+#'   samples is computed and a bar plot with error bars (SD) is saved as a PDF
+#'   using ggplot2. One PDF is produced per group.
 #'
-#' @param input.reads path to a folder of adaptor trimmed reads in fastq format.
+#' @param depth.directory path to a directory of per-sample depth subdirectories,
+#'   each containing an \code{rpkm-binned-data.txt} file produced by
+#'   \code{depth.binnedEstimate}.
 #'
-#' @param output.directory the new directory to save the adaptor trimmed sequences
+#' @param output.directory path to the directory where PDF plots will be written.
+#'   Default: \code{"binned-depth-summary"}.
 #'
-#' @param decontamination.path directory of genomes contaminants to scan samples
+#' @param sample.groups path to a CSV file whose first column is the group name
+#'   and whose second column is the sample name.
 #'
-#' @param samtools.path system path to samtools in case it can't be found
+#' @param threads not currently used; reserved for future parallelisation.
+#'   Default: \code{1}.
 #'
-#' @param bwa.path system path to bwa in case it can't be found
+#' @param memory not currently used. Default: \code{1}.
 #'
-#' @param threads number of computation processing threads
+#' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#'   recreated. Default: \code{FALSE}.
 #'
-#' @param mem amount of system memory to use
-#'
-#' @param resume TRUE to skip samples already completed
-#'
-#' @param overwrite TRUE to overwrite a folder of samples with output.dir
-#'
-#' @param quiet TRUE to supress screen output
-#'
-#' @return a new directory of adaptor trimmed reads and a summary of the trimming in logs/
-#'
-#' @examples
-#'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
-#'
+#' @return Invisibly returns nothing. Saves one PDF bar plot per group to
+#'   \code{output.directory}, named
+#'   \code{<group>_bin-plot_rpkm-median.pdf}.
 #'
 #' @export
 

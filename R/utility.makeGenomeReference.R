@@ -1,30 +1,42 @@
 #' @title genomeCoverage
 #'
-#' @description Function for batch trimming a folder of alignments, with the various trimming functions available to select from
+#' @description Simulates sequencing coverage at multiple depths by subsampling
+#'   reads from a real dataset, mapping them to a draft genome with BWA-MEM,
+#'   and summarising per-contig depth statistics with mosdepth. Coverage at
+#'   different thresholds (1x, 2x, 5x, 10x, 20x) is tabulated across a random
+#'   set of contigs and written to a CSV.
 #'
-#' @param genome.directory path to a folder of sequence alignments in phylip format.
+#' @param genome.directory path to a directory of genome assembly FASTA files
+#'   (parameter currently used as genome.file inside the function body).
 #'
-#' @param output.directory available input alignment formats: fasta or phylip
+#' @param read.directory path to a directory containing the paired-end fastq.gz
+#'   read files to subsample.
 #'
-#' @param threads contigs are added into existing alignment if algorithm is "add"
+#' @param output.directory path to the directory where subsampled read sets,
+#'   mapped BAM files, and coverage summaries will be saved.
 #'
-#' @param threads path to a folder of sequence alignments in phylip format.
+#' @param threads number of CPU threads for BWA, samtools, and mosdepth.
 #'
-#' @param memory give a save name if you wnat to save the summary to file.
+#' @param memory amount of RAM in GB to allocate to picard commands.
 #'
-#' @param overwrite TRUE to supress mafft screen output
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated.
 #'
-#' @param resume TRUE to supress mafft screen output
+#' @param resume logical; if TRUE already-completed subsamples are skipped.
+#'   Cannot be TRUE simultaneously with overwrite.
 #'
-#' @return an alignment of provided sequences in DNAStringSet format. Also can save alignment as a file with save.name
+#' @param quiet logical; if TRUE BWA and samtools stdout/stderr are suppressed.
 #'
-#' @examples
+#' @param samtools.path system path to the directory containing samtools; NULL
+#'   searches the system PATH.
 #'
-#' your.tree = ape::read.tree(file = "file-path-to-tree.tre")
-#' astral.data = astralPlane(astral.tree = your.tree,
-#'                           outgroups = c("species_one", "species_two"),
-#'                           tip.length = 1)
+#' @param bwa.path system path to the directory containing bwa; NULL searches
+#'   the system PATH.
 #'
+#' @param picard.path system path to the directory containing picard; NULL
+#'   searches the system PATH.
+#'
+#' @return invisibly; writes a coverage summary CSV to output.directory.
 #'
 #' @export
 
