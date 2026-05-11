@@ -86,7 +86,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     }
   } # end else
 
-  token = readRDS(dropbox.token)
+  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else rdrop2::drop_auth()
   all.reads = .dropbox_list_files(dropbox.directory, token)
 
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]
