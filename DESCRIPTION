@@ -24,5 +24,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.0
 Imports:
         ape (>= 5.0),
+        httr (>= 1.4),
+        jsonlite (>= 1.7),
         stringr (>= 1.4)
         

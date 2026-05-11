@@ -25,6 +25,40 @@
 #'
 #' @export
 
+# Internal helper: lists all files recursively in a Dropbox folder via API v2,
+# avoiding the rdrop2::drop_dir() LinearizeNestedList bug on empty entries.
+.dropbox_list_files = function(path, token) {
+  resp = httr::POST(
+    url = "https://api.dropboxapi.com/2/files/list_folder",
+    httr::config(token = token),
+    httr::content_type_json(),
+    body = jsonlite::toJSON(
+      list(path = path, recursive = TRUE, limit = 2000L),
+      auto_unbox = TRUE
+    )
+  )
+  httr::stop_for_status(resp)
+  result = httr::content(resp, as = "parsed")
+  entries = result$entries
+
+  while (isTRUE(result$has_more)) {
+    resp = httr::POST(
+      url = "https://api.dropboxapi.com/2/files/list_folder/continue",
+      httr::config(token = token),
+      httr::content_type_json(),
+      body = jsonlite::toJSON(list(cursor = result$cursor), auto_unbox = TRUE)
+    )
+    httr::stop_for_status(resp)
+    result = httr::content(resp, as = "parsed")
+    entries = c(entries, result$entries)
+  }
+
+  paths = vapply(entries, function(e) {
+    if (!is.null(e[[".tag"]]) && e[[".tag"]] == "file") e$path_display else NA_character_
+  }, character(1))
+  paths[!is.na(paths)]
+}
+
 dropboxDownload = function(sample.spreadsheet = NULL,
                           dropbox.directory = NULL,
                           dropbox.token = NULL,
@@ -52,10 +86,8 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     }
   } # end else
 
-  all.reads = rdrop2::drop_dir(
-    path = dropbox.directory,
-    recursive = TRUE
-  )$path_display
+  token = readRDS(dropbox.token)
+  all.reads = .dropbox_list_files(dropbox.directory, token)
 
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]
 
