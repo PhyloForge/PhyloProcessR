@@ -86,7 +86,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
   if (is.null(temp.directory) == TRUE){ temp.directory = getwd() }
 
-  if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   #Get multifile databases together
   sample.names = list.dirs(haplotype.caller.directory, recursive = F, full.names = F)

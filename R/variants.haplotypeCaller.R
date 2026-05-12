@@ -89,9 +89,7 @@ haplotypeCaller = function(mapping.directory = NULL,
   if (file.exists(mapping.directory) == F){ stop("BAM folder not found.") }
 
   # Creates output directory
-  if (dir.exists("logs") == F) {
-    dir.create("logs")
-  }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (dir.exists(output.directory) == F) {
@@ -154,7 +152,7 @@ haplotypeCaller = function(mapping.directory = NULL,
     } #end if statement
 
     #CReates new directory
-    report.path = paste0("logs/", sample.names[i])
+    report.path = paste0("logs/sample_logs/", sample.names[i])
     if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
     # Sets up merging of bams from different lanes
@@ -196,7 +194,7 @@ haplotypeCaller = function(mapping.directory = NULL,
         " MarkDuplicates",
         " -INPUT ", merge.dir, "/final-mapped-sort.bam",
         " -OUTPUT ", merge.dir, "/final-mapped-dup.bam",
-        " -CREATE_INDEX true -METRICS_FILE logs/", sample.names[i], "/duplicate_metrics.txt",
+        " -CREATE_INDEX true -METRICS_FILE logs/sample_logs/", sample.names[i], "/duplicate_metrics.txt",
         " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
       ))
 

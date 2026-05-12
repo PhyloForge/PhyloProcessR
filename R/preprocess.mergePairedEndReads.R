@@ -73,7 +73,7 @@ mergePairedEndReads = function(input.reads = NULL,
   }#end else
 
   #Creates output directory
-  if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
@@ -113,7 +113,7 @@ mergePairedEndReads = function(input.reads = NULL,
 
     #CReates new directory
     out.path = paste0(output.directory, "/", sample.names[i])
-    report.path = paste0("logs/", sample.names[i])
+    report.path = paste0("logs/sample_logs/", sample.names[i])
     if (file.exists(out.path) == FALSE) { dir.create(out.path) }
     if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 

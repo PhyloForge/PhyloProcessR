@@ -136,9 +136,7 @@ assembleSpades = function(input.reads = NULL,
   } # end else
 
   # Creates output directory
-  if (dir.exists("logs") == F) {
-    dir.create("logs")
-  }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   if (isolate == TRUE && mismatch.corrector == TRUE) {
     stop("Both --isolate or --careful (mismatch corrector) can not be used together. Please choose only one.")

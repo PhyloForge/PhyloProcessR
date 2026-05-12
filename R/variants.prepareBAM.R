@@ -132,9 +132,7 @@ prepareBAM = function(read.directory = NULL,
   } # end else
 
   # Creates output directory
-  if (dir.exists("logs") == F) {
-    dir.create("logs")
-  }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   # Read in sample data **** sample is run twice?!
   reads <- list.files(read.directory, recursive = TRUE, full.names = TRUE)
@@ -191,7 +189,7 @@ prepareBAM = function(read.directory = NULL,
     } # end if statement
 
     # CReates new directory
-    report.path <- paste0("logs/", sample.names[i])
+    report.path <- paste0("logs/sample_logs/", sample.names[i])
     if (file.exists(report.path) == FALSE) {
       dir.create(report.path)
     }

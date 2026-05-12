@@ -119,9 +119,7 @@ mapReferenceSample = function(mapping.directory = NULL,
 
 
   # Creates output directory
-  if (dir.exists("logs") == FALSE) {
-    dir.create("logs")
-  }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   # Read in sample data
   bam.files <- list.files(mapping.directory, recursive = TRUE, full.names = TRUE)
@@ -218,7 +216,7 @@ mapReferenceSample = function(mapping.directory = NULL,
     } # end if statement
 
     # CReates new directory
-    report.path <- paste0("logs/", sample.names[i])
+    report.path <- paste0("logs/sample_logs/", sample.names[i])
     if (file.exists(report.path) == FALSE) {
       dir.create(report.path)
     }

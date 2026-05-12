@@ -148,7 +148,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
 
   #Creates output directory
-  if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
   if (dir.exists(output.directory) == FALSE) {

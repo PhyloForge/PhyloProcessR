@@ -102,8 +102,7 @@ removeContamination = function(input.reads = "cleaned-reads",
   }#end else
 
   #Creates output directory
-  if (dir.exists("logs") == F){ dir.create("logs") }
-  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
@@ -123,6 +122,25 @@ removeContamination = function(input.reads = "cleaned-reads",
   if (dir.exists("ref-index") == FALSE){
     dir.create("ref-index")
     reference.list = list.files(decontamination.path, full.names = TRUE)
+
+    #Build contig-to-genome mapping before concatenating
+    contig.map = data.frame(Contig = character(), Genome = character(), Accession = character())
+    for (ref.file in reference.list) {
+      file.base = gsub("\\.fna\\.gz$|\\.fa\\.gz$|\\.fa$", "", basename(ref.file))
+      if (grepl("-", file.base)) {
+        parts = strsplit(file.base, "-")[[1]]
+        genome.name = parts[1]
+        accession = paste(parts[-1], collapse = "-")
+      } else {
+        genome.name = file.base
+        accession = file.base
+      }
+      headers = system(paste0("zcat -f ", shQuote(ref.file), " | grep '^>'"), intern = TRUE)
+      contig.names = gsub("^>([^ ]+).*", "\\1", headers)
+      contig.map = rbind(contig.map, data.frame(Contig = contig.names, Genome = genome.name, Accession = accession))
+    }
+    write.csv(contig.map, file = "ref-index/contig_mapping.csv", row.names = FALSE)
+
     system(paste0("cat ", paste(shQuote(reference.list), collapse = " "),
                   " | zcat -f > ref-index/reference.fa"))
     system(paste0(bwa.path, "bwa index -p ref-index/reference ref-index/reference.fa"),
@@ -140,7 +158,10 @@ removeContamination = function(input.reads = "cleaned-reads",
   contam.summary = data.frame(Sample = as.character(),
                               Lane = as.character(),
                               Contaminant = as.character(),
+                              Accession = as.character(),
                               ReadPairs = as.numeric())
+
+  contig.map = read.csv("ref-index/contig_mapping.csv")
 
   #Runs through each sample
   for (i in 1:length(sample.names)) {
@@ -248,10 +269,12 @@ removeContamination = function(input.reads = "cleaned-reads",
                                  out.path, "/decontam-mapped-sort.bam | cut -f 1,3"), intern = T))
       table.dat = data.frame(Organism = gsub("\t.*", "", table.dat),
                              Count = as.numeric(gsub(".*\t", "", table.dat)) )
-      table.dat$Organism = gsub("_.*", "", table.dat$Organism)
+      table.dat = merge(table.dat, contig.map, by.x = "Organism", by.y = "Contig", all.x = TRUE)
+      table.dat$Genome[is.na(table.dat$Genome)] = table.dat$Organism[is.na(table.dat$Genome)]
+      table.dat$Accession[is.na(table.dat$Accession)] = table.dat$Organism[is.na(table.dat$Accession)]
 
-      contam.data = aggregate(table.dat$Count, FUN = sum, by = list(table.dat$Organism))
-      colnames(contam.data) = c("Contaminant", "ReadPairs")
+      contam.data = aggregate(table.dat$Count, FUN = sum, by = list(table.dat$Genome, table.dat$Accession))
+      colnames(contam.data) = c("Contaminant", "Accession", "ReadPairs")
       contam.data = contam.data[contam.data$Contaminant != "*",]
 
       system(paste0("rm ", out.path, "/decontam-*"))
@@ -273,7 +296,7 @@ removeContamination = function(input.reads = "cleaned-reads",
       lane.contam = contam.data
       lane.contam$Sample = sample.names[i]
       lane.contam$Lane = gsub(".*_", "", lane.name)
-      contam.summary = rbind(contam.summary, lane.contam[, c("Sample", "Lane", "Contaminant", "ReadPairs")])
+      contam.summary = rbind(contam.summary, lane.contam[, c("Sample", "Lane", "Contaminant", "Accession", "ReadPairs")])
 
       write.csv(contam.data, file = paste0(report.path, "/contamination-read-counts.csv"), row.names = FALSE)
 

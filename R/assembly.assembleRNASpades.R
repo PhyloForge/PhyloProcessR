@@ -107,7 +107,7 @@ assembleRNASpades = function(input.reads = NULL,
   }#end else
 
   #Creates output directory
-  if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   #Sets up the reads
   files = list.files(path = input.reads, full.names = T, recursive = T)
