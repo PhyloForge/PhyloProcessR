@@ -161,6 +161,26 @@ removeContamination = function(input.reads = "cleaned-reads",
                               Accession = as.character(),
                               ReadPairs = as.numeric())
 
+  #Build contig mapping if missing (e.g. ref-index existed before this feature was added)
+  if (!file.exists("ref-index/contig_mapping.csv")) {
+    reference.list = list.files(decontamination.path, full.names = TRUE)
+    contig.map = data.frame(Contig = character(), Genome = character(), Accession = character())
+    for (ref.file in reference.list) {
+      file.base = gsub("\\.fna\\.gz$|\\.fa\\.gz$|\\.fa$", "", basename(ref.file))
+      if (grepl("-", file.base)) {
+        parts = strsplit(file.base, "-")[[1]]
+        genome.name = parts[1]
+        accession = paste(parts[-1], collapse = "-")
+      } else {
+        genome.name = file.base
+        accession = file.base
+      }
+      headers = system(paste0("zcat -f ", shQuote(ref.file), " | grep '^>'"), intern = TRUE)
+      contig.names = gsub("^>([^ ]+).*", "\\1", headers)
+      contig.map = rbind(contig.map, data.frame(Contig = contig.names, Genome = genome.name, Accession = accession))
+    }
+    write.csv(contig.map, file = "ref-index/contig_mapping.csv", row.names = FALSE)
+  }
   contig.map = read.csv("ref-index/contig_mapping.csv")
 
   #Runs through each sample

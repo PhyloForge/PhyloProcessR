@@ -143,9 +143,11 @@ createContaminantDB = function(decontamination.list = NULL,
     )
   }
 
-  file.list = list.files(output.directory)
-  del.files = file.list[grep(".fna.gz|.fa$", file.list, invert = T)]
-  system(paste0("rm ", paste0(output.directory, "/", del.files, collapse = " ")))
+  file.list = list.files(output.directory, full.names = TRUE)
+  del.files = file.list[grep("\\.fna\\.gz$|\\.fa$", file.list, invert = TRUE)]
+  if (length(del.files) > 0) {
+    unlink(del.files, recursive = TRUE)
+  }
 
   final.files = list.files(output.directory)
 

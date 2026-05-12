@@ -31,7 +31,7 @@ Bacteria,Pedobacter,GCA_000023825.1
 Bacteria,Phyllobacterium,GCA_002764115.1
 Bacteria,Pseudomonas,GCA_000007805.1
 Bacteria,Pseudonocardia,GCA_000196675.1
-Bacteria,Ralstonia,GCA_000020205.1
+Bacteria,Ralstonia,GCF_001587155.1
 Bacteria,Rhodococcus,GCA_000982715.1
 Bacteria,Salmonella,GCA_000006945.2
 Bacteria,Sphingomonas,GCA_000512205.2
@@ -46,8 +46,8 @@ Fungus,Aspergillus,GCA_000149205.2
 Fungus,Malassezia,GCA_003290485.1
 Fungus,Penicillium,GCA_000710275.1
 Fungus,Saccharomyces,GCA_000146045.2
-Fungus,Batrachochytrium_dendrobatidis,GCA_000149865.2
+Fungus,Batrachochytrium_dendrobatidis,GCF_000203795.2
 Fungus,Batrachochytrium_salamandrivorans,GCA_002006685.1
 Fungus,Candida,GCA_000182965.3
-Fungus,Mucor,GCA_001309975.1
+Fungus,Mucor,GCA_051295215.1
 Fungus,Schizosaccharomyces,GCA_000002945.2
