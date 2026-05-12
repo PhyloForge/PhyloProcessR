@@ -103,6 +103,7 @@ removeContamination = function(input.reads = "cleaned-reads",
 
   #Creates output directory
   if (dir.exists("logs") == F){ dir.create("logs") }
+  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs") }
 
   #Read in sample data **** sample is run twice?!
   reads = list.files(input.reads, recursive = T, full.names = T)
@@ -136,6 +137,11 @@ removeContamination = function(input.reads = "cleaned-reads",
                              startPairs = as.numeric(),
                              removePairs = as.numeric())
 
+  contam.summary = data.frame(Sample = as.character(),
+                              Lane = as.character(),
+                              Contaminant = as.character(),
+                              ReadPairs = as.numeric())
+
   #Runs through each sample
   for (i in 1:length(sample.names)) {
     #################################################
@@ -155,7 +161,7 @@ removeContamination = function(input.reads = "cleaned-reads",
 
     #CReates new directory
     out.path = paste0(output.directory, "/", sample.names[i])
-    report.path = paste0("logs/", sample.names[i])
+    report.path = paste0("logs/sample_logs/", sample.names[i])
     if (file.exists(out.path) == FALSE) { dir.create(out.path) }
     if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
@@ -245,8 +251,8 @@ removeContamination = function(input.reads = "cleaned-reads",
       table.dat$Organism = gsub("_.*", "", table.dat$Organism)
 
       contam.data = aggregate(table.dat$Count, FUN = sum, by = list(table.dat$Organism))
-      contam.data = contam.data[-1,]
       colnames(contam.data) = c("Contaminant", "ReadPairs")
+      contam.data = contam.data[contam.data$Contaminant != "*",]
 
       system(paste0("rm ", out.path, "/decontam-*"))
 
@@ -263,7 +269,13 @@ removeContamination = function(input.reads = "cleaned-reads",
                                endPairs = end.reads)
 
       summary.data = rbind(summary.data, temp.remove)
-      write.csv(contam.data, file = paste0("logs/", sample.names[i], "/contamination-read-counts.csv"), row.names = FALSE)
+
+      lane.contam = contam.data
+      lane.contam$Sample = sample.names[i]
+      lane.contam$Lane = gsub(".*_", "", lane.name)
+      contam.summary = rbind(contam.summary, lane.contam[, c("Sample", "Lane", "Contaminant", "ReadPairs")])
+
+      write.csv(contam.data, file = paste0(report.path, "/contamination-read-counts.csv"), row.names = FALSE)
 
     }#end sample j loop
 
@@ -271,6 +283,7 @@ removeContamination = function(input.reads = "cleaned-reads",
 
   }#end sample i loop
 
-  write.csv(summary.data, file = paste0("logs/removeContamination_summary.csv"), row.names = FALSE)
+  write.csv(summary.data, file = "logs/removeContamination_summary.csv", row.names = FALSE)
+  write.csv(contam.summary, file = "logs/removeContamination_contaminants.csv", row.names = FALSE)
 }
 

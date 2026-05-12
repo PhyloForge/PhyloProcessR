@@ -1,9 +1,8 @@
 ﻿Group,Genome,GenBank_Accession
 Database,UniVec,https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec
+Animal,Human_mito,NC_012920.1
 Animal,Caenorhabditis,GCA_000002985.3
 Animal,Drosophila,GCA_000001215.4
-Animal,Human,GCA_000001405.28
-Animal,Human_mito,NC_012920.1
 Bacteria,Achromobacter,GCA_013267375.1
 Bacteria,Acidaminococcus,GCA_000025305.1
 Bacteria,Acinetobacter,GCA_002055515.1
@@ -40,6 +39,10 @@ Bacteria,Salmonella,GCA_000006945.2
 Bacteria,Sphingomonas,GCA_000512205.2
 Bacteria,Staphylococcus,GCA_000013425.1
 Bacteria,Stenotrophomonas,GCA_000072485.1
+Bacteria,Cutibacterium,GCA_000008345.1
+Bacteria,Delftia,GCA_000248815.2
+Bacteria,Elizabethkingia,GCA_000513235.1
+Bacteria,Mycobacterium,GCA_000018345.1
 Bacteria,Streptococcus,GCA_000014205.1
 Fungus,Aspergillus,GCA_000149205.2
 Fungus,Magnaporthe,GCA_001936955.1
@@ -47,4 +50,8 @@ Fungus,Malassezia,GCA_003290485.1
 Fungus,Penicillium,GCA_000710275.1
 Fungus,Puccinia,GCA_001624995.1
 Fungus,Saccharomyces,GCA_000146045.2
+Fungus,Batrachochytrium_dendrobatidis,GCA_000149865.2
+Fungus,Batrachochytrium_salamandrivorans,GCA_002006685.1
+Fungus,Candida,GCA_000182965.3
+Fungus,Mucor,GCA_001309975.1
 Fungus,Schizosaccharomyces,GCA_000002945.2
