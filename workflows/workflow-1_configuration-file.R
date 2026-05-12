@@ -7,8 +7,6 @@
 # *** Full paths should be used whenever possible
 #The main working directory
 working.directory = "/Path/to/where/the/stuff/will/happen"
-#The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
-contaminant.genome.list = "decontamination_database.csv"
 #The name for the dataset
 dataset.name = "Descriptive-Name"
 
@@ -36,7 +34,7 @@ read.directory = "/Path/to/where/the/raw/reads/are"
 #The name for the processed reads folder
 processed.reads = "processed-reads"
 # TRUE to save a summary csv file of the raw sequence data
-summary.fastq = FALSE
+summary.fastq = TRUE
 
 # For downloading reads from dropbox
 #########################
@@ -66,12 +64,14 @@ error.correction = TRUE
 #Merge paired end reads, helps with assembly
 merge.pe.reads = TRUE
 # Trims low quality ends off of reads (not recommended, hurts assembly)
-quality.trim.reads <- FALSE
+quality.trim.reads = FALSE
 
 #Decontamination settings
 #########################
 #Remove contamination
 decontamination = TRUE
+#The file for the contaminant genomes (Genome, Accession columns); use NULL if download.contaminant.genomes = F
+contaminant.genome.list = "decontamination_database.csv"
 #Download contaminat genomes from genbank if TRUE
 download.contaminant.genomes = TRUE
 #A path can be set to a local set of contaminant genomes if downloading does not work; NULL if downloading
@@ -80,8 +80,8 @@ decontamination.path = NULL
 include.human = TRUE
 #Include the univec contaminant database?
 include.univec = TRUE
-#The matching proportion of bases for a contaminant hit and removal
-decontamination.match = 1.0
+#Minimum mapping identity (0-1) to consider a read a contaminant and remove it; 0.90 = 90% identity
+decontamination.match = 0.90
 
 #Program paths
 #########################
