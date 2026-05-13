@@ -8,14 +8,10 @@
 #'
 #' @param decontamination.list path to a CSV file with at least two columns:
 #'   Genome (a short display name) and GenBank_Accession (the GenBank accession
-#'   to download). Rows whose Genome matches "Human", "Homo", etc. can be
-#'   excluded via include.human.
+#'   to download).
 #'
 #' @param output.directory path to the directory where contaminant genome files
 #'   will be saved.
-#'
-#' @param include.human logical; if FALSE, rows associated with human genomes
-#'   are removed from decontamination.list before downloading.
 #'
 #' @param include.univec logical; if TRUE, the NCBI UniVec vector/adaptor
 #'   sequence database is downloaded and added to the contaminant directory.
@@ -37,7 +33,6 @@
 
 createContaminantDB = function(decontamination.list = NULL,
                                output.directory = "contaminant-references",
-                               include.human = TRUE,
                                include.univec = TRUE,
                                include.genbank = NULL,
                                include.fasta = NULL,
@@ -49,7 +44,6 @@ createContaminantDB = function(decontamination.list = NULL,
   # decontamination.list = "decontamination_database.csv"
   # overwrite = FALSE
   # quiet = TRUE
-  # include.human = TRUE
   # include.univec = TRUE
   # include.genbank = NULL
   # include.fasta = NULL
@@ -68,8 +62,6 @@ createContaminantDB = function(decontamination.list = NULL,
   }#end else
 
   sample.data = read.csv(file = decontamination.list)
-
-  if (include.human == FALSE){ sample.data = sample.data[!sample.data$Genome %in% c("Human", "Homo", "Sapien", "Homo_Sapien", "Homo Sapien"),] }
 
   if (nrow(sample.data) == 0){ stop("no samples remain to analyze.") }
 

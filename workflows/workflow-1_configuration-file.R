@@ -65,6 +65,8 @@ error.correction = TRUE
 merge.pe.reads = TRUE
 # Trims low quality ends off of reads (not recommended, hurts assembly)
 quality.trim.reads = FALSE
+# Normalizes read depth (not recommended for targeted capture)
+normalize.reads = FALSE
 
 #Decontamination settings
 #########################
@@ -76,8 +78,6 @@ contaminant.genome.list = "decontamination_database.csv"
 download.contaminant.genomes = TRUE
 #A path can be set to a local set of contaminant genomes if downloading does not work; NULL if downloading
 decontamination.path = NULL
-#include the human genome? Unless human is study organism or UCEs in mammals are used
-include.human = TRUE
 #Include the univec contaminant database?
 include.univec = TRUE
 #Minimum mapping identity (0-1) to consider a read a contaminant and remove it; 0.90 = 90% identity
