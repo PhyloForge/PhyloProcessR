@@ -114,8 +114,22 @@ removeAdaptors = function(input.reads = NULL,
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.names[i], " does not have any reads present for files ")
+      warning(sample.names[i], " does not have any reads present. Skipping.")
+      next
     } #end if statement
+
+    #Check for empty or near-empty input files (sequencing failures)
+    raw.reads = reads[grep(pattern = sample.names[i], x = reads)]
+    file.sizes = file.info(raw.reads)$size
+    if (any(is.na(file.sizes)) || max(file.sizes, na.rm = TRUE) < 1000) {
+      dir.create("logs/sample_logs", recursive = TRUE, showWarnings = FALSE)
+      failure.msg = paste0("Sample failed: input read files are empty or near-empty",
+                           " (max file size: ", max(file.sizes, na.rm = TRUE), " bytes).",
+                           " This indicates a sequencing or library preparation failure.")
+      writeLines(failure.msg, paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt"))
+      warning(sample.names[i], " has empty input read files. Skipping.")
+      next
+    }
 
     #CReates new directory
     out.path = paste0(output.directory, "/", sample.names[i])

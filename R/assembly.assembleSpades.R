@@ -182,8 +182,17 @@ assembleSpades = function(input.reads = NULL,
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(samples[i], " does not have any reads present. Sample folder may be empty. ")
+      warning(samples[i], " does not have any reads present. Skipping.")
+      next
     } #end if statement
+
+    #Skip samples with empty or near-empty read files (e.g. all reads removed by decontamination)
+    file.sizes = file.info(sample.reads)$size
+    if (any(is.na(file.sizes)) || max(file.sizes, na.rm = TRUE) < 1000) {
+      warning(samples[i], " read files are empty or near-empty (max file size: ",
+              max(file.sizes, na.rm = TRUE), " bytes). Skipping.")
+      next
+    }
 
     #Run SPADES on sample
     k.val = paste(kmer.values, collapse = ",")
@@ -236,7 +245,7 @@ assembleSpades = function(input.reads = NULL,
     if (file.exists(paste0(save.assem, "/scaffolds.fasta")) == TRUE ){
       system(paste0("cp ", save.assem, "/scaffolds.fasta ",  assembly.directory,
                     "/", samples[i], ".fa"))
-    } else { stop(paste0("spades error for ", samples[i], ", check spades.log file in spades-assembly folder.")) }
+    } else { warning(paste0("spades error for ", samples[i], ", check spades.log file in spades-assembly folder.")); next }
 
     if (clean.up.spades == TRUE) {
       system(paste0("rm -rf ", save.assem))
