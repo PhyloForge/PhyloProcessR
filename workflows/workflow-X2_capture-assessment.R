@@ -35,16 +35,33 @@ cleaned.dir = paste0(processed.reads, "/cleaned-reads")
 dir.create(raw.dir, showWarnings = FALSE)
 dir.create(cleaned.dir, showWarnings = FALSE)
 
-# Authorize Dropbox connection once at the start
-rdrop2::drop_auth(rdstoken = dropbox.token)
+# Set up read source and sample list
+if (use.dropbox == TRUE) {
 
-# Load full sample spreadsheet and get unique sample names.
-# The spreadsheet may have multiple rows per sample (one per lane/file) —
-# dropboxDownload handles multi-lane samples internally, so we loop over
-# unique Sample names, not rows.
-sample.data  = read.csv(sample.file)
-sample.names = unique(sample.data$Sample)
-cat("Found", length(sample.names), "unique samples in", sample.file, "\n")
+  # Authorize Dropbox connection once at the start
+  rdrop2::drop_auth(rdstoken = dropbox.token)
+
+  # Load full sample spreadsheet and get unique sample names.
+  # The spreadsheet may have multiple rows per sample (one per lane/file) —
+  # dropboxDownload handles multi-lane samples internally, so we loop over
+  # unique Sample names, not rows.
+  sample.data  = read.csv(sample.file)
+  sample.names = unique(sample.data$Sample)
+  cat("Found", length(sample.names), "unique samples in", sample.file, "\n")
+
+} else {
+
+  # Discover samples from the local read directory.
+  # Supports both sub-directory-per-sample and flat file layouts.
+  sample.names = list.dirs(read.directory, recursive = FALSE, full.names = FALSE)
+  if (length(sample.names) == 0) {
+    local.files  = list.files(read.directory, recursive = FALSE, full.names = FALSE)
+    sample.names = unique(gsub("_L00.*|_R[12].*|_READ[12].*", "", local.files))
+    sample.names = sample.names[grep("\\.fastq|\\.fq", sample.names, invert = TRUE)]
+  }
+  cat("Found", length(sample.names), "unique samples in", read.directory, "\n")
+
+}
 
 # Accumulators — built up across iterations and written as rolling CSVs
 all.fastq.stats   = data.frame()
@@ -91,41 +108,59 @@ for (i in 1:length(sample.names)) {
   }
 
   ##############################################################
-  ## Step 1: Download this sample from Dropbox
-  ##
-  ## dropboxDownload writes files flat into raw.dir with names:
-  ##   SampleName_L001_READ1.fastq.gz
-  ##   SampleName_L001_READ2.fastq.gz
-  ## (no per-sample subdirectory)
-  ##
-  ## We pass only the rows for this sample so that dropboxDownload
-  ## fetches just these files, not the entire 6 TB dataset.
+  ## Step 1: Obtain reads for this sample
   ##############################################################
-  sample.rows = sample.data[sample.data$Sample == sample.name, ]
-  temp.csv = tempfile(fileext = ".csv")
-  write.csv(sample.rows, temp.csv, row.names = FALSE)
+  if (use.dropbox == TRUE) {
 
-  dropboxDownload(sample.spreadsheet = temp.csv,
-                  dropbox.directory   = dropbox.directory,
-                  dropbox.token       = dropbox.token,
-                  output.directory    = raw.dir,
-                  overwrite           = FALSE,
-                  skip.not.found      = TRUE)
-  unlink(temp.csv)
+    # Download from Dropbox — files land flat in raw.dir as:
+    #   SampleName_L001_READ1.fastq.gz / SampleName_L001_READ2.fastq.gz
+    sample.rows = sample.data[sample.data$Sample == sample.name, ]
+    temp.csv = tempfile(fileext = ".csv")
+    write.csv(sample.rows, temp.csv, row.names = FALSE)
 
-  # Verify download succeeded by checking for files matching the sample name
-  downloaded.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
-  downloaded.files = downloaded.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", downloaded.files)]
-  if (length(downloaded.files) == 0) {
-    cat(" WARNING:", sample.name, "did not download — skipping.\n")
-    next
+    dropboxDownload(sample.spreadsheet = temp.csv,
+                    dropbox.directory   = dropbox.directory,
+                    dropbox.token       = dropbox.token,
+                    output.directory    = raw.dir,
+                    overwrite           = FALSE,
+                    skip.not.found      = TRUE)
+    unlink(temp.csv)
+
+    # Verify download succeeded
+    input.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
+    input.files = input.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", input.files)]
+    if (length(input.files) == 0) {
+      cat(" WARNING:", sample.name, "did not download — skipping.\n")
+      next
+    }
+    cat(" Downloaded", length(input.files), "file(s) for", sample.name, "\n")
+    input.dir = raw.dir
+
+  } else {
+
+    # Use the local read directory directly — no copying needed.
+    # Check whether reads are in a sub-directory or flat.
+    sample.subdir = file.path(read.directory, sample.name)
+    if (dir.exists(sample.subdir)) {
+      input.dir = sample.subdir
+    } else {
+      input.dir = read.directory
+    }
+
+    input.files = list.files(input.dir, pattern = sample.name, full.names = TRUE)
+    input.files = input.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$|\\.fastq$|\\.fq$", input.files)]
+    if (length(input.files) == 0) {
+      cat(" WARNING: no reads found for", sample.name, "in", input.dir, "— skipping.\n")
+      next
+    }
+    cat(" Found", length(input.files), "local file(s) for", sample.name, "\n")
+
   }
-  cat(" Downloaded", length(downloaded.files), "file(s) for", sample.name, "\n")
 
   ##############################################################
   ## Step 2: FastQ stats on raw reads
   ##############################################################
-  fastqStats(read.directory = raw.dir,
+  fastqStats(read.directory = input.dir,
              output.name    = "fastq-stats-temp",
              read.length    = read.length,
              threads        = threads,
@@ -144,7 +179,7 @@ for (i in 1:length(sample.names)) {
   ## (adaptor removal, dedup, low-complexity filter, length >=60)
   ## No decontamination — just enough cleaning to map reliably.
   ##############################################################
-  fastpComplete(input.reads       = raw.dir,
+  fastpComplete(input.reads       = input.dir,
                 output.directory  = cleaned.dir,
                 fastp.path        = fastp.path,
                 threads           = threads,
@@ -172,16 +207,15 @@ for (i in 1:length(sample.names)) {
                           overwrite        = FALSE,   # accumulate per-target CSVs across samples
                           quiet            = quiet)
 
-  if (file.exists("logs/assessCaptureEfficiency_summary.csv")) {
-    tmp.cap = read.csv("logs/assessCaptureEfficiency_summary.csv")
-    tmp.cap = tmp.cap[tmp.cap$Sample == sample.name, ]
-    all.capture.stats = rbind(all.capture.stats, tmp.cap)
-  }
+  # assessCaptureEfficiency now appends to its own CSV automatically —
+  # no manual accumulation needed here.
 
   ##############################################################
   ## Step 5: Delete reads for this sample to free disk space
+  ## Raw reads are only deleted when using Dropbox (local reads
+  ## are never touched regardless of delete.raw.reads).
   ##############################################################
-  if (delete.raw.reads == TRUE) {
+  if (use.dropbox == TRUE && delete.raw.reads == TRUE) {
     raw.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
     if (length(raw.files) > 0) {
       file.remove(raw.files)
@@ -201,9 +235,10 @@ for (i in 1:length(sample.names)) {
   ## Rolling saves — written after every sample so the run can
   ## be safely interrupted and resumed without losing data.
   ##############################################################
-  write.csv(all.fastq.stats,   "logs/X2_fastq-stats_rolling.csv",        row.names = FALSE)
-  write.csv(all.fastp.stats,   "logs/X2_fastp_rolling.csv",               row.names = FALSE)
-  write.csv(all.capture.stats, "logs/X2_capture-assessment_rolling.csv",  row.names = FALSE)
+  write.csv(all.fastq.stats, "logs/X2_fastq-stats_rolling.csv", row.names = FALSE)
+  write.csv(all.fastp.stats, "logs/X2_fastp_rolling.csv",      row.names = FALSE)
+  # capture stats are written directly by assessCaptureEfficiency to
+  # logs/assessCaptureEfficiency_summary.csv after every sample
 
   cat(" Sample", sample.name, "complete!\n")
 
@@ -236,22 +271,9 @@ if (nrow(all.fastp.stats) > 0) {
   fp.agg = data.frame()
 }
 
-# --- Aggregate capture stats per sample ---
-# readPairs and mappedReads are summed across lanes.
-# targetsHit uses MAX across lanes — summing would double-count loci captured
-# in multiple lanes. For exact union-of-lanes counts inspect the per-target
-# CSVs in sample-capture-assessment/<sample>/.
-if (nrow(all.capture.stats) > 0) {
-  cap.sum = aggregate(cbind(readPairs, mappedReads) ~ Sample,
-                      data = all.capture.stats, FUN = sum)
-  cap.max = aggregate(cbind(targetsHit, totalTargets) ~ Sample,
-                      data = all.capture.stats, FUN = max)
-  cap.agg = merge(cap.sum, cap.max, by = "Sample")
-  cap.agg$pctTargetsHit    = round(cap.agg$targetsHit / cap.agg$totalTargets * 100, 2)
-  cap.agg$pctReadsOnTarget = round(cap.agg$mappedReads / (cap.agg$readPairs * 2) * 100, 2)
-  cap.agg = cap.agg[, c("Sample", "readPairs", "mappedReads",
-                         "targetsHit", "totalTargets",
-                         "pctTargetsHit", "pctReadsOnTarget")]
+# --- Capture stats: already aggregated per sample by assessCaptureEfficiency ---
+if (file.exists("logs/assessCaptureEfficiency_summary.csv")) {
+  cap.agg = read.csv("logs/assessCaptureEfficiency_summary.csv", stringsAsFactors = FALSE)
 } else {
   cap.agg = data.frame()
 }

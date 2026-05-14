@@ -125,16 +125,13 @@ assessCaptureEfficiency = function(input.reads = NULL,
 
   if (length(sample.names) == 0) { return("No samples remain to analyze.") }
 
-  # Creates the summary log
-  summary.data = data.frame(Sample = as.character(),
-                            Lane = as.character(),
-                            readPairs = as.numeric(),
-                            mappedReads = as.numeric(),
-                            targetsHit = as.numeric(),
-                            totalTargets = as.numeric(),
-                            pctTargetsHit = as.numeric(),
-                            pctReadsOnTarget = as.numeric(),
-                            stringsAsFactors = FALSE)
+  # Creates the per-lane accumulator (used internally; collapsed to per-sample before saving)
+  lane.data = data.frame(Sample = as.character(),
+                         readPairs = as.numeric(),
+                         mappedReads = as.numeric(),
+                         targetsHit = as.numeric(),
+                         totalTargets = as.numeric(),
+                         stringsAsFactors = FALSE)
 
   for (i in 1:length(sample.names)) {
     #################################################
@@ -229,16 +226,13 @@ assessCaptureEfficiency = function(input.reads = NULL,
       pct.on.target = round(mapped.reads / (total.pairs * 2) * 100, 2)
 
       temp.remove = data.frame(Sample = sample.names[i],
-                               Lane = lane.name,
                                readPairs = total.pairs,
                                mappedReads = mapped.reads,
                                targetsHit = targets.hit,
                                totalTargets = n.targets,
-                               pctTargetsHit = pct.targets,
-                               pctReadsOnTarget = pct.on.target,
                                stringsAsFactors = FALSE)
 
-      summary.data = rbind(summary.data, temp.remove)
+      lane.data = rbind(lane.data, temp.remove)
 
       # Removes BAM to save disk space
       system(paste0("rm ", bam.file, " ", bam.file, ".bai"))
@@ -249,6 +243,26 @@ assessCaptureEfficiency = function(input.reads = NULL,
     print(paste0(sample.names[i], " Completed capture efficiency assessment!"))
   }#end i loop
 
-  write.csv(summary.data, file = "logs/assessCaptureEfficiency_summary.csv", row.names = FALSE)
+  # Aggregate lane.data to one row per sample:
+  #   readPairs and mappedReads are summed across lanes.
+  #   targetsHit uses max across lanes (summing would double-count loci
+  #   captured in multiple lanes; per-target CSVs in output.directory can
+  #   be used for an exact union if needed).
+  sum.agg = aggregate(cbind(readPairs, mappedReads) ~ Sample, data = lane.data, FUN = sum)
+  max.agg = aggregate(cbind(targetsHit, totalTargets) ~ Sample, data = lane.data, FUN = max)
+  summary.data = merge(sum.agg, max.agg, by = "Sample")
+  summary.data$pctTargetsHit    = round(summary.data$targetsHit / summary.data$totalTargets * 100, 2)
+  summary.data$pctReadsOnTarget = round(summary.data$mappedReads / (summary.data$readPairs * 2) * 100, 2)
+
+  # Append to the existing summary CSV rather than overwriting it, so the file
+  # accumulates across successive single-sample runs (as in workflow X2).
+  # Any rows for samples in this run are replaced to avoid duplicates on rerun.
+  out.csv = "logs/assessCaptureEfficiency_summary.csv"
+  if (file.exists(out.csv)) {
+    existing = read.csv(out.csv, stringsAsFactors = FALSE)
+    existing = existing[!existing$Sample %in% summary.data$Sample, ]
+    summary.data = rbind(existing, summary.data)
+  }
+  write.csv(summary.data, file = out.csv, row.names = FALSE)
 
 }#end function
