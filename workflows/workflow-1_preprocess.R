@@ -47,6 +47,19 @@ if (summary.fastq == TRUE){
              overwrite = overwrite)
 }#end summary.fastq if
 
+# Quick scan of raw reads against the target probe set to flag poor samples early
+if (assess.capture == TRUE){
+  assessCaptureEfficiency(input.reads = input.reads,
+                          output.directory = "sample-capture-assessment",
+                          target.fasta = target.fasta,
+                          bwa.path = bwa.path,
+                          samtools.path = samtools.path,
+                          threads = threads,
+                          mem = memory,
+                          overwrite = overwrite,
+                          quiet = quiet)
+}#end assess.capture if
+
 #The complete processing through fastp at once. +++ for speed.
 if (fastp.complete == TRUE) {
   fastpComplete(input.reads = input.reads,

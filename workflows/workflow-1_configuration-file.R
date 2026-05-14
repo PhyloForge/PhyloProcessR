@@ -35,6 +35,10 @@ read.directory = "/Path/to/where/the/raw/reads/are"
 processed.reads = "processed-reads"
 # TRUE to save a summary csv file of the raw sequence data
 summary.fastq = TRUE
+# TRUE to map reads to the target probe set and estimate capture efficiency per sample
+assess.capture = TRUE
+# Path to the target probe/marker FASTA used for sequence capture
+target.fasta = "/Path/to/probe-set.fa"
 
 # For downloading reads from dropbox
 #########################
