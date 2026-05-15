@@ -61,9 +61,10 @@ haplotypeCaller(
   quiet = quiet
 )
 
-# Function that recalibrates bases and calls haplotypes again
-if (base.recalibration == TRUE) {
-  #runs function
+# Function that recalibrates bases and calls haplotypes again.
+# Only runs when use.base.recalibration = TRUE; the results feed directly into
+# genotypeSamples below via the same flag.
+if (use.base.recalibration == TRUE) {
   baseRecalibration(
     haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
     mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
@@ -75,7 +76,6 @@ if (base.recalibration == TRUE) {
     overwrite = overwrite,
     quiet = quiet
   )
-
 }#end if
 
 # Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs

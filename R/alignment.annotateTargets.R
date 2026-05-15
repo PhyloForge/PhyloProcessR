@@ -105,8 +105,6 @@ annotateTargets = function(assembly.directory = NULL,
 #   min.match.coverage = 35
   #
 
-  require(foreach)
-
   #Add the slash character to path
   if (is.null(blast.path) == FALSE){
     b.string = unlist(strsplit(blast.path, ""))
@@ -144,17 +142,11 @@ annotateTargets = function(assembly.directory = NULL,
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
             "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
- # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loop for cd-hit est reductions
-  foreach::foreach(i = seq_along(file.names), .packages = c("foreach", "PhyloProcessR", "Biostrings", "data.table")) %dopar% {
-
-  #Matching and processing for each sample
-  #for (i in seq_along(file.names)) {
+  parallel::mclapply(seq_along(file.names), function(i) {
+  tryCatch({
 
     #Sets up working directories for each species
     sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
@@ -553,9 +545,10 @@ annotateTargets = function(assembly.directory = NULL,
 
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
-  }# end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(file.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) # end i loop
 
   ########################################################################
   # Output a single file for alignment

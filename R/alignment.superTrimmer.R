@@ -117,8 +117,6 @@ superTrimmer = function(alignment.dir = NULL,
   # threads = threads
   # memory = memory
 
-  require(foreach)
-
   if (is.null(TrimAl.path) == FALSE){
     b.string = unlist(strsplit(TrimAl.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -165,15 +163,11 @@ superTrimmer = function(alignment.dir = NULL,
   save.data[, Alignment:=as.character(Alignment)]
   save.data[, Pass:=as.logical(Pass)]
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  out.data = foreach::foreach(i=1:length(align.files), .combine = rbind, .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
-  #for (i in 1:length(align.files)){
+  out.data = do.call(rbind, parallel::mclapply(seq_along(align.files), function(i) {
+  tryCatch({
     print(paste0(align.files[i], " Starting..."))
 
      #Load in alignments
@@ -345,9 +339,11 @@ superTrimmer = function(alignment.dir = NULL,
     #rm()
     #gc()
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(align.files[i], " failed: ", conditionMessage(e))
+    NULL
+  })
+  }, mc.cores = threads)) #end i loop
 
   if (is.null(out.data) ==  TRUE){ return("No alignments were trimmed.") }
 

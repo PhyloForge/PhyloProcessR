@@ -101,16 +101,11 @@ addTaxaAlignments = function(alignment.directory = NULL,
   ### Reads in the additional stuff
   add.taxa = Biostrings::readDNAStringSet(sample.markers)
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
-  #Loops through each locus and does operations on them
-  #for (i in 1:length(align.files)) {
+  parallel::mclapply(seq_along(align.files), function(i) {
+  tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
@@ -287,9 +282,9 @@ addTaxaAlignments = function(alignment.directory = NULL,
     #Deletes old files
     print(paste0(align.files[i], " alignment saved."))
 
-  }#end i loop
-
-  #close multithread
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(align.files[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 } #end function

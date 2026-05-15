@@ -35,9 +35,11 @@ clean.up = TRUE
 auto.readgroup = TRUE
 # TRUE to stop  pipeline when read sets are missing corresponding assemblies; FALSE removes read sets without assemblies
 check.assemblies = FALSE
-# TRUE to run GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, set use.base.recalibration = FALSE
-base.recalibration = FALSE
-# TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
+# TRUE to run GATK4 base quality score recalibration (BQSR) and use the
+# recalibrated base qualities for all downstream genotyping. BQSR requires
+# sufficient sequencing depth and enough variant sites to build a reliable
+# recalibration model. If you observe few SNPs (e.g. low-depth or low-diversity
+# datasets), set this to FALSE and the original base qualities will be used.
 use.base.recalibration = FALSE
 # Set ploidy level
 ploidy = 2

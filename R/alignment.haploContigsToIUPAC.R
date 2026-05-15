@@ -56,7 +56,6 @@ haploContigsToIUPAC = function(alignment.directory = NULL,
 
 
   require(PhyloCap)
-  require(foreach)
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
@@ -77,16 +76,11 @@ haploContigsToIUPAC = function(alignment.directory = NULL,
 
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
-    #Loops through each locus and does operations on the
-    #for (i in 1:length(align.files)) {
+  parallel::mclapply(seq_along(align.files), function(i) {
+  tryCatch({
 
     ##############
     #STEP 2: Runs MAFFT to add
@@ -135,9 +129,10 @@ haploContigsToIUPAC = function(alignment.directory = NULL,
 
     print(paste0("Finished ", save.name, " making IUPAC alignment!"))
 
-  }#end loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(align.files[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end loop
 
 }
 

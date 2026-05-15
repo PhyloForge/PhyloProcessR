@@ -56,8 +56,6 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   # mafft.path = mafft.path
   # target.direction = TRUE
 
-  require(foreach)
-
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
@@ -91,16 +89,11 @@ trimAlignmentTargets = function(alignment.directory = NULL,
 
   if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i=1:length(align.files), .packages = c("PhyloProcessR", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
-  #Loops through each locus and does operations on them
-  #for (i in 1:length(align.files)){
+  parallel::mclapply(seq_along(align.files), function(i) {
+  tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
@@ -232,8 +225,9 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     rm()
     gc()
 
-  } #end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(align.files[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 } #end function

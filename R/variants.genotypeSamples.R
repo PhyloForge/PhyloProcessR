@@ -114,9 +114,6 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   # overwrite <- TRUE
 
   # Same adds to bbmap path
-  require(foreach)
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -194,16 +191,11 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   ##### Start up loop for each sample
   ############################################################################################
 
-  # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i = seq_along(sample.names), .packages = c("foreach")) %dopar% {
-    # Loops through each locus and does operations on them
-    # for (i in 1:length(loci.names)){
+  parallel::mclapply(seq_along(sample.names), function(i) {
+  tryCatch({
 
     dir.create(paste0(output.directory, "/", sample.names[i]))
 
@@ -321,9 +313,10 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
 
     print(paste0(sample.names[i], " completed GATK4 sample genotyping!"))
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(sample.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 }#end function
 

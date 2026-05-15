@@ -63,10 +63,6 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
   # overwrite <- TRUE
   # clean.up = TRUE
 
-  # Same adds to bbmap path
-  require(foreach)
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -107,154 +103,124 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
   ##### Start up loop for each sample
   ############################################################################################
 
-  # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
-  #Loops through each locus and does operations on them
-  foreach::foreach(i=seq_along(sample.names), .packages = c("foreach")) %dopar% {
-    # Loops through each locus and does operations on them
-    # for (i in 1:length(loci.names)){
+  # Use mclapply (fork-based) instead of a SOCK cluster to avoid
+  # "invalid connection" crashes when a GATK worker process dies.
+  parallel::mclapply(seq_along(sample.names), function(i) {
 
-    reference.path <- paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
+    sample.id      = sample.names[i]
+    hap.dir        = paste0(haplotype.caller.directory, "/", sample.id)
+    reference.path = paste0(mapping.directory, "/", sample.id, "/index/reference.fa")
+    log.file       = paste0("logs/sample_logs/FAILURE_", sample.id, "_baseRecalibration.txt")
 
-    # Genotype haplotype caller results
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " GenotypeGVCFs -R ", reference.path,
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-haplotype-caller.g.vcf.gz",
-      " --use-new-qual-calculator true -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf"
-    ))
+    tryCatch({
 
-    # Selects only the SNPs from the VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf",
-      " --select-type SNP"
-    ))
+      gatk = paste0(gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=",
+                    temp.directory, " -Xmx", mem.cl, "G\"")
 
-    #Selects only the indels from the VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-genotype.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf",
-      " --select-type INDEL"
-    ))
+      # Pass 1a: genotype the initial GVCF to get a raw variant set
+      system(paste0(gatk, " GenotypeGVCFs -R ", reference.path,
+                    " -V ", hap.dir, "/gatk4-haplotype-caller.g.vcf.gz",
+                    " --use-new-qual-calculator true",
+                    " -O ", hap.dir, "/gatk4-bqsr-genotype.vcf"))
 
-    # Applies filters to SNPs
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " VariantFiltration -R ", reference.path,
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf",
-      " -filter \"QD<2.0\" --filter-name \"QD2\"",
-      " -filter \"QUAL<100.0\" --filter-name \"QUAL30\"",
-      " -filter \"SOR>3.0\" --filter-name \"SOR3\"",
-      " -filter \"FS>60.0\" --filter-name \"FS60\"",
-      " -filter \"MQ<50.0\" --filter-name \"MQ40\"",
-      " -filter \"MQRankSum<-12.5\" --filter-name \"MQRankSum12.5\"",
-      " -filter \"ReadPosRankSum<-8.0\" --filter-name \"ReadPosRankSum8\""
-    ))
+      # Pass 1b: select and hard-filter SNPs
+      system(paste0(gatk, " SelectVariants",
+                    " -V ", hap.dir, "/gatk4-bqsr-genotype.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-snps.vcf --select-type SNP"))
 
-    # Applies filters to indels
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " VariantFiltration -R ", reference.path,
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf",
-      " -filter \"QD<2.0\" --filter-name \"QD2\"",
-      " -filter \"QUAL<100.0\" --filter-name \"QUAL30\"",
-      " -filter \"FS>200.0\" --filter-name \"FS200\"",
-      " -filter \"ReadPosRankSum<-20.0\" --filter-name \"ReadPosRankSum20\""
-    ))
+      system(paste0(gatk, " VariantFiltration -R ", reference.path,
+                    " -V ", hap.dir, "/gatk4-bqsr-snps.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-filtered-snps.vcf",
+                    " -filter \"QD<2.0\" --filter-name \"QD2\"",
+                    " -filter \"QUAL<100.0\" --filter-name \"QUAL30\"",
+                    " -filter \"SOR>3.0\" --filter-name \"SOR3\"",
+                    " -filter \"FS>60.0\" --filter-name \"FS60\"",
+                    " -filter \"MQ<50.0\" --filter-name \"MQ40\"",
+                    " -filter \"MQRankSum<-12.5\" --filter-name \"MQRankSum12.5\"",
+                    " -filter \"ReadPosRankSum<-8.0\" --filter-name \"ReadPosRankSum8\""))
 
-    # Combine them into a single VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SortVcf",
-      " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf",
-      " -I ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-combined.vcf"
-    ))
+      # Pass 1c: select and hard-filter indels
+      system(paste0(gatk, " SelectVariants",
+                    " -V ", hap.dir, "/gatk4-bqsr-genotype.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-indels.vcf --select-type INDEL"))
 
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-combined.vcf",
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-rem-filtered-combined.vcf",
-      " --exclude-filtered TRUE"
-    ))
+      system(paste0(gatk, " VariantFiltration -R ", reference.path,
+                    " -V ", hap.dir, "/gatk4-bqsr-indels.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-filtered-indels.vcf",
+                    " -filter \"QD<2.0\" --filter-name \"QD2\"",
+                    " -filter \"QUAL<100.0\" --filter-name \"QUAL30\"",
+                    " -filter \"FS>200.0\" --filter-name \"FS200\"",
+                    " -filter \"ReadPosRankSum<-20.0\" --filter-name \"ReadPosRankSum20\""))
 
-    #Gathers correct read files
-    lane.files = list.dirs(paste0(mapping.directory, "/", sample.names[i]))
-    lane.files = lane.files[grep("Lane_", lane.files)]
+      # Pass 1d: merge filtered SNPs + indels into a single "known sites" VCF
+      system(paste0(gatk, " SortVcf",
+                    " -I ", hap.dir, "/gatk4-bqsr-filtered-snps.vcf",
+                    " -I ", hap.dir, "/gatk4-bqsr-filtered-indels.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-filtered-combined.vcf"))
 
-    if (length(lane.files) != 1) {
-      read.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_Merge")
-    }
-    if (length(lane.files) == 1) {
-      read.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_1")
-    }
+      system(paste0(gatk, " SelectVariants",
+                    " -V ", hap.dir, "/gatk4-bqsr-filtered-combined.vcf",
+                    " -O ", hap.dir, "/gatk4-bqsr-rem-filtered-combined.vcf",
+                    " --exclude-filtered TRUE"))
 
-    #Applies base recalibration to the original bam file
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " BaseRecalibrator",
-      " -I ", read.bam, "/final-mapped-all.bam",
-      " -R ", reference.path,
-      " --known-sites ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-rem-filtered-combined.vcf",
-      " -O ", read.bam, "/recal_data.table"
-    ))
+      # Determine BAM path (merged vs. single-lane)
+      lane.files = list.dirs(paste0(mapping.directory, "/", sample.id))
+      lane.files = lane.files[grep("Lane_", lane.files)]
+      read.bam   = if (length(lane.files) == 1) {
+        paste0(mapping.directory, "/", sample.id, "/Lane_1")
+      } else {
+        paste0(mapping.directory, "/", sample.id, "/Lane_Merge")
+      }
 
-    recal.bam <- paste0(read.bam, "/bqsr-mapped-all.bam")
+      # Pass 2a: build recalibration table from the known-sites VCF
+      system(paste0(gatk, " BaseRecalibrator",
+                    " -I ", read.bam, "/final-mapped-all.bam",
+                    " -R ", reference.path,
+                    " --known-sites ", hap.dir, "/gatk4-bqsr-rem-filtered-combined.vcf",
+                    " -O ", read.bam, "/recal_data.table"))
 
-    # Applies the recalibration and creates a new bam file
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " ApplyBQSR",
-      " -I ", read.bam, "/final-mapped-all.bam",
-      " -R ", reference.path,
-      " --bqsr-recal-file ", read.bam, "/recal_data.table",
-      " -O ", recal.bam
-    ))
+      # Pass 2b: apply recalibration
+      recal.bam = paste0(read.bam, "/bqsr-mapped-all.bam")
+      system(paste0(gatk, " ApplyBQSR",
+                    " -I ", read.bam, "/final-mapped-all.bam",
+                    " -R ", reference.path,
+                    " --bqsr-recal-file ", read.bam, "/recal_data.table",
+                    " -O ", recal.bam))
 
-   # Starts to finally look for Haplotypes! *here
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " HaplotypeCaller",
-      " -R ", reference.path,
-      " -I ", recal.bam,
-      " -O ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.g.vcf.gz",
-      " -ERC GVCF",
-      " -bamout ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-haplotype-caller.bam"
-    ))
+      # Pass 2c: re-run HaplotypeCaller on the recalibrated BAM
+      system(paste0(gatk, " HaplotypeCaller",
+                    " -R ", reference.path,
+                    " -I ", recal.bam,
+                    " -O ", hap.dir, "/gatk4-bqsr-haplotype-caller.g.vcf.gz",
+                    " -ERC GVCF",
+                    " -bamout ", hap.dir, "/gatk4-bqsr-haplotype-caller.bam"))
 
-    if (clean.up == TRUE){
+      if (clean.up == TRUE) {
+        to.rm = c("gatk4-bqsr-filtered-combined.vcf",
+                  "gatk4-bqsr-filtered-indels.vcf",   "gatk4-bqsr-filtered-indels.vcf.idx",
+                  "gatk4-bqsr-filtered-snps.vcf",     "gatk4-bqsr-filtered-snps.vcf.idx",
+                  "gatk4-bqsr-rem-filtered-combined.vcf", "gatk4-bqsr-rem-filtered-combined.vcf.idx",
+                  "gatk4-bqsr-snps.vcf",   "gatk4-bqsr-snps.vcf.idx",
+                  "gatk4-bqsr-indels.vcf", "gatk4-bqsr-indels.vcf.idx")
+        for (f in to.rm) {
+          fp = paste0(hap.dir, "/", f)
+          if (file.exists(fp)) { file.remove(fp) }
+        }
+      }
 
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-combined.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-indels.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-filtered-snps.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-rem-filtered-combined.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-rem-filtered-combined.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-snps.vcf.idx"))
-      system(paste0("rm ", haplotype.caller.directory, "/", sample.names[i], "/gatk4-bqsr-indels.vcf.idx"))
+      print(paste0(sample.id, " completed GATK4 base recalibration!"))
 
-    }
+    }, error = function(e) {
+      msg = paste0("Unexpected R error: ", conditionMessage(e))
+      writeLines(msg, log.file)
+      warning(sample.id, ": baseRecalibration failed — see ", log.file)
+    })
 
-    print(paste0(sample.names[i], " completed GATK4 base recalibration!"))
+  }, mc.cores = threads)
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  invisible(NULL)
 
 }#end function
 

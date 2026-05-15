@@ -70,9 +70,6 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   # vcf.file = "SNP"
 
   # Same adds to bbmap path
-  require(foreach)
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -140,14 +137,11 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   ##### Start up loop for each sample
   ############################################################################################
 
-  #Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach(i = seq_along(sample.names), .packages = c("foreach", "PhyloProcessR")) %dopar% {
+  parallel::mclapply(seq_along(sample.names), function(i) {
+  tryCatch({
 
     # Obtains sample vcf
     sample.vcf = paste0(genotype.directory, "/", sample.names[i], "/", vcf.string)
@@ -190,9 +184,10 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
       paste0(output.directory, "/", sample.names[i], ".fa"), nbchar = 1000000, as.string = TRUE
     )
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(sample.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 }#end function
 

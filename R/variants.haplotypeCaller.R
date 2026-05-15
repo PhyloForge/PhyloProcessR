@@ -72,9 +72,6 @@ haplotypeCaller = function(mapping.directory = NULL,
   # overwrite <- TRUE
 
   # Same adds to bbmap path
-  require(foreach)
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -126,16 +123,11 @@ haplotypeCaller = function(mapping.directory = NULL,
   ########### Step 1 #########################################################################
   ##### Start up loop for each sample
   ############################################################################################
-  #Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(sample.names), .packages = c("foreach")) %dopar% {
-    #Runs through each sample
-    #for (i in 1:length(sample.names)) {
+  parallel::mclapply(seq_along(sample.names), function(i) {
+  tryCatch({
     #################################################
     ### Part A: prepare for loading and checks
     #################################################
@@ -236,10 +228,10 @@ haplotypeCaller = function(mapping.directory = NULL,
 
     print(paste0(sample.names[i], " completed GATK4 haplotype caller!"))
 
-  }# end i loop
-
-  parallel::stopCluster(cl)
-
+  }, error = function(e) {
+    warning(sample.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) # end i loop
 
 }#end function
 

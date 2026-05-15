@@ -63,8 +63,6 @@ sampleSensitivity = function(alignment.directory = NULL,
   ##### Required program path check
   ####################################################################
 
-  require(foreach)
-
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
@@ -112,17 +110,11 @@ sampleSensitivity = function(alignment.directory = NULL,
 
   sample.names = unique(taxa.temp)
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  #all.data = c()
-  all.data = foreach::foreach(i=1:length(marker.names),  .combine = rbind, .packages = c("PhyloProcessR", "foreach", "Biostrings","data.table", "ape", "stringr")) %dopar% {
-  #Loops through each alignment
-  #for (i in 1:length(marker.names)){
+  all.data = do.call(rbind, parallel::mclapply(seq_along(marker.names), function(i) {
+  tryCatch({
 
     #START HERE
     align.file = alignment.files[grep(paste0(marker.names[i], ".phy$"), alignment.files)]
@@ -219,12 +211,14 @@ sampleSensitivity = function(alignment.directory = NULL,
     sample.data[sample.data$sample_sensitivity == 0]$sample_sensitivity = NA
 
     #Writes sample table
-    #all.data = rbind(all.data, sample.data)
     print(data.frame(sample.data))
+    sample.data
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(marker.names[i], " failed: ", conditionMessage(e))
+    NULL
+  })
+  }, mc.cores = threads)) #end i loop
 
   #Writes final table
   write.table(all.data, file = paste0(output.directory, "/sample-sensitivity_raw-data.txt"), sep = "\t", row.names = F)

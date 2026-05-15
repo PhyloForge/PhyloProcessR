@@ -49,7 +49,6 @@ depth.binnedEstimate = function(depth.directory = NULL,
                        overwrite = FALSE) {
 
   #Debug
-  library(foreach)
   setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")
   depth.directory = "/Volumes/Armored/FrogCap_Anura_Seqcap/Analyses/read-depth"
   sub.directory = NULL
@@ -87,15 +86,11 @@ depth.binnedEstimate = function(depth.directory = NULL,
 
   base.headers = c("locus", "position", "mapped_reads")
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach::foreach(i=1:length(sample.names), .packages = c("PhyloCap", "foreach", "Biostrings","data.table")) %dopar% {
-  #for (i in 1:length(sample.names)){
+  parallel::mclapply(seq_along(sample.names), function(i) {
+  tryCatch({
 
     #################################################
     ### Part A: prepare for loading and checks
@@ -198,9 +193,10 @@ depth.binnedEstimate = function(depth.directory = NULL,
   write.table(bin.data, file = paste0(depth.directory, "/", sample.names[i], "/rpkm-binned-data.txt"),
               sep = "\t", row.names = F)
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(sample.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 }#end function
 

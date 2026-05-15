@@ -73,8 +73,6 @@ concatenateGenes = function(alignment.folder = NULL,
   # threads = 8
   # memory = 24
 
-  require(foreach)
-
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
   if(is.null(output.folder) == TRUE){ stop("Error: an output file name is needed.") }
@@ -107,14 +105,10 @@ concatenateGenes = function(alignment.folder = NULL,
     gene.names = gene.names[!gene.names %in% done.genes]
   }
 
-  # #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
-  foreach::foreach(i=1:length(gene.names), .packages = c("PhyloProcessR", "foreach", "Biostrings","Rsamtools", "ape", "stringr", "data.table")) %dopar% {
- # for (i in 1:length(gene.names)){
+  parallel::mclapply(seq_along(gene.names), function(i) {
+  tryCatch({
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene %in% gene.names[i],]
     #Match to the files to obtain
@@ -378,8 +372,9 @@ concatenateGenes = function(alignment.folder = NULL,
     rm()
     gc()
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(gene.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
 }#end function

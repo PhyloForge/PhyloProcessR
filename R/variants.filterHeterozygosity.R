@@ -51,8 +51,6 @@ filterHeterozygosity = function(iupac.directory = NULL,
   # memory = 20
   # overwrite = FALSE
 
-  require(foreach)
-
   # Initial checks
   if (iupac.directory == output.directory) {
     stop("You should not overwrite the original contigs.")
@@ -88,14 +86,11 @@ filterHeterozygosity = function(iupac.directory = NULL,
   file.names <- list.files(iupac.directory)
 
 
-  # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
   # Loops through each locus and does operations on them
-  foreach(i = seq_along(file.names), .packages = c("foreach", "Biostrings", "stringr", "PhyloProcessR")) %dopar% {
+  parallel::mclapply(seq_along(file.names), function(i) {
+  tryCatch({
 
     # Reads in contigs
     contigs = Biostrings::readDNAStringSet(paste0(iupac.directory, "/", file.names[i]), format = "fasta")
@@ -130,9 +125,10 @@ filterHeterozygosity = function(iupac.directory = NULL,
       sequences = final.loci, names = names(final.loci),
       paste0(removed.directory, "/", file.names[i]), nbchar = 1000000, as.string = TRUE
     )
-  } # end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(file.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) # end i loop
 
 } # end function
 

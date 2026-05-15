@@ -76,8 +76,6 @@ prepareBAM = function(read.directory = NULL,
   # quiet <- FALSE
   # overwrite <- TRUE
 
-  require(foreach)
-
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
     b.string <- unlist(strsplit(samtools.path, ""))
@@ -156,133 +154,134 @@ prepareBAM = function(read.directory = NULL,
   ##### Start up loop for each sample
   ############################################################################################
 
-  # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl <- floor(memory / threads)
 
-  # Loops through each locus and does operations on them
-  foreach(i = 1:length(sample.names), .packages = c("foreach", "ShortRead")) %dopar% {
-    # Runs through each sample
-    # for (i in 1:length(sample.names)) {
-    #################################################
-    ### Part A: prepare for loading and checks
-    #################################################
-    sample.dir <- paste0(output.directory, "/", sample.names[i])
-    if (file.exists(sample.dir) == FALSE) {
-      dir.create(sample.dir)
+  # Helper: run a GATK command, capture stderr to a log file, and stop with a
+  # descriptive message if the exit code is non-zero.  system() does not throw
+  # R errors on GATK failures — exit code checking is the only reliable way to
+  # detect a crash.
+  run.gatk = function(cmd, stderr.log) {
+    exit.code = system(paste0(cmd, " 2>> ", stderr.log))
+    if (exit.code != 0) {
+      gatk.msg = if (file.exists(stderr.log)) {
+        tail.lines = tail(readLines(stderr.log), 20)
+        paste(tail.lines, collapse = "\n")
+      } else { "(no stderr captured)" }
+      stop("GATK exited with code ", exit.code, ".\nLast lines of stderr:\n", gatk.msg)
     }
+    invisible(exit.code)
+  }
 
-    # Gets the reads for the sample
-    sample.reads <- reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
-    # Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0) {
-      sample.reads <- reads[grep(pattern = sample.names[i], x = reads)]
-    }
+  parallel::mclapply(seq_along(sample.names), function(i) {
 
-    sample.reads <- unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+    sample.id  = sample.names[i]
+    sample.dir = paste0(output.directory, "/", sample.id)
+    log.file   = paste0("logs/sample_logs/FAILURE_", sample.id, "_prepareBAM.txt")
 
-    # Returns an error if reads are not found
-    if (length(sample.reads) == 0) {
-      stop(sample.names[i], " does not have any reads present for files ")
-    } # end if statement
+    tryCatch({
 
-    # CReates new directory
-    report.path <- paste0("logs/sample_logs/", sample.names[i])
-    if (file.exists(report.path) == FALSE) {
-      dir.create(report.path)
-    }
+      if (file.exists(sample.dir) == FALSE) { dir.create(sample.dir) }
 
-    for (j in 1:length(sample.reads)) {
-
-      #Gets the reads from an individual lane
-      lane.reads <- reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
-
-      # Checks the Sample column in case already renamed
-      if (length(lane.reads) == 0) {
-        lane.reads <- reads[grep(pattern = sample.reads[j], x = reads)]
+      sample.reads <- reads[grep(pattern = paste0(sample.id, "_"), x = reads)]
+      if (length(sample.reads) == 0) {
+        sample.reads <- reads[grep(pattern = sample.id, x = reads)]
       }
-      # Returns an error if reads are not found
-      if (length(lane.reads) == 0) {
-        stop(sample.reads[j], " does not have any reads present for files ")
-      } # end if statement
+      sample.reads <- unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
 
-      # Gets lane names
-      lane.name <- paste0("Lane_", j)
-      lane.dir <- paste0(sample.dir, "/", lane.name)
-      dir.create(lane.dir)
+      if (length(sample.reads) == 0) {
+        stop(sample.id, " has no reads in ", read.directory)
+      }
 
-      ############################################################################################
-      ########### Step 2 #########################################################################
-      ##### Create unmapped reads set
-      ############################################################################################
+      report.path <- paste0("logs/sample_logs/", sample.id)
+      if (file.exists(report.path) == FALSE) { dir.create(report.path) }
 
-      ############################
-      # convert fastqs to a sam file
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " FastqToSam -FASTQ ", lane.reads[1], " -FASTQ2 ", lane.reads[2],
-        " -OUTPUT ", lane.dir, "/fastqsam.bam",
-        " -SAMPLE_NAME ", sample.names[i],
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
+      for (j in 1:length(sample.reads)) {
 
-      # Revert the sam to a bam file. Cleans and compresses
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " RevertSam -I ", lane.dir, "/fastqsam.bam -O ", lane.dir, "/revertsam.bam",
-        " -SANITIZE true -MAX_DISCARD_FRACTION 0.005",
-        " -ATTRIBUTE_TO_CLEAR XT -ATTRIBUTE_TO_CLEAR XN -ATTRIBUTE_TO_CLEAR AS",
-        " -ATTRIBUTE_TO_CLEAR OP -SORT_ORDER queryname",
-        " -RESTORE_ORIGINAL_QUALITIES true -REMOVE_DUPLICATE_INFORMATION true",
-        " -REMOVE_ALIGNMENT_INFORMATION true",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
+        lane.reads <- reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
+        if (length(lane.reads) == 0) {
+          lane.reads <- reads[grep(pattern = sample.reads[j], x = reads)]
+        }
+        if (length(lane.reads) == 0) {
+          stop("Lane ", j, " of ", sample.id, " has no reads")
+        }
 
-      # Tries to automatically find the read groups from the fasta headers
-      if (auto.readgroup == T) {
-        # Illumina machines generally
-        # @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> <read>:<is filtered>:<control number>:<sample number | barcode1'+barcode2'>
-        all.data <- ShortRead::id(ShortRead::readFastq(lane.reads[1]))[1]
-        tmp.data <- as.character(all.data)
-        header.data <- unlist(strsplit(tmp.data, ":"))
-        header.data <- header.data[1:4]
-        names(header.data) <- c("instrument", "run", "flowcell", "lane")
+        lane.name  = paste0("Lane_", j)
+        lane.dir   = paste0(sample.dir, "/", lane.name)
+        stderr.log = paste0(report.path, "/", lane.name, "_gatk-stderr.txt")
 
-        RGID <- paste0(header.data["flowcell"], ".", header.data["lane"])
-        RGPU <- paste0(header.data["flowcell"], ".", header.data["lane"], ".", sample.names[i])
+        dir.create(lane.dir, showWarnings = FALSE)
 
-        # Read groups are assigned
-        system(paste0(
-          gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-          " AddOrReplaceReadGroups -I ", lane.dir, "/revertsam.bam -O ", lane.dir, "/all_reads.bam",
-          " -RGSM ", sample.names[i], " -RGPU ", RGPU, " -RGID ", RGID,
-          " -RGLB LIB-", sample.names[i], " -RGPL ILLUMINA",
-          " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-        ))
-      } else {
-        # Assign read groups all the same
-        system(paste0(
-          gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-          " AddOrReplaceReadGroups -I ", lane.dir, "/revertsam.bam -O ", lane.dir, "/all_reads.bam",
-          " -RGSM ", sample.names[i], " -RGPU FLOWCELL1.LANE", j, ".", sample.names[i], " -RGID FLOWCELL1.LANE", j,
-          " -RGLB LIB-", sample.names[i], " -RGPL ILLUMINA",
-          " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-        ))
-      } # end if
+        gatk = paste0(gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=",
+                      temp.directory, " -Xmx", mem.cl, "G\"")
 
-      # Intermediate files are deleted
-      system(paste0("rm ", lane.dir, "/revertsam.bam"))
-      system(paste0("rm ", lane.dir, "/fastqsam.bam"))
+        # Step 1: FastqToSam
+        run.gatk(paste0(gatk, " FastqToSam",
+                        " -FASTQ ", lane.reads[1], " -FASTQ2 ", lane.reads[2],
+                        " -OUTPUT ", lane.dir, "/fastqsam.bam",
+                        " -SAMPLE_NAME ", sample.id,
+                        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
+                 stderr.log)
 
-      print(paste0(sample.names[i], " ", lane.name, " completed BAM creation!"))
-    } # end j loop
+        # Step 2: RevertSam
+        run.gatk(paste0(gatk, " RevertSam",
+                        " -I ", lane.dir, "/fastqsam.bam",
+                        " -O ", lane.dir, "/revertsam.bam",
+                        " -SANITIZE true -MAX_DISCARD_FRACTION 0.005",
+                        " -ATTRIBUTE_TO_CLEAR XT -ATTRIBUTE_TO_CLEAR XN -ATTRIBUTE_TO_CLEAR AS",
+                        " -ATTRIBUTE_TO_CLEAR OP -SORT_ORDER queryname",
+                        " -RESTORE_ORIGINAL_QUALITIES true -REMOVE_DUPLICATE_INFORMATION true",
+                        " -REMOVE_ALIGNMENT_INFORMATION true",
+                        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
+                 stderr.log)
 
-    print(paste0(sample.names[i], " completed BAM creation!"))
-  } # end i loop
+        file.remove(paste0(lane.dir, "/fastqsam.bam"))
 
-  parallel::stopCluster(cl)
+        # Step 3: AddOrReplaceReadGroups
+        if (auto.readgroup == TRUE) {
+          all.data    <- ShortRead::id(ShortRead::readFastq(lane.reads[1]))[1]
+          header.data <- unlist(strsplit(as.character(all.data), ":"))
+          header.data <- header.data[1:4]
+          names(header.data) <- c("instrument", "run", "flowcell", "lane")
+          RGID <- paste0(header.data["flowcell"], ".", header.data["lane"])
+          RGPU <- paste0(RGID, ".", sample.id)
+        } else {
+          RGID <- paste0("FLOWCELL1.LANE", j)
+          RGPU <- paste0(RGID, ".", sample.id)
+        }
+
+        run.gatk(paste0(gatk, " AddOrReplaceReadGroups",
+                        " -I ", lane.dir, "/revertsam.bam",
+                        " -O ", lane.dir, "/all_reads.bam",
+                        " -RGSM ", sample.id,
+                        " -RGPU ", RGPU, " -RGID ", RGID,
+                        " -RGLB LIB-", sample.id, " -RGPL ILLUMINA",
+                        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
+                 stderr.log)
+
+        file.remove(paste0(lane.dir, "/revertsam.bam"))
+
+        # Keep the stderr log only on failure; clean it up on success
+        if (file.exists(stderr.log)) { file.remove(stderr.log) }
+
+        print(paste0(sample.id, " ", lane.name, " completed BAM creation!"))
+
+      } # end j loop
+
+      print(paste0(sample.id, " completed BAM creation!"))
+
+    }, error = function(e) {
+      # Clean up any partial intermediate files so resume starts clean
+      for (f in c("fastqsam.bam", "revertsam.bam")) {
+        partial = list.files(sample.dir, pattern = f, recursive = TRUE, full.names = TRUE)
+        if (length(partial) > 0) { file.remove(partial) }
+      }
+      msg = conditionMessage(e)
+      writeLines(msg, log.file)
+      warning(sample.id, ": prepareBAM failed — see ", log.file)
+    })
+
+  }, mc.cores = threads) # end i loop
+
 } # end function
 
 

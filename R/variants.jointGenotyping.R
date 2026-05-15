@@ -111,9 +111,6 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
   # overwrite <- FALSE
 
   # Same adds to bbmap path
-  require(foreach)
-
-  # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
     b.string <- unlist(strsplit(gatk4.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -213,16 +210,11 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
   sample.datasets = paste0("-V ", sample.names)
   vcf.files = paste0(sample.datasets, collapse = " ")
 
-  # Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory / threads)
 
   # Loops through each locus and does operations on them
-  foreach::foreach(i = seq_along(loci.names), .packages = c("foreach")) %dopar% {
-    # Loops through each locus and does operations on them
-    # for (i in 1:length(loci.names)){
+  parallel::mclapply(seq_along(loci.names), function(i) {
+  tryCatch({
 
     # Genotype haplotype caller results
     system(paste0(
@@ -332,9 +324,10 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
     print(paste0(loci.names[i], " completed GATK4 joint sample genotyping!"))
     system(paste0("rm -r ", output.directory, "/", loci.names[i]))
 
-  }#end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(loci.names[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end i loop
 
   #Datasets to save
   #Save SNPs

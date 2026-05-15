@@ -83,16 +83,11 @@ mergeDuplicates = function(alignment.directory = NULL,
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
   new.align = c()
 
-  #Sets up multiprocessing
-  cl = parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  foreach(i=1:length(align.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
-  #Loops through each locus and does operations on the
-  #for (i in 1:length(align.files)) {
+  parallel::mclapply(seq_along(align.files), function(i) {
+  tryCatch({
 
     ##############
     #STEP 2: Runs MAFFT to add
@@ -221,10 +216,10 @@ mergeDuplicates = function(alignment.directory = NULL,
 
     ####################################################################################
 
-  }#end loop
-
-  parallel::stopCluster(cl)
-
+  }, error = function(e) {
+    warning(align.files[i], " failed: ", conditionMessage(e))
+  })
+  }, mc.cores = threads) #end loop
 
 }#end fuction
 

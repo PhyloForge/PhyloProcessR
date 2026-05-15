@@ -69,8 +69,6 @@ mapReferenceConsensus = function(mapping.directory = NULL,
   # quiet <- FALSE
   # overwrite <- FALSE
 
-  require(foreach)
-
   # Same adds to bbmap path
   if (is.null(samtools.path) == FALSE) {
     b.string <- unlist(strsplit(samtools.path, ""))
@@ -152,13 +150,9 @@ mapReferenceConsensus = function(mapping.directory = NULL,
   #Gathers alignment locus names
   locus.names = list.files(alignment.directory, full.names = TRUE)
 
-  # Sets up multiprocessing
-  cl <- parallel::makeCluster(threads, outfile = "")
-  doParallel::registerDoParallel(cl)
-  on.exit(parallel::stopCluster(cl), add = TRUE)
-
   # Loops through each locus and does operations on them
-  out.data = foreach::foreach(i=1:length(locus.names), .combine = append, .packages = c("PhyloProcessR", "foreach", "Biostrings", "stringr")) %dopar% {
+  out.data = do.call(c, parallel::mclapply(seq_along(locus.names), function(i) {
+  tryCatch({
     # Reads in files
     red.align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = locus.names[i], format = "phylip"))
 
@@ -170,13 +164,13 @@ mapReferenceConsensus = function(mapping.directory = NULL,
     con.seq = makeConsensus(red.align)
     names(con.seq) = gsub("\\..*", "", gsub(".*/", "", locus.names[i]))
 
-    #final.con = append(final.con, con.seq)
-
     as.list(as.character(con.seq))
 
-  } # end i loop
-
-  parallel::stopCluster(cl)
+  }, error = function(e) {
+    warning(locus.names[i], " failed: ", conditionMessage(e))
+    NULL
+  })
+  }, mc.cores = threads)) # end i loop
 
   # Saves final set
   writeFasta(
