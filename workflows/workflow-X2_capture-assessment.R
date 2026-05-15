@@ -109,25 +109,64 @@ for (i in 1:length(sample.names)) {
 
     # Download from Dropbox — files land flat in raw.dir as:
     #   SampleName_L001_READ1.fastq.gz / SampleName_L001_READ2.fastq.gz
+    # Retries up to 2 times if downloaded files fail a gzip integrity check,
+    # deleting the corrupt files before each retry so dropboxDownload re-fetches.
     sample.rows = sample.data[sample.data$Sample == sample.name, ]
     temp.csv = tempfile(fileext = ".csv")
     write.csv(sample.rows, temp.csv, row.names = FALSE)
 
-    dropboxDownload(sample.spreadsheet = temp.csv,
-                    dropbox.directory   = dropbox.directory,
-                    dropbox.token       = dropbox.token,
-                    output.directory    = raw.dir,
-                    overwrite           = FALSE,
-                    skip.not.found      = TRUE)
+    max.attempts = 3
+    download.ok  = FALSE
+
+    for (attempt in 1:max.attempts) {
+
+      if (attempt > 1) {
+        cat(" Retrying download (attempt", attempt, "of", max.attempts, ")...\n")
+        Sys.sleep(10)   # brief pause before retry to let any transient network issue settle
+      }
+
+      dropboxDownload(sample.spreadsheet = temp.csv,
+                      dropbox.directory   = dropbox.directory,
+                      dropbox.token       = dropbox.token,
+                      output.directory    = raw.dir,
+                      overwrite           = TRUE,   # overwrite so retry re-fetches corrupt files
+                      skip.not.found      = TRUE)
+
+      # Check files landed
+      input.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
+      input.files = input.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", input.files)]
+
+      if (length(input.files) == 0) {
+        cat(" Attempt", attempt, ": no files found after download.\n")
+        next
+      }
+
+      # gzip integrity check on every downloaded file
+      corrupt = sapply(input.files, function(f) {
+        system(paste0("gzip -t ", shQuote(f), " 2>/dev/null"), ignore.stdout = TRUE, ignore.stderr = TRUE) != 0
+      })
+
+      if (any(corrupt)) {
+        cat(" Attempt", attempt, ": corrupted file(s) detected:",
+            paste(basename(input.files[corrupt]), collapse = ", "), "\n")
+        file.remove(input.files)   # delete all files so the next attempt re-downloads cleanly
+      } else {
+        download.ok = TRUE
+        break
+      }
+
+    }#end attempt loop
+
     unlink(temp.csv)
 
-    # Verify download succeeded
-    input.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
-    input.files = input.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", input.files)]
-    if (length(input.files) == 0) {
-      cat(" WARNING:", sample.name, "did not download — skipping.\n")
+    if (!download.ok) {
+      cat(" WARNING:", sample.name, "failed gzip integrity check after", max.attempts,
+          "attempts — skipping.\n")
+      writeLines(paste0("Download failed gzip integrity check after ", max.attempts, " attempts."),
+                 paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-download.txt"))
       next
     }
+
     cat(" Downloaded", length(input.files), "file(s) for", sample.name, "\n")
     input.dir = raw.dir
 
@@ -153,24 +192,24 @@ for (i in 1:length(sample.names)) {
   }
 
   ##############################################################
-  ## Integrity check: verify gzip files are not truncated.
-  ## A corrupted download produces "unexpected end of file" errors
-  ## that cause fastp to hang or crash mid-run.
+  ## Integrity check for local reads: verify gzip files are not
+  ## truncated. Dropbox files are already checked during download
+  ## with retry above; this catches corruption in local read sets.
   ##############################################################
-  gz.files = input.files[grep("\\.gz$", input.files)]
-  if (length(gz.files) > 0) {
-    corrupt = sapply(gz.files, function(f) {
-      system(paste0("gzip -t ", shQuote(f), " 2>/dev/null"), ignore.stdout = TRUE, ignore.stderr = TRUE) != 0
-    })
-    if (any(corrupt)) {
-      cat(" WARNING:", sample.name, "has corrupted/truncated file(s):",
-          paste(basename(gz.files[corrupt]), collapse = ", "), "— skipping.\n")
-      writeLines(paste0("Corrupted or truncated gzip file(s): ",
-                        paste(basename(gz.files[corrupt]), collapse = ", ")),
-                 paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-download.txt"))
-      # Remove the bad files so a future re-run re-downloads them
-      if (use.dropbox == TRUE) { file.remove(input.files) }
-      next
+  if (use.dropbox == FALSE) {
+    gz.files = input.files[grep("\\.gz$", input.files)]
+    if (length(gz.files) > 0) {
+      corrupt = sapply(gz.files, function(f) {
+        system(paste0("gzip -t ", shQuote(f), " 2>/dev/null"), ignore.stdout = TRUE, ignore.stderr = TRUE) != 0
+      })
+      if (any(corrupt)) {
+        cat(" WARNING:", sample.name, "has corrupted/truncated local file(s):",
+            paste(basename(gz.files[corrupt]), collapse = ", "), "— skipping.\n")
+        writeLines(paste0("Corrupted or truncated gzip file(s): ",
+                          paste(basename(gz.files[corrupt]), collapse = ", ")),
+                   paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-file.txt"))
+        next
+      }
     }
   }
 
