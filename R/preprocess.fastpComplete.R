@@ -189,6 +189,15 @@ fastpComplete = function(input.reads = NULL,
     print(paste0(sample.names[i], " Completed adaptor removal!"))
   }#end i loop
 
-  write.csv(summary.data, file = paste0("logs/fastpComplete_summary.csv"), row.names = FALSE)
+  # Append to the existing summary CSV rather than overwriting it, so the file
+  # accumulates across successive single-sample runs (as in workflow X2).
+  # Any rows for samples in this run are replaced to avoid duplicates on rerun.
+  out.csv = "logs/fastpComplete_summary.csv"
+  if (file.exists(out.csv)) {
+    existing = read.csv(out.csv, stringsAsFactors = FALSE)
+    existing = existing[!existing$Sample %in% summary.data$Sample, ]
+    summary.data = rbind(existing, summary.data)
+  }
+  write.csv(summary.data, file = out.csv, row.names = FALSE)
 
 }#end function

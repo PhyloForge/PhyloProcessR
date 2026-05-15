@@ -55,6 +55,22 @@ delete.cleaned.reads = TRUE
 # Full path to the target probe/marker FASTA used for sequence capture
 target.fasta = "/Path/to/probe-set.fa"
 
+# Barcode scan settings
+#########################
+# TRUE = run barcodeSampleScan after cleaning reads (recommended)
+# FALSE = skip barcode identification entirely
+run.barcode.scan = TRUE
+# Full path to a FASTA of barcode reference sequence(s) used to recruit reads
+# (e.g. a 16S rRNA or COI representative for the target taxa)
+barcode.fasta = "/Path/to/barcode-reference.fa"
+# Full path to a FASTA of named barcode sequences for local BLAST identification.
+# NULL (recommended) queries NCBI nt remotely — no local database needed,
+# but requires an internet connection. Remote queries are slower; for large
+# datasets set this to a curated local database to avoid NCBI rate limits.
+barcode.database.fasta = NULL
+# Minimum number of reads that must map to the barcode before assembly proceeds
+barcode.min.reads = 10
+
 # Program paths
 #########################
 # When installed via conda, only the path to the conda bin directory is needed
@@ -62,3 +78,5 @@ conda.env = "/Path/to/conda/env/bin"
 fastp.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
+spades.path = conda.env
+blast.path = conda.env

@@ -29,6 +29,7 @@ setwd(working.directory)
 dir.create(processed.reads, showWarnings = FALSE)
 dir.create("logs/sample_logs", showWarnings = FALSE, recursive = TRUE)
 dir.create("sample-capture-assessment", showWarnings = FALSE)
+if (run.barcode.scan == TRUE) { dir.create("barcode-assessment", showWarnings = FALSE) }
 
 raw.dir     = paste0(processed.reads, "/raw-reads")
 cleaned.dir = paste0(processed.reads, "/cleaned-reads")
@@ -63,10 +64,9 @@ if (use.dropbox == TRUE) {
 
 }
 
-# Accumulators — built up across iterations and written as rolling CSVs
-all.fastq.stats   = data.frame()
-all.fastp.stats   = data.frame()
-all.capture.stats = data.frame()
+# fastqStats accumulator — written as a rolling CSV after every sample.
+# fastpComplete and assessCaptureEfficiency write their own growing CSVs directly.
+all.fastq.stats = data.frame()
 
 ##################################################################################################
 ## Main per-sample loop
@@ -91,17 +91,12 @@ for (i in 1:length(sample.names)) {
     if (length(done.csvs) > 0) {
       cat(" Already processed — reloading saved data and skipping.\n")
 
+      # Reload this sample's fastq stats into the accumulator so the rolling
+      # CSV stays complete. fastp and capture stats are read directly from their
+      # own growing CSVs at the final merge step — no accumulators needed.
       if (file.exists("logs/X2_fastq-stats_rolling.csv")) {
         tmp = read.csv("logs/X2_fastq-stats_rolling.csv")
         all.fastq.stats = rbind(all.fastq.stats, tmp[tmp$Sample == sample.name, ])
-      }
-      if (file.exists("logs/X2_fastp_rolling.csv")) {
-        tmp = read.csv("logs/X2_fastp_rolling.csv")
-        all.fastp.stats = rbind(all.fastp.stats, tmp[tmp$Sample == sample.name, ])
-      }
-      if (file.exists("logs/X2_capture-assessment_rolling.csv")) {
-        tmp = read.csv("logs/X2_capture-assessment_rolling.csv")
-        all.capture.stats = rbind(all.capture.stats, tmp[tmp$Sample == sample.name, ])
       }
       next
     }
@@ -158,6 +153,28 @@ for (i in 1:length(sample.names)) {
   }
 
   ##############################################################
+  ## Integrity check: verify gzip files are not truncated.
+  ## A corrupted download produces "unexpected end of file" errors
+  ## that cause fastp to hang or crash mid-run.
+  ##############################################################
+  gz.files = input.files[grep("\\.gz$", input.files)]
+  if (length(gz.files) > 0) {
+    corrupt = sapply(gz.files, function(f) {
+      system(paste0("gzip -t ", shQuote(f), " 2>/dev/null"), ignore.stdout = TRUE, ignore.stderr = TRUE) != 0
+    })
+    if (any(corrupt)) {
+      cat(" WARNING:", sample.name, "has corrupted/truncated file(s):",
+          paste(basename(gz.files[corrupt]), collapse = ", "), "— skipping.\n")
+      writeLines(paste0("Corrupted or truncated gzip file(s): ",
+                        paste(basename(gz.files[corrupt]), collapse = ", ")),
+                 paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-download.txt"))
+      # Remove the bad files so a future re-run re-downloads them
+      if (use.dropbox == TRUE) { file.remove(input.files) }
+      next
+    }
+  }
+
+  ##############################################################
   ## Step 2: FastQ stats on raw reads
   ##############################################################
   fastqStats(read.directory = input.dir,
@@ -187,14 +204,34 @@ for (i in 1:length(sample.names)) {
                 overwrite         = TRUE,
                 quiet             = quiet)
 
-  if (file.exists("logs/fastpComplete_summary.csv")) {
-    tmp.fp = read.csv("logs/fastpComplete_summary.csv")
-    tmp.fp = tmp.fp[tmp.fp$Sample == sample.name, ]
-    all.fastp.stats = rbind(all.fastp.stats, tmp.fp)
+  # fastpComplete now appends to its own CSV automatically —
+  # no manual accumulation needed here.
+
+  ##############################################################
+  ## Step 4a: Barcode identification on cleaned reads
+  ## Maps reads to a barcode reference (e.g. 16S, COI), assembles
+  ## on-target reads with SPAdes, and identifies the best species
+  ## match via BLAST. Runs on the same cleaned reads as the capture
+  ## assessment so no extra cleaning step is needed.
+  ##############################################################
+  if (run.barcode.scan == TRUE) {
+    barcodeSampleScan(input.reads       = cleaned.dir,
+                      output.directory  = "barcode-assessment",
+                      barcode.fasta     = barcode.fasta,
+                      database.fasta    = barcode.database.fasta,
+                      min.mapping.reads = barcode.min.reads,
+                      bwa.path          = bwa.path,
+                      samtools.path     = samtools.path,
+                      spades.path       = spades.path,
+                      blast.path        = blast.path,
+                      threads           = threads,
+                      mem               = memory,
+                      overwrite         = FALSE,
+                      quiet             = quiet)
   }
 
   ##############################################################
-  ## Step 4: Assess capture efficiency on cleaned reads
+  ## Step 4b: Assess capture efficiency on cleaned reads
   ## (fastpComplete writes cleaned reads to cleaned.dir/sample/)
   ##############################################################
   assessCaptureEfficiency(input.reads      = cleaned.dir,
@@ -236,9 +273,9 @@ for (i in 1:length(sample.names)) {
   ## be safely interrupted and resumed without losing data.
   ##############################################################
   write.csv(all.fastq.stats, "logs/X2_fastq-stats_rolling.csv", row.names = FALSE)
-  write.csv(all.fastp.stats, "logs/X2_fastp_rolling.csv",      row.names = FALSE)
-  # capture stats are written directly by assessCaptureEfficiency to
-  # logs/assessCaptureEfficiency_summary.csv after every sample
+  # fastpComplete and assessCaptureEfficiency write and append their own
+  # CSVs directly — logs/fastpComplete_summary.csv and
+  # logs/assessCaptureEfficiency_summary.csv grow after every sample
 
   cat(" Sample", sample.name, "complete!\n")
 
@@ -262,9 +299,11 @@ if (nrow(all.fastq.stats) > 0) {
 }
 
 # --- Aggregate fastp stats per sample (sum across lanes) ---
-if (nrow(all.fastp.stats) > 0) {
+# fastpComplete appends to its CSV directly; read it here for the merge.
+if (file.exists("logs/fastpComplete_summary.csv")) {
+  fp.raw = read.csv("logs/fastpComplete_summary.csv", stringsAsFactors = FALSE)
   fp.agg = aggregate(cbind(startPairs, removePairs, endPairs) ~ Sample,
-                     data = all.fastp.stats, FUN = sum)
+                     data = fp.raw, FUN = sum)
   fp.agg$pctRemovedByFastp = round(fp.agg$removePairs / fp.agg$startPairs * 100, 2)
   fp.agg = fp.agg[, c("Sample", "startPairs", "removePairs", "endPairs", "pctRemovedByFastp")]
 } else {
@@ -278,10 +317,18 @@ if (file.exists("logs/assessCaptureEfficiency_summary.csv")) {
   cap.agg = data.frame()
 }
 
-# --- Merge the three summaries on Sample ---
+# --- Barcode scan: best hit per sample already written by barcodeSampleScan ---
+if (run.barcode.scan == TRUE && file.exists("logs/barcodeSampleScan_summary.csv")) {
+  bc.agg = read.csv("logs/barcodeSampleScan_summary.csv", stringsAsFactors = FALSE)
+} else {
+  bc.agg = data.frame()
+}
+
+# --- Merge all summaries on Sample ---
 merged = fq.agg
 if (nrow(fp.agg) > 0)  { merged = merge(merged, fp.agg,  by = "Sample", all = TRUE) }
 if (nrow(cap.agg) > 0) { merged = merge(merged, cap.agg, by = "Sample", all = TRUE) }
+if (nrow(bc.agg) > 0)  { merged = merge(merged, bc.agg,  by = "Sample", all = TRUE) }
 
 # Reorder columns for readability
 keep.cols = intersect(
@@ -289,7 +336,8 @@ keep.cols = intersect(
     "Read_Pairs", "MegaBasePairs", "Reads_Per_Million", "Read_Length",
     "startPairs", "removePairs", "endPairs", "pctRemovedByFastp",
     "readPairs", "mappedReads",
-    "targetsHit", "totalTargets", "pctTargetsHit", "pctReadsOnTarget"),
+    "targetsHit", "totalTargets", "pctTargetsHit", "pctReadsOnTarget",
+    "MappedReads", "ContigLength", "BestMatch", "Pident", "AlignLength", "Evalue", "Bitscore"),
   colnames(merged)
 )
 merged = merged[, keep.cols]
