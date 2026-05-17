@@ -111,6 +111,12 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
       sample.name = gsub("\\.fa$", "", file.names[i])
 
+      # Skip samples already processed when overwrite = FALSE
+      if (overwrite == FALSE && file.exists(paste0(output.directory, "/", file.names[i]))) {
+        print(paste0(sample.name, " already processed, skipping. Set overwrite = TRUE to redo."))
+        return(NULL)
+      }
+
       contigs = Biostrings::readDNAStringSet(
         paste0(iupac.directory, "/", file.names[i]), format = "fasta"
       )
