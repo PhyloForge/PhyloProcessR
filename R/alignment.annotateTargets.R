@@ -51,8 +51,16 @@
 #' @param quiet logical. If TRUE, suppresses BLAST screen output. Default TRUE.
 #'
 #' @return Writes per-sample annotated FASTA files to \code{output.directory}, a combined
-#' FASTA file for alignment, and a summary CSV to the working directory. No value is
-#' returned to R.
+#' FASTA file for alignment, and a summary CSV to the working directory. Two log files are
+#' also written:
+#' \itemize{
+#'   \item \code{logs/sample_logs/<Sample>_blast-matches.csv} — the filtered BLAST table
+#'     for each sample (one row per hit: target, contig, pident, bitscore, evalue, lengths).
+#'   \item \code{logs/annotateTargets_summary.csv} — one row per sample summarising
+#'     deduplicated contig count, number of targets matched, annotated target count, and
+#'     mean/max BLAST identity and bitscore.
+#' }
+#' No value is returned to R.
 #'
 #' @export
 
@@ -135,6 +143,10 @@ annotateTargets = function(assembly.directory = NULL,
     }
   } else { dir.create(output.directory) }
 
+  if (!dir.exists("logs/sample_logs")) {
+    dir.create("logs/sample_logs", recursive = TRUE, showWarnings = FALSE)
+  }
+
   #Gets contig file names
   file.names = list.files(assembly.directory)
 
@@ -145,7 +157,7 @@ annotateTargets = function(assembly.directory = NULL,
   mem.cl <- floor(memory / threads)
 
   #Loop for cd-hit est reductions
-  parallel::mclapply(seq_along(file.names), function(i) {
+  results = parallel::mclapply(seq_along(file.names), function(i) {
   tryCatch({
 
     #Sets up working directories for each species
@@ -157,9 +169,8 @@ annotateTargets = function(assembly.directory = NULL,
 
     #Checks if this has been done already
     if (overwrite == FALSE){
-      if (file.exists(paste0(species.dir, "/", sample, "_matching-contigs.fa")) == T){
-        print(paste0(sample, " already finished, skipping. Set overwrite to T if you want to overwrite."))
-        #next
+      if (file.exists(paste0(output.directory, "/", sample, ".fa")) == TRUE){
+        print(paste0(sample, " already finished, skipping. Set overwrite = TRUE to redo."))
         return(NULL)
       }
     }#end
@@ -488,11 +499,28 @@ annotateTargets = function(assembly.directory = NULL,
         paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
       )
 
+      #------------------------------------------------------
+      # Per-sample blast log
+      #------------------------------------------------------
+      filt.log = as.data.frame(filt.data)[, c("qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+      filt.log$Sample = sample
+      filt.log = filt.log[, c("Sample", "qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+      write.csv(filt.log, file = paste0("logs/sample_logs/", sample, "_blast-matches.csv"), row.names = FALSE)
+
       system(paste0("rm -r ", species.dir))
 
       print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
-      return(NULL)
+      return(data.frame(
+        Sample           = sample,
+        DedupContigs     = length(all.data),
+        TargetsMatched   = length(unique(filt.data$qName)),
+        AnnotatedTargets = length(final.loci),
+        MeanPident       = round(mean(filt.data$pident), 2),
+        MeanBitscore     = round(mean(filt.data$bitscore), 1),
+        MaxBitscore      = round(max(filt.data$bitscore), 1),
+        stringsAsFactors = FALSE
+      ))
 
     }#end if statement
 
@@ -527,14 +555,48 @@ annotateTargets = function(assembly.directory = NULL,
       paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
     )
 
+    #------------------------------------------------------
+    # Per-sample blast log
+    #------------------------------------------------------
+    filt.log = as.data.frame(filt.data)[, c("qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+    filt.log$Sample = sample
+    filt.log = filt.log[, c("Sample", "qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+    write.csv(filt.log, file = paste0("logs/sample_logs/", sample, "_blast-matches.csv"), row.names = FALSE)
+
     system(paste0("rm -r ", species.dir))
 
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
+
+    return(data.frame(
+      Sample           = sample,
+      DedupContigs     = length(all.data),
+      TargetsMatched   = length(unique(filt.data$qName)),
+      AnnotatedTargets = length(final.loci),
+      MeanPident       = round(mean(filt.data$pident), 2),
+      MeanBitscore     = round(mean(filt.data$bitscore), 1),
+      MaxBitscore      = round(max(filt.data$bitscore), 1),
+      stringsAsFactors = FALSE
+    ))
 
   }, error = function(e) {
     warning(file.names[i], " failed: ", conditionMessage(e))
   })
   }, mc.cores = threads) # end i loop
+
+  ########################################################################
+  # Write cross-sample summary log
+  ########################################################################
+
+  summary.df = do.call(rbind, results[!sapply(results, is.null)])
+  if (!is.null(summary.df) && nrow(summary.df) > 0) {
+    out.csv = "logs/annotateTargets_summary.csv"
+    if (file.exists(out.csv)) {
+      existing = read.csv(out.csv, stringsAsFactors = FALSE)
+      existing = existing[!existing$Sample %in% summary.df$Sample, ]
+      summary.df = rbind(existing, summary.df)
+    }
+    write.csv(summary.df, file = out.csv, row.names = FALSE)
+  }
 
   ########################################################################
   # Output a single file for alignment
