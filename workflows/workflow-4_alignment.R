@@ -21,6 +21,7 @@ if (heterozygote.filter == TRUE){
     output.directory = "data-analysis/contigs/7_filtered-contigs",
     removed.directory = "data-analysis/contigs/6_removed-contigs",
     threshold = heterozygote.filter.threshold,
+    min.length = heterozygote.min.length,
     threads = threads,
     memory = memory,
     overwrite = overwrite

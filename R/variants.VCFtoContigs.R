@@ -31,6 +31,10 @@
 #'
 #' @param memory total RAM in GB; divided equally across threads.
 #'
+#' @param temp.directory path to a dedicated directory for GATK JVM and Picard
+#'   sorting temp files. NULL defaults to the current working directory, which
+#'   will cause temp files to accumulate in the project root.
+#'
 #' @param gatk4.path system path to the directory containing the gatk
 #'   executable; NULL searches the system PATH.
 #'
@@ -50,6 +54,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
                         ambiguity.codes = TRUE,
                         threads = 1,
                         memory = 1,
+                        temp.directory = NULL,
                         gatk4.path = NULL,
                         overwrite = FALSE,
                         quiet = TRUE) {
@@ -68,6 +73,8 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   # consensus.sequences = FALSE
   # ambiguity.codes = TRUE
   # vcf.file = "SNP"
+
+  if (is.null(temp.directory) == TRUE) { temp.directory = getwd() }
 
   # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {
@@ -147,28 +154,23 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
     sample.vcf = paste0(genotype.directory, "/", sample.names[i], "/", vcf.string)
     reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
 
+    gatk = paste0(gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=",
+                  temp.directory, " -Xmx", mem.cl, "G\"")
+
     if (ambiguity.codes == TRUE) {
-      # Selects only the SNPs from the VCF
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
-        " FastaAlternateReferenceMaker",
-        " -R ", reference.path,
-        " -V ", sample.vcf,
-        " -O ", output.directory, "/", sample.names[i], ".fa",
-        " --use-iupac-sample ", sample.names[i]
-      ))
-    } # end if
-    
+      system(paste0(gatk, " FastaAlternateReferenceMaker",
+                    " -R ", reference.path,
+                    " -V ", sample.vcf,
+                    " -O ", output.directory, "/", sample.names[i], ".fa",
+                    " --use-iupac-sample ", sample.names[i]))
+    }
+
     if (consensus.sequences == TRUE) {
-      # Selects only the SNPs from the VCF
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Xmx", mem.cl, "G\"",
-        " FastaAlternateReferenceMaker",
-        " -R ", reference.path,
-        " -V ", sample.vcf,
-        " -O ", output.directory, "/", sample.names[i], ".fa"
-      ))
-    } # end if
+      system(paste0(gatk, " FastaAlternateReferenceMaker",
+                    " -R ", reference.path,
+                    " -V ", sample.vcf,
+                    " -O ", output.directory, "/", sample.names[i], ".fa"))
+    }
 
     contigs = Biostrings::readDNAStringSet(paste0(output.directory, "/", sample.names[i], ".fa"), format = "fasta")
     names(contigs) = gsub(":.*", "", names(contigs))

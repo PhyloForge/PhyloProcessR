@@ -232,21 +232,21 @@ annotateTargets = function(assembly.directory = NULL,
     contigs = all.data
 
     #########################################################################
-    #Part D: Multiple sample contigs (tName) matching to one target (qName)
+    #Part C: Multiple sample contigs (tName) matching to one target (qName)
     #########################################################################
     #Pulls out
-    contig.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
+    target.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
 
     #Saves non duplicated data
-    good.data = filt.data[!filt.data$qName %in% contig.names,]
+    good.data = filt.data[!filt.data$qName %in% target.names,]
 
     #Only runs if there are duplicates
     fix.seq = Biostrings::DNAStringSet()
-    if (length(contig.names) != 0){
+    if (length(target.names) != 0){
       new.data = c()
-      for (j in 1:length(contig.names)) {
+      for (j in 1:length(target.names)) {
         #Subsets data
-        sub.match = filt.data[filt.data$qName %in% contig.names[j],]
+        sub.match = filt.data[filt.data$qName %in% target.names[j],]
 
         ########
         #Saves if they are on the same contig and same locus and fragmented for some reason
@@ -319,25 +319,6 @@ annotateTargets = function(assembly.directory = NULL,
             next
           }#end if
 
-          #Sets up the new contig location
-          #Cuts the node apart and saves separately
-          sub.match$tEnd = sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
-          sub.contigs = contigs[names(contigs) %in% sub.match$qName]
-
-          join.contigs<-Biostrings::DNAStringSet()
-          for (k in 1:(nrow(sub.match)-1)){
-            join.contigs<-append(join.contigs, sub.contigs[k])
-            n.pad<-sub.match$tStart[k+1]-sub.match$tEnd[k]
-            join.contigs<-append(join.contigs, Biostrings::DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
-          }
-          join.contigs<-append(join.contigs, sub.contigs[length(sub.contigs)])
-          save.contig<-Biostrings::DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
-
-          #Saves final sequence
-          names(save.contig)<-paste(contig.names[j], "_|_", sample, sep = "")
-          fix.seq<-append(fix.seq, save.contig)
-
-
         }#end this if
 
         #Saves highest bitscore
@@ -357,7 +338,7 @@ annotateTargets = function(assembly.directory = NULL,
     fix.seq.para = fix.seq
 
     #########################################################################
-    #Part C: Multiple targets (qName) matching to one sample contig (tName)
+    #Part D: Multiple targets (qName) matching to one sample contig (tName)
     #########################################################################
 
     #red.contigs = contigs[names(contigs) %in% filt.data$tName]
@@ -446,21 +427,21 @@ annotateTargets = function(assembly.directory = NULL,
     }#end if
 
     #########################################################################
-    #Part C: Keep paralogs or no
+    #Part E: Keep paralogs or no
     #########################################################################
 
     #Keeps potential paralogs
     if (retain.paralogs == TRUE){
 
-      contig.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
+      target.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
 
       #Saves non duplicated data
-      good.data = filt.data[!filt.data$qName %in% contig.names,]
+      good.data = filt.data[!filt.data$qName %in% target.names,]
 
       save.data = c()
-      for (j in 1:length(contig.names)){
+      for (j in 1:length(target.names)){
 
-        temp.data = filt.data[filt.data$qName %in% contig.names[j],]
+        temp.data = filt.data[filt.data$qName %in% target.names[j],]
         temp.save = temp.data[temp.data$bitscore == max(temp.data$bitscore),][1,]
         save.data = rbind(save.data, temp.save)
       }
@@ -528,10 +509,15 @@ annotateTargets = function(assembly.directory = NULL,
     #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
     temp = fin.loci[duplicated(names(fin.loci)) == T]
     if(length(temp) != 0){
-      dup.loci = fin.loci[names(fin.loci) %in% names(temp)]
-      dup.loci = dup.loci[Biostrings::width(dup.loci) == max(Biostrings::width(dup.loci))][1]
+      dup.names = unique(names(temp))
+      save.temp = Biostrings::DNAStringSet()
+      for (j in 1:length(dup.names)){
+        temp.data = fin.loci[names(fin.loci) %in% dup.names[j]]
+        best.temp = temp.data[Biostrings::width(temp.data) == max(Biostrings::width(temp.data))][1]
+        save.temp = append(save.temp, best.temp)
+      }# end j loop
       temp.fin = fin.loci[!names(fin.loci) %in% names(temp)]
-      fin.loci = append(temp.fin, dup.loci)
+      fin.loci = append(temp.fin, save.temp)
     }#end duplicate if
 
     #Finds probes that match to two or more contigs
@@ -572,7 +558,12 @@ annotateTargets = function(assembly.directory = NULL,
 
     #Gets length of contigs
     og.contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", samples[i], ".fa"))
-    cd.contigs = Biostrings::readDNAStringSet(paste0(output.directory, "/", samples[i], ".fa"))
+    out.fa = paste0(output.directory, "/", samples[i], ".fa")
+    if (!file.exists(out.fa)) {
+      warning(samples[i], ": no annotated output file found — sample had no targets passing filters, skipping.")
+      next
+    }
+    cd.contigs = Biostrings::readDNAStringSet(out.fa)
 
     #Gets the saved matching targets
     data.table::set(save.data, i =  match(samples[i], samples), j = match("Sample", header.data), value = samples[i] )

@@ -29,10 +29,19 @@ quiet = TRUE
 #########################
 # TRUE to run target annotation, FALSE if its already been done to skip
 annotate.targets = TRUE
-#whether to run heterozygote flter
+# TRUE to run the per-contig heterozygosity filter before annotation.
+# This removes contigs whose IUPAC ambiguity proportion meets or exceeds the
+# threshold — a useful proxy for chimeric assembly or mis-assembled paralogs.
+# It does NOT catch clean contamination from another organism (those contigs
+# have no IUPAC codes); use removeContamination() on reads for that.
 heterozygote.filter = TRUE
-#Filtering threshold to filter out potential paralogs
+# Maximum allowed proportion of IUPAC ambiguity bases per contig (0–1).
+# 0.05 (5%) is reasonable for vertebrates. Increase for high-diversity groups
+# (many invertebrates, some amphibians) to avoid over-filtering.
 heterozygote.filter.threshold = 0.05
+# Contigs shorter than this (bp) are exempt from the proportion filter.
+# A 80 bp contig needs only 4 ambiguous bases to hit 5%, which is noise.
+heterozygote.min.length = 100
 #The minimum match percentage for a contig match to a target
 min.match.percent = 60
 #The minimum match length in basepairs for a contig match to a target

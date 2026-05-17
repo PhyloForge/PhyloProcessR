@@ -20,8 +20,8 @@
 #' @param algorithm MAFFT alignment algorithm to use. Accepted values: "localpair" or
 #' "globalpair". Default "localpair".
 #'
-#' @param min.taxa minimum number of sequences required for a locus to be aligned. Loci
-#' with this many or fewer sequences are skipped. Default 4.
+#' @param min.taxa threshold for the minimum number of sequences required at a locus.
+#' Loci with this many or fewer sequences are skipped. Default 4.
 #'
 #' @param removal.threshold maximum pairwise distance from the reference sequence allowed
 #' for a sample sequence to be retained. Sequences exceeding this threshold are removed
@@ -94,6 +94,8 @@ alignTargets = function(targets.to.align = NULL,
   # #program paths
   # mafft.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
 
+  algorithm = match.arg(algorithm)
+
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
@@ -134,10 +136,10 @@ alignTargets = function(targets.to.align = NULL,
   for (i in sub.start:sub.end) {
 
     #Match probe names to contig names to acquire data
-    match.data = all.data[grep(pattern = paste0(locus.names[i], "_"), x = names(all.data))]
+    match.data = all.data[grep(pattern = paste0(locus.names[i], "_\\|_"), x = names(all.data))]
 
     #STEP 1: Throw out loci if there are too few taxa
-    if (length(names(match.data)) < min.taxa){
+    if (length(names(match.data)) <= min.taxa){
       print(paste0(locus.names[i], " had too few taxa"))
       next
     }
@@ -147,6 +149,10 @@ alignTargets = function(targets.to.align = NULL,
 
     #Gets reference locus
     ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = gsub("_\\|_.*", "", names(target.seqs) ) )]
+    if (length(ref.locus) == 0) {
+      print(paste0(locus.names[i], ": no reference sequence found in target file — skipping."))
+      next
+    }
     names(ref.locus) = paste("Reference_Locus")
     final.loci = append(match.data, ref.locus)
 
@@ -185,7 +191,7 @@ alignTargets = function(targets.to.align = NULL,
     rem.align = alignment[!names(alignment) %in% bad.seqs]
 
     # Moves onto next loop in there are no good sequences
-    if (length(rem.align) < as.numeric(min.taxa)){
+    if (length(rem.align) <= as.numeric(min.taxa)){
       #Deletes old files
       print(paste(locus.names[i], " had too few taxa", sep = ""))
       next }
@@ -220,10 +226,10 @@ alignTargets = function(targets.to.align = NULL,
     aligned.set = as.matrix(ape::as.DNAbin(new.align))
 
     #readies for saving
-    writePhylip(alignment = aligned.set,
-                file=paste0(output.directory, "/", locus.names[i], ".phy"),
-                interleave = F,
-                strict = F)
+    PhyloProcessR::writePhylip(alignment = aligned.set,
+                               file = paste0(output.directory, "/", locus.names[i], ".phy"),
+                               interleave = F,
+                               strict = F)
 
     #Deletes old files
     print(paste0(locus.names[i], " alignment saved."))

@@ -117,20 +117,31 @@ for (i in 1:length(sample.names)) {
 
     max.attempts = 3
     download.ok  = FALSE
+    last.error   = NULL
 
     for (attempt in 1:max.attempts) {
 
       if (attempt > 1) {
         cat(" Retrying download (attempt", attempt, "of", max.attempts, ")...\n")
-        Sys.sleep(10)   # brief pause before retry to let any transient network issue settle
+        Sys.sleep(30)   # longer pause — Dropbox 500 errors usually clear in ~30 s
       }
 
-      dropboxDownload(sample.spreadsheet = temp.csv,
-                      dropbox.directory   = dropbox.directory,
-                      dropbox.token       = dropbox.token,
-                      output.directory    = raw.dir,
-                      overwrite           = TRUE,   # overwrite so retry re-fetches corrupt files
-                      skip.not.found      = TRUE)
+      # Wrap in tryCatch so Dropbox HTTP errors (500, 503, etc.) don't crash
+      # the whole workflow — they're caught here and trigger a retry instead.
+      last.error = tryCatch({
+        dropboxDownload(sample.spreadsheet = temp.csv,
+                        dropbox.directory   = dropbox.directory,
+                        dropbox.token       = dropbox.token,
+                        output.directory    = raw.dir,
+                        overwrite           = TRUE,
+                        skip.not.found      = TRUE)
+        NULL   # NULL = no error
+      }, error = function(e) { conditionMessage(e) })
+
+      if (!is.null(last.error)) {
+        cat(" Attempt", attempt, ": download error:", last.error, "\n")
+        next   # retry
+      }
 
       # Check files landed
       input.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
@@ -138,6 +149,7 @@ for (i in 1:length(sample.names)) {
 
       if (length(input.files) == 0) {
         cat(" Attempt", attempt, ": no files found after download.\n")
+        last.error = "no files downloaded"
         next
       }
 
@@ -149,7 +161,8 @@ for (i in 1:length(sample.names)) {
       if (any(corrupt)) {
         cat(" Attempt", attempt, ": corrupted file(s) detected:",
             paste(basename(input.files[corrupt]), collapse = ", "), "\n")
-        file.remove(input.files)   # delete all files so the next attempt re-downloads cleanly
+        file.remove(input.files)
+        last.error = "corrupted gzip"
       } else {
         download.ok = TRUE
         break
@@ -160,10 +173,10 @@ for (i in 1:length(sample.names)) {
     unlink(temp.csv)
 
     if (!download.ok) {
-      cat(" WARNING:", sample.name, "failed gzip integrity check after", max.attempts,
-          "attempts — skipping.\n")
-      writeLines(paste0("Download failed gzip integrity check after ", max.attempts, " attempts."),
-                 paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-download.txt"))
+      cat(" WARNING:", sample.name, "skipping after", max.attempts,
+          "failed attempts. Last error:", last.error, "\n")
+      writeLines(paste0("Download failed after ", max.attempts, " attempts. Last error: ", last.error),
+                 paste0("logs/sample_logs/FAILURE_", sample.name, "_download-failed.txt"))
       next
     }
 
@@ -248,25 +261,29 @@ for (i in 1:length(sample.names)) {
 
   ##############################################################
   ## Step 4a: Barcode identification on cleaned reads
-  ## Maps reads to a barcode reference (e.g. 16S, COI), assembles
-  ## on-target reads with SPAdes, and identifies the best species
-  ## match via BLAST. Runs on the same cleaned reads as the capture
-  ## assessment so no extra cleaning step is needed.
+  ## Uses MItoTrawlR::barcodeSampleScan — iterative BBMap read
+  ## recruitment + SPAdes/CAP3 assembly stops as soon as the
+  ## barcode region is covered, then BLASTs for species ID.
   ##############################################################
   if (run.barcode.scan == TRUE) {
-    barcodeSampleScan(input.reads       = cleaned.dir,
-                      output.directory  = "barcode-assessment",
-                      barcode.fasta     = barcode.fasta,
-                      database.fasta    = barcode.database.fasta,
-                      min.mapping.reads = barcode.min.reads,
-                      bwa.path          = bwa.path,
-                      samtools.path     = samtools.path,
-                      spades.path       = spades.path,
-                      blast.path        = blast.path,
-                      threads           = threads,
-                      mem               = memory,
-                      overwrite         = FALSE,
-                      quiet             = quiet)
+    MItoTrawlR::barcodeSampleScan(
+      input.reads    = cleaned.dir,
+      output.directory = "barcode-assessment",
+      barcode.fasta  = barcode.fasta,
+      database.fasta = barcode.database.fasta,
+      hits.per.sample = 5,
+      per.max.length = barcode.per.max.length,
+      min.iterations = barcode.min.iterations,
+      max.iterations = barcode.max.iterations,
+      min.ref.id     = barcode.min.ref.id,
+      bbmap.path     = bbmap.path,
+      spades.path    = spades.path,
+      cap3.path      = cap3.path,
+      blast.path     = blast.path,
+      memory         = memory,
+      threads        = threads,
+      overwrite      = FALSE,
+      quiet          = quiet)
   }
 
   ##############################################################
@@ -376,7 +393,7 @@ keep.cols = intersect(
     "startPairs", "removePairs", "endPairs", "pctRemovedByFastp",
     "readPairs", "mappedReads",
     "targetsHit", "totalTargets", "pctTargetsHit", "pctReadsOnTarget",
-    "MappedReads", "ContigLength", "BestMatch", "Pident", "AlignLength", "Evalue", "Bitscore"),
+    "ContigLength", "ContigCount", "BestMatch", "Pident", "AlignLength", "Evalue", "Bitscore"),
   colnames(merged)
 )
 merged = merged[, keep.cols]

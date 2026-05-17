@@ -11,8 +11,10 @@ working.directory = "/Path/to/where/the/stuff/will/happen"
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. Default shown.
 assembly.directory = "data-analysis/contigs/3_target-contigs"
-# Temporary directory where temporary files are saved
-temp.directory = working.directory
+# Temporary directory where GATK JVM and Picard sorting temp files are saved.
+# Must be a dedicated subdirectory — do NOT set this to working.directory itself
+# or temp files will accumulate in the project root.
+temp.directory = paste0(working.directory, "/gatk-temp")
 # The name for the dataset
 dataset.name = "variant-calling"
 

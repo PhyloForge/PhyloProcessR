@@ -17,6 +17,9 @@ if (file.exists(paste0("data-analysis/", dataset.name)) == FALSE) {
   dir.create(paste0("data-analysis/", dataset.name))
 }#end if
 
+# Dedicated GATK temp directory — must exist before any GATK call is made
+dir.create(temp.directory, showWarnings = FALSE, recursive = TRUE)
+
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
@@ -112,6 +115,7 @@ if (consensus.sequences == TRUE) {
     vcf.file = vcf.file,
     consensus.sequences = TRUE,
     ambiguity.codes = FALSE,
+    temp.directory = temp.directory,
     gatk4.path = gatk4.path,
     threads = threads,
     memory = memory,
@@ -129,6 +133,7 @@ if (ambiguity.codes == TRUE) {
     vcf.file = vcf.file,
     consensus.sequences = FALSE,
     ambiguity.codes = TRUE,
+    temp.directory = temp.directory,
     gatk4.path = gatk4.path,
     threads = threads,
     memory = memory,

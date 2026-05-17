@@ -55,9 +55,9 @@ delete.cleaned.reads = TRUE
 # Full path to the target probe/marker FASTA used for sequence capture
 target.fasta = "/Path/to/probe-set.fa"
 
-# Barcode scan settings
+# Barcode scan settings  (calls MItoTrawlR::barcodeSampleScan)
 #########################
-# TRUE = run barcodeSampleScan after cleaning reads (recommended)
+# TRUE = run barcode identification after cleaning reads (recommended)
 # FALSE = skip barcode identification entirely
 run.barcode.scan = TRUE
 # Full path to a FASTA of barcode reference sequence(s) used to recruit reads
@@ -68,8 +68,16 @@ barcode.fasta = "/Path/to/barcode-reference.fa"
 # but requires an internet connection. Remote queries are slower; for large
 # datasets set this to a curated local database to avoid NCBI rate limits.
 barcode.database.fasta = NULL
-# Minimum number of reads that must map to the barcode before assembly proceeds
-barcode.min.reads = 10
+# Minimum number of iterative assembly rounds before convergence is tested.
+# 3 is appropriate for barcode regions (much shorter than a mitogenome).
+barcode.min.iterations = 3
+# Maximum number of iterative assembly rounds.
+barcode.max.iterations = 10
+# Starting BBMap minimum identity for read recruitment. Permissive on first pass
+# (0.70) to cast a wide net; automatically tightened to 0.95 once contigs assemble.
+barcode.min.ref.id = 0.70
+# Fraction above reference length that triggers the max-length guard.
+barcode.per.max.length = 0.50
 
 # Program paths
 #########################
@@ -78,5 +86,7 @@ conda.env = "/Path/to/conda/env/bin"
 fastp.path = conda.env
 samtools.path = conda.env
 bwa.path = conda.env
+bbmap.path = conda.env
 spades.path = conda.env
+cap3.path = conda.env
 blast.path = conda.env
