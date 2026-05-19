@@ -190,7 +190,7 @@ integrateLegacy = function(alignment.directory = NULL,
     ##############
     #Load in alignments
     if (legacy.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(legacy.directory, "/", legacy.files[i]), format = "phylip")
+      align = Biostrings::readDNAMultipleAlignment(file = paste0(legacy.directory, "/", legacy.files[i]), format = "phylip")
       align = Biostrings::DNAStringSet(align)
       save.name = gsub(".phy$", "", legacy.files[i])
       save.name = gsub(".phylip$", "", save.name)
@@ -286,7 +286,7 @@ integrateLegacy = function(alignment.directory = NULL,
     ##############
     #Load in alignments
     if (alignment.format == "phylip"){
-      old.align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", found.align), format = "phylip")
+      old.align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", found.align), format = "phylip")
       old.align = Biostrings::DNAStringSet(old.align)
       found.name = gsub(".phy$", "", found.align)
       found.name = gsub(".phylip$", "", found.name)

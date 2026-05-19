@@ -57,7 +57,7 @@ trimSampleSimilarity = function(alignment = NULL,
                          quiet = TRUE,
                          mafft.path = mafft.path)
 
-    names(rem.align) = gsub(pattern = "_R_", replacement = "", x = names(rem.align))
+    names(rem.align) = gsub(pattern = "^_R_", replacement = "", x = names(rem.align))
 
   } # end bad.seqs if
 

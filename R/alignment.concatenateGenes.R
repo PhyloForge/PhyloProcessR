@@ -73,10 +73,12 @@ concatenateGenes = function(alignment.folder = NULL,
   # threads = 8
   # memory = 24
 
+  input.format  = match.arg(input.format)
+  output.format = match.arg(output.format)
+
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
   if(is.null(output.folder) == TRUE){ stop("Error: an output file name is needed.") }
-  if(length(output.format) != 1){ stop("Error: please select a single output format or 'all' to save files in all formats.") }
   if(is.null(feature.gene.names) == TRUE && find.exon.names == FALSE){ stop("Error: a table associating each exon with a gene is needed.") }
 
   #Check if files exist or not
@@ -101,7 +103,7 @@ concatenateGenes = function(alignment.folder = NULL,
   #Skips files done already if resume = TRUE
   if (overwrite == FALSE){
     done.files = list.files(output.folder)
-    done.genes = gsub(".phy$", "", done.files)
+    done.genes = gsub("\\..*$", "", done.files)
     gene.names = gene.names[!gene.names %in% done.genes]
   }
 
@@ -135,7 +137,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
       #Load in alignments
       if (input.format == "phylip"){
-        exon.align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.folder, "/", temp.exon), format = "phylip")
+        exon.align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.folder, "/", temp.exon), format = "phylip")
         exon.align = Biostrings::DNAStringSet(exon.align)
       }#end phylip
 
@@ -169,15 +171,10 @@ concatenateGenes = function(alignment.folder = NULL,
     if (exon.count < minimum.exons){
       print(paste0("Below minimum exon count of ", minimum.exons, ". Skipped gene."))
       system(paste0("rm -r ", temp.dir))
-      #next
       return(NULL)
     }
 
-    dup.names = exon.align[duplicated(names(exon.align)),]
-    if (length(dup.names) != 0){ stop("DUPLICATE names found. Please check alignments.") }
-
-    ## If save names are not provided
-    if (is.null(save.names) == FALSE) {
+    if (length(save.names) > 0) {
 
       #Loads in the data
       align.list = lapply(save.names, function (x) data.table::fread(x, header = T))
@@ -226,58 +223,12 @@ concatenateGenes = function(alignment.folder = NULL,
 
         align.name = colnames(concat.data)[z]
 
-        if (start == 1){ end = start + align.len - 1 } else { end = start + align.len - 1 }
+        end = start + align.len - 1
 
         start = end + 1
       }#end x loop
 
-      ###########
-      ## Turn data into a phylip format to then save differently
-      ###########
-      # if (remove.reverse == TRUE){ names(align) = gsub("^_R_", "", names(align) ) }
-      #
-      # align.list = lapply(gene.exons, function (x) data.table::fread(x, header = T))
-      # sample.names = unique(unlist(lapply(align.list, function (x) x[,1])))
-      # sample.names = sample.names[order(sample.names)]
-
-      # sample.names = c()
-      # for (j in 1:length(gene.exons)){
-      #   #Reads in files
-      #   temp.exon = align.files[grep(gene.exons[j], align.files)]
-      #   align = Biostrings::readDNAStringSet(paste0(alignment.folder, "/", temp.exon) )
-      #   sample.names = append(sample.names, names(align))
-      # }#end j
-      #
-      # sample.names = unique(gsub("^_R_", "", sample.names) )
-      # concat.data = Biostrings::DNAStringSet()
-      # for (j in 1:length(gene.exons)){
-      #   #Reads in files
-      #   temp.exon = align.files[grep(gene.exons[j], align.files)]
-      #   align = Biostrings::readDNAStringSet(paste0(alignment.folder, "/", temp.exon) )
-      #   if (remove.reverse == TRUE){ names(align) = gsub("^_R_", "", names(align) ) }
-      #
-      #   #Adds blanks
-      #   add.taxa = sample.names[!sample.names %in% names(align)]
-      #   blank.align = Biostrings::DNAStringSet()
-      #   if (length(add.taxa) != 0){
-      #     for (y in 1:length(add.taxa)){
-      #       blank.align = append(blank.align,
-      #                            Biostrings::DNAStringSet(paste0(rep("-", max(Biostrings::width(align))), collapse = "")) )
-      #     }
-      #     names(blank.align) = add.taxa
-      #   }#end rem seqs if
-      #
-      #   #Saves the slices and cats
-      #   new.align = append(align, blank.align)
-      #   new.align = new.align[order(names(new.align))]
-      #   save.names = names(new.align)
-      #   concat.data = Biostrings::DNAStringSet(paste0(as.character(concat.data), as.character(new.align)))
-      #   names(concat.data) = save.names
-      # }#end j loop
-
       output.name = paste0(output.folder, "/", gene.names[i])
-      # write.align = alignmentConversion(input.alignment = concat.data, end.format = "matrix")
-      # writePhylip(write.align, file = paste0(output.name, ".phy"), interleave = F )
 
       #### SAVE AS FASTA
       ###################
@@ -300,8 +251,8 @@ concatenateGenes = function(alignment.folder = NULL,
 
         #Gets header information
         ntax = nrow(concat.data)
-        nchar = save.length
-        nex.header = paste0("dimensions ntax=", ntax, " nchar=", nchar, ";")
+        n.char = save.length
+        nex.header = paste0("dimensions ntax=", ntax, " nchar=", n.char, ";")
         for.header = paste0("format datatype=dna missing=n gap=-;")
 
         #Prep sample names to all have the same length padded with spaces
@@ -342,8 +293,8 @@ concatenateGenes = function(alignment.folder = NULL,
       if (output.format == "phylip" || output.format == "phy"){
         #Now have to reformat
         ntax = nrow(concat.data)
-        nchar = save.length
-        phy.header = paste0(" ", ntax, " ", nchar)
+        n.char = save.length
+        phy.header = paste0(" ", ntax, " ", n.char)
 
         #Prep sample names to all have the same length padded with spaces
         name.length = max(nchar(sample.names)) + 4
@@ -369,7 +320,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
     system(paste0("rm -r ", temp.dir))
 
-    rm()
+    rm(align.list, concat.data, exon.align)
     gc()
 
   }, error = function(e) {

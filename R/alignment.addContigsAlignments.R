@@ -115,7 +115,7 @@ addContigsAlignments = function(alignment.directory = NULL,
   for (i in 1:length(align.files)){
 
     if (alignment.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
+      align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
 
       #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
       #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
@@ -176,7 +176,7 @@ addContigsAlignments = function(alignment.directory = NULL,
   tryCatch({
       #Load in alignments
       if (alignment.format == "phylip"){
-        align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
+        align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
 
         #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
         #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
@@ -232,12 +232,12 @@ addContigsAlignments = function(alignment.directory = NULL,
                            quiet = TRUE,
                            mafft.path = mafft.path)
 
-      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+      reversed = names(alignment)[grep(pattern = "^_R_", names(alignment))]
       if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){
         alignment = reverseComplement(alignment)
       }
 
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
 
       dup.taxa = names(alignment)[duplicated(names(alignment))]
 

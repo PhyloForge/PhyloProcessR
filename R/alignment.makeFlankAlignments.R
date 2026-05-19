@@ -8,8 +8,6 @@
 #'
 #' @param output.directory path to the directory where flank alignments will be saved
 #'
-#' @param output.format format for the output alignments; currently "phylip"
-#'
 #' @param reference.type whether to use a "target" fasta file or an "alignment" directory as the reference for locating the exon coordinates
 #'
 #' @param reference.path path to the reference target fasta file (when reference.type = "target") or a directory of reference alignments (when reference.type = "alignment")
@@ -33,7 +31,6 @@
 makeFlankAlignments = function(alignment.directory = NULL,
                                 alignment.format = "phylip",
                                 output.directory = NULL,
-                                output.format = "phylip",
                                 reference.type = c("target", "alignment"),
                                 reference.path = NULL,
                                 target.direction = TRUE,
@@ -47,7 +44,6 @@ makeFlankAlignments = function(alignment.directory = NULL,
 #   alignment.directory = "alignments/untrimmed_all-markers"
 #   alignment.format = "phylip"
 #   output.directory = "alignments/untrimmed_introns"
-#   output.format = "phylip"
 #   reference.type = "target"
 #   reference.path = target.file
 #   target.direction = TRUE
@@ -56,6 +52,8 @@ makeFlankAlignments = function(alignment.directory = NULL,
 #   memory = memory
 #   overwrite = overwrite
 #   mafft.path = mafft.path
+
+  reference.type = match.arg(reference.type)
 
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
@@ -93,7 +91,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
     align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
   }
 
-  if (length(align.files) == 0) { print("All alignments have already been completed and overwrite = FALSE.") }
+  if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
 
   mem.cl = floor(memory/threads)
 
@@ -102,14 +100,9 @@ makeFlankAlignments = function(alignment.directory = NULL,
   tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
-
-      #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-      #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
-      #  align = gsub(".*\\ ", "", align)
-      #  char.count = nchar(align)
-
-      align = Biostrings::DNAStringSet(align)
+      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
+        file = paste0(alignment.directory, "/", align.files[i]), format = "phylip"
+      ))
       save.name = gsub(".phy$", "", align.files[i])
       save.name = gsub(".phylip$", "", save.name)
     }#end phylip
@@ -123,9 +116,10 @@ makeFlankAlignments = function(alignment.directory = NULL,
     if (reference.type == "target"){
       #Loads in a pulls out relevant target file
       target.seq = target.loci[names(target.loci) %in% save.name]
-      if (length(target.seq) == 0) { 
-        return("ALIGNMENT NOT FOUND IN TARGET MARKERS.")
-     }
+      if (length(target.seq) == 0) {
+        print(paste0(save.name, ": no matching reference found in target file — skipping."))
+        return(NULL)
+      }
       names(target.seq) = "Reference_Locus"
 
     }#end target if
@@ -135,7 +129,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
 
       if (file.exists(paste0(reference.path, "/", align.files[i])) == FALSE){ return(NULL) }
 
-      ref.align = Biostrings::readAAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
+      ref.align = Biostrings::readDNAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
       ref.align = Biostrings::DNAStringSet(ref.align)
       #Gets consensus seq for trimming more
       con.seq = PhyloProcessR::makeConsensus(ref.align, method = "majority")
@@ -172,7 +166,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
     #Checks if you want to keep to target direction or not
     if (target.direction == TRUE){
       #Aligns and then reverses back to correction orientation
-      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+      reversed = names(alignment)[grep(pattern = "^_R_", names(alignment))]
       if (length(reversed[grep(pattern = "Reference_Locus", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
       names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
     } else {
@@ -239,7 +233,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       save.name = gsub(".phy$", "", align.files[i])
 
       #readies for saving
-      writePhylip(alignment = aligned.set,
+      PhyloProcessR::writePhylip(alignment = aligned.set,
                   file=paste0(output.directory, "/", save.name, "_1.phy"),
                   interleave = F,
                   strict = F)
@@ -249,7 +243,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
       #readies for saving
-      writePhylip(alignment = aligned.set,
+      PhyloProcessR::writePhylip(alignment = aligned.set,
                   file=paste0(output.directory, "/", save.name, "_2.phy"),
                   interleave = F,
                   strict = F)
@@ -292,7 +286,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       } else { print(paste0(align.files[i], " alignment not saved. Not enough data."))  }
     }#end
 
-    rm()
+    rm(align, alignment, intron.align)
     gc()
 
   }, error = function(e) {

@@ -8,8 +8,6 @@
 #'
 #' @param output.dir path to the directory where trimmed alignments will be saved
 #'
-#' @param output.format format for the output alignments; currently "phylip"
-#'
 #' @param TrimAl if TRUE, run TrimAl (automated1 mode) as a trimming step
 #'
 #' @param TrimAl.path system path to the directory containing the trimal executable; NULL to use the system PATH
@@ -44,8 +42,6 @@
 #'
 #' @param overwrite if TRUE, delete and recreate the output directory; if FALSE, keep existing trimmed files and skip them
 #'
-#' @param resume if TRUE, skip alignments whose trimmed output files already exist in the output directory
-#'
 #' @return saves trimmed alignment files to output.dir, writes a summary CSV (alignment-trimming_summary.csv) and a log file; nothing is returned to R
 #'
 #' @export
@@ -53,7 +49,6 @@
 superTrimmer = function(alignment.dir = NULL,
                         alignment.format = "phylip",
                         output.dir = NULL,
-                        output.format = "phylip",
                         TrimAl = FALSE,
                         TrimAl.path = NULL,
                         trim.external = TRUE,
@@ -70,15 +65,13 @@ superTrimmer = function(alignment.dir = NULL,
                         max.alignment.gap.percent = 0,
                         threads = 1,
                         memory = 1,
-                        overwrite = FALSE,
-                        resume = TRUE) {
+                        overwrite = FALSE) {
 
 
   # TrimAl.path = "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
   # alignment.dir = "/Users/chutter/Downloads/untrimmed_all-markers_new"
   # alignment.format = "phylip"
   # output.dir = "/Users/chutter/Downloads/trimmed_all-markers_new"
-  # output.format = "phylip"
   # overwrite = FALSE
   # TrimAl = TRUE
   # trim.column = TRUE
@@ -99,7 +92,6 @@ superTrimmer = function(alignment.dir = NULL,
   # alignment.dir = "data-analysis/alignments/untrimmed_only-flanks-unlinked"
   # alignment.format = "phylip"
   # output.dir = "data-analysis/alignments/trimmed_only-flanks-unlinked"
-  # output.format = "phylip"
   # overwrite = overwrite
   # TrimAl = run.TrimAl
   # TrimAl.path = trimAl.path
@@ -122,7 +114,7 @@ superTrimmer = function(alignment.dir = NULL,
     if (b.string[length(b.string)] != "/") {
       TrimAl.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { TrimAl.path = NULL }
+  } else { TrimAl.path = "" }
 
   if (alignment.dir == output.dir){ stop("You should not overwrite the original alignments.") }
 
@@ -158,7 +150,7 @@ superTrimmer = function(alignment.dir = NULL,
                   "startPerGaps", "trimalPerGaps",
                   "edgePerGaps", "columnPerGaps", "covPerGaps")
 
-  save.data = data.table::data.table(matrix(as.double(0), nrow = length(align.files), ncol = length(header.data)))
+  save.data = data.table::data.table(matrix(as.double(0), nrow = 1L, ncol = length(header.data)))
   data.table::setnames(save.data, header.data)
   save.data[, Alignment:=as.character(Alignment)]
   save.data[, Pass:=as.logical(Pass)]
@@ -172,14 +164,9 @@ superTrimmer = function(alignment.dir = NULL,
 
      #Load in alignments
     if (alignment.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-
-    #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-    #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
-    #  align = gsub(".*\\ ", "", align)
-    #  char.count = nchar(align)
-
-      align = Biostrings::DNAStringSet(align)
+      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
+        file = paste0(alignment.dir, "/", align.files[i]), format = "phylip"
+      ))
       save.name = gsub(".phy$", "", align.files[i])
       save.name = gsub(".phylip$", "", save.name)
     }#end phylip
@@ -190,7 +177,7 @@ superTrimmer = function(alignment.dir = NULL,
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
 
-    if (length(align) < min.taxa.alignment) {
+    if (length(align) <= min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
       #next
       return(NULL)
@@ -292,7 +279,7 @@ superTrimmer = function(alignment.dir = NULL,
       }
     }#end trim.external
 
-    if (length(non.align) < min.taxa.alignment) {
+    if (length(non.align) <= min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
       #next
       return(NULL)
@@ -336,8 +323,8 @@ superTrimmer = function(alignment.dir = NULL,
     print(paste0(align.files[i], " Completed."))
     print(data.frame(temp.data))
 
-    #rm()
-    #gc()
+    rm(align, non.align)
+    gc()
 
   }, error = function(e) {
     warning(align.files[i], " failed: ", conditionMessage(e))
@@ -363,15 +350,15 @@ superTrimmer = function(alignment.dir = NULL,
   writeLines(paste0("Discarded alignments: ", length(out.data$Pass[out.data$Pass == FALSE])), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Mean samples removed per alignment: ",
-                    mean(out.data$startSamples - out.data$columnSamples)), fileConn)
+                    mean(out.data$startSamples - out.data$covSamples)), fileConn)
   writeLines(paste0("Mean alignment length trimmed per alignment: ",
-                    mean(out.data$startLength - out.data$columnLength)), fileConn)
+                    mean(out.data$startLength - out.data$covLength)), fileConn)
   writeLines(paste0("Mean basepairs trimmed per alignment: ",
-                    mean(out.data$startBasepairs - out.data$columnBasepairs)), fileConn)
+                    mean(out.data$startBasepairs - out.data$covBasepairs)), fileConn)
   writeLines(paste0("Mean gaps trimmed per alignment: ",
-                    mean(out.data$startGaps - out.data$columnGaps)), fileConn)
+                    mean(out.data$startGaps - out.data$covGaps)), fileConn)
   writeLines(paste0("Mean gap percent trimmed per alignment: ",
-                    mean(out.data$startPerGaps - out.data$columnPerGaps)), fileConn)
+                    mean(out.data$startPerGaps - out.data$covPerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Individual trimming step summary:"), fileConn)
@@ -413,29 +400,29 @@ superTrimmer = function(alignment.dir = NULL,
   writeLines(paste0("Mean gap percent change: ",
                     mean(out.data$trimalPerGaps - out.data$edgePerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
-  writeLines(paste0("Sample Coverage Trimming:"), fileConn)
-  writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$edgeSamples - out.data$covSamples)), fileConn)
-  writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$edgeLength - out.data$covLength)), fileConn)
-  writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$edgeBasepairs - out.data$covBasepairs)), fileConn)
-  writeLines(paste0("Mean gap change: ",
-                    mean(out.data$edgeGaps - out.data$covGaps)), fileConn)
-  writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$edgePerGaps - out.data$covPerGaps)), fileConn)
-  writeLines(paste0(""), fileConn)
   writeLines(paste0("Column Coverage Trimming:"), fileConn)
   writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$covSamples - out.data$columnSamples)), fileConn)
+                    mean(out.data$edgeSamples - out.data$columnSamples)), fileConn)
   writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$covLength - out.data$columnLength)), fileConn)
+                    mean(out.data$edgeLength - out.data$columnLength)), fileConn)
   writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$covBasepairs - out.data$columnBasepairs)), fileConn)
+                    mean(out.data$edgeBasepairs - out.data$columnBasepairs)), fileConn)
   writeLines(paste0("Mean gap change: ",
-                    mean(out.data$covGaps - out.data$columnGaps)), fileConn)
+                    mean(out.data$edgeGaps - out.data$columnGaps)), fileConn)
   writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$covPerGaps - out.data$columnPerGaps)), fileConn)
+                    mean(out.data$edgePerGaps - out.data$columnPerGaps)), fileConn)
+  writeLines(paste0(""), fileConn)
+  writeLines(paste0("Sample Coverage Trimming:"), fileConn)
+  writeLines(paste0("Mean samples removed: ",
+                    mean(out.data$columnSamples - out.data$covSamples)), fileConn)
+  writeLines(paste0("Mean alignment length reduction: ",
+                    mean(out.data$columnLength - out.data$covLength)), fileConn)
+  writeLines(paste0("Mean basepairs trimmed: ",
+                    mean(out.data$columnBasepairs - out.data$covBasepairs)), fileConn)
+  writeLines(paste0("Mean gap change: ",
+                    mean(out.data$columnGaps - out.data$covGaps)), fileConn)
+  writeLines(paste0("Mean gap percent change: ",
+                    mean(out.data$columnPerGaps - out.data$covPerGaps)), fileConn)
   close(fileConn)
 
 } #end function

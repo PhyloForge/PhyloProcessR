@@ -44,10 +44,10 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
 
   # Parameter checks
   if (is.null(gene.alignment.directory) == TRUE) {
-    stop("Error: a folder of alignments is needed.")
+    stop("Error: gene.alignment.directory is required.")
   }
   if (is.null(exon.alignment.directory) == TRUE) {
-    stop("Error: a folder of alignments is needed.")
+    stop("Error: exon.alignment.directory is required.")
   }
 
   if (is.null(output.directory) == TRUE) {
@@ -57,22 +57,18 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
 
   # Check if files exist or not
   if (dir.exists(gene.alignment.directory) == FALSE) {
-    return(paste0("Directory of alignments could not be found. Exiting."))
-  } # end file check
-  
-  # Check if files exist or not
+    stop("gene.alignment.directory not found. Please check the path.")
+  }
   if (dir.exists(exon.alignment.directory) == FALSE) {
-    return(paste0("Directory of alignments could not be found. Exiting."))
-  } # end file check
+    stop("exon.alignment.directory not found. Please check the path.")
+  }
 
   #Checks output overwrite
   if (overwrite == TRUE){
-    if (file.exists(paste0(output.directory)) == TRUE) {
-      system(paste0("rm -r ", output.directory))
-    }
+    if (dir.exists(output.directory) == TRUE) { system(paste0("rm -r ", output.directory)) }
     dir.create(output.directory)
   } else {
-    dir.create(output.directory)
+    if (!dir.exists(output.directory)) { dir.create(output.directory) }
   }#end overwrite if
 
   # Gets list of alignments
@@ -84,15 +80,18 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
   
   #Copies the genes over
   for (i in seq_along(gene.files)){
-    system(paste0("cp ", gene.alignment.directory, "/", gene.files[i], " ", output.directory, "/", gene.files[i]))
+    dest = paste0(output.directory, "/", gene.files[i])
+    if (overwrite == FALSE && file.exists(dest)) { next }
+    system(paste0("cp ", gene.alignment.directory, "/", gene.files[i], " ", dest))
   }
-  
-  #Copies the remaining exons over
+
+  #Copies the remaining single-exon loci over
   exon.copy = exon.files[gsub("\\..*", "", exon.files) %in% single.data$marker]
 
-  # Copies the genes over
   for (i in seq_along(exon.copy)) {
-    system(paste0("cp ", exon.alignment.directory, "/", exon.copy[i], " ", output.directory, "/", exon.copy[i]))
+    dest = paste0(output.directory, "/", exon.copy[i])
+    if (overwrite == FALSE && file.exists(dest)) { next }
+    system(paste0("cp ", exon.alignment.directory, "/", exon.copy[i], " ", dest))
   }
 
 }#end function

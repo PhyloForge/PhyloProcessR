@@ -23,6 +23,17 @@ overwrite = FALSE
 #Print verbose output for each function
 quiet = TRUE
 
+# Alignment subset
+#########################
+# TRUE = run makeAlignmentSubset to copy a named subset of trimmed_all-markers
+run.subset = FALSE
+# Name used for the output subdirectory: data-analysis/alignments/<subset.name>
+subset.name = "subset_markers"
+# Path to a fasta file whose sequence names identify the alignments to keep
+subset.fasta = NULL
+# Method used to match alignments: "fasta" (name matching), "grep" (pattern), or "blast" (similarity)
+subset.reference = "fasta"
+
 # Alignment subsets
 #########################
 # Concatenates exons from same gene

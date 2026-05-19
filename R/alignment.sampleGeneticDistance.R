@@ -112,7 +112,7 @@ summary.sampleGeneticDistance = function(alignment.directory = NULL,
   #Finds taxa
   taxa.temp = c()
   for (i in 1:(0.25*length(alignment.files))){
-    align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = alignment.files[i], format = "phylip"))
+    align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = alignment.files[i], format = "phylip"))
     taxa.temp = unique(append(taxa.temp, names(align)))
   }
 
@@ -126,7 +126,7 @@ summary.sampleGeneticDistance = function(alignment.directory = NULL,
 
     #START HERE
     align.file = alignment.files[grep(paste0(marker.names[i], ".phy$"), alignment.files)]
-    align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = align.file, format = "phylip"))
+    align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = align.file, format = "phylip"))
 
     if (target.type == "consensus"){
 
@@ -155,9 +155,9 @@ summary.sampleGeneticDistance = function(alignment.directory = NULL,
                            mafft.path = mafft.path)
 
       #Aligns and then reverses back to correction orientation
-      reversed = names(alignment)[grep(pattern = "_R_", names(alignment))]
+      reversed = names(alignment)[grep(pattern = "^_R_", names(alignment))]
       if (length(reversed[grep(pattern = "Reference_Marker", reversed)]) == 1){ alignment = Biostrings::reverseComplement(alignment) }
-      names(alignment) = gsub(pattern = "_R_", replacement = "", x = names(alignment))
+      names(alignment) = gsub(pattern = "^_R_", replacement = "", x = names(alignment))
 
       #Removes the edge gaps
       ref.aligned = as.character(alignment['Reference_Marker'])

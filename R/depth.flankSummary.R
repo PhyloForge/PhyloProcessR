@@ -171,7 +171,7 @@ flankDepthSummary = function(depth.directory = NULL,
 
     #Read in alignment
     temp.name = gsub(".phy$", "", locus.names[i])
-    align = readAAMultipleAlignment(file = paste0(work.dir,"/", locus.names[i]), format = "phylip")
+    align = Biostrings::readDNAMultipleAlignment(file = paste0(work.dir,"/", locus.names[i]), format = "phylip")
 
     #Removes samples that too short individually
     write.temp<-strsplit(as.character(align), "")

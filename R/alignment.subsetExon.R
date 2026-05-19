@@ -93,7 +93,7 @@
 #   #for (i in 1:length(align.files)) {
 #     #Load in alignments
 #     if (alignment.format == "phylip"){
-#       align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
+#       align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
 #
 #       #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
 #       #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
@@ -475,7 +475,7 @@
 #
 #       if (file.exists(paste0(reference.path, "/", align.files[i])) == FALSE){ return(NULL) }
 #
-#       ref.align = Biostrings::readAAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
+#       ref.align = Biostrings::readDNAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
 #       ref.align = Biostrings::DNAStringSet(ref.align)
 #       #Gets consensus seq for trimming more
 #       con.seq = makeConsensus(ref.align, method = "majority")

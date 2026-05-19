@@ -154,7 +154,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
   out.data = do.call(c, parallel::mclapply(seq_along(locus.names), function(i) {
   tryCatch({
     # Reads in files
-    red.align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = locus.names[i], format = "phylip"))
+    red.align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = locus.names[i], format = "phylip"))
 
     if (length(red.align) == 0) {
       return(NULL)

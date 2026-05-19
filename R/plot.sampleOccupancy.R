@@ -92,7 +92,7 @@ plotOccupancy = function(species.tree = NULL,
   #Loop through each locus and make a big matrix
   for (j in 1:length(locus.names)){
     #Reads in files
-    align = Biostrings::readAAMultipleAlignment(file = paste0(file.directory, "/", locus.names[j]), format = "phylip")
+    align = Biostrings::readDNAMultipleAlignment(file = paste0(file.directory, "/", locus.names[j]), format = "phylip")
 
     #Use taxa remove
     tax.names = names(Biostrings::DNAStringSet(align))

@@ -20,7 +20,6 @@ if (trim.to.targets == TRUE) {
     target.file = target.file,
     target.direction = TRUE,
     output.directory = "data-analysis/alignments/untrimmed_no-flanks",
-    output.format = "phylip",
     min.alignment.length = min.alignment.length,
     min.taxa.alignment = min.taxa.alignment,
     threads = threads,
@@ -57,7 +56,6 @@ if (trim.to.targets == TRUE) {
       alignment.dir = "data-analysis/alignments/untrimmed_no-flanks-unlinked",
       alignment.format = "phylip",
       output.dir = "data-analysis/alignments/trimmed_no-flanks-unlinked",
-      output.format = "phylip",
       overwrite = overwrite,
       TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,
@@ -91,7 +89,6 @@ if (trim.to.flanks == TRUE) {
     alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
     alignment.format = "phylip",
     output.directory = "data-analysis/alignments/untrimmed_only-flanks",
-    output.format = "phylip",
     reference.type = "target",
     reference.path = target.file,
     target.direction = TRUE,
@@ -131,7 +128,6 @@ if (trim.to.flanks == TRUE) {
       alignment.dir = "data-analysis/alignments/untrimmed_only-flanks-unlinked",
       alignment.format = "phylip",
       output.dir = "data-analysis/alignments/trimmed_only-flanks-unlinked",
-      output.format = "phylip",
       overwrite = overwrite,
       TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,
@@ -188,7 +184,6 @@ if (concatenate.genes == TRUE) {
     alignment.dir = "data-analysis/alignments/untrimmed_all-unlinked",
     alignment.format = "phylip",
     output.dir = "data-analysis/alignments/trimmed_all-unlinked",
-    output.format = "phylip",
     overwrite = overwrite,
     TrimAl = run.TrimAl,
     TrimAl.path = trimAl.path,
@@ -219,7 +214,6 @@ if (concatenate.genes == FALSE) {
     alignment.dir = "data-analysis/alignments/untrimmed_all-markers",
     alignment.format = "phylip",
     output.dir = "data-analysis/alignments/trimmed_all-markers",
-    output.format = "phylip",
     overwrite = overwrite,
     TrimAl = run.TrimAl,
     TrimAl.path = trimAl.path,
@@ -240,18 +234,25 @@ if (concatenate.genes == FALSE) {
 } # end concatenate genes
 
 
-# makeAlignmentSubset(alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
-#                     alignment.format = "phylip",
-#                     output.directory = "data-analysis/alignments/untrimmed_UCE",
-#                     output.format = "phylip",
-#                     subset.reference = "blast",
-#                     subset.fasta.file = "subset_uce-consensus.fa",
-#                     subset.grep.string = NULL,
-#                     subset.blast.targets = target.file,
-#                     blast.path = blast.path,
-#                     threads = threads,
-#                     memory = memory,
-#                     overwrite = overwrite)
+##################################################################################################
+## Alignment subset
+##################################################################################################
+
+if (run.subset == TRUE && !is.null(subset.fasta)) {
+  makeAlignmentSubset(
+    alignment.directory = "data-analysis/alignments/trimmed_all-markers",
+    alignment.format = "phylip",
+    output.directory = paste0("data-analysis/alignments/", subset.name),
+    subset.reference = subset.reference,
+    subset.fasta.file = subset.fasta,
+    subset.grep.string = NULL,
+    subset.blast.targets = target.file,
+    blast.path = blast.path,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite
+  )
+} # end subset
 
 
 ### End workflow

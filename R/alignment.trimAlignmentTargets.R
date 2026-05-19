@@ -8,8 +8,6 @@
 #'
 #' @param output.directory path to the directory where target-trimmed alignments will be saved
 #'
-#' @param output.format format for the output alignments; currently "phylip"
-#'
 #' @param target.file path to a fasta file containing the target/reference sequences; each sequence name must match the corresponding alignment file name (without extension)
 #'
 #' @param target.direction if TRUE, output alignments are oriented to match the direction of the target sequence
@@ -33,7 +31,6 @@
 trimAlignmentTargets = function(alignment.directory = NULL,
                                 alignment.format = "phylip",
                                 output.directory = NULL,
-                                output.format = "phylip",
                                 target.file = NULL,
                                 target.direction = TRUE,
                                 min.alignment.length = 100,
@@ -47,7 +44,6 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   # alignment.format = "phylip"
   # target.file = target.file
   # output.directory = "data-analysis/alignments/untrimmed_no-flanks"
-  # output.format = "phylip"
   # min.alignment.length = 100
   # min.taxa.alignment = min.taxa.alignment
   # threads = threads
@@ -96,14 +92,9 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
-      align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
-
-      #  align = Biostrings::readDNAStringSet(file = paste0(alignment.dir, "/", align.files[i]), format = "phylip")
-      #  align = readLines(paste0(alignment.dir, "/", align.files[i]))[-1]
-      #  align = gsub(".*\\ ", "", align)
-      #  char.count = nchar(align)
-
-      align = Biostrings::DNAStringSet(align)
+      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
+        file = paste0(alignment.directory, "/", align.files[i]), format = "phylip"
+      ))
       save.name = gsub(".phy$", "", align.files[i])
       save.name = gsub(".phylip$", "", save.name)
     }#end phylip
@@ -114,17 +105,18 @@ trimAlignmentTargets = function(alignment.directory = NULL,
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
 
-    #Loads in a pulls out relevant target file
+    #Loads in and pulls out relevant target sequence
     target.seq = target.loci[names(target.loci) %in% save.name]
-    if (length(target.seq) == 0) { 
-      return("ALIGNMENT NOT FOUND IN TARGET MARKERS.")
+    if (length(target.seq) == 0) {
+      print(paste0(save.name, ": no matching reference found in target file — skipping."))
+      return(NULL)
+    }
+    if (length(target.seq) >= 2) {
+      print(paste0(save.name, ": duplicate entries found in target file — skipping."))
+      return(NULL)
     }
 
     names(target.seq) = "Reference_Locus"
-
-    #Checks for correct target sequence amount
-    if (length(target.seq) == 0){ stop("Locus not found in target file.")}
-    if (length(target.seq) >= 2){ stop("Duplicate loci found in target file.")}
 
     ##############
     #STEP 2: Runs MAFFT to add
@@ -194,13 +186,13 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     ##############
     #removes loci with too few taxa
     skip.file = FALSE
-    if (length(names(target.region)) < as.numeric(min.taxa.alignment)){
+    if (length(names(target.region)) <= as.numeric(min.taxa.alignment)){
       print(paste0(align.files[i], " deleted. Too few taxa after trimming.") )
       skip.file = TRUE
     }
 
     #removes too short loci
-    if (Biostrings::width(target.region)[1] < as.numeric(min.alignment.length)){
+    if (Biostrings::width(target.region)[1] <= as.numeric(min.alignment.length)){
       print(paste(align.files[i], " deleted. Trimmed alignment length below threshold.") )
       skip.file = TRUE
     }
@@ -222,7 +214,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
       print(paste0(align.files[i], " alignment saved."))
     } else { print(paste0(align.files[i], " alignment discarded. Not enough data to save.")) }
 
-    rm()
+    rm(align, alignment, target.region, target.seq)
     gc()
 
   }, error = function(e) {

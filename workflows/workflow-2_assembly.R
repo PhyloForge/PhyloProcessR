@@ -55,4 +55,38 @@ removeOffTargetContigs(
   overwrite = overwrite,
   quiet = quiet
 )
+
+##################################################################################################
+##################################################################################################
+#################################################
+## Step 4 (optional): Recover missing loci
+## Attempts to assemble loci absent from each sample by mapping reads to
+## cross-sample contigs and/or the original reference, then running SPAdes.
+## Enable with expand.missing = TRUE in the configuration file.
+##################
+
+if (expand.missing == TRUE) {
+  expandMissingAssembly(
+    assembly.directory  = "data-analysis/contigs/3_target-contigs",
+    read.directory      = processed.reads,
+    mapping.reads       = mapping.reads,
+    reference           = target.markers,
+    output.directory    = "data-analysis/expand-missing-assembly",
+    phase2.reference    = phase2.reference,
+    recover.all.missing = recover.all.missing,
+    min.match.percent   = 60,
+    min.match.length    = 100,
+    min.match.coverage  = 35,
+    memory              = memory,
+    threads             = threads,
+    spades.path         = spades.path,
+    hisat2.path         = hisat2.path,
+    samtools.path       = samtools.path,
+    fastp.path          = fastp.path,
+    blast.path          = blast.path,
+    overwrite           = overwrite,
+    quiet               = quiet
+  )
+} # end expand.missing
+
 #End script

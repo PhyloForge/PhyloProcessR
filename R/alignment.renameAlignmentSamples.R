@@ -38,7 +38,7 @@ renameAlignmentSamples = function(align.directory = NULL,
   ## Replace old names with new ones
   for(i in 1:length(file.names)){
 
-    align = Biostrings::readAAMultipleAlignment(file = file.names[i], format = "phylip")
+    align = Biostrings::readDNAMultipleAlignment(file = file.names[i], format = "phylip")
     align = Biostrings::DNAStringSet(align)
 
     #Fix the labels

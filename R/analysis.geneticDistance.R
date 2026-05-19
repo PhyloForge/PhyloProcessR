@@ -108,7 +108,7 @@ geneticDistance = function(alignment.directory = NULL,
       # Finds taxa
       taxa.temp <- c()
       for (i in 1:length(alignment.files)) {
-            align <- Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = alignment.files[i], format = "phylip"))
+            align <- Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = alignment.files[i], format = "phylip"))
             taxa.temp <- unique(append(taxa.temp, names(align)))
       }
 
@@ -122,7 +122,7 @@ geneticDistance = function(alignment.directory = NULL,
 
       #START HERE
       align.file = alignment.files[grep(paste0(marker.names[i], ".phy$"), alignment.files)]
-      align = Biostrings::DNAStringSet(Biostrings::readAAMultipleAlignment(file = align.file, format = "phylip"))
+      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = align.file, format = "phylip"))
 
       temp.target = target.markers[names(target.markers) == marker.names[i],]
       temp.target = temp.target[1]
@@ -350,7 +350,7 @@ geneticDistance = function(alignment.directory = NULL,
 # for (i in 1:length(locus.names)){
   
 #   #Read in alignment
-#   align = readAAMultipleAlignment(file = locus.names[i], format = "phylip")
+#   align = readDNAMultipleAlignment(file = locus.names[i], format = "phylip")
   
 #   #Use taxa remove
 #   tax.names = rownames(align)
@@ -1404,7 +1404,7 @@ geneticDistance = function(alignment.directory = NULL,
 # for (i in 1:length(locus.names)){
   
 #   #Read in alignment
-#   align = readAAMultipleAlignment(file = locus.names[i], format = "phylip")
+#   align = readDNAMultipleAlignment(file = locus.names[i], format = "phylip")
   
 #   #Use taxa remove
 #   tax.names = rownames(align)
@@ -1465,7 +1465,7 @@ geneticDistance = function(alignment.directory = NULL,
 # for (i in 1:length(locus.names)){
   
 #   #Read in alignment
-#   align = readAAMultipleAlignment(file = locus.names[i], format = "phylip")
+#   align = readDNAMultipleAlignment(file = locus.names[i], format = "phylip")
   
 #   #Use taxa remove
 #   tax.names = rownames(align)
@@ -1525,7 +1525,7 @@ geneticDistance = function(alignment.directory = NULL,
 # for (i in 1:length(locus.names)){
   
 #   #Read in alignment
-#   align = readAAMultipleAlignment(file = locus.names[i], format = "phylip")
+#   align = readDNAMultipleAlignment(file = locus.names[i], format = "phylip")
   
 #   #Use taxa remove
 #   tax.names = rownames(align)

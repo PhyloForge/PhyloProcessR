@@ -8,8 +8,6 @@
 #'
 #' @param output.directory path to the directory where the subset alignment files will be copied
 #'
-#' @param output.format format for output alignments (currently informational; files are copied directly)
-#'
 #' @param subset.reference method used to define the subset: "fasta" matches alignment names to sequence names in a fasta file, "grep" matches alignment file names to a pattern string, "blast" uses BLAST similarity to a set of target sequences
 #'
 #' @param subset.fasta.file path to a fasta file whose sequence names are used to select alignments (required when subset.reference is "fasta")
@@ -24,6 +22,8 @@
 #'
 #' @param memory total memory in GB (currently reserved for future use)
 #'
+#' @param quiet if TRUE, suppress stdout from BLAST commands. Default TRUE.
+#'
 #' @param overwrite if TRUE, overwrite an existing output directory; if FALSE, keep existing files
 #'
 #' @return copies the selected alignment files to output.directory; nothing is returned to R
@@ -33,12 +33,12 @@
 makeAlignmentSubset = function(alignment.directory = NULL,
                                alignment.format = "phylip",
                                output.directory = NULL,
-                               output.format = "phylip",
                                subset.reference = c("fasta", "grep", "blast"),
                                subset.fasta.file = NULL,
                                subset.grep.string = NULL,
                                subset.blast.targets = NULL,
                                blast.path = NULL,
+                               quiet = TRUE,
                                threads = 1,
                                memory = 1,
                                overwrite = FALSE) {
@@ -46,11 +46,12 @@ makeAlignmentSubset = function(alignment.directory = NULL,
   # alignment.directory = "alignments/untrimmed_all-markers"
   # alignment.format = "phylip"
   # output.directory = "alignments/subset_UCEs"
-  # output.format = "phylip"
   # subset.reference = "fasta"
   # subset.fasta.file = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Pipeline/Source_Files/Hutter_uce5k_loci.fa"
   # subset.grep.string = "uce"
   # subset.blast.targets = "/Users/chutter/Dropbox/Research/1_Main-Projects/1_Collaborative-Projects/Microhylidae_SeqCap/New_Work_2021/Master_Ranoidea_All-Markers_Apr21-2019.fa"
+
+  subset.reference = match.arg(subset.reference)
 
   #Checks the program
   if (is.null(blast.path) == FALSE){
@@ -58,7 +59,7 @@ makeAlignmentSubset = function(alignment.directory = NULL,
     if (b.string[length(b.string)] != "/") {
       blast.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { blast.path = NULL }
+  } else { blast.path = "" }
 
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
@@ -76,8 +77,8 @@ makeAlignmentSubset = function(alignment.directory = NULL,
   #Uses the reference names to isolate
   if (subset.reference == "fasta"){
     fasta.loci = Biostrings::readDNAStringSet(file = subset.fasta.file, format = "fasta")
-    ref.names = gsub(".phy$", "", names(fasta.loci) )
-    subset.files = align.files[gsub(".phy$", "", align.files) %in% ref.names]
+    ref.names = gsub("\\..*$", "", names(fasta.loci) )
+    subset.files = align.files[gsub("\\..*$", "", align.files) %in% ref.names]
 
     if (length(subset.files) == 0){ stop("Reference fasta names could not be matched.")}
   }#end if
@@ -111,8 +112,9 @@ makeAlignmentSubset = function(alignment.directory = NULL,
 
     filt.data = match.data[match.data$matches >= ( 0.5 * match.data$tLen),]
 
-    if (nrow(match.data) == 0) {
-      stop(paste0("no subset matches to targets. Skipping"))  }
+    if (nrow(filt.data) == 0) {
+      stop("No subset matches passed the coverage filter. Check subset.fasta.file and subset.blast.targets.")
+    }
 
     #Sorting: exon name, contig name, bitscore higher first, evalue
     data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
@@ -152,7 +154,10 @@ makeAlignmentSubset = function(alignment.directory = NULL,
     final.data = rbind(final.data, save.match)
 
     #Gets final set of alignments
-    subset.files = align.files[gsub(".phy$", "", align.files) %in% final.data$qName]
+    subset.files = align.files[gsub("\\..*$", "", align.files) %in% final.data$qName]
+
+    #Clean up BLAST temp files
+    system("rm -f subset-blast-match.txt subset_nucl-blast_db.*")
 
   }#end blast if
 

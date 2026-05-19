@@ -94,7 +94,7 @@ mergeDuplicates = function(alignment.directory = NULL,
     ##############
     #Load in alignments
     if (alignment.format == "phylip"){
-      old.align = Biostrings::readAAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
+      old.align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", align.files[i]), format = "phylip")
       old.align = Biostrings::DNAStringSet(old.align)
       save.name = gsub(".phy$", "", align.files[i])
       save.name = gsub(".phylip$", "", save.name)
