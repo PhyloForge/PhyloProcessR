@@ -239,6 +239,10 @@ integrateLegacy = function(alignment.directory = NULL,
   #add.taxa = Biostrings::readDNAStringSet(sample.markers)
   bait.loci = Biostrings::readDNAStringSet(target.markers)  # loads up fasta file
 
+  # Vectors for summary log: track which output loci carried legacy / mito data
+  legacy.loci = character(0)
+  mito.loci   = character(0)
+
   for (i in 1:length(legacy.files)) {
 
     use.mito = FALSE
@@ -483,6 +487,8 @@ integrateLegacy = function(alignment.directory = NULL,
                                strict = F)
 
     print(paste0("Finished ", save.name, " legacy integration successfully!"))
+    legacy.loci = c(legacy.loci, save.name)
+    if (use.mito == TRUE) { mito.loci = c(mito.loci, save.name) }
     system(paste0("rm ", save.name, "*"))
     rm(align, old.align, combo.align, aligned.set, con.seq, match.data)
     gc()
@@ -541,6 +547,84 @@ integrateLegacy = function(alignment.directory = NULL,
                     output.directory, "-all/", new.files[i]))
     }#end i loop
   }#end if
+
+  ####################################################################################
+  ####################################################################################
+  ## Summary log
+  ####################################################################################
+  print("Writing integration summary log...")
+
+  # Choose which directory to summarise:
+  # -all includes capture-only loci and is the most complete view;
+  # -only is used when include.all.together = FALSE.
+  if (include.all.together == TRUE) {
+    scan.dir = paste0(output.directory, "-all")
+  } else {
+    scan.dir = paste0(output.directory, "-only")
+  }
+
+  scan.files = list.files(scan.dir)
+  only.names = gsub("\\..*$", "", list.files(paste0(output.directory, "-only")))
+
+  # Build per-taxon counts by reading each output alignment
+  taxa.counts = list()
+
+  for (sf in scan.files) {
+    locus.name = gsub("\\..*$", "", sf)
+    aln = Biostrings::readDNAMultipleAlignment(
+      file   = paste0(scan.dir, "/", sf),
+      format = "phylip")
+    aln      = Biostrings::DNAStringSet(aln)
+    aln.char = as.character(aln)
+
+    is.mito   = locus.name %in% mito.loci
+    is.legacy = locus.name %in% only.names & !is.mito
+
+    for (tx in names(aln)) {
+      if (is.null(taxa.counts[[tx]])) {
+        taxa.counts[[tx]] = c(Total_Loci          = 0L,
+                              Capture_Loci        = 0L,
+                              Legacy_Nuclear_Loci = 0L,
+                              Legacy_Mito_Loci    = 0L,
+                              Total_BP            = 0L)
+      }
+      bp = nchar(gsub("[-nN?]", "", aln.char[[tx]], ignore.case = TRUE))
+      taxa.counts[[tx]]["Total_Loci"] = taxa.counts[[tx]]["Total_Loci"] + 1L
+      taxa.counts[[tx]]["Total_BP"]   = taxa.counts[[tx]]["Total_BP"]   + as.integer(bp)
+
+      if (is.mito) {
+        taxa.counts[[tx]]["Legacy_Mito_Loci"]    = taxa.counts[[tx]]["Legacy_Mito_Loci"]    + 1L
+      } else if (is.legacy) {
+        taxa.counts[[tx]]["Legacy_Nuclear_Loci"] = taxa.counts[[tx]]["Legacy_Nuclear_Loci"] + 1L
+      } else {
+        taxa.counts[[tx]]["Capture_Loci"]        = taxa.counts[[tx]]["Capture_Loci"]        + 1L
+      }
+    }#end taxon loop
+  }#end file loop
+
+  # Assemble data frame
+  summary.df = do.call(rbind, lapply(names(taxa.counts), function(tx) {
+    r = taxa.counts[[tx]]
+    data.frame(
+      Taxon               = tx,
+      Total_Loci          = r["Total_Loci"],
+      Capture_Loci        = r["Capture_Loci"],
+      Legacy_Nuclear_Loci = r["Legacy_Nuclear_Loci"],
+      Legacy_Mito_Loci    = r["Legacy_Mito_Loci"],
+      Legacy_Total        = r["Legacy_Nuclear_Loci"] + r["Legacy_Mito_Loci"],
+      Total_BP            = r["Total_BP"],
+      Pct_Loci            = round((r["Total_Loci"] / length(scan.files)) * 100, 1),
+      stringsAsFactors    = FALSE,
+      row.names           = NULL
+    )
+  }))
+
+  summary.df = summary.df[order(-summary.df$Total_Loci, summary.df$Taxon), ]
+  rownames(summary.df) = NULL
+
+  log.file = paste0(output.directory, "-integration_summary.txt")
+  write.table(summary.df, file = log.file, sep = "\t", row.names = FALSE, quote = FALSE)
+  print(paste0("Integration summary written to: ", log.file))
 
   ####################################################################################
 
