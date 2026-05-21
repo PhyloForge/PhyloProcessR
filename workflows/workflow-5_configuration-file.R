@@ -34,6 +34,12 @@ subset.fasta = NULL
 # Method used to match alignments: "fasta" (name matching), "grep" (pattern), or "blast" (similarity)
 subset.reference = "fasta"
 
+# Novel markers integration
+#########################
+# TRUE = incorporate novel loci from workflow X4 (untrimmed_novel-markers) into
+#        trimming and unlinked datasets. Expects that directory to exist.
+include.novel.markers = FALSE
+
 # Alignment subsets
 #########################
 # Concatenates exons from same gene

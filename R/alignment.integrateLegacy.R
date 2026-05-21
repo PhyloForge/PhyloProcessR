@@ -20,9 +20,6 @@
 #' @param output.directory base path for output directories. Two directories are created:
 #' \code{output.directory-only} and \code{output.directory-all}.
 #'
-#' @param output.format format for the output alignment files. Currently "phylip" is
-#' supported.
-#'
 #' @param legacy.directory path to the directory containing the legacy alignment files to
 #' be integrated.
 #'
@@ -35,6 +32,18 @@
 #' @param combine.same.sample logical. If TRUE, sequences from the same sample present in
 #' both the legacy and capture alignments are merged into a single sequence, preferring
 #' non-gap and non-N characters at each site. Default TRUE.
+#'
+#' @param name.match character. Controls how samples are matched between the legacy and
+#' capture alignments when \code{combine.same.sample} is TRUE. \code{"exact"} requires
+#' identical sequence names. \code{"species"} strips the trailing specimen/voucher ID
+#' (the last underscore-delimited field) before matching, so that e.g.
+#' \code{Centrolene_bacatum_MZUTI-2436} and \code{Centrolene_bacatum_KU12345} are treated
+#' as the same taxon and merged into a single sequence named \code{Centrolene_bacatum}.
+#' When \code{"species"} is used and the legacy alignment contains multiple sequences for
+#' the same species, one representative is selected before alignment: the sequence whose
+#' full name (including voucher ID) matches a sequence already in the capture alignment is
+#' preferred; if no match exists, the sequence with the most informative (non-gap,
+#' non-missing) bases is used. Default \code{"exact"}.
 #'
 #' @param include.uncaptured.legacy logical. If TRUE, legacy alignments for loci not found
 #' in the capture dataset are saved to the output as stand-alone alignments. Default FALSE.
@@ -55,6 +64,22 @@
 #' @param mafft.path path to the directory containing the MAFFT executable. If NULL, MAFFT
 #' is expected to be on the system PATH.
 #'
+#' @param include.mitochondrial logical. If TRUE, mitochondrial loci absent from the
+#' nuclear target marker file can still be integrated by building a second BLAST database
+#' from consensus sequences derived from a set of existing mitochondrial capture alignments.
+#' When a legacy locus produces no BLAST hit against the nuclear targets, it is re-queried
+#' against the mitochondrial database, and if a match is found the corresponding
+#' mitochondrial capture alignment is used for integration. Recommended: generate the
+#' mitochondrial capture alignments with \href{https://github.com/chutter/MitoTrawlR}{MitoTrawlR}.
+#' Default FALSE.
+#'
+#' @param mito.alignment.directory path to the directory containing the mitochondrial
+#' capture alignment files. Only used when \code{include.mitochondrial = TRUE}. The
+#' alignment files should cover all mitochondrial loci to be matched.
+#'
+#' @param mito.alignment.format format of the mitochondrial alignment files. Accepted
+#' values: "phylip" or "fasta". Default "phylip".
+#'
 #' @param blast.path path to the directory containing BLAST executables. If NULL, BLAST
 #' tools are expected to be on the system PATH.
 #'
@@ -66,13 +91,16 @@
 integrateLegacy = function(alignment.directory = NULL,
                            alignment.format = "phylip",
                            output.directory = NULL,
-                           output.format = "phylip",
                            legacy.directory = NULL,
                            legacy.format = "phylip",
                            target.markers = NULL,
                            combine.same.sample = TRUE,
+                           name.match = c("exact", "species"),
                            include.uncaptured.legacy = FALSE,
                            include.all.together = FALSE,
+                           include.mitochondrial = FALSE,
+                           mito.alignment.directory = NULL,
+                           mito.alignment.format = "phylip",
                            threads = 1,
                            memory = 1,
                            overwrite = FALSE,
@@ -80,46 +108,21 @@ integrateLegacy = function(alignment.directory = NULL,
                            mafft.path = NULL,
                            blast.path = NULL) {
 
-#
-#   alignment.directory = "/Volumes/LaCie/mitocap_2/Alignments/untrimmed-alignments"
-#   alignment.format = "phylip"
-#   output.directory = "/Volumes/LaCie//mitocap_2/untrimmed_mt_legacy"
-#   output.format = "phylip"
-#   legacy.directory = "/Volumes/LaCie//mitocap_2/genbank-legacy"
-#   legacy.format = "phylip"
-#   target.markers = "/Volumes/LaCie/mitocap_2/reference/refMarkers.fa"
-#   combine.same.sample = FALSE
-#   include.uncaptured.legacy = FALSE
-#   include.all.together = TRUE
-#   threads = 10
-#   memory = 50
-#   overwrite = TRUE
-#   quiet = FALSE
-#   mafft.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-#   blast.path = "/Users/chutter/Bioinformatics/conda-envs/PhyloCap/bin"
-
-  # setwd("/Volumes/Armored/Boophis_Tree")
-  # alignment.directory = "alignments/untrimmed_all-markers"
+  # alignment.directory = "/Volumes/LaCie/mitocap_2/Alignments/untrimmed-alignments"
   # alignment.format = "phylip"
-  # output.directory = "alignments/untrimmed_legacy"
-  # output.format = "phylip"
-  # legacy.directory = "alignments/legacy-genbank-nuc"
+  # output.directory = "/Volumes/LaCie/mitocap_2/untrimmed_mt_legacy"
+  # legacy.directory = "/Volumes/LaCie/mitocap_2/genbank-legacy"
   # legacy.format = "phylip"
-  # target.markers = "Hyloidea_All-Markers_Apr21-2019.fa"
-  # combine.same.sample = TRUE
-  # include.uncaptured.legacy = TRUE
+  # target.markers = "/Volumes/LaCie/mitocap_2/reference/refMarkers.fa"
+  # combine.same.sample = FALSE
+  # include.uncaptured.legacy = FALSE
   # include.all.together = TRUE
-  # threads = 1
-  # memory = 4
+  # threads = 10
+  # memory = 50
   # overwrite = TRUE
-  # quiet = TRUE
-  # mafft.path = "/usr/local/bin"
-  # blast.path = "/Users/chutter/miniconda3/bin"
-
-  # *** combine non-overlapping seqs
-  # *** check for duplicates and remove
-  # *** include loci not in sequence capture too
-  # *** trim to legacy
+  # quiet = FALSE
+  # mafft.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
+  # blast.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
 
   #Same adds to bbmap path
   if (is.null(mafft.path) == FALSE){
@@ -137,23 +140,33 @@ integrateLegacy = function(alignment.directory = NULL,
     }#end if
   } else { blast.path = "" }
 
+  name.match = match.arg(name.match)
+
+  # Validate mitochondrial inputs
+  if (include.mitochondrial == TRUE) {
+    if (is.null(mito.alignment.directory)) {
+      stop("mito.alignment.directory must be provided when include.mitochondrial = TRUE.")
+    }
+    if (!dir.exists(mito.alignment.directory)) {
+      stop(paste0("mito.alignment.directory not found: ", mito.alignment.directory))
+    }
+  }
+
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
   #Overwrite
-  if (dir.exists(paste0(output.directory, "-all")) == TRUE) {
+  if (dir.exists(paste0(output.directory, "-only")) == TRUE ||
+      dir.exists(paste0(output.directory, "-all")) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory, "-all"))
-      dir.create(paste0(output.directory, "-all"))
       system(paste0("rm -r ", output.directory, "-only"))
-      dir.create(paste0(output.directory, "-only"))
+      system(paste0("rm -r ", output.directory, "-all"))
     } else {
-      stop("Overwrite = FALSE and directory exists. Either change to TRUE or overwrite manually.")
+      stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
     }
-  } else {
-    dir.create(paste0(output.directory, "-all"))
-    dir.create(paste0(output.directory, "-only"))
-  }#end else
+  }
+  dir.create(paste0(output.directory, "-only"))
+  if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all")) }
 
   #Gathers alignments
   align.files = list.files(alignment.directory)
@@ -166,24 +179,55 @@ integrateLegacy = function(alignment.directory = NULL,
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
               "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
-  #Make blast database for the probe loci
+  #Make blast database for the nuclear probe loci
   system(paste0(blast.path, "makeblastdb -in ", target.markers,
                 " -parse_seqids -dbtype nucl -out target_nucl-blast_db"), ignore.stdout = quiet)
+
+  ##########################################################################
+  # Build mitochondrial BLAST DB from consensus sequences of mito alignments
+  ##########################################################################
+  mito.align.files = character(0)
+  if (include.mitochondrial == TRUE) {
+    print("Building mitochondrial BLAST database from consensus sequences...")
+    mito.align.files = list.files(mito.alignment.directory)
+    if (length(mito.align.files) == 0) {
+      stop("No mitochondrial alignment files found in mito.alignment.directory.")
+    }
+
+    mito.cons.list = Biostrings::DNAStringSet()
+    for (mf in mito.align.files) {
+      mito.locus.name = gsub("\\..*$", "", mf)
+      if (mito.alignment.format == "phylip") {
+        mito.aln = Biostrings::readDNAMultipleAlignment(
+          file = paste0(mito.alignment.directory, "/", mf), format = "phylip")
+        mito.aln = Biostrings::DNAStringSet(mito.aln)
+      } else {
+        mito.aln = Biostrings::readDNAStringSet(paste0(mito.alignment.directory, "/", mf))
+      }
+      mito.con = makeConsensus(alignment = mito.aln,
+                               method = c("majority"),
+                               warn.non.IUPAC = FALSE,
+                               remove.gaps = TRUE,
+                               type = c("DNA"))
+      names(mito.con) = mito.locus.name
+      mito.cons.list = append(mito.cons.list, mito.con)
+      rm(mito.aln, mito.con)
+    }#end mito files loop
+
+    Biostrings::writeXStringSet(mito.cons.list, filepath = "mito_consensus_references.fa")
+    system(paste0(blast.path, "makeblastdb -in mito_consensus_references.fa",
+                  " -parse_seqids -dbtype nucl -out mito_nucl-blast_db"), ignore.stdout = quiet)
+    rm(mito.cons.list)
+    print(paste0("Mitochondrial BLAST database built from ", length(mito.align.files), " loci."))
+  }#end include.mitochondrial
 
   ### Reads in the additional stuff
   #add.taxa = Biostrings::readDNAStringSet(sample.markers)
   bait.loci = Biostrings::readDNAStringSet(target.markers)  # loads up fasta file
 
-  #Sets up multiprocessing
-  #cl = parallel::makeCluster(threads, outfile = "")
-  #doParallel::registerDoParallel(cl)
-  #mem.cl = floor(memory/threads)
-
-  #Loops through each locus and does operations on them
-  #foreach(i=1:length(legacy.files), .packages = c("PhyloCap", "foreach", "Biostrings", "ape", "stringr")) %dopar% {
-  #Loops through each locus and does operations on the
-  delete.old = c()
   for (i in 1:length(legacy.files)) {
+
+    use.mito = FALSE
 
     ##############
     #STEP 0: Load in legacy alignment
@@ -192,30 +236,13 @@ integrateLegacy = function(alignment.directory = NULL,
     if (legacy.format == "phylip"){
       align = Biostrings::readDNAMultipleAlignment(file = paste0(legacy.directory, "/", legacy.files[i]), format = "phylip")
       align = Biostrings::DNAStringSet(align)
-      save.name = gsub(".phy$", "", legacy.files[i])
-      save.name = gsub(".phylip$", "", save.name)
+      save.name = gsub("\\..*$", "", legacy.files[i])
     }#end phylip
 
     if (legacy.format == "fasta"){
       align = Biostrings::readDNAStringSet(paste0(legacy.directory, "/", legacy.files[i]) )
-      save.name = gsub(".fa$", "", legacy.files[i])
-      save.name = gsub(".fasta$", "", save.name)
+      save.name = gsub("\\..*$", "", legacy.files[i])
     }#end phylip
-
-    # ##############
-    # #STEP 1: Sets up new for adding into alignment
-    # ##############
-    # #Match probe names to contig names to acquire data
-    # name.locus = gsub(".phy$", "", locus.names[i])
-    # add.seqs = add.taxa[grep(pattern = paste0(name.locus, "_"), x = names(add.taxa))]
-    # names(add.seqs) = gsub(pattern = ".*_\\|_", replacement = "", x = names(add.seqs))
-    #
-    # if (length(add.seqs) == 0){ return(NULL) }
-    #
-    # #Gets reference locus
-    # ref.locus = bait.loci[grep(pattern = paste0(name.locus, "$"), x = names(bait.loci))]
-    # names(ref.locus) = paste("Reference_Locus")
-    # add.seqs = append(add.seqs, ref.locus)
 
     ##############
     #STEP 1: Blast to targets
@@ -228,34 +255,57 @@ integrateLegacy = function(alignment.directory = NULL,
                   remove.gaps = TRUE,
                   type = c("DNA"))
 
-    #Finds probes that match to two or more contigs
-    final.loci = as.list(as.character(con.seq))
-    writeFasta(sequences = final.loci, names = names(final.loci),
-               paste0(save.name, "_consensus.fa"), nbchar = 1000000, as.string = T)
+    #Writes consensus to temp file for BLAST
+    Biostrings::writeXStringSet(con.seq, filepath = paste0(save.name, "_consensus.fa"))
 
     #Matches samples to loci
     system(paste0(blast.path, "blastn -task dc-megablast -db target_nucl-blast_db -evalue 0.001",
                   " -query ", save.name, "_consensus.fa -out ", save.name, "_target-blast-match.txt",
                   " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-                  " -num_threads ", threads))
+                  " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
 
     #Loads in match data
     match.data = data.table::fread(paste0(save.name, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
     data.table::setnames(match.data, headers)
 
     if (nrow(match.data) == 0) {
-      print(paste0(sample, " had no matches. Skipping"))
-      next }
+      # Nuclear BLAST failed — try mitochondrial DB if enabled
+      if (include.mitochondrial == TRUE) {
+        system(paste0(blast.path, "blastn -task dc-megablast -db mito_nucl-blast_db -evalue 0.001",
+                      " -query ", save.name, "_consensus.fa -out ", save.name, "_mito-blast-match.txt",
+                      " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
+                      " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
+
+        match.data = data.table::fread(paste0(save.name, "_mito-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+        data.table::setnames(match.data, headers)
+
+        if (nrow(match.data) == 0) {
+          print(paste0(save.name, " had no BLAST matches to nuclear or mitochondrial markers. Skipping."))
+          system(paste0("rm ", save.name, "*"))
+          next
+        }
+        use.mito = TRUE
+      } else {
+        print(paste0(save.name, " had no BLAST matches to target markers. Skipping."))
+        system(paste0("rm ", save.name, "*"))
+        next
+      }
+    }
 
     if (nrow(match.data) >= 2){
       match.data = match.data[match.data$bitscore == max(match.data$bitscore),]
     }
 
     if (nrow(match.data) >= 2){
-      stop("too many matches...")
+      stop(paste0(save.name, " matched multiple targets after bitscore filter. Check target file for duplicates."))
     }
 
-    found.align = align.files[grep(match.data$tName, align.files)]
+    # Search the correct file list depending on whether the match came from mito or nuclear DB
+    if (use.mito == TRUE) {
+      found.align = mito.align.files[grep(match.data$tName, mito.align.files)]
+    } else {
+      found.align = align.files[grep(match.data$tName, align.files)]
+    }
 
     if (include.uncaptured.legacy == FALSE){
       if (length(found.align) == 0){
@@ -271,12 +321,12 @@ integrateLegacy = function(alignment.directory = NULL,
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
         #readies for saving
-        writePhylip(alignment = aligned.set,
-                    file=paste0(output.directory, "-only/", save.name, ".phy"),
-                    interleave = F,
-                    strict = F)
+        PhyloProcessR::writePhylip(alignment = aligned.set,
+                                   file = paste0(output.directory, "-only/", save.name, ".phy"),
+                                   interleave = F,
+                                   strict = F)
 
-        print(paste0("No sequence capture alignment found. Included uncaptured ", save.name, "  successfully!"))
+        print(paste0("No sequence capture alignment found. Included uncaptured ", save.name, " successfully!"))
         next
       }
     }#end if
@@ -284,19 +334,54 @@ integrateLegacy = function(alignment.directory = NULL,
     ##############
     #STEP 2: Runs MAFFT to add
     ##############
+    # Select the source directory and format: mitochondrial or nuclear capture alignments
+    src.dir    = if (use.mito == TRUE) mito.alignment.directory else alignment.directory
+    src.format = if (use.mito == TRUE) mito.alignment.format    else alignment.format
+
     #Load in alignments
-    if (alignment.format == "phylip"){
-      old.align = Biostrings::readDNAMultipleAlignment(file = paste0(alignment.directory, "/", found.align), format = "phylip")
+    if (src.format == "phylip"){
+      old.align = Biostrings::readDNAMultipleAlignment(file = paste0(src.dir, "/", found.align), format = "phylip")
       old.align = Biostrings::DNAStringSet(old.align)
-      found.name = gsub(".phy$", "", found.align)
-      found.name = gsub(".phylip$", "", found.name)
+      found.name = gsub("\\..*$", "", found.align)
     }#end phylip
 
-    if (alignment.format == "fasta"){
-      old.align = Biostrings::readDNAStringSet(paste0(alignment.directory, "/", found.align) )
-      found.name = gsub(".fa$", "", found.align)
-      found.name = gsub(".fasta$", "", found.name)
-    }#end phylip
+    if (src.format == "fasta"){
+      old.align = Biostrings::readDNAStringSet(paste0(src.dir, "/", found.align))
+      found.name = gsub("\\..*$", "", found.align)
+    }#end fasta
+
+    # When matching by species, reduce the legacy alignment to one sequence per species
+    # before passing to MAFFT to avoid creating multiple duplicates that complicate merging.
+    # Preference: a legacy sequence whose full name matches a capture specimen (museum ID match).
+    # Fallback: the sequence with the most informative (non-gap, non-missing) bases.
+    if (name.match == "species") {
+      stripped.legacy = gsub("_[^_]+$", "", names(align))
+      dup.species = unique(stripped.legacy[duplicated(stripped.legacy)])
+
+      if (length(dup.species) > 0) {
+        nondup.align  = align[!stripped.legacy %in% dup.species]
+        selected.seqs = Biostrings::DNAStringSet()
+
+        for (sp in dup.species) {
+          candidates = align[stripped.legacy == sp]
+
+          # Prefer candidate whose full name (with voucher) already exists in capture alignment
+          cap.match = candidates[names(candidates) %in% names(old.align)]
+
+          if (length(cap.match) > 0) {
+            selected.seqs = append(selected.seqs, cap.match[1])
+          } else {
+            # No museum ID match — pick the sequence with the most informative bases
+            n.informative = sapply(as.character(candidates), function(s) {
+              nchar(gsub("[-?nN]", "", s, ignore.case = TRUE))
+            })
+            selected.seqs = append(selected.seqs, candidates[which.max(n.informative)])
+          }
+        }#end dup.species loop
+
+        align = append(nondup.align, selected.seqs)
+      }
+    }# end name.match species pre-selection
 
     #Aligns and then reverses back to correction orientation
     combo.align = runMafft(sequence.data = old.align,
@@ -310,23 +395,32 @@ integrateLegacy = function(alignment.directory = NULL,
                            mafft.path = mafft.path)
 
     #Checks for failed mafft run
-    if (length(combo.align) == 0){ return(NULL) }
+    if (length(combo.align) == 0){ next }
     #Aligns and then reverses back to correction orientation
     names(combo.align) = gsub(pattern = "^_R_", replacement = "", x = names(combo.align))
 
     # Duplication changes and such
     if (combine.same.sample == TRUE){
 
-      dup.names = names(combo.align)[duplicated(names(combo.align)) == TRUE]
+      # Build the key used for matching: exact name or species name (voucher stripped)
+      if (name.match == "species") {
+        match.keys = gsub("_[^_]+$", "", names(combo.align))
+      } else {
+        match.keys = names(combo.align)
+      }
 
-      if (length(dup.names) != 0){
-        nodup.align = combo.align[!names(combo.align) %in% dup.names]
+      dup.keys = unique(match.keys[duplicated(match.keys)])
+
+      if (length(dup.keys) != 0){
+        nodup.align = combo.align[!match.keys %in% dup.keys]
 
         #Goes through each duplicate
         save.seqs = Biostrings::DNAStringSet()
-        for (j in 1:length(dup.names)){
+        for (j in 1:length(dup.keys)){
 
-          dup.sample = combo.align[names(combo.align) %in% dup.names[j]]
+          dup.idx = which(match.keys == dup.keys[j])
+          dup.sample = combo.align[dup.idx]
+
           #Converts alignment to matrix of characters to be used
           new.align = strsplit(as.character(dup.sample), "")
           align.in = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
@@ -336,35 +430,21 @@ integrateLegacy = function(alignment.directory = NULL,
 
             temp.col = align.in[,k]
 
-            if (temp.col[1] == temp.col[2]){ save.char = temp.col[1] }
-            if (temp.col[1] != temp.col[2]){
+            if (length(unique(temp.col)) == 1){ save.char = temp.col[1] } else {
               temp.col = temp.col[temp.col != "-"]
               temp.col = temp.col[temp.col != "N"]
               temp.col = temp.col[temp.col != "?"]
 
               if (length(temp.col) == 0){ save.char = "-" }
-              if (length(temp.col) == 1){ save.char = temp.col }
-              if (length(temp.col) == 2){ save.char = temp.col[1] }
-
-              # temp.col = temp.col[temp.col != "Y"]
-              # temp.col = temp.col[temp.col != "B"]
-              # temp.col = temp.col[temp.col != "D"]
-              # temp.col = temp.col[temp.col != "H"]
-              # temp.col = temp.col[temp.col != "V"]
-              # temp.col = temp.col[temp.col != "K"]
-              # temp.col = temp.col[temp.col != "S"]
-              # temp.col = temp.col[temp.col != "W"]
-              # temp.col = temp.col[temp.col != "R"]
-              # temp.col = temp.col[temp.col != "M"]
-
-            }#end upper if
+              if (length(temp.col) >= 1){ save.char = temp.col[1] }
+            }#end else
 
             save.string = append(save.string, save.char)
 
           }#end k loop
 
           out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
-          names(out.consensus) = dup.names[j]
+          names(out.consensus) = dup.keys[j]
           save.seqs = append(save.seqs, out.consensus)
 
         }#end j
@@ -379,40 +459,65 @@ integrateLegacy = function(alignment.directory = NULL,
     aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
     #readies for saving
-    writePhylip(alignment = aligned.set,
-                file=paste0(output.directory, "-only/", save.name, ".phy"),
-                interleave = F,
-                strict = F)
+    PhyloProcessR::writePhylip(alignment = aligned.set,
+                               file = paste0(output.directory, "-only/", save.name, ".phy"),
+                               interleave = F,
+                               strict = F)
 
     print(paste0("Finished ", save.name, " legacy integration successfully!"))
     system(paste0("rm ", save.name, "*"))
+    rm(align, old.align, combo.align, aligned.set, con.seq, match.data)
+    gc()
 
 
   }#end loop
 
-  system(paste0("rm *nucl-blast_db*"))
+  system(paste0("rm target_nucl-blast_db*"))
+  if (include.mitochondrial == TRUE) {
+    system(paste0("rm mito_nucl-blast_db* mito_consensus_references.fa"))
+  }
 
   ####################################################################################
   if (include.all.together == TRUE){
-    ### Copies all files to new folder and then yeah
+    # Copy all original capture alignments first.
+    # When name.match = "species", rename sequences to collapsed species names
+    # so they are consistent with the integrated alignments.
+
+    # Helper: copy/rename a single alignment to the -all directory
+    copy.align.to.all = function(src.file, src.directory, src.fmt) {
+      out.name = paste0(output.directory, "-all/", gsub("\\..*$", "", src.file), ".phy")
+      if (name.match == "species") {
+        if (src.fmt == "phylip") {
+          cap.align = Biostrings::readDNAMultipleAlignment(
+            file = paste0(src.directory, "/", src.file), format = "phylip")
+          cap.align = Biostrings::DNAStringSet(cap.align)
+        } else {
+          cap.align = Biostrings::readDNAStringSet(paste0(src.directory, "/", src.file))
+        }
+        names(cap.align) = gsub("_[^_]+$", "", names(cap.align))
+        write.temp = strsplit(as.character(cap.align), "")
+        aligned.set = as.matrix(ape::as.DNAbin(write.temp))
+        PhyloProcessR::writePhylip(alignment = aligned.set, file = out.name,
+                                   interleave = F, strict = F)
+      } else {
+        system(paste0("cp ", src.directory, "/", src.file, " ", out.name))
+      }
+    }#end helper
+
+    # Copy nuclear capture alignments
     for (i in 1:length(align.files)){
-
-      system(paste0("cp ", alignment.directory, "/", align.files[i],
-                    " ", output.directory, "-all/", align.files[i]))
-
+      copy.align.to.all(align.files[i], alignment.directory, alignment.format)
     }#end i
 
-    #Delete old
-    delete.old = delete.old[duplicated(delete.old) != T]
-
-    if (is.null(delete.old) != TRUE){
-      del.string = paste0(output.directory, "-all/", delete.old, collapse = " ")
-      system(paste0("rm ", del.string))
+    # Copy mitochondrial capture alignments (if enabled)
+    if (include.mitochondrial == TRUE && length(mito.align.files) > 0) {
+      for (i in 1:length(mito.align.files)){
+        copy.align.to.all(mito.align.files[i], mito.alignment.directory, mito.alignment.format)
+      }#end i
     }
 
-    #Add new
+    # Overwrite with legacy-integrated versions where available (cp overwrites existing)
     new.files = list.files(paste0(output.directory, "-only"))
-
     for (i in 1:length(new.files)){
       system(paste0("cp ", output.directory, "-only/", new.files[i], " ",
                     output.directory, "-all/", new.files[i]))

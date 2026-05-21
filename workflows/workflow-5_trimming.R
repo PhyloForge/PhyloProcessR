@@ -169,10 +169,26 @@ if (concatenate.genes == TRUE) {
   )
 
   if (gather.unlinked == TRUE){
+    # When novel markers are available, combine with all-markers as the exon source
+    # so gatherUnlinked handles gene vs single-exon assignment for all loci together
+    if (include.novel.markers == TRUE &&
+        dir.exists("data-analysis/alignments/untrimmed_novel-markers")) {
+      combined.exon.dir = "data-analysis/alignments/untrimmed_all-plus-novel"
+      if (dir.exists(combined.exon.dir) && overwrite == TRUE) {
+        system(paste0("rm -r ", combined.exon.dir))
+      }
+      dir.create(combined.exon.dir, showWarnings = FALSE)
+      system(paste0("cp data-analysis/alignments/untrimmed_all-markers/* ", combined.exon.dir, "/"))
+      system(paste0("cp data-analysis/alignments/untrimmed_novel-markers/* ", combined.exon.dir, "/"))
+      exon.dir = combined.exon.dir
+    } else {
+      exon.dir = "data-analysis/alignments/untrimmed_all-markers"
+    }# end novel markers
+
     # Gathers the unlinked markers (genes and single exons / UCEs)
     gatherUnlinked(
       gene.alignment.directory = "data-analysis/alignments/untrimmed_genes",
-      exon.alignment.directory = "data-analysis/alignments/untrimmed_all-markers",
+      exon.alignment.directory = exon.dir,
       output.directory = "data-analysis/alignments/untrimmed_all-unlinked",
       feature.gene.names = feature.gene.names,
       overwrite = overwrite
@@ -209,9 +225,24 @@ if (concatenate.genes == TRUE) {
 ##################################################################################################
 
 if (concatenate.genes == FALSE) {
+  # When novel markers are available, combine with all-markers before trimming
+  if (include.novel.markers == TRUE &&
+      dir.exists("data-analysis/alignments/untrimmed_novel-markers")) {
+    combined.exon.dir = "data-analysis/alignments/untrimmed_all-plus-novel"
+    if (dir.exists(combined.exon.dir) && overwrite == TRUE) {
+      system(paste0("rm -r ", combined.exon.dir))
+    }
+    dir.create(combined.exon.dir, showWarnings = FALSE)
+    system(paste0("cp data-analysis/alignments/untrimmed_all-markers/* ", combined.exon.dir, "/"))
+    system(paste0("cp data-analysis/alignments/untrimmed_novel-markers/* ", combined.exon.dir, "/"))
+    trim.input.dir = combined.exon.dir
+  } else {
+    trim.input.dir = "data-analysis/alignments/untrimmed_all-markers"
+  }# end novel markers
+
   # Trims the unlinked
   superTrimmer(
-    alignment.dir = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.dir = trim.input.dir,
     alignment.format = "phylip",
     output.dir = "data-analysis/alignments/trimmed_all-markers",
     overwrite = overwrite,
