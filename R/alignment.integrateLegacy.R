@@ -155,9 +155,10 @@ integrateLegacy = function(alignment.directory = NULL,
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
-  #Overwrite
-  if (dir.exists(paste0(output.directory, "-only")) == TRUE ||
-      dir.exists(paste0(output.directory, "-all")) == TRUE) {
+  #Overwrite — check for non-empty directories only; empty dirs are left by interrupted runs
+  only.has.files = length(list.files(paste0(output.directory, "-only"))) > 0
+  all.has.files  = length(list.files(paste0(output.directory, "-all")))  > 0
+  if (only.has.files || all.has.files) {
     if (overwrite == TRUE){
       system(paste0("rm -r ", output.directory, "-only"))
       system(paste0("rm -r ", output.directory, "-all"))
@@ -165,8 +166,8 @@ integrateLegacy = function(alignment.directory = NULL,
       stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
     }
   }
-  dir.create(paste0(output.directory, "-only"))
-  if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all")) }
+  dir.create(paste0(output.directory, "-only"), showWarnings = FALSE)
+  if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all"), showWarnings = FALSE) }
 
   #Gathers alignments
   align.files = list.files(alignment.directory)

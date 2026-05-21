@@ -42,27 +42,31 @@ if (convert.nexus == TRUE) {
 ## Step 1: Integrate legacy alignments into sequence-capture alignments
 ##################################################################################################
 
-integrateLegacy(
-  alignment.directory = alignment.directory,
-  alignment.format = alignment.format,
-  output.directory = "data-analysis/alignments/untrimmed_legacy",
-  legacy.directory = legacy.directory,
-  legacy.format = legacy.format,
-  target.markers = target.file,
-  combine.same.sample = combine.same.sample,
-  name.match = name.match,
-  include.uncaptured.legacy = include.uncaptured.legacy,
-  include.all.together = include.all.together,
-  include.mitochondrial = include.mitochondrial,
-  mito.alignment.directory = mito.alignment.directory,
-  mito.alignment.format = mito.alignment.format,
-  threads = threads,
-  memory = memory,
-  overwrite = overwrite,
-  quiet = quiet,
-  mafft.path = mafft.path,
-  blast.path = blast.path
-)
+if (length(list.files("data-analysis/alignments/untrimmed_legacy-only")) == 0 || overwrite == TRUE) {
+  integrateLegacy(
+    alignment.directory = alignment.directory,
+    alignment.format = alignment.format,
+    output.directory = "data-analysis/alignments/untrimmed_legacy",
+    legacy.directory = legacy.directory,
+    legacy.format = legacy.format,
+    target.markers = target.file,
+    combine.same.sample = combine.same.sample,
+    name.match = name.match,
+    include.uncaptured.legacy = include.uncaptured.legacy,
+    include.all.together = include.all.together,
+    include.mitochondrial = include.mitochondrial,
+    mito.alignment.directory = mito.alignment.directory,
+    mito.alignment.format = mito.alignment.format,
+    threads = threads,
+    memory = memory,
+    overwrite = overwrite,
+    quiet = quiet,
+    mafft.path = mafft.path,
+    blast.path = blast.path
+  )
+} else {
+  print("Legacy integration output already exists and is non-empty, skipping: data-analysis/alignments/untrimmed_legacy-only")
+}
 
 # Select working directory for downstream steps:
 # -all contains the full dataset (capture + legacy); -only contains only the integrated files
