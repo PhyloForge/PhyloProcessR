@@ -136,6 +136,10 @@ convertNexusPartitions = function(nexus.file = NULL,
       gene.seqs = gene.seqs[miss.prop <= (max.missing.percent / 100)]
     }
 
+    # Replace '?' with 'n': '?' is valid NEXUS missing-data notation but is not a
+    # recognised IUPAC code and will cause Biostrings to error downstream.
+    gene.seqs = lapply(gene.seqs, function(seq) { seq[seq == "?"] = "n"; seq })
+
     # Skip if too few taxa
     if (length(gene.seqs) <= min.taxa.alignment) {
       if (quiet == FALSE) {
