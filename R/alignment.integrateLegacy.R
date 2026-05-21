@@ -225,6 +225,18 @@ integrateLegacy = function(alignment.directory = NULL,
   #add.taxa = Biostrings::readDNAStringSet(sample.markers)
   bait.loci = Biostrings::readDNAStringSet(target.markers)  # loads up fasta file
 
+  # Helper: return a sanitized copy of an alignment file if it contains '?' (a valid
+  # NEXUS/Sanger missing-data character that Biostrings does not accept).  '?' is
+  # replaced with 'N' in the file text before Biostrings reads it.  Returns the
+  # original path unchanged if no '?' are found (no temp file created).
+  sanitize.align.file = function(file.path) {
+    raw.lines = readLines(file.path, warn = FALSE)
+    if (!any(grepl("\\?", raw.lines))) { return(list(path = file.path, tmp = FALSE)) }
+    san.file = tempfile(fileext = ".tmp.phy")
+    writeLines(gsub("\\?", "N", raw.lines), san.file)
+    return(list(path = san.file, tmp = TRUE))
+  }
+
   for (i in 1:length(legacy.files)) {
 
     use.mito = FALSE
@@ -233,16 +245,18 @@ integrateLegacy = function(alignment.directory = NULL,
     #STEP 0: Load in legacy alignment
     ##############
     #Load in alignments
+    san = sanitize.align.file(paste0(legacy.directory, "/", legacy.files[i]))
     if (legacy.format == "phylip"){
-      align = Biostrings::readDNAMultipleAlignment(file = paste0(legacy.directory, "/", legacy.files[i]), format = "phylip")
+      align = Biostrings::readDNAMultipleAlignment(file = san$path, format = "phylip")
       align = Biostrings::DNAStringSet(align)
       save.name = gsub("\\..*$", "", legacy.files[i])
     }#end phylip
 
     if (legacy.format == "fasta"){
-      align = Biostrings::readDNAStringSet(paste0(legacy.directory, "/", legacy.files[i]) )
+      align = Biostrings::readDNAStringSet(san$path)
       save.name = gsub("\\..*$", "", legacy.files[i])
-    }#end phylip
+    }#end fasta
+    if (san$tmp) { file.remove(san$path) }
 
     ##############
     #STEP 1: Blast to targets
