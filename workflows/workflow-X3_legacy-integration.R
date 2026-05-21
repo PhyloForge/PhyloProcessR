@@ -18,15 +18,20 @@ setwd(working.directory)
 ##################################################################################################
 
 if (convert.nexus == TRUE) {
-  convertNexusPartitions(
-    nexus.file          = nexus.file,
-    output.directory    = nexus.output.directory,
-    output.format       = "phylip",
-    min.taxa.alignment  = min.taxa.alignment,
-    max.missing.percent = max.missing.percent,
-    overwrite           = overwrite,
-    quiet               = quiet
-  )
+  if (!dir.exists(nexus.output.directory) || overwrite == TRUE) {
+    convertNexusPartitions(
+      nexus.file          = nexus.file,
+      output.directory    = nexus.output.directory,
+      output.format       = "phylip",
+      min.taxa.alignment  = min.taxa.alignment,
+      max.missing.percent = max.missing.percent,
+      overwrite           = overwrite,
+      quiet               = quiet
+    )
+  } else {
+    print(paste0("Nexus output directory already exists, skipping conversion: ",
+                 nexus.output.directory))
+  }
   # Use the converted output as the legacy alignment source
   legacy.directory = nexus.output.directory
   legacy.format    = "phylip"
