@@ -183,6 +183,18 @@ integrateLegacy = function(alignment.directory = NULL,
   system(paste0(blast.path, "makeblastdb -in ", target.markers,
                 " -parse_seqids -dbtype nucl -out target_nucl-blast_db"), ignore.stdout = quiet)
 
+  # Helper: return a sanitized copy of an alignment file if it contains '?' (a valid
+  # NEXUS/Sanger missing-data character that Biostrings does not accept).  '?' is
+  # replaced with 'N' in the file text before Biostrings reads it.  Returns the
+  # original path unchanged if no '?' are found (no temp file created).
+  sanitize.align.file = function(file.path) {
+    raw.lines = readLines(file.path, warn = FALSE)
+    if (!any(grepl("\\?", raw.lines))) { return(list(path = file.path, tmp = FALSE)) }
+    san.file = tempfile(fileext = ".tmp.phy")
+    writeLines(gsub("\\?", "N", raw.lines), san.file)
+    return(list(path = san.file, tmp = TRUE))
+  }
+
   ##########################################################################
   # Build mitochondrial BLAST DB from consensus sequences of mito alignments
   ##########################################################################
@@ -197,13 +209,14 @@ integrateLegacy = function(alignment.directory = NULL,
     mito.cons.list = Biostrings::DNAStringSet()
     for (mf in mito.align.files) {
       mito.locus.name = gsub("\\..*$", "", mf)
+      mito.san = sanitize.align.file(paste0(mito.alignment.directory, "/", mf))
       if (mito.alignment.format == "phylip") {
-        mito.aln = Biostrings::readDNAMultipleAlignment(
-          file = paste0(mito.alignment.directory, "/", mf), format = "phylip")
+        mito.aln = Biostrings::readDNAMultipleAlignment(file = mito.san$path, format = "phylip")
         mito.aln = Biostrings::DNAStringSet(mito.aln)
       } else {
-        mito.aln = Biostrings::readDNAStringSet(paste0(mito.alignment.directory, "/", mf))
+        mito.aln = Biostrings::readDNAStringSet(mito.san$path)
       }
+      if (mito.san$tmp) { file.remove(mito.san$path) }
       mito.con = makeConsensus(alignment = mito.aln,
                                method = c("majority"),
                                warn.non.IUPAC = FALSE,
@@ -224,18 +237,6 @@ integrateLegacy = function(alignment.directory = NULL,
   ### Reads in the additional stuff
   #add.taxa = Biostrings::readDNAStringSet(sample.markers)
   bait.loci = Biostrings::readDNAStringSet(target.markers)  # loads up fasta file
-
-  # Helper: return a sanitized copy of an alignment file if it contains '?' (a valid
-  # NEXUS/Sanger missing-data character that Biostrings does not accept).  '?' is
-  # replaced with 'N' in the file text before Biostrings reads it.  Returns the
-  # original path unchanged if no '?' are found (no temp file created).
-  sanitize.align.file = function(file.path) {
-    raw.lines = readLines(file.path, warn = FALSE)
-    if (!any(grepl("\\?", raw.lines))) { return(list(path = file.path, tmp = FALSE)) }
-    san.file = tempfile(fileext = ".tmp.phy")
-    writeLines(gsub("\\?", "N", raw.lines), san.file)
-    return(list(path = san.file, tmp = TRUE))
-  }
 
   for (i in 1:length(legacy.files)) {
 
@@ -353,16 +354,18 @@ integrateLegacy = function(alignment.directory = NULL,
     src.format = if (use.mito == TRUE) mito.alignment.format    else alignment.format
 
     #Load in alignments
+    old.san = sanitize.align.file(paste0(src.dir, "/", found.align))
     if (src.format == "phylip"){
-      old.align = Biostrings::readDNAMultipleAlignment(file = paste0(src.dir, "/", found.align), format = "phylip")
+      old.align = Biostrings::readDNAMultipleAlignment(file = old.san$path, format = "phylip")
       old.align = Biostrings::DNAStringSet(old.align)
       found.name = gsub("\\..*$", "", found.align)
     }#end phylip
 
     if (src.format == "fasta"){
-      old.align = Biostrings::readDNAStringSet(paste0(src.dir, "/", found.align))
+      old.align = Biostrings::readDNAStringSet(old.san$path)
       found.name = gsub("\\..*$", "", found.align)
     }#end fasta
+    if (old.san$tmp) { file.remove(old.san$path) }
 
     # When matching by species, reduce the legacy alignment to one sequence per species
     # before passing to MAFFT to avoid creating multiple duplicates that complicate merging.
