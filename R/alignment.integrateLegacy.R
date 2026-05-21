@@ -166,8 +166,8 @@ integrateLegacy = function(alignment.directory = NULL,
       stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
     }
   }
-  dir.create(paste0(output.directory, "-only"), showWarnings = FALSE)
-  if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all"), showWarnings = FALSE) }
+  dir.create(paste0(output.directory, "-only"), recursive = TRUE, showWarnings = FALSE)
+  if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all"), recursive = TRUE, showWarnings = FALSE) }
 
   #Gathers alignments
   align.files = list.files(alignment.directory)
