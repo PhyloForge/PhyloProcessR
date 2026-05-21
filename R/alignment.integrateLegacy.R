@@ -230,7 +230,7 @@ integrateLegacy = function(alignment.directory = NULL,
 
     Biostrings::writeXStringSet(mito.cons.list, filepath = "mito_consensus_references.fa")
     system(paste0(blast.path, "makeblastdb -in mito_consensus_references.fa",
-                  " -parse_seqids -dbtype nucl -out mito_nucl-blast_db"), ignore.stdout = quiet)
+                  " -dbtype nucl -out mito_nucl-blast_db"), ignore.stdout = quiet)
     rm(mito.cons.list)
     print(paste0("Mitochondrial BLAST database built from ", length(mito.align.files), " loci."))
   }#end include.mitochondrial
@@ -286,18 +286,18 @@ integrateLegacy = function(alignment.directory = NULL,
 
     #Loads in match data
     match.data = data.table::fread(paste0(save.name, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
-    data.table::setnames(match.data, headers)
+    if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
     if (nrow(match.data) == 0) {
       # Nuclear BLAST failed — try mitochondrial DB if enabled
       if (include.mitochondrial == TRUE) {
-        system(paste0(blast.path, "blastn -task dc-megablast -db mito_nucl-blast_db -evalue 0.001",
+        system(paste0(blast.path, "blastn -task blastn -db mito_nucl-blast_db -evalue 0.001",
                       " -query ", save.name, "_consensus.fa -out ", save.name, "_mito-blast-match.txt",
                       " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
                       " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
 
         match.data = data.table::fread(paste0(save.name, "_mito-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
-        data.table::setnames(match.data, headers)
+        if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
         if (nrow(match.data) == 0) {
           print(paste0(save.name, " had no BLAST matches to nuclear or mitochondrial markers. Skipping."))
