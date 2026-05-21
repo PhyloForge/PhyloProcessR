@@ -218,11 +218,11 @@ integrateLegacy = function(alignment.directory = NULL,
         mito.aln = Biostrings::readDNAStringSet(mito.san$path)
       }
       if (mito.san$tmp) { file.remove(mito.san$path) }
-      mito.con = makeConsensus(alignment = mito.aln,
-                               method = c("majority"),
-                               warn.non.IUPAC = FALSE,
-                               remove.gaps = TRUE,
-                               type = c("DNA"))
+      # Use most complete sequence as the locus representative in the BLAST DB
+      mito.informative = sapply(as.character(mito.aln), function(s) {
+        nchar(gsub("[-?nN]", "", s, ignore.case = TRUE))
+      })
+      mito.con = mito.aln[which.max(mito.informative)]
       names(mito.con) = mito.locus.name
       mito.cons.list = append(mito.cons.list, mito.con)
       rm(mito.aln, mito.con)
@@ -268,19 +268,21 @@ integrateLegacy = function(alignment.directory = NULL,
     #STEP 1: Blast to targets
     ##############
 
-    #Create consensus to blast
-    con.seq = makeConsensus(alignment = align,
-                  method = c("majority"),
-                  warn.non.IUPAC = FALSE,
-                  remove.gaps = TRUE,
-                  type = c("DNA"))
+    # Use the most informative (fewest gaps/Ns) single sequence as the BLAST query.
+    # A majority-rule consensus of a diverse alignment (e.g. 300 taxa across a whole
+    # family) is typically so degenerate it fails to BLAST reliably. A real sequence
+    # from the alignment is a much better representative.
+    n.informative = sapply(as.character(align), function(s) {
+      nchar(gsub("[-?nN]", "", s, ignore.case = TRUE))
+    })
+    blast.seq = align[which.max(n.informative)]
 
-    #Writes consensus to temp file for BLAST
-    Biostrings::writeXStringSet(con.seq, filepath = paste0(save.name, "_consensus.fa"))
+    #Writes representative sequence to temp file for BLAST
+    Biostrings::writeXStringSet(blast.seq, filepath = paste0(save.name, "_query.fa"))
 
-    #Matches samples to loci
-    system(paste0(blast.path, "blastn -task dc-megablast -db target_nucl-blast_db -evalue 0.001",
-                  " -query ", save.name, "_consensus.fa -out ", save.name, "_target-blast-match.txt",
+    #Matches samples to loci — use standard blastn for full sensitivity across divergent taxa
+    system(paste0(blast.path, "blastn -task blastn -db target_nucl-blast_db -evalue 0.001",
+                  " -query ", save.name, "_query.fa -out ", save.name, "_target-blast-match.txt",
                   " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
                   " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
 
@@ -292,7 +294,7 @@ integrateLegacy = function(alignment.directory = NULL,
       # Nuclear BLAST failed — try mitochondrial DB if enabled
       if (include.mitochondrial == TRUE) {
         system(paste0(blast.path, "blastn -task blastn -db mito_nucl-blast_db -evalue 0.001",
-                      " -query ", save.name, "_consensus.fa -out ", save.name, "_mito-blast-match.txt",
+                      " -query ", save.name, "_query.fa -out ", save.name, "_mito-blast-match.txt",
                       " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
                       " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
 
@@ -490,7 +492,7 @@ integrateLegacy = function(alignment.directory = NULL,
     legacy.loci = c(legacy.loci, save.name)
     if (use.mito == TRUE) { mito.loci = c(mito.loci, save.name) }
     system(paste0("rm ", save.name, "*"))
-    rm(align, old.align, combo.align, aligned.set, con.seq, match.data)
+    rm(align, old.align, combo.align, aligned.set, blast.seq, match.data)
     gc()
 
 
