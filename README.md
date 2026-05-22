@@ -106,3 +106,29 @@ And installation should be done! All the functions for PhyloProcessR should be r
 [Tutorial 4: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
 
 
+# Legacy data integration (`integrateLegacy`)
+
+Workflow X3 integrates Sanger or GenBank legacy sequence alignments into an existing sequence-capture dataset. For each legacy alignment, a representative sequence is BLASTed against the target marker file to identify the matching capture locus. The legacy sequences are then added to that locus alignment via MAFFT, and optionally merged with any capture sequences from the same sample.
+
+### Mitochondrial loci
+
+Mitochondrial loci (e.g. 12S, 16S, ND1) are not present in a typical nuclear probe set and will return no BLAST hit against the nuclear target file. Set `include.mitochondrial = TRUE` and point `mito.alignment.directory` at a set of existing mitochondrial capture alignments (e.g. produced by [MitoTrawlR](https://github.com/chutter/MitoTrawlR)) to enable a second BLAST step that matches these loci automatically.
+
+### Controlling how sample names are matched: `name.match`
+
+Because legacy (Sanger/GenBank) datasets often use different voucher IDs or formatting conventions from sequence-capture datasets, three matching strategies are available:
+
+| Mode | Merge identical names? | Merge same species? | Handles `-` vs `_` differences? | Pre-selects one legacy seq per species? | Unmatched legacy sequences |
+|---|:---:|:---:|:---:|:---:|---|
+| `"exact"` | ✅ | ❌ | ❌ | ❌ | Added as separate rows |
+| `"fuzzy"` | ✅ | ❌ | ✅ | ❌ | Added as separate rows |
+| `"species"` | ✅ | ✅ | ❌ | ✅ | Excluded (one per species only) |
+
+**`"exact"`** — sequence names must be identical for merging. All legacy sequences are added to the alignment; those with a name that exactly matches a capture sequence are merged column-by-column (preferring non-gap characters at each site).
+
+**`"fuzzy"`** — before comparing names, hyphens, dots, and spaces are converted to underscores and names are lowercased. This handles common formatting differences such as `MZUTI-2436` vs `MZUTI_2436`. Sequences whose normalised names match are merged and the merged sequence retains the original capture alignment name. All unmatched legacy sequences are added as separate rows with their original names preserved.
+
+**`"species"`** — strips the trailing specimen/voucher ID (the last underscore-delimited field) before matching, so that e.g. `Centrolene_bacatum_MZUTI-2436` (capture) and `Centrolene_bacatum_KU12345` (legacy) are treated as the same taxon and merged into a single sequence named `Centrolene_bacatum`. When the legacy alignment contains multiple sequences for the same species, one representative is pre-selected: the sequence whose full name matches a capture specimen is preferred; otherwise the sequence with the most informative (non-gap, non-missing) bases is used.
+
+> **Which mode to use?** If your capture and legacy datasets use the same voucher IDs, use `"exact"`. If they share species but with different voucher formatting, use `"fuzzy"`. If you want to collapse everything to species-level regardless of voucher ID, use `"species"`.
+

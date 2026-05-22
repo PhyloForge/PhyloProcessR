@@ -51,9 +51,12 @@ quiet = TRUE
 # TRUE = merge sequences from the same sample found in both datasets into one sequence
 combine.same.sample = TRUE
 # How to match sample names between legacy and capture alignments:
-#   "exact"   = names must be identical
-#   "species" = strip trailing specimen/voucher ID before matching;
-#               merged sequence is named to species only (e.g. Genus_species)
+#   "exact"   = names must be identical to merge; all others added as separate rows
+#   "species" = strip trailing voucher ID before matching; merged sequence named
+#               to species only (e.g. Genus_species); one legacy seq pre-selected per species
+#   "fuzzy"   = normalise hyphens/underscores/case before matching (handles formatting
+#               differences like MZUTI-2436 vs MZUTI_2436); matched pairs merged and
+#               retain the capture name; unmatched legacy sequences added as separate rows
 name.match = "exact"
 # TRUE = also include legacy loci absent from the capture dataset as stand-alone alignments
 include.uncaptured.legacy = FALSE

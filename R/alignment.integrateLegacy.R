@@ -34,16 +34,26 @@
 #' non-gap and non-N characters at each site. Default TRUE.
 #'
 #' @param name.match character. Controls how samples are matched between the legacy and
-#' capture alignments when \code{combine.same.sample} is TRUE. \code{"exact"} requires
-#' identical sequence names. \code{"species"} strips the trailing specimen/voucher ID
-#' (the last underscore-delimited field) before matching, so that e.g.
-#' \code{Centrolene_bacatum_MZUTI-2436} and \code{Centrolene_bacatum_KU12345} are treated
-#' as the same taxon and merged into a single sequence named \code{Centrolene_bacatum}.
-#' When \code{"species"} is used and the legacy alignment contains multiple sequences for
-#' the same species, one representative is selected before alignment: the sequence whose
-#' full name (including voucher ID) matches a sequence already in the capture alignment is
-#' preferred; if no match exists, the sequence with the most informative (non-gap,
-#' non-missing) bases is used. Default \code{"exact"}.
+#' capture alignments when \code{combine.same.sample} is TRUE. Three options:
+#' \describe{
+#'   \item{\code{"exact"}}{Names must be identical to merge. All legacy sequences are added
+#'   to the alignment; those whose names exactly match a capture sequence are merged
+#'   column-by-column.}
+#'   \item{\code{"species"}}{Strips the trailing specimen/voucher ID (the last
+#'   underscore-delimited field) before matching, so that e.g.
+#'   \code{Centrolene_bacatum_MZUTI-2436} and \code{Centrolene_bacatum_KU12345} are
+#'   treated as the same taxon and merged into a single sequence named
+#'   \code{Centrolene_bacatum}. When multiple legacy sequences exist for the same species,
+#'   one is pre-selected: the sequence whose full name matches a capture specimen is
+#'   preferred; otherwise the most informative (fewest gaps/Ns) sequence is used.}
+#'   \item{\code{"fuzzy"}}{Normalises names by converting hyphens, dots, and spaces to
+#'   underscores and lowercasing before matching, then merges sequences whose normalised
+#'   names are identical. This handles common formatting differences such as
+#'   \code{MZUTI-2436} vs \code{MZUTI_2436}. All legacy sequences that do not match any
+#'   capture sequence are added to the alignment as separate rows with their original
+#'   names preserved. The merged sequence retains the original capture alignment name.}
+#' }
+#' Default \code{"exact"}.
 #'
 #' @param include.uncaptured.legacy logical. If TRUE, legacy alignments for loci not found
 #' in the capture dataset are saved to the output as stand-alone alignments. Default FALSE.
@@ -95,7 +105,7 @@ integrateLegacy = function(alignment.directory = NULL,
                            legacy.format = "phylip",
                            target.markers = NULL,
                            combine.same.sample = TRUE,
-                           name.match = c("exact", "species"),
+                           name.match = c("exact", "species", "fuzzy"),
                            include.uncaptured.legacy = FALSE,
                            include.all.together = FALSE,
                            include.mitochondrial = FALSE,
@@ -426,9 +436,13 @@ integrateLegacy = function(alignment.directory = NULL,
     # Duplication changes and such
     if (combine.same.sample == TRUE){
 
-      # Build the key used for matching: exact name or species name (voucher stripped)
+      # Build the key used for matching
       if (name.match == "species") {
+        # Strip trailing voucher field → e.g. Centrolene_bacatum
         match.keys = gsub("_[^_]+$", "", names(combo.align))
+      } else if (name.match == "fuzzy") {
+        # Normalise separators and case: hyphens/dots/spaces → underscore, lowercase
+        match.keys = tolower(gsub("[-. ]", "_", names(combo.align)))
       } else {
         match.keys = names(combo.align)
       }
@@ -468,7 +482,12 @@ integrateLegacy = function(alignment.directory = NULL,
           }#end k loop
 
           out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
-          names(out.consensus) = dup.keys[j]
+          # "species": use collapsed species name; others: keep original capture name
+          if (name.match == "species") {
+            names(out.consensus) = dup.keys[j]
+          } else {
+            names(out.consensus) = names(combo.align)[dup.idx[1]]
+          }
           save.seqs = append(save.seqs, out.consensus)
 
         }#end j
