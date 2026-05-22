@@ -162,18 +162,18 @@ annotateTargets = function(assembly.directory = NULL,
 
     #Sets up working directories for each species
     sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
-    species.dir = paste0(output.directory, "/", sample)
 
-    #Creates species directory if none exists
-    if (file.exists(species.dir) == F){ dir.create(species.dir) }
-
-    #Checks if this has been done already
+    #Checks if this has been done already (before creating any directory)
     if (overwrite == FALSE){
       if (file.exists(paste0(output.directory, "/", sample, ".fa")) == TRUE){
         print(paste0(sample, " already finished, skipping. Set overwrite = TRUE to redo."))
         return(NULL)
       }
     }#end
+
+    # Temporary working directory kept inside logs so output.directory stays clean
+    species.dir = paste0("logs/sample_logs/", sample)
+    if (!dir.exists(species.dir)){ dir.create(species.dir, recursive = TRUE, showWarnings = FALSE) }
 
     #########################################################################
     # Part A: reduce redundancy
@@ -216,8 +216,13 @@ annotateTargets = function(assembly.directory = NULL,
       " -num_threads 1"
     ))
 
-    #Need to load in transcriptome for each species and take the matching transcripts to the database
-    system(paste0("rm ", species.dir, "/*nucl-blast_db*"))
+    # Remove BLAST database index files and large intermediate contig files
+    system(paste0("rm -f ", species.dir, "/*nucl-blast_db*"))
+    system(paste0("rm -f ",
+      species.dir, "/", sample, "_red.fa ",
+      species.dir, "/", sample, "_red.fa.clstr ",
+      species.dir, "/", sample, "_rename.fa"
+    ))
 
     #Loads in match data
     match.data = data.table::fread(paste0(species.dir, "/", sample, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
@@ -507,8 +512,6 @@ annotateTargets = function(assembly.directory = NULL,
       filt.log = filt.log[, c("Sample", "qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
       write.csv(filt.log, file = paste0("logs/sample_logs/", sample, "_blast-matches.csv"), row.names = FALSE)
 
-      system(paste0("rm -r ", species.dir))
-
       print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
       return(data.frame(
@@ -563,8 +566,6 @@ annotateTargets = function(assembly.directory = NULL,
     filt.log = filt.log[, c("Sample", "qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
     write.csv(filt.log, file = paste0("logs/sample_logs/", sample, "_blast-matches.csv"), row.names = FALSE)
 
-    system(paste0("rm -r ", species.dir))
-
     print(paste0(sample, " target matching complete. ", length(final.loci), " targets found!"))
 
     return(data.frame(
@@ -615,9 +616,6 @@ annotateTargets = function(assembly.directory = NULL,
   save.contigs = Biostrings::DNAStringSet()
   for (i in 1:length(samples)){
 
-    #Sets up working directories for each species
-    species.dir = paste0(output.directory, "/", samples[i])
-
     #Gets length of contigs
     og.contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", samples[i], ".fa"))
     out.fa = paste0(output.directory, "/", samples[i], ".fa")
@@ -647,7 +645,7 @@ annotateTargets = function(assembly.directory = NULL,
              paste0(alignment.contig.name, "_to-align.fa"), nbchar = 1000000, as.string = T)
 
   #Saves combined, final dataset
-  write.csv(save.data, file = paste0(alignment.contig.name, "_sample-assessment.csv"), row.names = F)
+  write.csv(save.data, file = "logs/annotation_sample_summary.csv", row.names = F)
 
 } #End function
 

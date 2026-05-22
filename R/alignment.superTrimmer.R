@@ -335,12 +335,14 @@ superTrimmer = function(alignment.dir = NULL,
 
   if (is.null(out.data) ==  TRUE){ return("No alignments were trimmed.") }
 
-  #Print and save summary table — stored alongside the output directory
-  write.csv(out.data, file = paste0(output.dir, "_trimming_summary.csv"), row.names = F)
+  #Print and save summary table and log to the logs/ directory
+  dir.create("logs", recursive = TRUE, showWarnings = FALSE)
+  log.base = paste0("logs/", basename(output.dir))
+  write.csv(out.data, file = paste0(log.base, "_trimming_summary.csv"), row.names = F)
 
   #Saves log file of things
-  if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
-  fileConn = file(paste0(output.dir, ".log"), open = "w")
+  if (file.exists(paste0(log.base, ".log")) == TRUE){ system(paste0("rm ", log.base, ".log")) }
+  fileConn = file(paste0(log.base, ".log"), open = "w")
   writeLines(paste0("Log file for ", output.dir), fileConn)
   writeLines(paste0("\n"), fileConn)
   writeLines(paste0("Overall trimming summary:"), fileConn)

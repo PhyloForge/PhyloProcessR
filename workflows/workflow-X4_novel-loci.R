@@ -96,28 +96,23 @@ if (heterozygote.filter == TRUE) {
 
 ##################################################################################################
 ##################################################################################################
-## Step 4: Annotate contigs against novel target sequences
+## Step 4: Collect novel contigs
 ##
-## BLASTs per-sample assembled contigs against the novel_targets.fa generated in step 1,
-## selects the best contig per locus per sample, and writes the to-align FASTA.
+## Because assembleSharedRegions names every contig by its source genomic region
+## (e.g. chr3_450000_450800_contig_1), the locus assignment is already encoded in
+## the name. collectNovelContigs groups by region, picks the longest contig per
+## (region, sample) pair, and writes the to-align FASTA — no BLAST or probe set
+## involved.
 ##################################################################################################
 
 if (annotate.targets == TRUE) {
-  annotateTargets(
-    assembly.directory   = input.contigs,
-    target.file          = "data-analysis/novel-loci-discovery/novel_targets.fa",
-    alignment.contig.name = paste0("data-analysis/", dataset.name),
-    output.directory     = "data-analysis/contigs/11_genome-annotated",
-    min.match.percent    = min.match.percent,
-    min.match.length     = min.match.length,
-    min.match.coverage   = min.match.coverage,
-    retain.paralogs      = retain.paralogs,
-    threads              = threads,
-    memory               = memory,
-    overwrite            = overwrite,
-    quiet                = quiet,
-    blast.path           = blast.path,
-    cdhit.path           = cdhit.path
+  collectNovelContigs(
+    contig.directory  = input.contigs,
+    output.name       = paste0("data-analysis/", dataset.name),
+    min.contig.length = min.match.length,
+    min.taxa          = min.taxa.alignment,
+    threads           = threads,
+    overwrite         = overwrite
   )
 }# end annotate.targets
 

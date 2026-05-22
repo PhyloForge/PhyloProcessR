@@ -7,7 +7,8 @@
 ##   3. Retaining genomic regions covered by reads in >= min.samples samples
 ##   4. Assembling per-sample contigs from those regions (SPAdes)
 ##   5. Filtering for heterozygosity
-##   6. Annotating and aligning across samples (as in workflow 4)
+##   6. Collecting novel contigs (no BLAST — region encoded in contig name)
+##   7. Aligning across samples
 ##
 ## Prerequisites:
 ##   - Completed workflow 1 (read preprocessing)
@@ -29,7 +30,7 @@ processed.reads = "processed-reads"
 mapping.reads = "decontaminated-reads"
 # Full path to reference genome FASTA
 genome.file = "/PATH/TO/reference_genome.fa"
-# Name for the novel loci dataset (used for intermediate files in annotateTargets)
+# Name for the novel loci dataset (used as prefix for intermediate and output files)
 dataset.name = "Novel-Loci"
 
 # Global settings
@@ -72,18 +73,14 @@ heterozygote.filter.threshold = 0.05
 # Contigs shorter than this (bp) are exempt from the proportion filter
 heterozygote.min.length = 100
 
-# Annotation settings
+# Contig collection settings
 #########################
-# TRUE = run annotateTargets to match contigs to novel target sequences
+# TRUE = run collectNovelContigs to consolidate assembled contigs before alignment.
+#        No BLAST or probe set is used — the genomic region is already encoded in
+#        each contig name by assembleSharedRegions.
 annotate.targets = TRUE
-# Minimum BLAST match percent identity
-min.match.percent = 60
-# Minimum BLAST match length in bp
-min.match.length = 40
-# Minimum contig overlap with the target (percent)
-min.match.coverage = 50
-# TRUE = retain rather than remove potential paralogs
-retain.paralogs = FALSE
+# Minimum contig length in bp to retain
+min.match.length = 200
 
 # Alignment settings
 #########################
@@ -101,12 +98,10 @@ removal.threshold = 0.35
 ### *** When installing via conda, only the path to the conda bin directory is needed.
 ### Otherwise modify any of these to the path where the program is found.
 conda.env = "PATH/TO/miniconda3/envs/PhyloProcessR/bin"
-hisat2.path    = conda.env
-samtools.path  = conda.env
-bedtools.path  = conda.env
-spades.path    = conda.env
-blast.path     = conda.env
-cdhit.path     = conda.env
-mafft.path     = conda.env
+hisat2.path   = conda.env
+samtools.path = conda.env
+bedtools.path = conda.env
+spades.path   = conda.env
+mafft.path    = conda.env
 
 #### End configuration
