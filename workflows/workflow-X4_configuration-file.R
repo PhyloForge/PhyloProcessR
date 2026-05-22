@@ -24,10 +24,11 @@ working.directory = "/PATH/TO/PROJECT/DIRECTORY"
 # Existing sequence-capture alignments (output of workflow 4 alignment step)
 alignment.directory = "data-analysis/alignments/untrimmed_all-markers"
 alignment.format = "phylip"
-# Processed reads directory (contains per-sample subdirectories)
-processed.reads = "processed-reads"
-# Read subdirectory to use for mapping — must be paired (non-merged)
-mapping.reads = "decontaminated-reads"
+# Directory containing per-sample read subdirectories.
+# Point directly to the folder whose immediate children are one directory per sample
+# (e.g. the decontaminated-reads subdirectory of your processed reads).
+# R1 / R2 files must be present directly inside each sample subdirectory.
+read.directory = "processed-reads/decontaminated-reads"
 # Full path to reference genome FASTA
 genome.file = "/PATH/TO/reference_genome.fa"
 # Name for the novel loci dataset (used as prefix for intermediate and output files)

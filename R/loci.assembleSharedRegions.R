@@ -91,15 +91,7 @@ assembleSharedRegions = function(discover.directory = NULL,
     print(paste0("sample-bams/ directory not found in: ", discover.directory)); return(NULL)
   }
 
-  #Overwrite
-  if (dir.exists(output.directory) == TRUE) {
-    if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-    } else {
-      stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
-    }
-  }
-  dir.create(output.directory)
+  dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
 
   #Load region BED file
   regions = data.table::fread(region.bed, sep = "\t", header = FALSE)
@@ -128,6 +120,12 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       samp = sample.names[s]
       bam = bam.files[s]
+
+      if (overwrite == FALSE && file.exists(paste0(output.directory, "/", samp, ".fa"))) {
+        print(paste0(samp, ": contig FASTA already exists — skipping."))
+        return(NULL)
+      }
+
       samp.dir = paste0(output.directory, "/", samp)
       dir.create(samp.dir, showWarnings = FALSE)
 

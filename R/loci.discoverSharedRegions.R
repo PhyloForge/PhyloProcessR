@@ -16,11 +16,10 @@
 #' @param alignment.format format of the alignment files. Accepted: "phylip" or "fasta".
 #' Default "phylip".
 #'
-#' @param read.directory path to the processed reads directory. Each sample should have its
-#' own subdirectory within this directory.
-#'
-#' @param mapping.reads name of the read subdirectory within each sample folder to use for
-#' mapping. Should be paired (non-merged) reads. Default \code{"decontaminated-reads"}.
+#' @param read.directory path to the directory containing per-sample read subdirectories.
+#' Point this directly at the folder whose immediate children are one directory per sample
+#' (e.g. \code{"processed-reads/decontaminated-reads"}). R1/R2 files are expected directly
+#' inside each sample subdirectory.
 #'
 #' @param genome.file full path to the reference genome FASTA file.
 #'
@@ -69,7 +68,6 @@
 discoverSharedRegions = function(alignment.directory = NULL,
                                  alignment.format = "phylip",
                                  read.directory = NULL,
-                                 mapping.reads = "decontaminated-reads",
                                  genome.file = NULL,
                                  output.directory = NULL,
                                  min.samples = 4,
@@ -87,8 +85,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
   # alignment.directory = "data-analysis/alignments/untrimmed_all-markers"
   # alignment.format = "phylip"
-  # read.directory = "processed-reads"
-  # mapping.reads = "decontaminated-reads"
+  # read.directory = "processed-reads/decontaminated-reads"
   # genome.file = "/PATH/TO/genome.fa"
   # output.directory = "data-analysis/novel-loci-discovery"
   # min.samples = 4
@@ -135,58 +132,60 @@ discoverSharedRegions = function(alignment.directory = NULL,
     print(paste0("genome.file not found: ", genome.file)); return(NULL)
   }
 
-  #Overwrite
-  if (dir.exists(output.directory) == TRUE) {
-    if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-    } else {
-      stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
-    }
-  }
-  dir.create(output.directory)
-  dir.create(paste0(output.directory, "/sample-bams"))
-  dir.create(paste0(output.directory, "/covered-beds"))
+  # Create output directories; never wipe on resume — overwrite controls per-step redo
+  dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
+  dir.create(paste0(output.directory, "/sample-bams"), showWarnings = FALSE)
+  dir.create(paste0(output.directory, "/covered-beds"), showWarnings = FALSE)
 
   #Gather alignments
   align.files = list.files(alignment.directory)
   if (length(align.files) == 0) { print("No alignment files found in alignment.directory."); return(NULL) }
 
+  known.ref    = paste0(output.directory, "/known_loci_consensus.fa")
+  known.index  = paste0(output.directory, "/known_loci_index")
+  genome.index = paste0(output.directory, "/genome_index")
+
   ##################################################################################################
   ## Step 1: Build known-loci consensus reference
   ##################################################################################################
-  print(paste0("Building known-loci consensus from ", length(align.files), " alignments..."))
+  if (overwrite == TRUE || !file.exists(known.ref)) {
+    print(paste0("Building known-loci consensus from ", length(align.files), " alignments..."))
 
-  all.consensus = Biostrings::DNAStringSet()
-  for (i in 1:length(align.files)) {
-    locus.name = gsub("\\..*$", "", align.files[i])
-    if (alignment.format == "phylip") {
-      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
-        file = paste0(alignment.directory, "/", align.files[i]), format = "phylip"))
-    } else {
-      align = Biostrings::readDNAStringSet(paste0(alignment.directory, "/", align.files[i]))
+    all.consensus = Biostrings::DNAStringSet()
+    for (i in 1:length(align.files)) {
+      locus.name = gsub("\\..*$", "", align.files[i])
+      if (alignment.format == "phylip") {
+        align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
+          file = paste0(alignment.directory, "/", align.files[i]), format = "phylip"))
+      } else {
+        align = Biostrings::readDNAStringSet(paste0(alignment.directory, "/", align.files[i]))
+      }
+      con = makeConsensus(alignment = align, method = "majority",
+                          warn.non.IUPAC = FALSE, remove.gaps = TRUE, type = "DNA")
+      names(con) = locus.name
+      all.consensus = append(all.consensus, con)
+      rm(align, con)
     }
-    con = makeConsensus(alignment = align, method = "majority",
-                        warn.non.IUPAC = FALSE, remove.gaps = TRUE, type = "DNA")
-    names(con) = locus.name
-    all.consensus = append(all.consensus, con)
-    rm(align, con)
-  }
 
-  known.ref = paste0(output.directory, "/known_loci_consensus.fa")
-  Biostrings::writeXStringSet(all.consensus, filepath = known.ref)
-  rm(all.consensus)
-  gc()
+    Biostrings::writeXStringSet(all.consensus, filepath = known.ref)
+    rm(all.consensus)
+    gc()
+  } else {
+    print("Known-loci consensus already exists — skipping Step 1.")
+  }
 
   ##################################################################################################
   ## Step 2: Index references
   ##################################################################################################
-  print("Indexing known-loci consensus and genome...")
-  known.index = paste0(output.directory, "/known_loci_index")
-  genome.index = paste0(output.directory, "/genome_index")
-  system(paste0(hisat2.path, "hisat2-build ", known.ref, " ", known.index),
-         ignore.stdout = quiet, ignore.stderr = quiet)
-  system(paste0(hisat2.path, "hisat2-build ", genome.file, " ", genome.index),
-         ignore.stdout = quiet, ignore.stderr = quiet)
+  if (overwrite == TRUE || !file.exists(paste0(known.index, ".1.ht2"))) {
+    print("Indexing known-loci consensus and genome...")
+    system(paste0(hisat2.path, "hisat2-build ", known.ref, " ", known.index),
+           ignore.stdout = quiet, ignore.stderr = quiet)
+    system(paste0(hisat2.path, "hisat2-build ", genome.file, " ", genome.index),
+           ignore.stdout = quiet, ignore.stderr = quiet)
+  } else {
+    print("HISAT2 indices already exist — skipping Step 2.")
+  }
 
   ##################################################################################################
   ## Step 3: Per-sample — map to known loci, extract unmapped, map to genome
@@ -200,7 +199,13 @@ discoverSharedRegions = function(alignment.directory = NULL,
   parallel::mclapply(sample.names, function(samp) {
     tryCatch({
 
-      read.dir = paste0(read.directory, "/", samp, "/", mapping.reads)
+      bed.out = paste0(output.directory, "/covered-beds/", samp, "_covered.bed")
+      if (overwrite == FALSE && file.exists(bed.out)) {
+        print(paste0(samp, ": coverage BED already exists — skipping."))
+        return(NULL)
+      }
+
+      read.dir = paste0(read.directory, "/", samp)
       if (!dir.exists(read.dir)) {
         print(paste0(samp, ": read directory not found. Skipping."))
         return(NULL)
@@ -261,7 +266,6 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
       # Get covered regions: depth >= min.coverage, merge nearby intervals
       bam.out = paste0(output.directory, "/sample-bams/", samp, ".bam")
-      bed.out = paste0(output.directory, "/covered-beds/", samp, "_covered.bed")
       system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg | ",
                     "awk '$4 >= ", min.coverage, "' | ",
                     bedtools.path, "bedtools merge -d ", max.merge.distance,
@@ -280,56 +284,65 @@ discoverSharedRegions = function(alignment.directory = NULL,
   ##################################################################################################
   ## Step 4: Find genomic regions shared across >= min.samples samples
   ##################################################################################################
-  print("Finding shared genomic regions...")
-  bed.files = list.files(paste0(output.directory, "/covered-beds"),
-                         pattern = "_covered.bed$", full.names = TRUE)
-  if (length(bed.files) == 0) {
-    print("No per-sample coverage BEDs produced. Check mapping settings and read paths.")
-    return(NULL)
-  }
-
-  # Concatenate per-sample BEDs with sample name in column 4 for count_distinct
-  all.bed = paste0(output.directory, "/all_covered.bed")
-  if (file.exists(all.bed)) { system(paste0("rm ", all.bed)) }
-  for (i in 1:length(bed.files)) {
-    samp.label = gsub("_covered\\.bed$", "", basename(bed.files[i]))
-    system(paste0("awk -v s='", samp.label, "' 'BEGIN{OFS=\"\\t\"}{print $1,$2,$3,s}' ",
-                  bed.files[i], " >> ", all.bed))
-  }
-
-  # Sort, merge, count distinct samples per region, filter
   shared.bed = paste0(output.directory, "/novel_regions.bed")
-  system(paste0("sort -k1,1 -k2,2n ", all.bed, " | ",
-                bedtools.path, "bedtools merge -i stdin -c 4 -o count_distinct | ",
-                "awk -v ms=", min.samples, " -v ml=", min.region.length,
-                " '$4 >= ms && ($3-$2) >= ml' > ", shared.bed))
-  system(paste0("rm ", all.bed))
+  novel.fa   = paste0(output.directory, "/novel_targets.fa")
 
-  n.regions = as.integer(trimws(system(paste0("wc -l < ", shared.bed), intern = TRUE)))
-  if (is.na(n.regions) || n.regions == 0) {
-    print("No shared novel regions found. Try lowering min.samples, min.coverage, or min.region.length.")
-    return(NULL)
+  if (overwrite == TRUE || !file.exists(shared.bed)) {
+    print("Finding shared genomic regions...")
+    bed.files = list.files(paste0(output.directory, "/covered-beds"),
+                           pattern = "_covered.bed$", full.names = TRUE)
+    if (length(bed.files) == 0) {
+      print("No per-sample coverage BEDs produced. Check mapping settings and read paths.")
+      return(NULL)
+    }
+
+    # Concatenate per-sample BEDs with sample name in column 4 for count_distinct
+    all.bed = paste0(output.directory, "/all_covered.bed")
+    if (file.exists(all.bed)) { system(paste0("rm ", all.bed)) }
+    for (i in 1:length(bed.files)) {
+      samp.label = gsub("_covered\\.bed$", "", basename(bed.files[i]))
+      system(paste0("awk -v s='", samp.label, "' 'BEGIN{OFS=\"\\t\"}{print $1,$2,$3,s}' ",
+                    bed.files[i], " >> ", all.bed))
+    }
+
+    # Sort, merge, count distinct samples per region, filter
+    system(paste0("sort -k1,1 -k2,2n ", all.bed, " | ",
+                  bedtools.path, "bedtools merge -i stdin -c 4 -o count_distinct | ",
+                  "awk -v ms=", min.samples, " -v ml=", min.region.length,
+                  " '$4 >= ms && ($3-$2) >= ml' > ", shared.bed))
+    system(paste0("rm ", all.bed))
+
+    n.regions = as.integer(trimws(system(paste0("wc -l < ", shared.bed), intern = TRUE)))
+    if (is.na(n.regions) || n.regions == 0) {
+      print("No shared novel regions found. Try lowering min.samples, min.coverage, or min.region.length.")
+      return(NULL)
+    }
+    print(paste0("Found ", n.regions, " novel regions covered in >= ", min.samples, " samples."))
+  } else {
+    print("Shared regions BED already exists — skipping Step 4.")
   }
-  print(paste0("Found ", n.regions, " novel regions covered in >= ", min.samples, " samples."))
 
   ##################################################################################################
   ## Step 5: Extract genome sequences at shared regions → novel_targets.fa
   ##################################################################################################
-  raw.fa = paste0(output.directory, "/novel_targets_raw.fa")
-  system(paste0(bedtools.path, "bedtools getfasta -fi ", genome.file,
-                " -bed ", shared.bed, " -fo ", raw.fa),
-         ignore.stdout = quiet, ignore.stderr = quiet)
+  if (overwrite == TRUE || !file.exists(novel.fa)) {
+    raw.fa = paste0(output.directory, "/novel_targets_raw.fa")
+    system(paste0(bedtools.path, "bedtools getfasta -fi ", genome.file,
+                  " -bed ", shared.bed, " -fo ", raw.fa),
+           ignore.stdout = quiet, ignore.stderr = quiet)
 
-  raw.seqs = Biostrings::readDNAStringSet(raw.fa)
-  # Rename chr:start-end → chr_start_end (phylip-safe, no colons)
-  names(raw.seqs) = gsub("-", "_", gsub(":", "_", names(raw.seqs)))
-  novel.fa = paste0(output.directory, "/novel_targets.fa")
-  Biostrings::writeXStringSet(raw.seqs, filepath = novel.fa)
-  system(paste0("rm ", raw.fa))
-  rm(raw.seqs)
+    raw.seqs = Biostrings::readDNAStringSet(raw.fa)
+    # Rename chr:start-end → chr_start_end (phylip-safe, no colons)
+    names(raw.seqs) = gsub("-", "_", gsub(":", "_", names(raw.seqs)))
+    Biostrings::writeXStringSet(raw.seqs, filepath = novel.fa)
+    system(paste0("rm ", raw.fa))
+    rm(raw.seqs)
 
-  # Cleanup indices and temp consensus
-  system(paste0("rm -f ", known.ref, " ", known.index, ".* ", genome.index, ".*"))
+    # Cleanup indices and temp consensus (only after first successful run)
+    system(paste0("rm -f ", known.ref, " ", known.index, ".* ", genome.index, ".*"))
+  } else {
+    print("Novel targets FASTA already exists — skipping Step 5.")
+  }
 
   print(paste0("Novel target sequences written to: ", novel.fa))
   print(paste0("Per-sample BAM files written to:   ", output.directory, "/sample-bams/"))

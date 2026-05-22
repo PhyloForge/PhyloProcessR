@@ -24,8 +24,7 @@ setwd(working.directory)
 discoverSharedRegions(
   alignment.directory = alignment.directory,
   alignment.format    = alignment.format,
-  read.directory      = processed.reads,
-  mapping.reads       = mapping.reads,
+  read.directory      = read.directory,
   genome.file         = genome.file,
   output.directory    = "data-analysis/novel-loci-discovery",
   min.samples         = min.samples,
