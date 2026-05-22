@@ -212,8 +212,8 @@ discoverSharedRegions = function(alignment.directory = NULL,
       }
 
       read.files = list.files(read.dir, full.names = TRUE)
-      r1 = read.files[grep("_R1", read.files)]
-      r2 = read.files[grep("_R2", read.files)]
+      r1 = read.files[grep("_R1_|_R1\\.f|-R1\\.f|READ1|_1\\.f|-1\\.f", read.files)]
+      r2 = read.files[grep("_R2_|_R2\\.f|-R2\\.f|READ2|_2\\.f|-2\\.f", read.files)]
       if (length(r1) == 0 || length(r2) == 0) {
         print(paste0(samp, ": R1/R2 reads not found. Skipping."))
         return(NULL)
