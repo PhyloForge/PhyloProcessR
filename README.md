@@ -93,15 +93,36 @@ And installation should be done! All the functions for PhyloProcessR should be r
 < coming soon a function to test if they can found >
 
 
-# PhyloProcessR pipeline tutorials 
+# PhyloProcessR workflows
 
-[Installation: detailed installation instructions and trouble-shooting ](https://github.com/chutter/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
+PhyloProcessR is organised into a series of workflows, each covering a distinct stage of the pipeline. Configuration files and R scripts for each workflow are provided in the `workflows/` directory.
+
+| Workflow | Script | Description |
+|---|---|---|
+| **Workflow 1** | `workflow-1_preprocess.R` | Organise raw reads, remove adaptors, decontaminate, normalise, and merge paired-end reads |
+| **Workflow 2** | `workflow-2_assembly.R` | De novo assembly with SPAdes; match contigs to target markers |
+| **Workflow 3** | `workflow-3_variantCalling.R` | SNP calling and IUPAC/haplotype consensus generation |
+| **Workflow 4** | `workflow-4_alignment.R` | Align target markers across samples |
+| **Workflow 5** | `workflow-5_trimming.R` | Trim alignments, concatenate genes, build unlinked dataset; optionally include novel markers from Workflow X4 |
+| **Workflow X3** | `workflow-X3_legacy-integration.R` | Integrate Sanger/GenBank legacy alignments into the capture dataset; supports NEXUS conversion and mitochondrial loci |
+| **Workflow X4** | `workflow-X4_novel-loci.R` | Discover novel shared genomic regions from unmapped reads, assemble and align them as new loci |
+
+Each workflow has a matching configuration file (e.g. `workflow-1_configuration-file.R`) where all parameters are set. See the tutorials below for detailed guidance.
+
+
+# PhyloProcessR pipeline tutorials
+
+[Installation: detailed installation instructions and trouble-shooting](https://github.com/chutter/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
 [Tutorial 1: PhyloProcessR configuration](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
+— Setting up working directories, renaming files, and configuring the decontamination database.
 
 [Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
+— Step-by-step guide to running Workflows 1–5, X3, and X4, including expected outputs and directory structures.
 
 [Tutorial 3: Assess sequence capture results](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Assess-results)
+— Summarise capture success across samples and loci.
 
-[Tutorial 4: Combine legacy genbank data with sequence capture](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
+[Tutorial 4: Legacy data integration (Workflow X3)](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
+— Full guide to integrating Sanger or GenBank alignments into a sequence-capture dataset, including NEXUS conversion, name-matching strategies, mitochondrial loci, and gene concatenation.
 
