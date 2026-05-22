@@ -132,6 +132,13 @@ discoverSharedRegions = function(alignment.directory = NULL,
     print(paste0("genome.file not found: ", genome.file)); return(NULL)
   }
 
+  # Verify external tools are reachable before doing any heavy work
+  bt.check = Sys.which(paste0(bedtools.path, "bedtools"))
+  if (bt.check == "") {
+    stop("bedtools not found at '", bedtools.path, "bedtools'. ",
+         "Run 'which bedtools' on the cluster and update bedtools.path in your config.")
+  }
+
   # Create output directories; never wipe on resume — overwrite controls per-step redo
   dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
   dir.create(paste0(output.directory, "/sample-bams"), showWarnings = FALSE)

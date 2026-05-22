@@ -95,10 +95,13 @@ assembleSharedRegions = function(discover.directory = NULL,
 
   #Load region BED file
   regions = data.table::fread(region.bed, sep = "\t", header = FALSE)
+  if (is.null(regions) || nrow(regions) == 0) {
+    print("novel_regions.bed is empty or missing — no shared regions were found.")
+    print("Check that bedtools ran successfully in discoverSharedRegions (correct bedtools.path?)")
+    return(NULL)
+  }
   data.table::setnames(regions, c("chrom", "start", "end", "sample_count"))
   region.names = paste0(regions$chrom, "_", regions$start, "_", regions$end)
-
-  if (nrow(regions) == 0) { print("No regions found in novel_regions.bed."); return(NULL) }
   print(paste0("Assembling contigs for ", nrow(regions), " regions..."))
 
   #Get per-sample BAM files
