@@ -46,10 +46,11 @@
 #'   \code{Centrolene_bacatum}. When multiple legacy sequences exist for the same species,
 #'   one is pre-selected: the sequence whose full name matches a capture specimen is
 #'   preferred; otherwise the most informative (fewest gaps/Ns) sequence is used.}
-#'   \item{\code{"fuzzy"}}{Normalises names by converting hyphens, dots, and spaces to
-#'   underscores and lowercasing before matching, then merges sequences whose normalised
-#'   names are identical. This handles common formatting differences such as
-#'   \code{MZUTI-2436} vs \code{MZUTI_2436}. All legacy sequences that do not match any
+#'   \item{\code{"fuzzy"}}{Strips all separator characters (hyphens, underscores, dots,
+#'   and spaces) and lowercases names before matching, then merges sequences whose
+#'   normalised names are identical. This handles common formatting differences including
+#'   \code{MZUTI-2436} vs \code{MZUTI_2436} vs \code{MZUTI2436} (separator present,
+#'   different separator, or no separator). All legacy sequences that do not match any
 #'   capture sequence are added to the alignment as separate rows with their original
 #'   names preserved. The merged sequence retains the original capture alignment name.}
 #' }
@@ -441,8 +442,9 @@ integrateLegacy = function(alignment.directory = NULL,
         # Strip trailing voucher field → e.g. Centrolene_bacatum
         match.keys = gsub("_[^_]+$", "", names(combo.align))
       } else if (name.match == "fuzzy") {
-        # Normalise separators and case: hyphens/dots/spaces → underscore, lowercase
-        match.keys = tolower(gsub("[-. ]", "_", names(combo.align)))
+        # Strip all separators (hyphens, underscores, dots, spaces) and lowercase,
+        # so MZUTI-2436, MZUTI_2436, and MZUTI2436 all match each other
+        match.keys = tolower(gsub("[-_. ]", "", names(combo.align)))
       } else {
         match.keys = names(combo.align)
       }

@@ -54,9 +54,10 @@ combine.same.sample = TRUE
 #   "exact"   = names must be identical to merge; all others added as separate rows
 #   "species" = strip trailing voucher ID before matching; merged sequence named
 #               to species only (e.g. Genus_species); one legacy seq pre-selected per species
-#   "fuzzy"   = normalise hyphens/underscores/case before matching (handles formatting
-#               differences like MZUTI-2436 vs MZUTI_2436); matched pairs merged and
-#               retain the capture name; unmatched legacy sequences added as separate rows
+#   "fuzzy"   = strip all separators (hyphens, underscores, dots, spaces) and lowercase
+#               before matching, so MZUTI-2436, MZUTI_2436, and MZUTI2436 all match;
+#               matched pairs merged retaining the capture name; unmatched legacy
+#               sequences added as separate rows
 name.match = "exact"
 # TRUE = also include legacy loci absent from the capture dataset as stand-alone alignments
 include.uncaptured.legacy = FALSE
