@@ -325,6 +325,7 @@ superTrimmer = function(alignment.dir = NULL,
 
     rm(align, non.align)
     gc()
+    temp.data  # explicit return value for do.call(rbind, ...)
 
   }, error = function(e) {
     warning(align.files[i], " failed: ", conditionMessage(e))
