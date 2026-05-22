@@ -335,8 +335,8 @@ superTrimmer = function(alignment.dir = NULL,
 
   if (is.null(out.data) ==  TRUE){ return("No alignments were trimmed.") }
 
-  #Print and save summary table
-  write.csv(out.data, file = "alignment-trimming_summary.csv", row.names = F)
+  #Print and save summary table — stored alongside the output directory
+  write.csv(out.data, file = paste0(output.dir, "_trimming_summary.csv"), row.names = F)
 
   #Saves log file of things
   if (file.exists(paste0(output.dir, ".log")) == TRUE){ system(paste0("rm ", output.dir, ".log")) }
