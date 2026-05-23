@@ -207,7 +207,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
     tryCatch({
 
       bed.out = paste0(output.directory, "/covered-beds/", samp, "_covered.bed")
-      if (overwrite == FALSE && file.exists(bed.out)) {
+      if (overwrite == FALSE && file.exists(bed.out) && file.size(bed.out) > 0) {
         print(paste0(samp, ": coverage BED already exists — skipping."))
         return(NULL)
       }
@@ -273,14 +273,21 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
       # Get covered regions: depth >= min.coverage, merge nearby intervals
       bam.out = paste0(output.directory, "/sample-bams/", samp, ".bam")
-      system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg | ",
-                    "awk '$4 >= ", min.coverage, "' | ",
-                    bedtools.path, "bedtools merge -d ", max.merge.distance,
-                    " > ", bed.out),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      n.mapped = as.integer(trimws(
+        system(paste0(samtools.path, "samtools view -c -F 4 ", bam.out), intern = TRUE)))
+      if (is.na(n.mapped) || n.mapped == 0) {
+        print(paste0(samp, ": no reads mapped to genome — covered BED will be empty."))
+        file.create(bed.out)   # create empty marker so skip logic works correctly
+      } else {
+        system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg | ",
+                      "awk '$4 >= ", min.coverage, "' | ",
+                      bedtools.path, "bedtools merge -d ", max.merge.distance,
+                      " > ", bed.out),
+               ignore.stdout = quiet, ignore.stderr = quiet)
+      }
 
       system(paste0("rm -r ", tmp))
-      print(paste0("Finished mapping ", samp))
+      print(paste0("Finished mapping ", samp, " (", n.mapped, " genome-mapped reads)"))
 
     }, error = function(e) {
       print(paste0("Error processing ", samp, ": ", e$message))
@@ -306,10 +313,21 @@ discoverSharedRegions = function(alignment.directory = NULL,
     # Concatenate per-sample BEDs with sample name in column 4 for count_distinct
     all.bed = paste0(output.directory, "/all_covered.bed")
     if (file.exists(all.bed)) { system(paste0("rm ", all.bed)) }
-    for (i in 1:length(bed.files)) {
-      samp.label = gsub("_covered\\.bed$", "", basename(bed.files[i]))
+    non.empty.beds = bed.files[file.size(bed.files) > 0]
+    print(paste0(length(non.empty.beds), " of ", length(bed.files),
+                 " samples had covered genomic regions."))
+
+    if (length(non.empty.beds) == 0) {
+      print("All per-sample coverage BEDs are empty — no reads mapped to novel genomic regions.")
+      print("Possible causes: reads fully explained by known loci; MAPQ threshold too strict;")
+      print("or genome/read mismatch. Try lowering min.coverage or min.mapping.quality.")
+      return(NULL)
+    }
+
+    for (i in 1:length(non.empty.beds)) {
+      samp.label = gsub("_covered\\.bed$", "", basename(non.empty.beds[i]))
       system(paste0("awk -v s='", samp.label, "' 'BEGIN{OFS=\"\\t\"}{print $1,$2,$3,s}' ",
-                    bed.files[i], " >> ", all.bed))
+                    non.empty.beds[i], " >> ", all.bed))
     }
 
     # Sort, merge, count distinct samples per region, filter
@@ -321,7 +339,8 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
     n.regions = as.integer(trimws(system(paste0("wc -l < ", shared.bed), intern = TRUE)))
     if (is.na(n.regions) || n.regions == 0) {
-      print("No shared novel regions found. Try lowering min.samples, min.coverage, or min.region.length.")
+      print(paste0("No shared novel regions found in >= ", min.samples, " samples."))
+      print("Try lowering min.samples, min.coverage, or min.region.length.")
       return(NULL)
     }
     print(paste0("Found ", n.regions, " novel regions covered in >= ", min.samples, " samples."))
