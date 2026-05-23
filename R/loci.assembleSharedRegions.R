@@ -135,6 +135,24 @@ assembleSharedRegions = function(discover.directory = NULL,
       samp.dir = paste0(discover.directory, "/", samp)
       dir.create(samp.dir, showWarnings = FALSE)
 
+      # Pre-filter: extract ALL reads overlapping any novel region in a single BAM pass.
+      # This avoids making 26k+ individual samtools calls on the full genome BAM.
+      # Subsequent per-region extraction works on this small filtered BAM instead.
+      novel.bam = paste0(samp.dir, "/novel_reads.bam")
+      ret0 = system(paste0(samtools.path, "samtools view -b -L ", region.bed,
+                           " -o ", novel.bam, " ", bam),
+                    ignore.stdout = quiet, ignore.stderr = quiet)
+      if (ret0 != 0 || !file.exists(novel.bam) || file.size(novel.bam) == 0) {
+        print(paste0(samp, ": failed to extract novel-region reads. Skipping."))
+        return(NULL)
+      }
+      system(paste0(samtools.path, "samtools index ", novel.bam),
+             ignore.stdout = quiet, ignore.stderr = quiet)
+
+      n.novel.reads = as.integer(trimws(
+        system(paste0(samtools.path, "samtools view -c ", novel.bam), intern = TRUE)))
+      print(paste0(samp, ": ", n.novel.reads, " reads mapped to novel regions — starting per-region assembly."))
+
       all.contigs = Biostrings::DNAStringSet()
 
       for (r in 1:nrow(regions)) {
@@ -146,9 +164,10 @@ assembleSharedRegions = function(discover.directory = NULL,
         tmp.fq  = paste0(samp.dir, "/tmp_", reg.name, ".fastq")
         spades.dir = paste0(samp.dir, "/spades_", reg.name)
 
-        # Extract reads mapping to this region (-o before input avoids stdout ambiguity)
+        # Extract reads for this region from the pre-filtered novel BAM (much faster
+        # than scanning the full genome BAM 26k times)
         ret = system(paste0(samtools.path, "samtools view -b -o ", tmp.bam,
-                            " ", bam, " ", region.str),
+                            " ", novel.bam, " ", region.str),
                      ignore.stdout = quiet, ignore.stderr = quiet)
 
         if (ret != 0 || !file.exists(tmp.bam)) { next }
@@ -185,6 +204,9 @@ assembleSharedRegions = function(discover.directory = NULL,
         system(paste0("rm -rf ", spades.dir, " ", tmp.bam, " ", tmp.fq))
 
       }#end region loop
+
+      # Clean up the pre-filtered novel BAM now that all regions are processed
+      system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
 
       # Write per-sample contig FASTA
       if (length(all.contigs) > 0) {
