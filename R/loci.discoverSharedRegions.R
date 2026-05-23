@@ -275,19 +275,36 @@ discoverSharedRegions = function(alignment.directory = NULL,
       bam.out = paste0(output.directory, "/sample-bams/", samp, ".bam")
       n.mapped = as.integer(trimws(
         system(paste0(samtools.path, "samtools view -c -F 4 ", bam.out), intern = TRUE)))
+
       if (is.na(n.mapped) || n.mapped == 0) {
         print(paste0(samp, ": no reads mapped to genome — covered BED will be empty."))
-        file.create(bed.out)   # create empty marker so skip logic works correctly
+        file.create(bed.out)
       } else {
-        system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg | ",
-                      "awk '$4 >= ", min.coverage, "' | ",
-                      bedtools.path, "bedtools merge -d ", max.merge.distance,
-                      " > ", bed.out),
-               ignore.stdout = quiet, ignore.stderr = quiet)
+        # Step 1: generate bedGraph (always show stderr so errors are visible)
+        bg.tmp = paste0(tmp, "/coverage.bg")
+        system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg > ", bg.tmp))
+
+        bg.size = if (file.exists(bg.tmp)) file.size(bg.tmp) else 0L
+        if (bg.size == 0) {
+          print(paste0(samp, ": bedtools genomecov produced no output (BAM may lack index or header)."))
+          file.create(bed.out)
+        } else {
+          # Step 2: filter by min.coverage, merge nearby intervals
+          system(paste0("awk '$4 >= ", min.coverage, "' ", bg.tmp, " | ",
+                        bedtools.path, "bedtools merge -d ", max.merge.distance,
+                        " > ", bed.out))
+          n.regions = as.integer(trimws(
+            system(paste0("wc -l < ", bed.out), intern = TRUE)))
+          print(paste0(samp, ": ", n.regions, " covered regions (>= ", min.coverage,
+                       "x) from ", n.mapped, " genome-mapped reads."))
+        }
+        system(paste0("rm -f ", bg.tmp))
       }
 
       system(paste0("rm -r ", tmp))
-      print(paste0("Finished mapping ", samp, " (", n.mapped, " genome-mapped reads)"))
+      if (is.na(n.mapped) || n.mapped == 0) {
+        print(paste0("Finished mapping ", samp, " (0 genome-mapped reads)"))
+      }
 
     }, error = function(e) {
       print(paste0("Error processing ", samp, ": ", e$message))
