@@ -45,7 +45,7 @@ convertNexusPartitions = function(nexus.file = NULL,
                                    quiet = FALSE) {
 
   # nexus.file = "/Users/chutter/Downloads/Glassfrog_matrix_2026.nex"
-  # output.directory = "data-analysis/legacy-alignments"
+  # output.directory = "data-analysis/legacy-integration/legacy-alignments"
   # output.format = "phylip"
   # min.taxa.alignment = 4
   # max.missing.percent = 100

@@ -25,7 +25,7 @@ convert.nexus = FALSE
 nexus.file = NULL
 # Directory to write the per-locus phylip files produced by the conversion.
 # When convert.nexus = TRUE this is used automatically as legacy.directory.
-nexus.output.directory = "data-analysis/legacy-alignments"
+nexus.output.directory = "data-analysis/legacy-integration/legacy-alignments"
 # Maximum percent of missing/gap characters allowed per sample per locus.
 # Samples exceeding this are dropped from that locus. Default 100 = keep all.
 max.missing.percent = 100

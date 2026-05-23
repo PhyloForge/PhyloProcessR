@@ -437,65 +437,93 @@ integrateLegacy = function(alignment.directory = NULL,
     # Duplication changes and such
     if (combine.same.sample == TRUE){
 
-      # Build the key used for matching
+      # Identify which sequences in combo.align came from the capture vs legacy source.
+      # After MAFFT strips the _R_ prefix from reversed sequences the names should match
+      # the originals.  Anything not found in old.align is treated as legacy.
+      cap.src.names = names(old.align)
+      is.cap.seq    = names(combo.align) %in% cap.src.names
+
+      # Build normalised keys for matching
       if (name.match == "species") {
-        # Strip trailing voucher field → e.g. Centrolene_bacatum
-        match.keys = gsub("_[^_]+$", "", names(combo.align))
+        key.fn = function(x) gsub("_[^_]+$", "", x)
       } else if (name.match == "fuzzy") {
         # Strip all separators (hyphens, underscores, dots, spaces) and lowercase,
-        # so MZUTI-2436, MZUTI_2436, and MZUTI2436 all match each other
-        match.keys = tolower(gsub("[-_. ]", "", names(combo.align)))
+        # so MZUTI-2436, MZUTI_2436, and MZUTI2436 all normalise to the same key
+        key.fn = function(x) tolower(gsub("[-_. ]", "", x))
       } else {
-        match.keys = names(combo.align)
+        key.fn = identity
       }
 
-      dup.keys = unique(match.keys[duplicated(match.keys)])
+      combo.keys = key.fn(names(combo.align))
+      cap.keys   = key.fn(cap.src.names)
+      leg.keys   = key.fn(names(align))
 
-      if (length(dup.keys) != 0){
-        nodup.align = combo.align[!match.keys %in% dup.keys]
+      # Only merge keys that appear in BOTH the capture and legacy source sets.
+      # This prevents within-dataset duplicates (e.g. two legacy specimens of the
+      # same species) from being silently collapsed into one merged sequence.
+      dup.keys = intersect(unique(cap.keys), unique(leg.keys))
 
-        #Goes through each duplicate
+      if (length(dup.keys) > 0){
+        # Start nodup.align with all sequences whose key is not in any cross-match.
+        # Unmatched capture-only AND unmatched legacy-only sequences both go here.
+        nodup.align = combo.align[!combo.keys %in% dup.keys]
+
         save.seqs = Biostrings::DNAStringSet()
-        for (j in 1:length(dup.keys)){
+        for (j in seq_along(dup.keys)){
+          dk = dup.keys[j]
 
-          dup.idx = which(match.keys == dup.keys[j])
-          dup.sample = combo.align[dup.idx]
+          # Separate capture and legacy sequences with this key in combo.align
+          cap.idx = which(combo.keys == dk &  is.cap.seq)
+          leg.idx = which(combo.keys == dk & !is.cap.seq)
 
-          #Converts alignment to matrix of characters to be used
-          new.align = strsplit(as.character(dup.sample), "")
-          align.in = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = T)
+          # Guard: if MAFFT slightly modified a name so we can't find one side, pass through
+          if (length(cap.idx) == 0 || length(leg.idx) == 0) {
+            nodup.align = append(nodup.align, combo.align[c(cap.idx, leg.idx)])
+            next
+          }
 
-          save.string = as.character()
-          for (k in 1:ncol(align.in)){
+          # If multiple legacy sequences share this key, keep all but the most informative
+          # as separate rows so they are not silently dropped from the output
+          if (length(leg.idx) > 1) {
+            n.inf = sapply(as.character(combo.align[leg.idx]), function(s)
+              nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+            best.l  = leg.idx[which.max(n.inf)]
+            extras  = leg.idx[leg.idx != best.l]
+            nodup.align = append(nodup.align, combo.align[extras])
+            leg.idx = best.l
+          }
 
-            temp.col = align.in[,k]
+          # Similarly, keep extra capture sequences as-is if more than one match
+          if (length(cap.idx) > 1) {
+            nodup.align = append(nodup.align, combo.align[cap.idx[-1]])
+            cap.idx = cap.idx[1]
+          }
 
-            if (length(unique(temp.col)) == 1){ save.char = temp.col[1] } else {
-              temp.col = temp.col[temp.col != "-"]
-              temp.col = temp.col[temp.col != "N"]
-              temp.col = temp.col[temp.col != "?"]
+          # Merge the one capture + one best-matching legacy sequence column-by-column
+          dup.sample = combo.align[c(cap.idx, leg.idx)]
+          new.align  = strsplit(as.character(dup.sample), "")
+          align.in   = matrix(unlist(new.align), ncol = length(new.align[[1]]), byrow = TRUE)
 
-              if (length(temp.col) == 0){ save.char = "-" }
-              if (length(temp.col) >= 1){ save.char = temp.col[1] }
-            }#end else
-
-            save.string = append(save.string, save.char)
-
+          save.string = character(ncol(align.in))
+          for (k in seq_len(ncol(align.in))){
+            temp.col = align.in[, k]
+            if (length(unique(temp.col)) == 1){
+              save.string[k] = temp.col[1]
+            } else {
+              temp.col = temp.col[!temp.col %in% c("-", "N", "?")]
+              save.string[k] = if (length(temp.col) == 0) "-" else temp.col[1]
+            }
           }#end k loop
 
           out.consensus = Biostrings::DNAStringSet(paste0(save.string, collapse = ""))
-          # "species": use collapsed species name; others: keep original capture name
-          if (name.match == "species") {
-            names(out.consensus) = dup.keys[j]
-          } else {
-            names(out.consensus) = names(combo.align)[dup.idx[1]]
-          }
+          # "species" mode: use the collapsed species key; other modes: keep capture name
+          names(out.consensus) = if (name.match == "species") dk else names(combo.align)[cap.idx]
           save.seqs = append(save.seqs, out.consensus)
 
         }#end j
 
         combo.align = append(save.seqs, nodup.align)
-      }#end if to do the thing
+      }#end if dup.keys > 0
 
     }#end combine.same.sample if
 
