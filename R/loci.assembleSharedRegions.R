@@ -36,7 +36,9 @@
 #' (system PATH).
 #'
 #' @return Writes one FASTA file per sample to \code{output.directory}, where each contig
-#' is named \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}). No value is
+#' is named \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}). Intermediate
+#' per-sample working directories (temp BAMs, FASTQs, SPAdes output) are written under
+#' \code{discover.directory} and cleaned up after each sample completes. No value is
 #' returned to R.
 #'
 #' @export
@@ -129,7 +131,8 @@ assembleSharedRegions = function(discover.directory = NULL,
         return(NULL)
       }
 
-      samp.dir = paste0(output.directory, "/", samp)
+      # Intermediate work dir goes inside discover.directory to keep output.directory clean
+      samp.dir = paste0(discover.directory, "/", samp)
       dir.create(samp.dir, showWarnings = FALSE)
 
       all.contigs = Biostrings::DNAStringSet()
@@ -137,17 +140,18 @@ assembleSharedRegions = function(discover.directory = NULL,
       for (r in 1:nrow(regions)) {
 
         reg.name = region.names[r]
-        region.str = paste0(regions$chrom[r], ":", regions$start[r], "-", regions$end[r])
+        # BED is 0-based half-open; samtools view uses 1-based closed — add 1 to start
+        region.str = paste0(regions$chrom[r], ":", regions$start[r] + 1L, "-", regions$end[r])
         tmp.bam = paste0(samp.dir, "/tmp_", reg.name, ".bam")
         tmp.fq  = paste0(samp.dir, "/tmp_", reg.name, ".fastq")
         spades.dir = paste0(samp.dir, "/spades_", reg.name)
 
-        # Extract reads mapping to this region
-        system(paste0(samtools.path, "samtools view -b ", bam,
-                      " ", region.str, " -o ", tmp.bam),
-               ignore.stdout = quiet, ignore.stderr = quiet)
+        # Extract reads mapping to this region (-o before input avoids stdout ambiguity)
+        ret = system(paste0(samtools.path, "samtools view -b -o ", tmp.bam,
+                            " ", bam, " ", region.str),
+                     ignore.stdout = quiet, ignore.stderr = quiet)
 
-        if (!file.exists(tmp.bam)) { next }
+        if (ret != 0 || !file.exists(tmp.bam)) { next }
 
         n.reads = as.integer(trimws(
           system(paste0(samtools.path, "samtools view -c ", tmp.bam), intern = TRUE)))
@@ -156,8 +160,8 @@ assembleSharedRegions = function(discover.directory = NULL,
           next
         }
 
-        # Convert to FASTQ (single-end; mates outside region are not co-extracted)
-        system(paste0(samtools.path, "samtools fastq ", tmp.bam, " > ", tmp.fq),
+        # Convert to FASTQ using -o flag (avoids shell redirect / ignore.stdout conflict)
+        system(paste0(samtools.path, "samtools fastq -o ", tmp.fq, " ", tmp.bam),
                ignore.stdout = quiet, ignore.stderr = quiet)
 
         # SPAdes assembly
