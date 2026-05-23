@@ -155,7 +155,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
   ##################################################################################################
   ## Step 1: Build known-loci consensus reference
   ##################################################################################################
-  if (overwrite == TRUE || !file.exists(known.ref)) {
+  if (overwrite == TRUE || !file.exists(known.ref) || file.size(known.ref) == 0) {
     print(paste0("Building known-loci consensus from ", length(align.files), " alignments..."))
 
     all.consensus = Biostrings::DNAStringSet()
@@ -184,7 +184,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
   ##################################################################################################
   ## Step 2: Index references
   ##################################################################################################
-  if (overwrite == TRUE || !file.exists(paste0(known.index, ".1.ht2"))) {
+  if (overwrite == TRUE || !file.exists(paste0(known.index, ".1.ht2")) || file.size(paste0(known.index, ".1.ht2")) == 0) {
     print("Indexing known-loci consensus and genome...")
     system(paste0(hisat2.path, "hisat2-build ", known.ref, " ", known.index),
            ignore.stdout = quiet, ignore.stderr = quiet)
@@ -294,7 +294,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
   shared.bed = paste0(output.directory, "/novel_regions.bed")
   novel.fa   = paste0(output.directory, "/novel_targets.fa")
 
-  if (overwrite == TRUE || !file.exists(shared.bed)) {
+  if (overwrite == TRUE || !file.exists(shared.bed) || file.size(shared.bed) == 0) {
     print("Finding shared genomic regions...")
     bed.files = list.files(paste0(output.directory, "/covered-beds"),
                            pattern = "_covered.bed$", full.names = TRUE)
@@ -332,7 +332,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
   ##################################################################################################
   ## Step 5: Extract genome sequences at shared regions → novel_targets.fa
   ##################################################################################################
-  if (overwrite == TRUE || !file.exists(novel.fa)) {
+  if (overwrite == TRUE || !file.exists(novel.fa) || file.size(novel.fa) == 0) {
     raw.fa = paste0(output.directory, "/novel_targets_raw.fa")
     system(paste0(bedtools.path, "bedtools getfasta -fi ", genome.file,
                   " -bed ", shared.bed, " -fo ", raw.fa),
