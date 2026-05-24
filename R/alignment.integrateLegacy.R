@@ -532,14 +532,19 @@ integrateLegacy = function(alignment.directory = NULL,
     aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
     #readies for saving
+    # Use found.name (the capture locus name) so the file in -only/ correctly
+    # overwrites the matching capture alignment when copied to -all/.
+    # Using save.name (the legacy locus name) here would leave the original
+    # capture-only alignment in -all/ under a different filename, causing
+    # concatenateGenes to build gene alignments without legacy samples.
     PhyloProcessR::writePhylip(alignment = aligned.set,
-                               file = paste0(output.directory, "-only/", save.name, ".phy"),
+                               file = paste0(output.directory, "-only/", found.name, ".phy"),
                                interleave = F,
                                strict = F)
 
-    print(paste0("Finished ", save.name, " legacy integration successfully!"))
-    legacy.loci = c(legacy.loci, save.name)
-    if (use.mito == TRUE) { mito.loci = c(mito.loci, save.name) }
+    print(paste0("Finished ", save.name, " → ", found.name, " legacy integration successfully!"))
+    legacy.loci = c(legacy.loci, found.name)
+    if (use.mito == TRUE) { mito.loci = c(mito.loci, found.name) }
     system(paste0("rm ", save.name, "*"))
     rm(align, old.align, combo.align, aligned.set, blast.seq, match.data)
     gc()
