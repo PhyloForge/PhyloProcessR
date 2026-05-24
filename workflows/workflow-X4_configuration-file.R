@@ -9,6 +9,7 @@
 ##   5. Filtering for heterozygosity
 ##   6. Collecting novel contigs (no BLAST — region encoded in contig name)
 ##   7. Aligning across samples
+##   8. Trimming alignments
 ##
 ## Prerequisites:
 ##   - Completed workflow 1 (read preprocessing)
@@ -94,6 +95,31 @@ min.taxa.alignment = 4
 # Maximum pairwise difference from reference sequence for a contig to be removed
 removal.threshold = 0.35
 
+# Trimming alignment settings
+#########################
+# TRUE = run alignment trimming (superTrimmer)
+trim.alignments = TRUE
+# Minimum alignment length in basepairs to keep an alignment
+min.alignment.length = 100
+# Run TrimAl to remove highly variable or misaligned columns
+run.TrimAl = TRUE
+# TRUE = trim columns below a minimum gap threshold
+trim.column = TRUE
+# Minimum percent of bases that must be present to keep a column
+min.column.gap.percent = 50
+# Resolve ambiguous IUPAC sites to a random constituent base
+convert.ambiguous.sites = FALSE
+# TRUE = trim poorly covered edges of each alignment
+trim.external = TRUE
+# Minimum percent of bases required to keep an edge column
+min.external.percent = 50
+# TRUE = remove samples below a minimum coverage threshold
+trim.coverage = TRUE
+# Minimum percent of bases a sample must have across the alignment
+min.coverage.percent = 35
+# Minimum number of bases a sample must have across the alignment
+min.coverage.bp = 60
+
 # Program paths
 #########################
 ### *** When installing via conda, only the path to the conda bin directory is needed.
@@ -105,5 +131,6 @@ bedtools.path = conda.env
 spades.path   = conda.env
 blast.path    = conda.env
 mafft.path    = conda.env
+trimAl.path   = conda.env
 
 #### End configuration

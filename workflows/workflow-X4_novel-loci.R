@@ -143,4 +143,37 @@ if (align.targets == TRUE) {
   )
 }# end align.targets
 
+##################################################################################################
+##################################################################################################
+## Step 6: Trim novel loci alignments
+##
+## Removes poorly covered columns and samples from each alignment. Output is written to
+## data-analysis/alignments/trimmed_novel-markers and is ready for phylogenetic analysis
+## or merging with the existing trimmed_all-markers dataset.
+##################################################################################################
+
+if (trim.alignments == TRUE) {
+  superTrimmer(
+    alignment.dir          = "data-analysis/alignments/untrimmed_novel-markers",
+    alignment.format       = "phylip",
+    output.dir             = "data-analysis/alignments/trimmed_novel-markers",
+    overwrite              = overwrite,
+    TrimAl                 = run.TrimAl,
+    TrimAl.path            = trimAl.path,
+    trim.column            = trim.column,
+    convert.ambiguous.sites = convert.ambiguous.sites,
+    alignment.assess       = FALSE,
+    trim.external          = trim.external,
+    trim.coverage          = trim.coverage,
+    min.coverage.percent   = min.coverage.percent,
+    min.external.percent   = min.external.percent,
+    min.column.gap.percent = min.column.gap.percent,
+    min.alignment.length   = min.alignment.length,
+    min.taxa.alignment     = min.taxa.alignment,
+    min.coverage.bp        = min.coverage.bp,
+    threads                = threads,
+    memory                 = memory
+  )
+}# end trim.alignments
+
 ### End workflow

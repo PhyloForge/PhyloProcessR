@@ -132,6 +132,11 @@ alignTargets = function(targets.to.align = NULL,
   if (sub.start == 0){ sub.start = 1}
   sub.end = floor(subset.end * length(locus.names))
 
+  # Log tracking
+  dir.create("logs", recursive = TRUE, showWarnings = FALSE)
+  locus.log    = vector("list", sub.end - sub.start + 1)
+  aligned.samples = character(0)
+
   #Loops through each locus and writes each species to end of file
   for (i in sub.start:sub.end) {
 
@@ -139,8 +144,13 @@ alignTargets = function(targets.to.align = NULL,
     match.data = all.data[grep(pattern = paste0(locus.names[i], "_\\|_"), x = names(all.data))]
 
     #STEP 1: Throw out loci if there are too few taxa
-    if (length(names(match.data)) <= min.taxa){
+    if (length(names(match.data)) < min.taxa){
       print(paste0(locus.names[i], " had too few taxa"))
+      locus.log[[i - sub.start + 1]] = data.frame(
+        Locus = locus.names[i], N_taxa_initial = length(match.data),
+        N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+        Mean_pct_missing = NA_real_, Status = "too_few_taxa",
+        stringsAsFactors = FALSE)
       next
     }
 
@@ -151,6 +161,11 @@ alignTargets = function(targets.to.align = NULL,
     ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = gsub("_\\|_.*", "", names(target.seqs) ) )]
     if (length(ref.locus) == 0) {
       print(paste0(locus.names[i], ": no reference sequence found in target file — skipping."))
+      locus.log[[i - sub.start + 1]] = data.frame(
+        Locus = locus.names[i], N_taxa_initial = length(match.data),
+        N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+        Mean_pct_missing = NA_real_, Status = "no_reference",
+        stringsAsFactors = FALSE)
       next
     }
     names(ref.locus) = paste("Reference_Locus")
@@ -160,6 +175,11 @@ alignTargets = function(targets.to.align = NULL,
     dup.names = match.data[duplicated(names(match.data)), ]
     if (length(dup.names) != 0) {
       print(paste0(locus.names[i], " did not successfully align. Duplicate samples, likely paralog."))
+      locus.log[[i - sub.start + 1]] = data.frame(
+        Locus = locus.names[i], N_taxa_initial = length(match.data),
+        N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+        Mean_pct_missing = NA_real_, Status = "duplicate_samples",
+        stringsAsFactors = FALSE)
       next
     } # end if
 
@@ -177,6 +197,11 @@ alignTargets = function(targets.to.align = NULL,
     #Checks for failed mafft run
     if (length(alignment) == 0){
       print(paste0(locus.names[i], " did not successfully align."))
+      locus.log[[i - sub.start + 1]] = data.frame(
+        Locus = locus.names[i], N_taxa_initial = length(match.data),
+        N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+        Mean_pct_missing = NA_real_, Status = "mafft_failed",
+        stringsAsFactors = FALSE)
       next }
 
     #Removes the reverse name
@@ -194,6 +219,11 @@ alignTargets = function(targets.to.align = NULL,
     if (length(rem.align) <= as.numeric(min.taxa)){
       #Deletes old files
       print(paste(locus.names[i], " had too few taxa", sep = ""))
+      locus.log[[i - sub.start + 1]] = data.frame(
+        Locus = locus.names[i], N_taxa_initial = length(match.data),
+        N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+        Mean_pct_missing = NA_real_, Status = "too_few_taxa_after_filter",
+        stringsAsFactors = FALSE)
       next }
 
     ### realign if bad seqs removed
@@ -211,6 +241,11 @@ alignTargets = function(targets.to.align = NULL,
       #Checks for failed mafft run
       if (length(alignment) == 0){
         print(paste0(locus.names[i], " did not successfully align."))
+        locus.log[[i - sub.start + 1]] = data.frame(
+          Locus = locus.names[i], N_taxa_initial = length(match.data),
+          N_taxa_aligned = 0L, Alignment_length = NA_integer_,
+          Mean_pct_missing = NA_real_, Status = "mafft_failed_realign",
+          stringsAsFactors = FALSE)
         next }
 
       #Removes the reverse name
@@ -225,6 +260,23 @@ alignTargets = function(targets.to.align = NULL,
     new.align = strsplit(as.character(red.align), "")
     aligned.set = as.matrix(ape::as.DNAbin(new.align))
 
+    # Compute per-locus stats for log
+    aln.mat    = as.character(aligned.set)
+    aln.len    = ncol(aligned.set)
+    gap.counts = rowSums(aln.mat == "-" | aln.mat == "n" | aln.mat == "N")
+    pct.miss   = round(mean(gap.counts / aln.len) * 100, 2)
+
+    locus.log[[i - sub.start + 1]] = data.frame(
+      Locus            = locus.names[i],
+      N_taxa_initial   = length(match.data),
+      N_taxa_aligned   = length(red.align),
+      Alignment_length = aln.len,
+      Mean_pct_missing = pct.miss,
+      Status           = "aligned",
+      stringsAsFactors = FALSE)
+
+    aligned.samples = c(aligned.samples, rownames(aligned.set))
+
     #readies for saving
     PhyloProcessR::writePhylip(alignment = aligned.set,
                                file = paste0(output.directory, "/", locus.names[i], ".phy"),
@@ -236,8 +288,44 @@ alignTargets = function(targets.to.align = NULL,
 
   }# end big i loop
 
+  ##########################################################################
+  # Write alignment logs
+  ##########################################################################
+  log.df = do.call(rbind, locus.log[!sapply(locus.log, is.null)])
+
+  if (!is.null(log.df) && nrow(log.df) > 0) {
+
+    # Append to any existing log (handles subset / resume runs)
+    locus.log.file = "logs/alignTargets_locus_summary.csv"
+    if (file.exists(locus.log.file)) {
+      existing = read.csv(locus.log.file, stringsAsFactors = FALSE)
+      existing = existing[!existing$Locus %in% log.df$Locus, ]
+      log.df   = rbind(existing, log.df)
+    }
+    write.csv(log.df, file = locus.log.file, row.names = FALSE)
+    print(paste0("Per-locus alignment summary: ", locus.log.file))
+  }
+
+  if (length(aligned.samples) > 0) {
+    samp.tbl  = as.data.frame(table(aligned.samples), stringsAsFactors = FALSE)
+    names(samp.tbl) = c("Sample", "N_loci_aligned")
+    samp.tbl  = samp.tbl[order(-samp.tbl$N_loci_aligned), ]
+
+    samp.log.file = "logs/alignTargets_sample_summary.csv"
+    if (file.exists(samp.log.file)) {
+      existing.s = read.csv(samp.log.file, stringsAsFactors = FALSE)
+      existing.s = existing.s[!existing.s$Sample %in% samp.tbl$Sample, ]
+      samp.tbl   = rbind(existing.s, samp.tbl)
+      samp.tbl   = samp.tbl[order(-samp.tbl$N_loci_aligned), ]
+    }
+    write.csv(samp.tbl, file = samp.log.file, row.names = FALSE)
+    print(paste0("Per-sample alignment summary: ", samp.log.file))
+  }
 
 }# end function
+
+
+#END SCRIPT
 
 
 #END SCRIPT

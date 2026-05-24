@@ -100,6 +100,9 @@ collectNovelContigs = function(contig.directory = NULL,
       # Extract region name: everything up to the last "_contig_" occurrence
       # e.g. "chr3_450000_450800_contig_2" → "chr3_450000_450800"
       region.keys = sub("_contig_[0-9]+$", "", names(ctgs))
+      # Sanitize to match novel_targets.fa sequence names (handles contigs assembled
+      # before scaffold-name sanitization was applied)
+      region.keys = gsub("[^A-Za-z0-9_.]", "_", region.keys)
 
       # For each region keep the longest contig
       best = tapply(seq_along(ctgs), region.keys, function(idx) {
@@ -175,11 +178,34 @@ collectNovelContigs = function(contig.directory = NULL,
     open      = "w"
   )
 
-  # Write summary log
-  write.csv(summary.df, file = "logs/novel_contig_summary.csv", row.names = FALSE)
+  # Per-locus summary: one row per locus with sample count and filter status
+  locus.df = data.frame(
+    Locus          = names(locus.counts),
+    N_samples      = as.integer(locus.counts),
+    Passed_filter  = names(locus.counts) %in% keep.loci,
+    stringsAsFactors = FALSE
+  )
+  locus.df = locus.df[order(-locus.df$N_samples), ]
+
+  # Per-sample summary with contig length stats
+  # Recompute widths for sequences that passed the min.taxa filter
+  if (length(all.seqs) > 0) {
+    pass.names  = sub("_\\|_.*$", "", names(all.seqs))
+    pass.widths = Biostrings::width(all.seqs)
+    per.samp.loci = tapply(pass.names, sub("^.*_\\|_", "", names(all.seqs)), function(x) length(x))
+    summary.df$LociPassingFilter = as.integer(per.samp.loci[summary.df$Sample])
+    summary.df$LociPassingFilter[is.na(summary.df$LociPassingFilter)] = 0L
+  } else {
+    summary.df$LociPassingFilter = 0L
+  }
+
+  # Write logs
+  write.csv(summary.df, file = "logs/novel_contig_summary.csv",  row.names = FALSE)
+  write.csv(locus.df,   file = "logs/novel_locus_summary.csv",   row.names = FALSE)
 
   print(paste0("To-align FASTA written to: ", out.fa))
-  print(paste0("Summary written to: logs/novel_contig_summary.csv"))
+  print(paste0("Per-sample summary:  logs/novel_contig_summary.csv"))
+  print(paste0("Per-locus summary:   logs/novel_locus_summary.csv"))
 
   return(invisible(summary.df))
 
