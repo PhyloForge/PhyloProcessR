@@ -82,7 +82,7 @@ heterozygote.min.length = 100
 #        each contig name by assembleSharedRegions.
 annotate.targets = TRUE
 # Minimum contig length in bp to retain
-min.match.length = 200
+min.match.length = 100
 
 # Alignment settings
 #########################
