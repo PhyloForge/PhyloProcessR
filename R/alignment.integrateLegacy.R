@@ -442,14 +442,14 @@ integrateLegacy = function(alignment.directory = NULL,
       # alignment (capture) — use position, not names, because when the same specimen
       # appears in both datasets the names are identical and name-matching wrongly
       # classifies the legacy copy as capture, preventing the merge.
-      n.legacy   = length(align)
-      n.capture  = length(old.align)
+      cap.src.names = names(old.align)
+      n.legacy      = length(align)
+      n.capture     = length(old.align)
       if (length(combo.align) == n.legacy + n.capture) {
         is.cap.seq = c(rep(FALSE, n.legacy), rep(TRUE, n.capture))
       } else {
         # Unexpected output length (MAFFT edge case) — fall back to name matching
-        cap.src.names = names(old.align)
-        is.cap.seq    = names(combo.align) %in% cap.src.names
+        is.cap.seq = names(combo.align) %in% cap.src.names
       }
 
       # Build normalised keys for matching
