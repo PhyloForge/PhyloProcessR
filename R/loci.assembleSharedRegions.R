@@ -178,15 +178,27 @@ assembleSharedRegions = function(discover.directory = NULL,
       # Step B: Count reads per region in one bedtools pass.
       # bedtools coverage -counts appends one column: number of reads overlapping
       # each BED interval. This replaces 26k+ individual samtools view calls.
+      # Use intern = TRUE to capture output directly — avoids the stdout conflict
+      # where R's ignore.stdout appends "> /dev/null" after a shell ">" redirect,
+      # making the last redirect win and leaving the file empty.
       ##########################################################################
-      cov.file = paste0(samp.dir, "/region_readcounts.tsv")
-      system(paste0(bedtools.path, "bedtools coverage -a ", region.bed,
-                    " -b ", novel.bam, " -counts > ", cov.file),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      cov.out = system(paste0(bedtools.path, "bedtools coverage -a ", region.bed,
+                              " -b ", novel.bam, " -counts"),
+                       intern = TRUE, ignore.stderr = quiet)
 
-      region.counts = data.table::fread(cov.file, header = FALSE)
+      if (length(cov.out) == 0) {
+        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        print(paste0(samp, ": bedtools coverage produced no output — skipping."))
+        return(NULL)
+      }
+
+      region.counts = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
+      if (ncol(region.counts) == 0) {
+        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        print(paste0(samp, ": bedtools coverage output could not be parsed — skipping."))
+        return(NULL)
+      }
       reads.per.region = region.counts[[ncol(region.counts)]]
-      system(paste0("rm -f ", cov.file))
 
       active.r = which(reads.per.region >= min.reads.assemble)
       print(paste0(samp, ": ", length(active.r), " of ", nrow(regions),
