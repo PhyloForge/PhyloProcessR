@@ -62,7 +62,8 @@ if (file.exists("data-analysis/novel-loci-discovery/novel_regions.bed")) {
     overwrite           = overwrite,
     quiet               = quiet,
     spades.path         = spades.path,
-    samtools.path       = samtools.path
+    samtools.path       = samtools.path,
+    bedtools.path       = bedtools.path
   )
 
 }# end if

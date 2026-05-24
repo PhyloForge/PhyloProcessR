@@ -1,13 +1,14 @@
 #' @title assembleSharedRegions
 #'
 #' @description Assembles per-sample contigs for each novel genomic region identified by
-#' \code{discoverSharedRegions}. For each sample and each region in the shared-regions BED
-#' file, reads are extracted from the sample's genome-mapped BAM, and SPAdes is run to
-#' assemble contigs. Resulting contigs are named by region and combined into a single FASTA
-#' per sample, written to \code{output.directory}. The output is structured to be compatible
-#' with the downstream \code{filterHeterozygosity} → \code{annotateTargets} →
-#' \code{alignTargets} pipeline (workflow 4), using the \code{novel_targets.fa} from
-#' \code{discoverSharedRegions} as the target file.
+#' \code{discoverSharedRegions}. For each sample, reads overlapping any novel region are
+#' extracted from the genome-mapped BAM in a single pass, then a read-count filter is applied
+#' across all regions simultaneously (via \code{bedtools coverage}) so that SPAdes is only
+#' invoked for regions that actually have sufficient coverage. Resulting contigs are named by
+#' region and combined into a single FASTA per sample, written to \code{output.directory}. The
+#' output is structured to be compatible with the downstream
+#' \code{filterHeterozygosity} → \code{collectNovelContigs} → \code{alignTargets} pipeline
+#' (workflow X4).
 #'
 #' @param discover.directory path to the output directory from \code{discoverSharedRegions}.
 #' Must contain \code{sample-bams/} and \code{novel_regions.bed}.
@@ -35,6 +36,9 @@
 #' @param samtools.path path to directory containing samtools executable. Default NULL
 #' (system PATH).
 #'
+#' @param bedtools.path path to directory containing the bedtools executable. Default NULL
+#' (system PATH).
+#'
 #' @return Writes one FASTA file per sample to \code{output.directory}, where each contig
 #' is named \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}). Intermediate
 #' per-sample working directories (temp BAMs, FASTQs, SPAdes output) are written under
@@ -52,7 +56,8 @@ assembleSharedRegions = function(discover.directory = NULL,
                                  overwrite = FALSE,
                                  quiet = FALSE,
                                  spades.path = NULL,
-                                 samtools.path = NULL) {
+                                 samtools.path = NULL,
+                                 bedtools.path = NULL) {
 
   # discover.directory = "data-analysis/novel-loci-discovery"
   # output.directory = "data-analysis/contigs/9_genome-contigs"
@@ -64,6 +69,7 @@ assembleSharedRegions = function(discover.directory = NULL,
   # quiet = TRUE
   # spades.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
   # samtools.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
+  # bedtools.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
 
   #Path normalization
   if (is.null(spades.path) == FALSE) {
@@ -79,6 +85,13 @@ assembleSharedRegions = function(discover.directory = NULL,
       samtools.path = paste0(append(b.string, "/"), collapse = "")
     }
   } else { samtools.path = "" }
+
+  if (is.null(bedtools.path) == FALSE) {
+    b.string = unlist(strsplit(bedtools.path, ""))
+    if (b.string[length(b.string)] != "/") {
+      bedtools.path = paste0(append(b.string, "/"), collapse = "")
+    }
+  } else { bedtools.path = "" }
 
   #Input checks
   if (is.null(discover.directory)) { print("discover.directory not provided."); return(NULL) }
@@ -135,9 +148,11 @@ assembleSharedRegions = function(discover.directory = NULL,
       samp.dir = paste0(discover.directory, "/", samp)
       dir.create(samp.dir, showWarnings = FALSE)
 
-      # Pre-filter: extract ALL reads overlapping any novel region in a single BAM pass.
-      # This avoids making 26k+ individual samtools calls on the full genome BAM.
-      # Subsequent per-region extraction works on this small filtered BAM instead.
+      ##########################################################################
+      # Step A: Extract all reads overlapping any novel region in one BAM pass.
+      # Working from this small filtered BAM instead of the full genome BAM
+      # makes every subsequent operation orders of magnitude faster.
+      ##########################################################################
       novel.bam = paste0(samp.dir, "/novel_reads.bam")
       ret0 = system(paste0(samtools.path, "samtools view -b -L ", region.bed,
                            " -o ", novel.bam, " ", bam),
@@ -151,35 +166,59 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       n.novel.reads = as.integer(trimws(
         system(paste0(samtools.path, "samtools view -c ", novel.bam), intern = TRUE)))
-      print(paste0(samp, ": ", n.novel.reads, " reads mapped to novel regions — starting per-region assembly."))
+      print(paste0(samp, ": ", n.novel.reads, " reads mapped to novel regions."))
 
+      if (is.na(n.novel.reads) || n.novel.reads == 0) {
+        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        print(paste0(samp, ": no reads in novel regions — skipping."))
+        return(NULL)
+      }
+
+      ##########################################################################
+      # Step B: Count reads per region in one bedtools pass.
+      # bedtools coverage -counts appends one column: number of reads overlapping
+      # each BED interval. This replaces 26k+ individual samtools view calls.
+      ##########################################################################
+      cov.file = paste0(samp.dir, "/region_readcounts.tsv")
+      system(paste0(bedtools.path, "bedtools coverage -a ", region.bed,
+                    " -b ", novel.bam, " -counts > ", cov.file),
+             ignore.stdout = quiet, ignore.stderr = quiet)
+
+      region.counts = data.table::fread(cov.file, header = FALSE)
+      reads.per.region = region.counts[[ncol(region.counts)]]
+      system(paste0("rm -f ", cov.file))
+
+      active.r = which(reads.per.region >= min.reads.assemble)
+      print(paste0(samp, ": ", length(active.r), " of ", nrow(regions),
+                   " regions have >= ", min.reads.assemble, " reads — running SPAdes."))
+
+      if (length(active.r) == 0) {
+        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        print(paste0(samp, ": no regions with sufficient reads."))
+        return(NULL)
+      }
+
+      ##########################################################################
+      # Step C: Per-region SPAdes assembly (only active regions)
+      ##########################################################################
       all.contigs = Biostrings::DNAStringSet()
 
-      for (r in 1:nrow(regions)) {
+      for (r in active.r) {
 
         reg.name = region.names[r]
         # BED is 0-based half-open; samtools view uses 1-based closed — add 1 to start
         region.str = paste0(regions$chrom[r], ":", regions$start[r] + 1L, "-", regions$end[r])
-        tmp.bam = paste0(samp.dir, "/tmp_", reg.name, ".bam")
-        tmp.fq  = paste0(samp.dir, "/tmp_", reg.name, ".fastq")
+        tmp.bam    = paste0(samp.dir, "/tmp_", reg.name, ".bam")
+        tmp.fq     = paste0(samp.dir, "/tmp_", reg.name, ".fastq")
         spades.dir = paste0(samp.dir, "/spades_", reg.name)
 
-        # Extract reads for this region from the pre-filtered novel BAM (much faster
-        # than scanning the full genome BAM 26k times)
+        # Extract reads for this region from the pre-filtered novel BAM
         ret = system(paste0(samtools.path, "samtools view -b -o ", tmp.bam,
                             " ", novel.bam, " ", region.str),
                      ignore.stdout = quiet, ignore.stderr = quiet)
-
         if (ret != 0 || !file.exists(tmp.bam)) { next }
 
-        n.reads = as.integer(trimws(
-          system(paste0(samtools.path, "samtools view -c ", tmp.bam), intern = TRUE)))
-        if (is.na(n.reads) || n.reads < min.reads.assemble) {
-          system(paste0("rm -f ", tmp.bam))
-          next
-        }
-
-        # Convert to FASTQ using -o flag (avoids shell redirect / ignore.stdout conflict)
+        # Convert to FASTQ
         system(paste0(samtools.path, "samtools fastq -o ", tmp.fq, " ", tmp.bam),
                ignore.stdout = quiet, ignore.stderr = quiet)
 
@@ -205,7 +244,7 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       }#end region loop
 
-      # Clean up the pre-filtered novel BAM now that all regions are processed
+      # Clean up the pre-filtered novel BAM
       system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
 
       # Write per-sample contig FASTA
@@ -213,7 +252,7 @@ assembleSharedRegions = function(discover.directory = NULL,
         Biostrings::writeXStringSet(all.contigs,
                                     filepath = paste0(output.directory, "/", samp, ".fa"))
         print(paste0(samp, ": assembled ", length(all.contigs), " contigs across ",
-                     nrow(regions), " regions."))
+                     length(active.r), " regions."))
       } else {
         print(paste0(samp, ": no contigs assembled."))
       }
