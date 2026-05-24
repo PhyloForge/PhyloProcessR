@@ -83,17 +83,20 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
   if (is.null(iupac.directory))  { stop("Please provide the iupac.directory.") }
   if (is.null(output.directory)) { stop("Please provide an output.directory.") }
-  if (is.null(removed.directory)){ stop("Please provide a removed.directory.") }
   if (iupac.directory == output.directory)  { stop("iupac.directory and output.directory must differ.") }
-  if (iupac.directory == removed.directory) { stop("iupac.directory and removed.directory must differ.") }
+  if (!is.null(removed.directory) && iupac.directory == removed.directory) {
+    stop("iupac.directory and removed.directory must differ.")
+  }
 
   if (dir.exists(output.directory)) {
     if (overwrite) { system(paste0("rm -r ", output.directory)); dir.create(output.directory) }
   } else { dir.create(output.directory) }
 
-  if (dir.exists(removed.directory)) {
-    if (overwrite) { system(paste0("rm -r ", removed.directory)); dir.create(removed.directory) }
-  } else { dir.create(removed.directory) }
+  if (!is.null(removed.directory)) {
+    if (dir.exists(removed.directory)) {
+      if (overwrite) { system(paste0("rm -r ", removed.directory)); dir.create(removed.directory) }
+    } else { dir.create(removed.directory) }
+  }
 
   if (!dir.exists("logs/sample_logs")) {
     dir.create("logs/sample_logs", recursive = TRUE, showWarnings = FALSE)
@@ -175,7 +178,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
         )
       }
 
-      if (length(high.contigs) > 0) {
+      if (length(high.contigs) > 0 && !is.null(removed.directory)) {
         final.loci = as.list(as.character(high.contigs))
         PhyloProcessR::writeFasta(
           sequences = final.loci, names = names(final.loci),

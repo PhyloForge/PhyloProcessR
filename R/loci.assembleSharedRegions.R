@@ -168,6 +168,7 @@ assembleSharedRegions = function(discover.directory = NULL,
                            " -o ", novel.bam, " ", bam),
                     ignore.stdout = quiet, ignore.stderr = quiet)
       if (ret0 != 0 || !file.exists(novel.bam) || file.size(novel.bam) == 0) {
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": failed to extract novel-region reads. Skipping."))
         return(NULL)
       }
@@ -179,7 +180,7 @@ assembleSharedRegions = function(discover.directory = NULL,
       print(paste0(samp, ": ", n.novel, " reads mapped to novel regions."))
 
       if (is.na(n.novel) || n.novel == 0) {
-        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": no reads in novel regions — skipping."))
         return(NULL)
       }
@@ -193,14 +194,14 @@ assembleSharedRegions = function(discover.directory = NULL,
                        intern = TRUE, ignore.stderr = quiet)
 
       if (length(cov.out) == 0) {
-        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": bedtools coverage produced no output — skipping."))
         return(NULL)
       }
 
       region.counts    = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
       if (ncol(region.counts) == 0) {
-        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": bedtools coverage output could not be parsed — skipping."))
         return(NULL)
       }
@@ -211,7 +212,7 @@ assembleSharedRegions = function(discover.directory = NULL,
                    " regions have >= ", min.reads.assemble, " reads."))
 
       if (length(active.regions) == 0) {
-        system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": no regions with sufficient reads — skipping."))
         return(NULL)
       }
@@ -236,7 +237,7 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       contig.fa = paste0(spades.dir, "/contigs.fasta")
       if (!file.exists(contig.fa) || file.size(contig.fa) == 0) {
-        system(paste0("rm -rf ", spades.dir))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": SPAdes produced no contigs."))
         return(NULL)
       }
@@ -258,7 +259,7 @@ assembleSharedRegions = function(discover.directory = NULL,
       system(paste0("rm -rf ", spades.dir))
 
       if (!file.exists(blast.out) || file.size(blast.out) == 0) {
-        system(paste0("rm -f ", blast.out))
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": no BLAST hits for assembled contigs."))
         return(NULL)
       }
@@ -267,6 +268,7 @@ assembleSharedRegions = function(discover.directory = NULL,
       system(paste0("rm -f ", blast.out))
 
       if (nrow(blast.data) == 0) {
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": no BLAST hits for assembled contigs."))
         return(NULL)
       }
@@ -282,6 +284,7 @@ assembleSharedRegions = function(discover.directory = NULL,
       blast.best = blast.best[tName %in% active.regions]
 
       if (nrow(blast.best) == 0) {
+        system(paste0("rm -rf ", samp.dir))
         print(paste0(samp, ": no contigs passed the read-depth filter."))
         return(NULL)
       }
@@ -305,6 +308,9 @@ assembleSharedRegions = function(discover.directory = NULL,
       } else {
         print(paste0(samp, ": no contigs assembled."))
       }
+
+      # Remove the per-sample working directory now that the FASTA is written
+      system(paste0("rm -rf ", samp.dir))
 
       rm(all.contigs, blast.data, blast.best, ctgs)
       gc()
