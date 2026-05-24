@@ -418,9 +418,20 @@ integrateLegacy = function(alignment.directory = NULL,
       }
     }# end name.match species pre-selection
 
+    # Tag sequence names before MAFFT so provenance (capture vs legacy) is
+    # unambiguous regardless of MAFFT output order, dropped sequences, or
+    # identical names across datasets.  Tags are stripped immediately after
+    # reading the MAFFT output.
+    cap.tag = "INTCAP__"
+    leg.tag = "INTLEG__"
+    old.align.tagged        = old.align
+    names(old.align.tagged) = paste0(cap.tag, names(old.align))
+    align.tagged            = align
+    names(align.tagged)     = paste0(leg.tag, names(align))
+
     #Aligns and then reverses back to correction orientation
-    combo.align = runMafft(sequence.data = old.align,
-                           add.contigs = align,
+    combo.align = runMafft(sequence.data = old.align.tagged,
+                           add.contigs = align.tagged,
                            save.name = paste0(output.directory, "-only/", found.name),
                            algorithm = "add",
                            adjust.direction = TRUE,
@@ -431,26 +442,16 @@ integrateLegacy = function(alignment.directory = NULL,
 
     #Checks for failed mafft run
     if (length(combo.align) == 0){ next }
-    #Aligns and then reverses back to correction orientation
+
+    # Strip MAFFT reverse-complement prefix, then derive provenance from our tags
     names(combo.align) = gsub(pattern = "^_R_", replacement = "", x = names(combo.align))
+    is.cap.seq         = startsWith(names(combo.align), cap.tag)
+    names(combo.align) = sub(paste0("^(", cap.tag, "|", leg.tag, ")"), "", names(combo.align))
 
     # Duplication changes and such
     if (combine.same.sample == TRUE){
 
-      # Identify which sequences in combo.align came from the capture vs legacy source.
-      # MAFFT --add outputs newly-added sequences (legacy) first, then the existing
-      # alignment (capture) — use position, not names, because when the same specimen
-      # appears in both datasets the names are identical and name-matching wrongly
-      # classifies the legacy copy as capture, preventing the merge.
       cap.src.names = names(old.align)
-      n.legacy      = length(align)
-      n.capture     = length(old.align)
-      if (length(combo.align) == n.legacy + n.capture) {
-        is.cap.seq = c(rep(FALSE, n.legacy), rep(TRUE, n.capture))
-      } else {
-        # Unexpected output length (MAFFT edge case) — fall back to name matching
-        is.cap.seq = names(combo.align) %in% cap.src.names
-      }
 
       # Build normalised keys for matching
       if (name.match == "species") {

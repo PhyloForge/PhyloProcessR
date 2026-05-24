@@ -30,9 +30,10 @@ nexus.output.directory = "data-analysis/legacy-integration/legacy-alignments"
 # Samples exceeding this are dropped from that locus. Default 100 = keep all.
 max.missing.percent = 100
 
-# Legacy (Sanger/GenBank) alignment directory
-# If convert.nexus = TRUE this is set automatically to nexus.output.directory
-legacy.directory = "/PATH/TO/legacy-alignments"
+# Legacy (Sanger/GenBank) alignment directory.
+# If convert.nexus = TRUE this is set automatically to nexus.output.directory.
+# Otherwise place your pre-existing legacy phylip/fasta files here.
+legacy.directory = "data-analysis/legacy-integration/legacy-alignments"
 legacy.format = "phylip"
 
 # Global settings
