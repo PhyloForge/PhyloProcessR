@@ -1,23 +1,24 @@
 #' @title assembleSharedRegions
 #'
 #' @description Assembles per-sample contigs for each novel genomic region identified by
-#' \code{discoverSharedRegions}. For each sample, reads overlapping any novel region are
-#' extracted from the genome-mapped BAM in a single pass, then a read-count filter is applied
-#' across all regions simultaneously (via \code{bedtools coverage}) so that SPAdes is only
-#' invoked for regions that actually have sufficient coverage. Resulting contigs are named by
-#' region and combined into a single FASTA per sample, written to \code{output.directory}. The
-#' output is structured to be compatible with the downstream
+#' \code{discoverSharedRegions}. For each sample all reads overlapping any novel region are
+#' extracted in a single BAM pass, assembled together in one SPAdes run, and the resulting
+#' contigs are assigned to individual regions by BLASTing against the \code{novel_targets.fa}
+#' produced by \code{discoverSharedRegions}. Only contigs assigned to a region that had
+#' \code{min.reads.assemble} or more reads are retained. Contigs are named
+#' \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}) and written as one
+#' FASTA per sample to \code{output.directory}, compatible with the downstream
 #' \code{filterHeterozygosity} → \code{collectNovelContigs} → \code{alignTargets} pipeline
 #' (workflow X4).
 #'
 #' @param discover.directory path to the output directory from \code{discoverSharedRegions}.
-#' Must contain \code{sample-bams/} and \code{novel_regions.bed}.
+#' Must contain \code{sample-bams/}, \code{novel_regions.bed}, and \code{novel_targets.fa}.
 #'
 #' @param output.directory path to write per-sample contig FASTA files
 #' (e.g. \code{data-analysis/contigs/9_genome-contigs}).
 #'
-#' @param min.reads.assemble minimum number of reads mapping to a region for SPAdes to be
-#' run. Regions with fewer reads are skipped. Default 5.
+#' @param min.reads.assemble minimum number of reads mapping to a region for contigs
+#' assembled to that region to be retained. Default 5.
 #'
 #' @param kmer.values integer vector of k-mer sizes passed to SPAdes. Default
 #' \code{c(33, 55, 77, 99, 127)}.
@@ -26,7 +27,7 @@
 #'
 #' @param memory total RAM in GB available. Default 8.
 #'
-#' @param overwrite logical. If TRUE, deletes and recreates the output directory. Default FALSE.
+#' @param overwrite logical. If TRUE, existing per-sample FASTAs are re-generated. Default FALSE.
 #'
 #' @param quiet logical. If TRUE, suppresses stdout/stderr from external tools. Default FALSE.
 #'
@@ -39,11 +40,12 @@
 #' @param bedtools.path path to directory containing the bedtools executable. Default NULL
 #' (system PATH).
 #'
-#' @return Writes one FASTA file per sample to \code{output.directory}, where each contig
-#' is named \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}). Intermediate
-#' per-sample working directories (temp BAMs, FASTQs, SPAdes output) are written under
-#' \code{discover.directory} and cleaned up after each sample completes. No value is
-#' returned to R.
+#' @param blast.path path to directory containing blastn and makeblastdb executables.
+#' Default NULL (system PATH).
+#'
+#' @return Writes one FASTA file per sample to \code{output.directory}. Intermediate
+#' working directories are written under \code{discover.directory} and cleaned up after
+#' each sample completes. No value is returned to R.
 #'
 #' @export
 
@@ -57,7 +59,8 @@ assembleSharedRegions = function(discover.directory = NULL,
                                  quiet = FALSE,
                                  spades.path = NULL,
                                  samtools.path = NULL,
-                                 bedtools.path = NULL) {
+                                 bedtools.path = NULL,
+                                 blast.path = NULL) {
 
   # discover.directory = "data-analysis/novel-loci-discovery"
   # output.directory = "data-analysis/contigs/9_genome-contigs"
@@ -70,56 +73,51 @@ assembleSharedRegions = function(discover.directory = NULL,
   # spades.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
   # samtools.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
   # bedtools.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
+  # blast.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
 
-  #Path normalization
-  if (is.null(spades.path) == FALSE) {
-    b.string = unlist(strsplit(spades.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      spades.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { spades.path = "" }
+  # Path normalisation
+  norm.path = function(p) {
+    if (is.null(p)) return("")
+    b = unlist(strsplit(p, ""))
+    if (b[length(b)] != "/") p = paste0(p, "/")
+    p
+  }
+  spades.path   = norm.path(spades.path)
+  samtools.path = norm.path(samtools.path)
+  bedtools.path = norm.path(bedtools.path)
+  blast.path    = norm.path(blast.path)
 
-  if (is.null(samtools.path) == FALSE) {
-    b.string = unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { samtools.path = "" }
-
-  if (is.null(bedtools.path) == FALSE) {
-    b.string = unlist(strsplit(bedtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bedtools.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { bedtools.path = "" }
-
-  #Input checks
+  # Input checks
   if (is.null(discover.directory)) { print("discover.directory not provided."); return(NULL) }
-  if (is.null(output.directory)) { print("output.directory not provided."); return(NULL) }
+  if (is.null(output.directory))   { print("output.directory not provided.");   return(NULL) }
 
-  region.bed = paste0(discover.directory, "/novel_regions.bed")
-  bam.dir = paste0(discover.directory, "/sample-bams")
+  region.bed  = paste0(discover.directory, "/novel_regions.bed")
+  novel.fa    = paste0(discover.directory, "/novel_targets.fa")
+  bam.dir     = paste0(discover.directory, "/sample-bams")
+
   if (!file.exists(region.bed)) {
     print(paste0("novel_regions.bed not found in: ", discover.directory)); return(NULL)
   }
+  if (!file.exists(novel.fa)) {
+    print(paste0("novel_targets.fa not found in: ", discover.directory)); return(NULL)
+  }
   if (!dir.exists(bam.dir)) {
-    print(paste0("sample-bams/ directory not found in: ", discover.directory)); return(NULL)
+    print(paste0("sample-bams/ not found in: ", discover.directory)); return(NULL)
   }
 
   dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
 
-  #Load region BED file
+  # Load region BED
   regions = data.table::fread(region.bed, sep = "\t", header = FALSE)
   if (is.null(regions) || nrow(regions) == 0) {
-    print("novel_regions.bed is empty or missing — no shared regions were found.")
-    print("Check that bedtools ran successfully in discoverSharedRegions (correct bedtools.path?)")
+    print("novel_regions.bed is empty — no shared regions were found.")
     return(NULL)
   }
   data.table::setnames(regions, c("chrom", "start", "end", "sample_count"))
   region.names = paste0(regions$chrom, "_", regions$start, "_", regions$end)
   print(paste0("Assembling contigs for ", nrow(regions), " regions..."))
 
-  #Get per-sample BAM files
+  # Get per-sample BAM files
   bam.files = list.files(bam.dir, pattern = "\\.bam$", full.names = TRUE)
   bam.files = bam.files[!grepl("\\.bai$", bam.files)]
   sample.names = gsub("\\.bam$", "", basename(bam.files))
@@ -127,8 +125,18 @@ assembleSharedRegions = function(discover.directory = NULL,
   if (length(bam.files) == 0) { print("No BAM files found in sample-bams/."); return(NULL) }
   print(paste0("Assembling ", length(sample.names), " samples..."))
 
-  kmer.str = paste0(kmer.values, collapse = ",")
-  mem.per = max(floor(memory / threads), 4)
+  ##################################################################################################
+  ## Build a shared BLAST database from novel_targets.fa (once, before parallel loop)
+  ##################################################################################################
+  blast.db = paste0(discover.directory, "/novel_targets_blast_db")
+  system(paste0(blast.path, "makeblastdb -in ", novel.fa,
+                " -dbtype nucl -out ", blast.db),
+         ignore.stdout = quiet, ignore.stderr = quiet)
+
+  kmer.str  = paste0(kmer.values, collapse = ",")
+  mem.per   = max(floor(memory / threads), 4)
+  blast.headers = c("qName", "tName", "pident", "length", "mismatch", "gapopen",
+                    "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore")
 
   ##################################################################################################
   ## Per-sample assembly (parallel)
@@ -137,21 +145,18 @@ assembleSharedRegions = function(discover.directory = NULL,
     tryCatch({
 
       samp = sample.names[s]
-      bam = bam.files[s]
+      bam  = bam.files[s]
 
       if (overwrite == FALSE && file.exists(paste0(output.directory, "/", samp, ".fa"))) {
         print(paste0(samp, ": contig FASTA already exists — skipping."))
         return(NULL)
       }
 
-      # Intermediate work dir goes inside discover.directory to keep output.directory clean
       samp.dir = paste0(discover.directory, "/", samp)
       dir.create(samp.dir, showWarnings = FALSE)
 
       ##########################################################################
-      # Step A: Extract all reads overlapping any novel region in one BAM pass.
-      # Working from this small filtered BAM instead of the full genome BAM
-      # makes every subsequent operation orders of magnitude faster.
+      # Step A: Extract all reads overlapping any novel region in one BAM pass
       ##########################################################################
       novel.bam = paste0(samp.dir, "/novel_reads.bam")
       ret0 = system(paste0(samtools.path, "samtools view -b -L ", region.bed,
@@ -164,23 +169,19 @@ assembleSharedRegions = function(discover.directory = NULL,
       system(paste0(samtools.path, "samtools index ", novel.bam),
              ignore.stdout = quiet, ignore.stderr = quiet)
 
-      n.novel.reads = as.integer(trimws(
+      n.novel = as.integer(trimws(
         system(paste0(samtools.path, "samtools view -c ", novel.bam), intern = TRUE)))
-      print(paste0(samp, ": ", n.novel.reads, " reads mapped to novel regions."))
+      print(paste0(samp, ": ", n.novel, " reads mapped to novel regions."))
 
-      if (is.na(n.novel.reads) || n.novel.reads == 0) {
+      if (is.na(n.novel) || n.novel == 0) {
         system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
         print(paste0(samp, ": no reads in novel regions — skipping."))
         return(NULL)
       }
 
       ##########################################################################
-      # Step B: Count reads per region in one bedtools pass.
-      # bedtools coverage -counts appends one column: number of reads overlapping
-      # each BED interval. This replaces 26k+ individual samtools view calls.
-      # Use intern = TRUE to capture output directly — avoids the stdout conflict
-      # where R's ignore.stdout appends "> /dev/null" after a shell ">" redirect,
-      # making the last redirect win and leaving the file empty.
+      # Step B: Count reads per region in one bedtools pass to determine which
+      # regions have sufficient coverage (used to filter contigs after BLAST)
       ##########################################################################
       cov.out = system(paste0(bedtools.path, "bedtools coverage -a ", region.bed,
                               " -b ", novel.bam, " -counts"),
@@ -192,84 +193,115 @@ assembleSharedRegions = function(discover.directory = NULL,
         return(NULL)
       }
 
-      region.counts = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
+      region.counts    = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
       if (ncol(region.counts) == 0) {
         system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
         print(paste0(samp, ": bedtools coverage output could not be parsed — skipping."))
         return(NULL)
       }
       reads.per.region = region.counts[[ncol(region.counts)]]
+      active.regions   = region.names[reads.per.region >= min.reads.assemble]
 
-      active.r = which(reads.per.region >= min.reads.assemble)
-      print(paste0(samp, ": ", length(active.r), " of ", nrow(regions),
-                   " regions have >= ", min.reads.assemble, " reads — running SPAdes."))
+      print(paste0(samp, ": ", length(active.regions), " of ", nrow(regions),
+                   " regions have >= ", min.reads.assemble, " reads."))
 
-      if (length(active.r) == 0) {
+      if (length(active.regions) == 0) {
         system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
-        print(paste0(samp, ": no regions with sufficient reads."))
+        print(paste0(samp, ": no regions with sufficient reads — skipping."))
         return(NULL)
       }
 
       ##########################################################################
-      # Step C: Per-region SPAdes assembly (only active regions)
+      # Step C: Convert all novel reads to FASTQ and run ONE SPAdes assembly
       ##########################################################################
-      all.contigs = Biostrings::DNAStringSet()
+      novel.fq   = paste0(samp.dir, "/novel_reads.fastq")
+      spades.dir = paste0(samp.dir, "/spades_all")
 
-      for (r in active.r) {
-
-        reg.name = region.names[r]
-        # BED is 0-based half-open; samtools view uses 1-based closed — add 1 to start
-        region.str = paste0(regions$chrom[r], ":", regions$start[r] + 1L, "-", regions$end[r])
-        tmp.bam    = paste0(samp.dir, "/tmp_", reg.name, ".bam")
-        tmp.fq     = paste0(samp.dir, "/tmp_", reg.name, ".fastq")
-        spades.dir = paste0(samp.dir, "/spades_", reg.name)
-
-        # Extract reads for this region from the pre-filtered novel BAM
-        ret = system(paste0(samtools.path, "samtools view -b -o ", tmp.bam,
-                            " ", novel.bam, " ", region.str),
-                     ignore.stdout = quiet, ignore.stderr = quiet)
-        if (ret != 0 || !file.exists(tmp.bam)) { next }
-
-        # Convert to FASTQ
-        system(paste0(samtools.path, "samtools fastq -o ", tmp.fq, " ", tmp.bam),
-               ignore.stdout = quiet, ignore.stderr = quiet)
-
-        # SPAdes assembly
-        system(paste0(spades.path, "spades.py -s ", tmp.fq,
-                      " -k ", kmer.str,
-                      " -o ", spades.dir,
-                      " -m ", mem.per,
-                      " --threads 1 --careful"),
-               ignore.stdout = quiet, ignore.stderr = quiet)
-
-        # Load contigs if assembly produced output
-        contig.fa = paste0(spades.dir, "/contigs.fasta")
-        if (file.exists(contig.fa)) {
-          ctgs = Biostrings::readDNAStringSet(contig.fa)
-          if (length(ctgs) > 0) {
-            names(ctgs) = paste0(reg.name, "_contig_", seq_along(ctgs))
-            all.contigs = append(all.contigs, ctgs)
-          }
-        }
-
-        system(paste0("rm -rf ", spades.dir, " ", tmp.bam, " ", tmp.fq))
-
-      }#end region loop
-
-      # Clean up the pre-filtered novel BAM
+      system(paste0(samtools.path, "samtools fastq -o ", novel.fq, " ", novel.bam),
+             ignore.stdout = quiet, ignore.stderr = quiet)
       system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
 
-      # Write per-sample contig FASTA
+      system(paste0(spades.path, "spades.py -s ", novel.fq,
+                    " -k ", kmer.str,
+                    " -o ", spades.dir,
+                    " -m ", mem.per,
+                    " --threads 1 --careful"),
+             ignore.stdout = quiet, ignore.stderr = quiet)
+      system(paste0("rm -f ", novel.fq))
+
+      contig.fa = paste0(spades.dir, "/contigs.fasta")
+      if (!file.exists(contig.fa) || file.size(contig.fa) == 0) {
+        system(paste0("rm -rf ", spades.dir))
+        print(paste0(samp, ": SPAdes produced no contigs."))
+        return(NULL)
+      }
+
+      ##########################################################################
+      # Step D: BLAST contigs against novel_targets.fa to assign region names.
+      # tName values in the output are chr_start_end, matching region.names.
+      ##########################################################################
+      blast.out = paste0(samp.dir, "/contig_blast.txt")
+      system(paste0(blast.path, "blastn -task blastn -db ", blast.db,
+                    " -query ", contig.fa,
+                    " -out ", blast.out,
+                    " -outfmt \"6 qseqid sseqid pident length mismatch gapopen",
+                    " qstart qend sstart send evalue bitscore\"",
+                    " -num_threads 1 -evalue 0.001"),
+             ignore.stdout = quiet, ignore.stderr = quiet)
+
+      ctgs = Biostrings::readDNAStringSet(contig.fa)
+      system(paste0("rm -rf ", spades.dir))
+
+      if (!file.exists(blast.out) || file.size(blast.out) == 0) {
+        system(paste0("rm -f ", blast.out))
+        print(paste0(samp, ": no BLAST hits for assembled contigs."))
+        return(NULL)
+      }
+
+      blast.data = data.table::fread(blast.out, header = FALSE)
+      system(paste0("rm -f ", blast.out))
+
+      if (nrow(blast.data) == 0) {
+        print(paste0(samp, ": no BLAST hits for assembled contigs."))
+        return(NULL)
+      }
+      data.table::setnames(blast.data, blast.headers)
+
+      ##########################################################################
+      # Step E: Assign each contig to its best-matching region, keep only
+      # contigs assigned to regions that pass the min.reads.assemble threshold
+      ##########################################################################
+      # Best hit per contig = highest bitscore
+      blast.best = blast.data[, .SD[which.max(bitscore)], by = qName]
+      # Restrict to regions with sufficient read depth
+      blast.best = blast.best[tName %in% active.regions]
+
+      if (nrow(blast.best) == 0) {
+        print(paste0(samp, ": no contigs passed the read-depth filter."))
+        return(NULL)
+      }
+
+      # Name contigs as region_contig_N (N = rank within region by bitscore desc)
+      blast.best = blast.best[order(tName, -bitscore)]
+      blast.best[, contig.idx := seq_len(.N), by = tName]
+      blast.best[, new.name := paste0(tName, "_contig_", contig.idx)]
+
+      # Subset and rename the DNAStringSet
+      keep.names = blast.best$qName[blast.best$qName %in% names(ctgs)]
+      all.contigs = ctgs[keep.names]
+      names(all.contigs) = blast.best$new.name[match(keep.names, blast.best$qName)]
+
+      # Write per-sample FASTA
       if (length(all.contigs) > 0) {
         Biostrings::writeXStringSet(all.contigs,
                                     filepath = paste0(output.directory, "/", samp, ".fa"))
         print(paste0(samp, ": assembled ", length(all.contigs), " contigs across ",
-                     length(active.r), " regions."))
+                     length(unique(blast.best$tName)), " regions."))
       } else {
         print(paste0(samp, ": no contigs assembled."))
       }
 
-      rm(all.contigs)
+      rm(all.contigs, blast.data, blast.best, ctgs)
       gc()
 
     }, error = function(e) {
@@ -277,6 +309,9 @@ assembleSharedRegions = function(discover.directory = NULL,
       return(NULL)
     })
   }, mc.cores = threads)
+
+  # Clean up shared BLAST database
+  system(paste0("rm -f ", blast.db, "*"))
 
   print("Shared region assembly complete.")
 

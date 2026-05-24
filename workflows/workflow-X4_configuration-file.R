@@ -103,6 +103,7 @@ hisat2.path   = conda.env
 samtools.path = conda.env
 bedtools.path = conda.env
 spades.path   = conda.env
+blast.path    = conda.env
 mafft.path    = conda.env
 
 #### End configuration
