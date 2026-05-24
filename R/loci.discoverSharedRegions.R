@@ -365,7 +365,11 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
     raw.seqs = Biostrings::readDNAStringSet(raw.fa)
     # Rename chr:start-end → chr_start_end (phylip-safe, no colons)
-    names(raw.seqs) = gsub("-", "_", gsub(":", "_", names(raw.seqs)))
+    # Sanitize sequence names: bedtools getfasta produces "chrom:start-end".
+    # Replace ":" and "-" first (coordinate delimiters), then replace any remaining
+    # shell-unsafe character (;  =  space  etc.) with "_" so names are safe to use
+    # in file paths and shell commands.
+    names(raw.seqs) = gsub("[^A-Za-z0-9_.]", "_", gsub("[:-]", "_", names(raw.seqs)))
     Biostrings::writeXStringSet(raw.seqs, filepath = novel.fa)
     system(paste0("rm ", raw.fa))
     rm(raw.seqs)

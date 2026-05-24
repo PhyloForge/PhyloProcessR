@@ -114,7 +114,12 @@ assembleSharedRegions = function(discover.directory = NULL,
     return(NULL)
   }
   data.table::setnames(regions, c("chrom", "start", "end", "sample_count"))
-  region.names = paste0(regions$chrom, "_", regions$start, "_", regions$end)
+  # Sanitize region names the same way discoverSharedRegions sanitizes novel_targets.fa
+  # sequence names — must match exactly so the BLAST tName lookup works.
+  # Scaffold names from some genome assemblies contain shell-unsafe characters
+  # (e.g. "ScWFrIx_100724;HRSCAF=196187") that break file paths and MAFFT commands.
+  region.names = gsub("[^A-Za-z0-9_.]", "_",
+                      paste0(regions$chrom, "_", regions$start, "_", regions$end))
   print(paste0("Assembling contigs for ", nrow(regions), " regions..."))
 
   # Get per-sample BAM files
