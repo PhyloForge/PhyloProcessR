@@ -78,7 +78,40 @@ if (include.all.together == TRUE) {
 
 ##################################################################################################
 ##################################################################################################
-## Step 2: Concatenate exons into genes and gather unlinked dataset
+## Step 2: Trim the legacy-only alignments
+##
+## Trims the raw legacy-integrated exon alignments (untrimmed_legacy-only) directly,
+## producing a trimmed_legacy-only set. Useful for inspecting which legacy loci passed
+## filters before downstream concatenation or gene-tree inference.
+##################################################################################################
+
+if (trim.alignments == TRUE) {
+  superTrimmer(
+    alignment.dir          = "data-analysis/legacy-integration/untrimmed_legacy-only",
+    alignment.format       = "phylip",
+    output.dir             = "data-analysis/legacy-integration/trimmed_legacy-only",
+    overwrite              = overwrite,
+    TrimAl                 = run.TrimAl,
+    TrimAl.path            = trimAl.path,
+    trim.column            = trim.column,
+    convert.ambiguous.sites = convert.ambiguous.sites,
+    alignment.assess       = FALSE,
+    trim.external          = trim.external,
+    trim.coverage          = trim.coverage,
+    min.coverage.percent   = min.coverage.percent,
+    min.external.percent   = min.external.percent,
+    min.column.gap.percent = min.column.gap.percent,
+    min.alignment.length   = min.alignment.length,
+    min.taxa.alignment     = min.taxa.alignment,
+    min.coverage.bp        = min.coverage.bp,
+    threads                = threads,
+    memory                 = memory
+  )
+}# end trim.alignments
+
+##################################################################################################
+##################################################################################################
+## Step 3: Concatenate exons into genes and gather unlinked dataset
 ##################################################################################################
 
 if (concatenate.genes == TRUE) {

@@ -33,7 +33,7 @@ max.missing.percent = 100
 # Legacy (Sanger/GenBank) alignment directory.
 # If convert.nexus = TRUE this is set automatically to nexus.output.directory.
 # Otherwise place your pre-existing legacy phylip/fasta files here.
-legacy.directory = "data-analysis/legacy-integration/legacy-alignments"
+legacy.directory = "data-analysis/alignments/legacy-alignments"
 legacy.format = "phylip"
 
 # Global settings
@@ -61,7 +61,7 @@ combine.same.sample = TRUE
 #               sequences added as separate rows
 name.match = "exact"
 # TRUE = also include legacy loci absent from the capture dataset as stand-alone alignments
-include.uncaptured.legacy = FALSE
+include.uncaptured.legacy = TRUE
 # TRUE = write a second output directory containing all capture alignments updated
 #        with legacy-integrated versions where available (recommended)
 include.all.together = TRUE
@@ -86,9 +86,10 @@ mito.alignment.format = "phylip"
 concatenate.genes = TRUE
 # Minimum number of exons needed to produce a concatenated gene alignment
 minimum.exons = 2
-# TRUE  = include legacy-only loci in the gene concatenation step
+# TRUE  = include legacy-only loci in the gene concatenation step. 
+# Note if the legacy are too short they could get dropped
 # FALSE = concatenate only capture-derived exons; legacy loci remain as separate alignments
-concatenate.legacy.genes = TRUE
+concatenate.legacy.genes = FALSE
 # TRUE = gather all unlinked alignments (concatenated genes + single-exon loci) for analysis
 gather.unlinked = TRUE
 

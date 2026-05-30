@@ -45,7 +45,7 @@ convertNexusPartitions = function(nexus.file = NULL,
                                    quiet = FALSE) {
 
   # nexus.file = "/Users/chutter/Downloads/Glassfrog_matrix_2026.nex"
-  # output.directory = "data-analysis/legacy-integration/legacy-alignments"
+  # output.directory = "data-analysis/alignments/legacy-alignments"
   # output.format = "phylip"
   # min.taxa.alignment = 4
   # max.missing.percent = 100
@@ -80,9 +80,57 @@ convertNexusPartitions = function(nexus.file = NULL,
   print(paste0("  ", n.taxa, " taxa, ", n.chars, " total characters."))
 
   ##################################################################################################
-  ## Step 2: Parse charset partitions from the SETS block
+  ## Step 1b: Expand MATCHCHAR references
+  ##
+  ## ape::read.nexus.data() does NOT expand MATCHCHAR dots (or any other matchchar symbol).
+  ## It stores them literally, and ape::as.DNAbin(".") converts them to null bytes which then
+  ## become NA strings in the output phylip file, corrupting all sequences that used matchchar.
+  ## This is the default export behaviour of PAUP*, MrBayes, FigTree, and many other programs.
+  ##
+  ## Fix: parse the FORMAT statement for an explicit MATCHCHAR declaration; if none is found
+  ## but any sequence already contains '.' characters, treat '.' as the matchchar. In either
+  ## case, replace every matchchar position in every sequence with the corresponding base from
+  ## the first taxon (which is always a real base in standard NEXUS MATCHCHAR convention).
   ##################################################################################################
   nex.lines = readLines(nexus.file)
+
+  # Try to read an explicit MATCHCHAR value from the FORMAT statement
+  format.line = nex.lines[grepl("\\bformat\\b", nex.lines, ignore.case = TRUE)]
+  matchchar = NULL
+  if (length(format.line) > 0) {
+    mc.match = regmatches(format.line[1],
+                          regexpr("(?i)matchchar\\s*=\\s*(.)", format.line[1], perl = TRUE))
+    if (length(mc.match) > 0 && nchar(mc.match) > 0) {
+      matchchar = substr(mc.match, nchar(mc.match), nchar(mc.match))
+    }
+  }
+
+  # Fall back: if no explicit MATCHCHAR but '.' appears in any sequence, assume '.' is the
+  # matchchar (very common default in PAUP* / MrBayes exports).
+  if (is.null(matchchar)) {
+    has.dot = any(sapply(nex.data, function(seq) any(seq == ".")))
+    if (has.dot) { matchchar = "." }
+  }
+
+  # Expand matchchar positions using the first taxon's bases as the reference
+  if (!is.null(matchchar) && n.taxa > 1) {
+    ref.seq = nex.data[[1]]
+    n.expanded = 0L
+    nex.data = lapply(nex.data, function(seq) {
+      mc.pos = seq == matchchar
+      if (any(mc.pos)) {
+        seq[mc.pos] = ref.seq[mc.pos]
+        n.expanded <<- n.expanded + sum(mc.pos)
+      }
+      seq
+    })
+    print(paste0("  MATCHCHAR '", matchchar, "' expanded at ", n.expanded,
+                 " positions across all taxa."))
+  }
+  ##################################################################################################
+  ## Step 2: Parse charset partitions from the SETS block
+  ## (nex.lines already read in Step 1b)
+  ##################################################################################################
   charset.lines = nex.lines[grepl("charset", nex.lines, ignore.case = TRUE)]
 
   if (length(charset.lines) == 0) {
