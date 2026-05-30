@@ -349,9 +349,28 @@ integrateLegacy = function(alignment.directory = NULL,
 
     if (include.uncaptured.legacy == TRUE){
       if (length(found.align) == 0){
+        # Remove any duplicate taxon names present in the source legacy alignment
+        # (e.g. a specimen appearing twice in the original NEXUS/phylip file).
+        # Keeping the most informative (fewest gaps/Ns) copy.
+        dup.in.source = duplicated(names(align))
+        if (any(dup.in.source)) {
+          dup.nms = unique(names(align)[dup.in.source])
+          print(paste0(save.name, ": removing ", length(dup.nms),
+                       " duplicate taxon name(s) from uncaptured legacy alignment."))
+          keep.idx = sapply(dup.nms, function(nm) {
+            idx = which(names(align) == nm)
+            n.inf = sapply(as.character(align[idx]), function(s)
+              nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+            idx[which.max(n.inf)]
+          })
+          drop.idx = which(dup.in.source)
+          drop.idx = drop.idx[!drop.idx %in% keep.idx]
+          align = align[-drop.idx]
+        }
+
         #Saves them
         write.temp = strsplit(as.character(align), "")
-        aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+        aligned.set = as.matrix(ape::as.DNAbin(write.temp))
 
         #readies for saving
         PhyloProcessR::writePhylip(alignment = aligned.set,
@@ -537,9 +556,26 @@ integrateLegacy = function(alignment.directory = NULL,
 
     }#end combine.same.sample if
 
+    # Final duplicate-name guard: if any taxon name appears more than once after
+    # all the merging logic, keep the most informative copy.  This catches edge
+    # cases (e.g. two legacy specimens of the same species that didn't trigger
+    # name.match merging) before they reach writePhylip / IQ-TREE.
+    dup.final = duplicated(names(combo.align))
+    if (any(dup.final)) {
+      dup.nms = unique(names(combo.align)[dup.final])
+      print(paste0(found.name, ": removing ", length(dup.nms),
+                   " duplicate taxon name(s) from integrated alignment."))
+      for (dn in dup.nms) {
+        idx = which(names(combo.align) == dn)
+        n.inf = sapply(as.character(combo.align[idx]), function(s)
+          nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+        combo.align = combo.align[-idx[order(n.inf)[-length(n.inf)]]]
+      }
+    }
+
     #Saves them
     write.temp = strsplit(as.character(combo.align), "")
-    aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
+    aligned.set = as.matrix(ape::as.DNAbin(write.temp))
 
     #readies for saving
     # Use found.name (the capture locus name) so the file in -only/ correctly

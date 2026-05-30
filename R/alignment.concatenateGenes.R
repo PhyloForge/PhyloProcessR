@@ -218,8 +218,13 @@ concatenateGenes = function(alignment.folder = NULL,
 
         align = align[order(align$Sample),]
 
-        data.table::set(concat.data, i = match(concat.data$Sample, align$Sample),
-                        j = as.integer(z), value = align$Sequence)
+        # Match each concat.data row to its sequence in align by sample name.
+        # Using value = align$Sequence[match(...)] with i = 1:nrow is the correct
+        # semantics: for each row in concat.data, look up the right sequence from
+        # align regardless of sort-order differences between the two tables.
+        data.table::set(concat.data, i = 1:nrow(concat.data),
+                        j = as.integer(z),
+                        value = align$Sequence[match(concat.data$Sample, align$Sample)])
 
         align.name = colnames(concat.data)[z]
 
