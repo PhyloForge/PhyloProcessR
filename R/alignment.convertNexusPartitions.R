@@ -67,7 +67,7 @@ convertNexusPartitions = function(nexus.file = NULL,
       stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
     }
   }
-  dir.create(output.directory)
+  dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
 
   ##################################################################################################
   ## Step 1: Read the full concatenated alignment
