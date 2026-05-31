@@ -51,21 +51,31 @@ trimTrimal = function(alignment = NULL,
 
   if (file.exists(paste0("tm-", input.file)) == F) {
     system(paste0("rm ", input.file))
+    if (file.exists(paste0(input.file, ".fai"))) { system(paste0("rm ", input.file, ".fai")) }
     return(alignment)
   } else { system(paste0("mv tm-", input.file, " ", input.file)) }
 
   out.align = Rsamtools::scanFa(Rsamtools::FaFile(input.file))
 
-  #Fixes any terrible NA names introduced by trimal
-  new.names = c()
-  for (j in 1:length(names(out.align))){
-    new.names[j] = save.rownames[grep(pattern = paste0(names(out.align)[j], "$"), x = save.rownames)]
-  }
+  # Restore original (full-length) names from save.rownames.
+  # The old approach used an unescaped regex grep with a "$" anchor, which has two failure modes:
+  #   (1) Suffix collision: if name A is a suffix of name B, grep matches BOTH and the
+  #       multi-element assignment silently corrupts new.names, shifting every subsequent label.
+  #   (2) Regex metacharacters: dots and other special chars in taxon names cause false matches.
+  # Fix: exact match first; fall back to literal endsWith() for genuinely truncated names.
+  new.names = vapply(names(out.align), function(nm) {
+    exact = which(save.rownames == nm)
+    if (length(exact) == 1L) return(save.rownames[exact])
+    suffix = which(endsWith(save.rownames, nm))
+    if (length(suffix) == 1L) return(save.rownames[suffix])
+    nm  # last resort: keep whatever TrimAl gave us
+  }, character(1L))
 
   temp = names(out.align)[is.na(names(out.align)) == T]
   if (length(temp) > 0){ stop("there are NAs in the names") }
   names(out.align) = new.names
   system(paste0("rm ", input.file))
+  if (file.exists(paste0(input.file, ".fai"))) { system(paste0("rm ", input.file, ".fai")) }
   return(out.align)
 
 }#end function
