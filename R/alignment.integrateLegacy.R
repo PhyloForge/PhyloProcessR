@@ -313,12 +313,66 @@ integrateLegacy = function(alignment.directory = NULL,
         if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
         if (nrow(match.data) == 0) {
+          if (include.uncaptured.legacy == TRUE) {
+            dup.in.source = duplicated(names(align))
+            if (any(dup.in.source)) {
+              dup.nms = unique(names(align)[dup.in.source])
+              print(paste0(save.name, ": removing ", length(dup.nms),
+                           " duplicate taxon name(s) from uncaptured legacy alignment."))
+              keep.idx = sapply(dup.nms, function(nm) {
+                idx   = which(names(align) == nm)
+                n.inf = sapply(as.character(align[idx]), function(s)
+                  nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+                idx[which.max(n.inf)]
+              })
+              drop.idx = which(dup.in.source)
+              drop.idx = drop.idx[!drop.idx %in% keep.idx]
+              align = align[-drop.idx]
+            }
+            write.temp  = strsplit(as.character(align), "")
+            aligned.set = as.matrix(ape::as.DNAbin(write.temp))
+            PhyloProcessR::writePhylip(alignment = aligned.set,
+                                       file = paste0(output.directory, "-only/", save.name, ".phy"),
+                                       interleave = F, strict = F)
+            print(paste0("No BLAST match to nuclear or mito panel. Included uncaptured ", save.name, " successfully!"))
+            system(paste0("rm ", save.name, "*"))
+            next
+          }
           print(paste0(save.name, " had no BLAST matches to nuclear or mitochondrial markers. Skipping."))
           system(paste0("rm ", save.name, "*"))
           next
         }
         use.mito = TRUE
       } else {
+        # No nuclear BLAST match.  If include.uncaptured.legacy = TRUE, save as stand-alone
+        # alignment instead of discarding.  The existing include.uncaptured.legacy block below
+        # only fires when BLAST found a tName but no matching capture file; it never runs when
+        # BLAST returns zero rows (which is the case for genes absent from the capture panel).
+        if (include.uncaptured.legacy == TRUE) {
+          dup.in.source = duplicated(names(align))
+          if (any(dup.in.source)) {
+            dup.nms = unique(names(align)[dup.in.source])
+            print(paste0(save.name, ": removing ", length(dup.nms),
+                         " duplicate taxon name(s) from uncaptured legacy alignment."))
+            keep.idx = sapply(dup.nms, function(nm) {
+              idx   = which(names(align) == nm)
+              n.inf = sapply(as.character(align[idx]), function(s)
+                nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+              idx[which.max(n.inf)]
+            })
+            drop.idx = which(dup.in.source)
+            drop.idx = drop.idx[!drop.idx %in% keep.idx]
+            align = align[-drop.idx]
+          }
+          write.temp  = strsplit(as.character(align), "")
+          aligned.set = as.matrix(ape::as.DNAbin(write.temp))
+          PhyloProcessR::writePhylip(alignment = aligned.set,
+                                     file = paste0(output.directory, "-only/", save.name, ".phy"),
+                                     interleave = F, strict = F)
+          print(paste0("No BLAST match to capture panel. Included uncaptured ", save.name, " successfully!"))
+          system(paste0("rm ", save.name, "*"))
+          next
+        }
         print(paste0(save.name, " had no BLAST matches to target markers. Skipping."))
         system(paste0("rm ", save.name, "*"))
         next
@@ -379,6 +433,7 @@ integrateLegacy = function(alignment.directory = NULL,
                                    strict = F)
 
         print(paste0("No sequence capture alignment found. Included uncaptured ", save.name, " successfully!"))
+        system(paste0("rm ", save.name, "*"))
         next
       }
     }#end if
