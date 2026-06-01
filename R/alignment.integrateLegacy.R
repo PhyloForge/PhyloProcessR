@@ -492,6 +492,16 @@ integrateLegacy = function(alignment.directory = NULL,
       }
     }# end name.match species pre-selection
 
+    # Separate all-gap legacy sequences before MAFFT.
+    # MAFFT --add silently drops sequences with no informative bases (all gaps /
+    # Ns / missing).  We exclude them here and re-insert them as gap rows after
+    # all post-MAFFT processing so every taxon appears in the final alignment.
+    is.all.gap.legacy = sapply(as.character(align), function(s) {
+      nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)) == 0
+    })
+    all.gap.legacy = align[ is.all.gap.legacy]
+    align.nogap    = align[!is.all.gap.legacy]
+
     # Tag sequence names before MAFFT so provenance (capture vs legacy) is
     # unambiguous regardless of MAFFT output order, dropped sequences, or
     # identical names across datasets.  Tags are stripped immediately after
@@ -500,27 +510,35 @@ integrateLegacy = function(alignment.directory = NULL,
     leg.tag = "INTLEG__"
     old.align.tagged        = old.align
     names(old.align.tagged) = paste0(cap.tag, names(old.align))
-    align.tagged            = align
-    names(align.tagged)     = paste0(leg.tag, names(align))
 
-    #Aligns and then reverses back to correction orientation
-    combo.align = runMafft(sequence.data = old.align.tagged,
-                           add.contigs = align.tagged,
-                           save.name = paste0(output.directory, "-only/", found.name),
-                           algorithm = "add",
-                           adjust.direction = TRUE,
-                           threads = 1,
-                           cleanup.files = T,
-                           quiet = quiet,
-                           mafft.path = mafft.path)
+    if (length(align.nogap) == 0) {
+      # All legacy sequences are all-gap; nothing for MAFFT to add.
+      # Use the capture alignment directly; mark all as capture sequences.
+      combo.align = old.align
+      is.cap.seq  = rep(TRUE, length(combo.align))
+    } else {
+      align.tagged            = align.nogap
+      names(align.tagged)     = paste0(leg.tag, names(align.nogap))
 
-    #Checks for failed mafft run
-    if (length(combo.align) == 0){ next }
+      #Aligns and then reverses back to correction orientation
+      combo.align = runMafft(sequence.data = old.align.tagged,
+                             add.contigs = align.tagged,
+                             save.name = paste0(output.directory, "-only/", found.name),
+                             algorithm = "add",
+                             adjust.direction = TRUE,
+                             threads = 1,
+                             cleanup.files = T,
+                             quiet = quiet,
+                             mafft.path = mafft.path)
 
-    # Strip MAFFT reverse-complement prefix, then derive provenance from our tags
-    names(combo.align) = gsub(pattern = "^_R_", replacement = "", x = names(combo.align))
-    is.cap.seq         = startsWith(names(combo.align), cap.tag)
-    names(combo.align) = sub(paste0("^(", cap.tag, "|", leg.tag, ")"), "", names(combo.align))
+      #Checks for failed mafft run
+      if (length(combo.align) == 0){ next }
+
+      # Strip MAFFT reverse-complement prefix, then derive provenance from our tags
+      names(combo.align) = gsub(pattern = "^_R_", replacement = "", x = names(combo.align))
+      is.cap.seq         = startsWith(names(combo.align), cap.tag)
+      names(combo.align) = sub(paste0("^(", cap.tag, "|", leg.tag, ")"), "", names(combo.align))
+    }
 
     # Duplication changes and such
     if (combine.same.sample == TRUE){
@@ -625,6 +643,21 @@ integrateLegacy = function(alignment.directory = NULL,
         n.inf = sapply(as.character(combo.align[idx]), function(s)
           nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
         combo.align = combo.align[-idx[order(n.inf)[-length(n.inf)]]]
+      }
+    }
+
+    # Re-insert all-gap legacy sequences that were excluded from MAFFT.
+    # Each is added as a row of dashes matching the alignment width, but only
+    # if its name is not already present in combo.align (e.g. it was merged via
+    # combine.same.sample).
+    if (length(all.gap.legacy) > 0 && length(combo.align) > 0) {
+      aln.width = unique(Biostrings::width(combo.align))[1]
+      gap.row   = paste(rep("-", aln.width), collapse = "")
+      for (gap.nm in names(all.gap.legacy)) {
+        if (!gap.nm %in% names(combo.align)) {
+          gap.seq = Biostrings::DNAStringSet(setNames(gap.row, gap.nm))
+          combo.align = append(combo.align, gap.seq)
+        }
       }
     }
 
