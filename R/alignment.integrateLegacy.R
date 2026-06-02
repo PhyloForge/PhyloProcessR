@@ -254,6 +254,67 @@ integrateLegacy = function(alignment.directory = NULL,
   legacy.loci = character(0)
   mito.loci   = character(0)
 
+  # Build the key function once here (outside the per-locus loop) so it is
+  # available both in the uncaptured-legacy save paths and in the MAFFT
+  # integration path.  (The MAFFT path also defines key.fn locally inside the
+  # combine.same.sample block — that definition now just shadows this one.)
+  if (name.match == "species") {
+    key.fn = function(x) gsub("_[^_]+$", "", x)
+  } else if (name.match == "fuzzy") {
+    key.fn = function(x) tolower(gsub("[-_. ]", "", x))
+  } else {
+    key.fn = identity
+  }
+
+  # Collect every unique capture taxon name from the alignment directory once,
+  # before the per-locus loop.  Uncaptured-legacy loci (Legacy_M30*, nuclear
+  # genes absent from the capture panel) are saved directly with raw legacy
+  # names.  Without renaming, the same specimen can appear as two separate
+  # taxa in the supermatrix — e.g. "Ikakogi_tayrona_MAR545" (legacy) and
+  # "Ikakogi_tayrona_MAR-545" (capture) — causing IQ-TREE to place them in
+  # completely different parts of the tree.  We rename legacy taxa to the
+  # capture name wherever a fuzzy key match is found before writing any
+  # uncaptured alignment.
+  if (combine.same.sample == TRUE && length(align.files) > 0) {
+    if (!quiet) { print("Collecting capture taxon names for uncaptured-locus renaming...") }
+    all.cap.taxa = character(0)
+    for (cap.file in align.files) {
+      cap.san = sanitize.align.file(paste0(alignment.directory, "/", cap.file))
+      if (alignment.format == "phylip") {
+        cap.tmp = tryCatch({
+          a = Biostrings::readDNAMultipleAlignment(file = cap.san$path, format = "phylip")
+          Biostrings::DNAStringSet(a)
+        }, error = function(e) Biostrings::DNAStringSet())
+      } else {
+        cap.tmp = tryCatch(
+          Biostrings::readDNAStringSet(cap.san$path),
+          error = function(e) Biostrings::DNAStringSet()
+        )
+      }
+      if (cap.san$tmp) { file.remove(cap.san$path) }
+      all.cap.taxa = union(all.cap.taxa, names(cap.tmp))
+    }
+    all.cap.keys = key.fn(all.cap.taxa)
+  } else {
+    all.cap.taxa = character(0)
+    all.cap.keys = character(0)
+  }
+
+  # Helper: rename legacy taxa in an uncaptured alignment to use the capture
+  # specimen name wherever a unique fuzzy key match exists.  Only renames
+  # unambiguous one-to-one matches; ties are left as-is.
+  rename.to.capture.names = function(aln) {
+    if (length(all.cap.taxa) == 0) { return(aln) }
+    leg.keys  = key.fn(names(aln))
+    new.names = names(aln)
+    for (j in seq_along(new.names)) {
+      hit = which(all.cap.keys == leg.keys[j])
+      if (length(hit) == 1L) { new.names[j] = all.cap.taxa[hit] }
+    }
+    names(aln) = new.names
+    aln
+  }
+
   for (i in 1:length(legacy.files)) {
 
     use.mito = FALSE
@@ -329,6 +390,7 @@ integrateLegacy = function(alignment.directory = NULL,
               drop.idx = drop.idx[!drop.idx %in% keep.idx]
               align = align[-drop.idx]
             }
+            align = rename.to.capture.names(align)
             write.temp  = strsplit(as.character(align), "")
             aligned.set = as.matrix(ape::as.DNAbin(write.temp))
             PhyloProcessR::writePhylip(alignment = aligned.set,
@@ -364,6 +426,7 @@ integrateLegacy = function(alignment.directory = NULL,
             drop.idx = drop.idx[!drop.idx %in% keep.idx]
             align = align[-drop.idx]
           }
+          align = rename.to.capture.names(align)
           write.temp  = strsplit(as.character(align), "")
           aligned.set = as.matrix(ape::as.DNAbin(write.temp))
           PhyloProcessR::writePhylip(alignment = aligned.set,
@@ -422,7 +485,9 @@ integrateLegacy = function(alignment.directory = NULL,
           align = align[-drop.idx]
         }
 
-        #Saves them
+        #Saves them — rename legacy taxa to capture names first so the same
+        # specimen does not appear under two different names in the supermatrix
+        align = rename.to.capture.names(align)
         write.temp = strsplit(as.character(align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp))
 
