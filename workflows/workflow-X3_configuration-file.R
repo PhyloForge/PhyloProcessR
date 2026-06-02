@@ -107,7 +107,7 @@ run.TrimAl = TRUE
 # Catches paralogs, off-target captures, and reverse-complemented sequences
 # that produce two distinct phylogenetic signals in one alignment.
 # Even one such alignment in the supermatrix can distort the whole tree.
-trim.similarity = FALSE
+trim.similarity = TRUE
 # Pairwise distance threshold (0-1): samples at or above this distance from
 # the consensus are removed. 0.4 removes sequences >40% divergent.
 similarity.threshold = 0.4

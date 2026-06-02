@@ -65,6 +65,13 @@ min.alignment.length = 100
 max.alignment.gap.percent = 50
 #run the trimming program TrimAl to remove high variable or misaligned columns
 run.TrimAl = TRUE
+# TRUE = remove samples too divergent from the majority-rule consensus.
+# Catches paralogs, off-target captures, and reverse-complemented sequences
+# that produce two distinct phylogenetic signals in one alignment.
+trim.similarity = TRUE
+# Pairwise distance threshold (0-1): samples at or above this distance from
+# the consensus are removed. 0.4 removes sequences >40% divergent.
+similarity.threshold = 0.4
 #Whether to trim out columns below a certain threshold
 trim.column = TRUE
 #The percent of bases that must be present to keep a column
