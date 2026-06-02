@@ -103,6 +103,14 @@ min.taxa.alignment = 4
 min.alignment.length = 100
 # Run TrimAl to remove highly variable or misaligned columns
 run.TrimAl = TRUE
+# TRUE = remove samples too divergent from the majority-rule consensus.
+# Catches paralogs, off-target captures, and reverse-complemented sequences
+# that produce two distinct phylogenetic signals in one alignment.
+# Even one such alignment in the supermatrix can distort the whole tree.
+trim.similarity = FALSE
+# Pairwise distance threshold (0-1): samples at or above this distance from
+# the consensus are removed. 0.4 removes sequences >40% divergent.
+similarity.threshold = 0.4
 # TRUE = trim columns below a minimum gap threshold
 trim.column = TRUE
 # Minimum percent of bases that must be present to keep a column
