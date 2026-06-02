@@ -540,21 +540,24 @@ integrateLegacy = function(alignment.directory = NULL,
       names(combo.align) = sub(paste0("^(", cap.tag, "|", leg.tag, ")"), "", names(combo.align))
     }
 
+    # Build normalised key function for name matching.
+    # Defined here (outside combine.same.sample) so the re-insertion step below
+    # can also use it to avoid double-inserting all-gap specimens whose capture
+    # equivalent has a slightly different name (e.g. hyphens vs no hyphens).
+    if (name.match == "species") {
+      key.fn = function(x) gsub("_[^_]+$", "", x)
+    } else if (name.match == "fuzzy") {
+      # Strip all separators (hyphens, underscores, dots, spaces) and lowercase,
+      # so MZUTI-2436, MZUTI_2436, and MZUTI2436 all normalise to the same key
+      key.fn = function(x) tolower(gsub("[-_. ]", "", x))
+    } else {
+      key.fn = identity
+    }
+
     # Duplication changes and such
     if (combine.same.sample == TRUE){
 
       cap.src.names = names(old.align)
-
-      # Build normalised keys for matching
-      if (name.match == "species") {
-        key.fn = function(x) gsub("_[^_]+$", "", x)
-      } else if (name.match == "fuzzy") {
-        # Strip all separators (hyphens, underscores, dots, spaces) and lowercase,
-        # so MZUTI-2436, MZUTI_2436, and MZUTI2436 all normalise to the same key
-        key.fn = function(x) tolower(gsub("[-_. ]", "", x))
-      } else {
-        key.fn = identity
-      }
 
       combo.keys = key.fn(names(combo.align))
       cap.keys   = key.fn(cap.src.names)
@@ -647,14 +650,18 @@ integrateLegacy = function(alignment.directory = NULL,
     }
 
     # Re-insert all-gap legacy sequences that were excluded from MAFFT.
-    # Each is added as a row of dashes matching the alignment width, but only
-    # if its name is not already present in combo.align (e.g. it was merged via
-    # combine.same.sample).
+    # Each is added as a row of dashes matching the alignment width, but ONLY
+    # if the specimen is not already represented in combo.align.  The check uses
+    # the same key function as combine.same.sample so that all-gap legacy taxa
+    # whose capture equivalent has a slightly different name (e.g. MAR545 vs
+    # MAR-545) are not re-inserted as a ghost duplicate row of gaps alongside
+    # the real capture sequence.
     if (length(all.gap.legacy) > 0 && length(combo.align) > 0) {
-      aln.width = unique(Biostrings::width(combo.align))[1]
-      gap.row   = paste(rep("-", aln.width), collapse = "")
+      aln.width    = unique(Biostrings::width(combo.align))[1]
+      gap.row      = paste(rep("-", aln.width), collapse = "")
+      present.keys = key.fn(names(combo.align))
       for (gap.nm in names(all.gap.legacy)) {
-        if (!gap.nm %in% names(combo.align)) {
+        if (!key.fn(gap.nm) %in% present.keys) {
           gap.seq = Biostrings::DNAStringSet(setNames(gap.row, gap.nm))
           combo.align = append(combo.align, gap.seq)
         }
