@@ -12,6 +12,19 @@
 #'
 #' @param TrimAl.path system path to the directory containing the trimal executable; NULL to use the system PATH
 #'
+#' @param trim.similarity if TRUE, remove samples that are too divergent from
+#'   the majority-rule consensus (e.g. paralogs, off-target captures, or
+#'   reverse-complemented sequences that create two distinct signals in the
+#'   alignment). Runs after TrimAl and before edge trimming. If sequences are
+#'   removed, the remaining sequences are optionally realigned with MAFFT.
+#'
+#' @param similarity.threshold pairwise distance from the consensus (0-1) at or
+#'   above which a sample is considered too divergent and removed; default 0.4
+#'
+#' @param mafft.path system path to the directory containing the mafft
+#'   executable; NULL to use the system PATH. Only needed when
+#'   trim.similarity = TRUE.
+#'
 #' @param trim.external if TRUE, trim poorly covered columns from the external (5' and 3') ends of the alignment
 #'
 #' @param min.external.percent minimum percentage of sequences that must have data at a column for it to be retained during external trimming
@@ -51,6 +64,9 @@ superTrimmer = function(alignment.dir = NULL,
                         output.dir = NULL,
                         TrimAl = FALSE,
                         TrimAl.path = NULL,
+                        trim.similarity = FALSE,
+                        similarity.threshold = 0.4,
+                        mafft.path = NULL,
                         trim.external = TRUE,
                         min.external.percent = 50,
                         trim.coverage = TRUE,
@@ -140,15 +156,15 @@ superTrimmer = function(alignment.dir = NULL,
 
   #Data to collect
   header.data = c("Alignment", "Pass", "startSamples", "trimalSamples",
-                  "edgeSamples", "columnSamples", "covSamples",
+                  "simSamples", "edgeSamples", "columnSamples", "covSamples",
                   "startLength", "trimalLength",
-                  "edgeLength", "columnLength", "covLength",
+                  "simLength", "edgeLength", "columnLength", "covLength",
                   "startBasepairs", "trimalBasepairs",
-                  "edgeBasepairs", "columnBasepairs", "covBasepairs",
+                  "simBasepairs", "edgeBasepairs", "columnBasepairs", "covBasepairs",
                   "startGaps",  "trimalGaps",
-                  "edgeGaps", "columnGaps", "covGaps",
+                  "simGaps", "edgeGaps", "columnGaps", "covGaps",
                   "startPerGaps", "trimalPerGaps",
-                  "edgePerGaps", "columnPerGaps", "covPerGaps")
+                  "simPerGaps", "edgePerGaps", "columnPerGaps", "covPerGaps")
 
   save.data = data.table::data.table(matrix(as.double(0), nrow = 1L, ncol = length(header.data)))
   data.table::setnames(save.data, header.data)
@@ -222,6 +238,23 @@ superTrimmer = function(alignment.dir = NULL,
       data.table::set(temp.data, i = as.integer(1), j = match("trimalGaps", header.data), value = gap.count[1])
       data.table::set(temp.data, i = as.integer(1), j = match("trimalPerGaps", header.data), value = gap.count[3])
     }#end if
+
+    # Step 3b. Similarity trimming: remove samples too divergent from the
+    # majority-rule consensus (catches paralogs, off-target captures, and
+    # reverse-complemented sequences that produce two distinct signals).
+    if (trim.similarity == TRUE && length(non.align) > 2){
+      sim.align = trimSampleSimilarity(alignment           = non.align,
+                                       similarity.threshold = similarity.threshold,
+                                       realign.mafft        = TRUE,
+                                       mafft.path           = mafft.path)
+      non.align = sim.align
+      data.table::set(temp.data, i = as.integer(1), j = match("simSamples",     header.data), value = length(sim.align))
+      data.table::set(temp.data, i = as.integer(1), j = match("simLength",      header.data), value = if (length(sim.align) > 0) Biostrings::width(sim.align)[1] else 0L)
+      gap.count = countAlignmentGaps(non.align)
+      data.table::set(temp.data, i = as.integer(1), j = match("simBasepairs",   header.data), value = gap.count[2] - gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("simGaps",        header.data), value = gap.count[1])
+      data.table::set(temp.data, i = as.integer(1), j = match("simPerGaps",     header.data), value = gap.count[3])
+    }#end trim.similarity
 
     # Step 4. Edge trimming
     if (trim.external == TRUE && length(non.align) != 0){
@@ -390,6 +423,18 @@ superTrimmer = function(alignment.dir = NULL,
                     mean(out.data$startGaps - out.data$trimalGaps)), fileConn)
   writeLines(paste0("Mean gap percent change: ",
                     mean(out.data$startPerGaps - out.data$trimalPerGaps)), fileConn)
+  writeLines(paste0(""), fileConn)
+  writeLines(paste0("Similarity Trimming:"), fileConn)
+  writeLines(paste0("Mean samples removed: ",
+                    mean(out.data$trimalSamples - out.data$simSamples)), fileConn)
+  writeLines(paste0("Mean alignment length reduction: ",
+                    mean(out.data$trimalLength - out.data$simLength)), fileConn)
+  writeLines(paste0("Mean basepairs trimmed: ",
+                    mean(out.data$trimalBasepairs - out.data$simBasepairs)), fileConn)
+  writeLines(paste0("Mean gap change: ",
+                    mean(out.data$trimalGaps - out.data$simGaps)), fileConn)
+  writeLines(paste0("Mean gap percent change: ",
+                    mean(out.data$trimalPerGaps - out.data$simPerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("External Trimming:"), fileConn)
   writeLines(paste0("Mean samples removed: ",
