@@ -74,8 +74,13 @@
 #' @param minimum.match.coverage numeric minimum proportion of the target length
 #'   that must be covered by the BLAST match.
 #'
-#' @param add.flanks integer number of base pairs to add upstream and downstream
-#'   of each matched region when extracting sequences.
+#' @param add.flanks integer; base pairs to add upstream and downstream of each
+#'   matched region when extracting sequences.  Default 1000 bp, which is
+#'   sufficient to capture the full sequenced fragment for most Illumina
+#'   paired-end libraries (typical insert size 300-600 bp) with room to spare.
+#'   Increase to 1000-5000 bp for UCE analyses where flanking sequence is the
+#'   primary phylogenetic signal.  Flanks can always be trimmed back later
+#'   during the alignment trimming step.
 #'
 #' @param genome.search.string optional character string to filter files in a
 #'   genome directory by name (e.g. "_genomic.fna.gz").
@@ -115,7 +120,7 @@ extractGenomeTarget = function(genome.path = NULL,
                                minimum.match.length = 100,
                                minimum.match.identity = 0.75,
                                minimum.match.coverage = 0.75,
-                               add.flanks = 500,
+                               add.flanks = 1000,
                                genome.search.string = NULL,
                                threads = 1,
                                memory = 1,
