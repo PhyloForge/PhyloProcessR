@@ -153,6 +153,10 @@ extractGenomeTarget = function(genome.path = NULL,
     }#end if
   } else { blast.path = "" }
 
+  # Validate choice parameters
+  input.type        = match.arg(input.type)
+  duplicate.matches = match.arg(duplicate.matches)
+
   #Initial checks
   if (output.name == genome.path){ stop("You should not overwrite the original genome file.") }
   if (output.name == input.file){ stop("You should not overwrite the original target file.") }
@@ -169,10 +173,10 @@ extractGenomeTarget = function(genome.path = NULL,
   #Gets file names if they are directory or a single file
   if (dir.exists(genome.path) == TRUE) {
     file.names = list.files(genome.path, recursive = T)
-    genome.files = file.names[grep(".fai$", file.names, invert = T)]
-    if (is.null(genome.search.string) != T){
-      genome.files = file.names[grep(genome.search.string, file.names)]
-      }
+    genome.files = file.names[grep("\\.fai$", file.names, invert = T)]
+    if (!is.null(genome.search.string)){
+      genome.files = genome.files[grep(genome.search.string, genome.files)]
+    }
   } else {
     genome.files = genome.path
     genome.path = dirname(genome.files)
@@ -208,7 +212,7 @@ extractGenomeTarget = function(genome.path = NULL,
   #Loops through each locus and does operations on them
   for (i in 1:length(genome.files)) {
     #Sets up working directories for each species
-    sample = gsub(pattern = ".fa$|.fna|.gz", replacement = "", x = genome.files[i])
+    sample = gsub(pattern = "\\.fna\\.gz$|\\.fa\\.gz$|\\.fna$|\\.fa$|\\.gz$", replacement = "", x = genome.files[i])
     sample = gsub(pattern = ".*/", replacement = "", x = sample)
     species.dir = paste0(output.name, "/", sample)
 
@@ -255,14 +259,20 @@ extractGenomeTarget = function(genome.path = NULL,
 
       #Loads in match data
       match.data = data.table::fread(paste0(species.dir, "/", sample, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+
+      #Guard: empty BLAST output
+      if (nrow(match.data) == 0) {
+        print(paste0(sample, " had no matches. Skipping"))
+        next
+      }
       data.table::setnames(match.data, headers)
 
-      #Matches need to be greater than 12
-      filt.data = match.data[match.data$matches > minimum.match.length,]
+      #Matches need to be >= minimum.match.length bp
+      filt.data = match.data[match.data$matches >= minimum.match.length,]
       #Remove identical rows
       filt.data = filt.data[duplicated(filt.data) != T,]
-      #Percent identitiy must match 50% or greater
-      filt.data = filt.data[filt.data$pident >= minimum.match.identity,]
+      #Percent identity: minimum.match.identity is 0-1 fraction; pident is 0-100
+      filt.data = filt.data[filt.data$pident >= minimum.match.identity * 100,]
 
       #Make sure the hit is greater than 50% of the reference length
       filt.data = filt.data[filt.data$matches >= ( (minimum.match.coverage) * filt.data$tLen),]
@@ -365,7 +375,11 @@ extractGenomeTarget = function(genome.path = NULL,
         } #end j loop
 
         temp.filt = filt.data[!filt.data$tName %in% dup.names,]
-        filt.data = rbind(temp.filt, save.dup)
+        if (duplicate.matches == "none") {
+          filt.data = temp.filt
+        } else {
+          filt.data = rbind(temp.filt, save.dup)
+        }
 
       }#end if
 
@@ -374,11 +388,10 @@ extractGenomeTarget = function(genome.path = NULL,
       #Extracts the genomic data using the final.table coordinates
       Rsamtools::indexFa(species.genome.path)
       fa = Rsamtools::FaFile(species.genome.path)
-      gr = as(GenomicRanges::seqinfo(fa), "GRanges")
 
-      #adds genome columns
-      final.table[, gStart:=as.numeric(0)]
-      final.table[, gEnd:=as.numeric(0)]
+      #adds genome columns — initialise to NA so skipped rows are filtered below
+      final.table[, gStart:=NA_real_]
+      final.table[, gEnd:=NA_real_]
       header.data = colnames(final.table)
 
       for (j in 1:nrow(final.table)){
@@ -390,7 +403,9 @@ extractGenomeTarget = function(genome.path = NULL,
         gen.end  = max(c(sub.match$qEnd, sub.match$qStart)) + add.flanks
         if (gen.start <= 0){ gen.start = as.numeric(1) }
         if (gen.end > sub.match$qLen) { gen.end = sub.match$qLen }
-        if (gen.end-gen.start >= max(sub.match$tLen) * 100){ next }
+        # Skip if the extracted span is implausibly large (> 100x target length)
+        # Leave gStart/gEnd as NA so this row is removed by the filter below
+        if (gen.end - gen.start >= max(sub.match$tLen) * 100){ next }
 
         ## Save in table here
         data.table::set(final.table, i =  as.integer(j),
@@ -401,8 +416,8 @@ extractGenomeTarget = function(genome.path = NULL,
 
       }#end j loop
 
-      #removes skipped nas above
-      final.table = final.table[is.na(final.table$gStart) != T,]
+      #removes rows that were skipped (gStart is still NA)
+      final.table = final.table[!is.na(final.table$gStart),]
 
       #gets ranges of stuff and obtains sequences
       gr.ranges = data.frame(seqnames = final.table$qName,
@@ -447,7 +462,6 @@ extractGenomeTarget = function(genome.path = NULL,
       #Extracts the genomic data using the final.table coordinates
       Rsamtools::indexFa(species.genome.path)
       fa = Rsamtools::FaFile(species.genome.path)
-      gr = as(GenomicRanges::seqinfo(fa), "GRanges")
 
       #gets ranges of stuff and obtains sequences
       final.table = read.table(input.file, header = bed.headers)
@@ -483,7 +497,11 @@ extractGenomeTarget = function(genome.path = NULL,
 
     print(paste0(sample, " Matching to the genome complete. ", length(final.loci), " targets extracted!"))
 
-    if (length(zipped.up) == 1){ system(paste0("rm ", species.dir, "/", sample, "_genome.fa") ) }
+    if (length(zipped.up) == 1){
+      system(paste0("rm ", species.dir, "/", sample, "_genome.fa"))
+      fai.path = paste0(species.dir, "/", sample, "_genome.fa.fai")
+      if (file.exists(fai.path)) { system(paste0("rm ", fai.path)) }
+    }
 
   }# end i loop
 
