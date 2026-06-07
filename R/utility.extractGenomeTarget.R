@@ -8,7 +8,30 @@
 #'   CSV outputs.
 #'
 #' @param genome.path path to a single genome FASTA file or to a directory of
-#'   genome files to process.
+#'   genome files to process.  May be \code{NULL} when \code{genome.accessions}
+#'   is supplied.
+#'
+#' @param genome.accessions optional path to a CSV file whose rows each
+#'   identify one NCBI genome assembly to download, extract targets from, and
+#'   then delete.  Use \strong{GCA accession numbers} (GenBank assemblies) —
+#'   they cover every genome, including those without a RefSeq (GCF) record.
+#'   Required column: \code{Accession} (or the name given in
+#'   \code{accession.column}).  Optional column: \code{Name} (or
+#'   \code{name.column}) for a human-readable sample label; the accession is
+#'   used when absent.  Downloads are performed with the NCBI \code{datasets}
+#'   CLI tool one genome at a time and the FASTA is deleted immediately after
+#'   extraction to minimise disk usage.
+#'
+#' @param accession.column name of the column in \code{genome.accessions} that
+#'   holds the GCA/GCF accession strings.  Default \code{"Accession"}.
+#'
+#' @param name.column optional name of the column in \code{genome.accessions}
+#'   that holds a human-readable sample label.  When \code{NULL} (default) the
+#'   accession string is used as the sample name.
+#'
+#' @param ncbi.datasets.path system path to the directory containing the NCBI
+#'   \code{datasets} executable.  \code{NULL} searches the system PATH.
+#'   Install via conda: \code{conda install -c conda-forge ncbi-datasets-cli}.
 #'
 #' @param input.file path to the target sequence file; either a multi-sequence
 #'   FASTA (when input.type = "fasta") or a BED coordinate file (when
@@ -75,6 +98,10 @@
 #' @export
 
 extractGenomeTarget = function(genome.path = NULL,
+                               genome.accessions = NULL,
+                               accession.column = "Accession",
+                               name.column = NULL,
+                               ncbi.datasets.path = NULL,
                                input.file = NULL,
                                input.type = c("fasta", "bed"),
                                output.name = NULL,
@@ -153,15 +180,27 @@ extractGenomeTarget = function(genome.path = NULL,
     }#end if
   } else { blast.path = "" }
 
+  # Normalise NCBI datasets CLI path
+  if (!is.null(ncbi.datasets.path)) {
+    d.string = unlist(strsplit(ncbi.datasets.path, ""))
+    if (d.string[length(d.string)] != "/") {
+      ncbi.datasets.path = paste0(append(d.string, "/"), collapse = "")
+    }
+  } else { ncbi.datasets.path = "" }
+
   # Validate choice parameters
   input.type        = match.arg(input.type)
   duplicate.matches = match.arg(duplicate.matches)
 
   #Initial checks
-  if (output.name == genome.path){ stop("You should not overwrite the original genome file.") }
+  if (is.null(genome.path) && is.null(genome.accessions)) {
+    stop("Error: supply genome.path (files) and/or genome.accessions (CSV of NCBI accessions).")
+  }
+  if (!is.null(output.name) && !is.null(genome.path) && output.name == genome.path){
+    stop("You should not overwrite the original genome file.")
+  }
   if (output.name == input.file){ stop("You should not overwrite the original target file.") }
   if (is.null(input.file) == T){ stop("A fasta file of targets to match to assembly contigs is needed.") }
-  if (is.null(genome.path) == T){ stop("A fasta file of targets to match to assembly contigs is needed.") }
 
   if (dir.exists(output.name) == TRUE) {
     if (overwrite == TRUE){
@@ -170,18 +209,58 @@ extractGenomeTarget = function(genome.path = NULL,
     }
   } else { dir.create(output.name) }
 
-  #Gets file names if they are directory or a single file
-  if (dir.exists(genome.path) == TRUE) {
-    file.names = list.files(genome.path, recursive = T)
-    genome.files = file.names[grep("\\.fai$", file.names, invert = T)]
-    if (!is.null(genome.search.string)){
-      genome.files = genome.files[grep(genome.search.string, genome.files)]
+  ##############################################################################
+  # Build a unified list of genome sources.
+  # Each entry: list(type, file, path, sample, accession)
+  #   type="file"      — local genome file (existing behaviour)
+  #   type="accession" — download from NCBI, extract, delete
+  ##############################################################################
+  genome.sources = list()
+
+  # --- Local files ---
+  if (!is.null(genome.path)) {
+    if (dir.exists(genome.path)) {
+      file.names   = list.files(genome.path, recursive = TRUE)
+      genome.files = file.names[grep("\\.fai$", file.names, invert = TRUE)]
+      if (!is.null(genome.search.string)) {
+        genome.files = genome.files[grep(genome.search.string, genome.files)]
+      }
+    } else {
+      genome.files = basename(genome.path)
+      genome.path  = dirname(genome.path)
     }
-  } else {
-    genome.files = genome.path
-    genome.path = dirname(genome.files)
-    genome.files = basename(genome.files)
-  }#end else
+    for (f in genome.files) {
+      sn = gsub(pattern = "\\.fna\\.gz$|\\.fa\\.gz$|\\.fna$|\\.fa$|\\.gz$",
+                replacement = "", x = basename(f))
+      genome.sources = append(genome.sources,
+                              list(list(type="file", file=f,
+                                        genome.path=genome.path, sample=sn)))
+    }
+  }
+
+  # --- NCBI accession downloads ---
+  if (!is.null(genome.accessions)) {
+    if (!file.exists(genome.accessions)) {
+      stop(paste0("Error: genome.accessions file not found: ", genome.accessions))
+    }
+    acc.table = read.csv(genome.accessions, stringsAsFactors = FALSE)
+    if (!accession.column %in% colnames(acc.table)) {
+      stop(paste0("Error: column '", accession.column, "' not found in genome.accessions CSV."))
+    }
+    accessions = acc.table[[accession.column]]
+    sample.nms = if (!is.null(name.column) && name.column %in% colnames(acc.table))
+      acc.table[[name.column]]
+    else
+      accessions
+    for (k in seq_along(accessions)) {
+      genome.sources = append(genome.sources,
+                              list(list(type="accession",
+                                        accession = accessions[k],
+                                        sample    = sample.nms[k])))
+    }
+  }
+
+  if (length(genome.sources) == 0) { stop("Error: no genome sources found.") }
 
 
   # if (match.by.chr == TRUE){
@@ -209,36 +288,73 @@ extractGenomeTarget = function(genome.path = NULL,
   }#end fasta
 
 
-  #Loops through each locus and does operations on them
-  for (i in 1:length(genome.files)) {
-    #Sets up working directories for each species
-    sample = gsub(pattern = "\\.fna\\.gz$|\\.fa\\.gz$|\\.fna$|\\.fa$|\\.gz$", replacement = "", x = genome.files[i])
-    sample = gsub(pattern = ".*/", replacement = "", x = sample)
+  #Loops through each genome source (local files and/or NCBI downloads)
+  for (i in seq_along(genome.sources)) {
+    src = genome.sources[[i]]
+
+    sample      = src$sample
     species.dir = paste0(output.name, "/", sample)
+    downloaded  = FALSE   # tracks whether we need to clean up a downloaded genome
 
     #Creates species directory if none exists
-    if (dir.exists(species.dir) == F){ dir.create(species.dir) }
+    if (!dir.exists(species.dir)) { dir.create(species.dir) }
+
+    ##########################################################################
+    # NCBI download preamble — only for accession sources
+    ##########################################################################
+    if (src$type == "accession") {
+      acc      = src$accession
+      zip.path = file.path(species.dir, paste0(acc, "_download.zip"))
+      tmp.dir  = file.path(species.dir, paste0(acc, "_tmp"))
+
+      if (!overwrite && file.exists(file.path(species.dir,
+                                               paste0(sample, "_target-matches.fa")))) {
+        print(paste0(sample, " already done, skipping.")); next
+      }
+
+      print(paste0("Downloading ", acc, " from NCBI..."))
+      dl.ret = system(paste0(ncbi.datasets.path, "datasets download genome accession ", acc,
+                             " --include genome --filename ", zip.path), ignore.stdout = quiet)
+      if (dl.ret != 0 || !file.exists(zip.path)) {
+        warning(paste0(acc, ": download failed. Skipping.")); next
+      }
+      system(paste0("unzip -o \"", zip.path, "\" -d \"", tmp.dir, "\""),
+             ignore.stdout = quiet)
+
+      fna.files = list.files(tmp.dir,
+                             pattern = "\\.fna$|\\.fa$|\\.fna\\.gz$|\\.fa\\.gz$",
+                             recursive = TRUE, full.names = TRUE)
+      if (length(fna.files) == 0) {
+        warning(paste0(acc, ": no genome FASTA found after download. Skipping."))
+        unlink(tmp.dir, recursive = TRUE); file.remove(zip.path); next
+      }
+
+      species.genome.path = fna.files[1]
+      downloaded  = TRUE
+      zipped.up   = integer(0)   # downloaded files are already unzipped
+    }
 
     if (input.type == "fasta"){
 
-      #Checks if this has been done already
-      if (overwrite == FALSE){
-        if (file.exists(paste0(species.dir, "/", sample, "_target-matches.fa")) == T){ next }
-      }#end
+      #Checks if this has been done already (file sources only; accession already checked above)
+      if (src$type == "file") {
+        if (overwrite == FALSE){
+          if (file.exists(paste0(species.dir, "/", sample, "_target-matches.fa")) == T){ next }
+        }#end
 
-      #########################################################################
-      #Part A: Blasting
-      #########################################################################
+        #######################################################################
+        #Part A: Resolve genome path for local files
+        #######################################################################
+        zipped.up = grep("\\.gz$", src$file)
 
-      zipped.up = grep(".gz$", genome.files[i])
-
-      if (length(zipped.up) == 1){
-        system(paste0("gzip -dc ", genome.path, "/", genome.files[i], " > ",
-                                  species.dir, "/", sample, "_genome.fa") )
-        species.genome.path = paste0(species.dir, "/", sample, "_genome.fa")
+        if (length(zipped.up) == 1){
+          system(paste0("gzip -dc \"", file.path(src$genome.path, src$file), "\" > \"",
+                        file.path(species.dir, paste0(sample, "_genome.fa")), "\""))
+          species.genome.path = file.path(species.dir, paste0(sample, "_genome.fa"))
         } else {
-        species.genome.path = paste0(genome.path, "/", genome.files[i])
-      }#end else
+          species.genome.path = file.path(src$genome.path, src$file)
+        }#end else
+      }#end file source
 
       #Matches samples to loci
       system(paste0(blast.path, "blastn -task dc-megablast -db ", output.name, "/target_nucl-blast_db -evalue 0.001",
@@ -448,15 +564,23 @@ extractGenomeTarget = function(genome.path = NULL,
     }#end input type fasta
 
     if (input.type == "bed"){
+      # BED mode only makes sense for local files; skip accession sources
+      if (src$type == "accession") {
+        warning(paste0(src$accession, ": input.type='bed' not supported for NCBI downloads. Skipping."))
+        unlink(file.path(species.dir, paste0(src$accession, "_tmp")), recursive=TRUE)
+        f <- file.path(species.dir, paste0(src$accession, "_download.zip"))
+        if (file.exists(f)) file.remove(f)
+        next
+      }
 
-      zipped.up = grep(".gz$", genome.files[i])
+      zipped.up = grep("\\.gz$", src$file)
 
       if (length(zipped.up) == 1){
-        system(paste0("gzip -dc ", genome.path, "/", genome.files[i], " > ",
-                      species.dir, "/", sample, "_genome.fa") )
-        species.genome.path = paste0(species.dir, "/", sample, "_genome.fa")
+        system(paste0("gzip -dc \"", file.path(src$genome.path, src$file), "\" > \"",
+                      file.path(species.dir, paste0(sample, "_genome.fa")), "\""))
+        species.genome.path = file.path(species.dir, paste0(sample, "_genome.fa"))
       } else {
-        species.genome.path = paste0(genome.path, "/", genome.files[i])
+        species.genome.path = file.path(src$genome.path, src$file)
       }#end else
 
       #Extracts the genomic data using the final.table coordinates
@@ -497,10 +621,19 @@ extractGenomeTarget = function(genome.path = NULL,
 
     print(paste0(sample, " Matching to the genome complete. ", length(final.loci), " targets extracted!"))
 
-    if (length(zipped.up) == 1){
-      system(paste0("rm ", species.dir, "/", sample, "_genome.fa"))
-      fai.path = paste0(species.dir, "/", sample, "_genome.fa.fai")
-      if (file.exists(fai.path)) { system(paste0("rm ", fai.path)) }
+    # Clean up temporary genome files
+    if (downloaded) {
+      # Accession source: delete entire downloaded tmp dir and zip
+      unlink(file.path(species.dir, paste0(src$accession, "_tmp")), recursive = TRUE)
+      zip.path = file.path(species.dir, paste0(src$accession, "_download.zip"))
+      if (file.exists(zip.path)) file.remove(zip.path)
+      fai.path = paste0(species.genome.path, ".fai")
+      if (file.exists(fai.path)) file.remove(fai.path)
+    } else if (length(zipped.up) == 1) {
+      # Local gzipped file: delete the decompressed copy
+      system(paste0("rm \"", file.path(species.dir, paste0(sample, "_genome.fa")), "\""))
+      fai.path = file.path(species.dir, paste0(sample, "_genome.fa.fai"))
+      if (file.exists(fai.path)) { system(paste0("rm \"", fai.path, "\"")) }
     }
 
   }# end i loop
