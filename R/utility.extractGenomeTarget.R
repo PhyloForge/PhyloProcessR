@@ -110,6 +110,15 @@
 #'
 #' @param memory amount of RAM in GB (currently reserved).
 #'
+#' @param max.retries integer; number of times to retry a failed NCBI FTP URL
+#'   lookup or genome download before giving up and moving to the next genome.
+#'   Default 3.  Between each attempt the function waits \code{retry.delay}
+#'   seconds.
+#'
+#' @param retry.delay numeric; seconds to wait between retry attempts.
+#'   Default 60.  Increase for flaky connections or heavily loaded NCBI FTP
+#'   servers.
+#'
 #' @param overwrite logical; if TRUE existing output directories are deleted and
 #'   recreated.
 #'
@@ -131,6 +140,8 @@ extractGenomeTarget = function(genome.path = NULL,
                                assembly.level = c("scaffold", "chromosome", "complete"),
                                max.assemblies = NULL,
                                ncbi.api.key = NULL,
+                               max.retries = 3,
+                               retry.delay = 60,
                                input.file = NULL,
                                input.type = c("fasta", "bed"),
                                output.name = NULL,
@@ -453,35 +464,68 @@ extractGenomeTarget = function(genome.path = NULL,
     # No CLI tools required.
     ##########################################################################
     if (src$type == "accession") {
-      acc = src$accession
+      acc          = src$accession
+      sentinel     = file.path(species.dir, paste0(sample, "_COMPLETED"))
+      matches.file = file.path(species.dir, paste0(sample, "_target-matches.fa"))
 
-      if (!overwrite && file.exists(file.path(species.dir,
-                                               paste0(sample, "_target-matches.fa")))) {
-        print(paste0(sample, " already done, skipping.")); next
+      # ── Already-done check ─────────────────────────────────────────────────
+      # A COMPLETED sentinel file is written at the very end of a successful
+      # run.  The output FASTA is also checked as a fallback for runs that
+      # finished before the sentinel was introduced.
+      if (!overwrite &&
+          (file.exists(sentinel) || file.exists(matches.file))) {
+        print(paste0("[", i, "/", length(genome.sources), "] ",
+                     sample, " already completed — skipping."))
+        next
       }
 
-      # Resolve the HTTPS FTP URL for this accession via Entrez
-      print(paste0("Resolving download URL for ", acc, "..."))
-      genome.url = ncbi.genome.url(acc)
+      # ── Step 1: resolve FTP URL via Entrez (with retries) ─────────────────
+      print(paste0("[", i, "/", length(genome.sources), "] ",
+                   "Resolving download URL for ", acc, "..."))
+      genome.url = NULL
+      for (attempt in seq_len(max.retries)) {
+        genome.url = ncbi.genome.url(acc)
+        if (!is.null(genome.url)) break
+        if (attempt < max.retries) {
+          warning(paste0(acc, ": URL lookup attempt ", attempt, " failed — ",
+                         "retrying in ", retry.delay, "s..."))
+          Sys.sleep(retry.delay)
+        }
+      }
       if (is.null(genome.url)) {
-        warning(paste0(acc, ": could not resolve genome FTP URL. Skipping.")); next
+        warning(paste0(acc, ": could not resolve genome FTP URL after ",
+                       max.retries, " attempt(s). Skipping."))
+        next
       }
 
-      # Download the gzipped genome FASTA
+      # ── Step 2: download gzipped genome FASTA (with retries) ──────────────
       genome.gz = file.path(species.dir, paste0(sample, "_genome.fna.gz"))
-      print(paste0("Downloading ", acc, " (", basename(genome.url), ")..."))
-      dl.ret = tryCatch(
-        download.file(genome.url, destfile=genome.gz,
-                      method="curl", quiet=quiet, mode="wb"),
-        error=function(e) 1L
-      )
-      if (dl.ret != 0 || !file.exists(genome.gz) || file.size(genome.gz) == 0) {
-        warning(paste0(acc, ": download failed. Skipping."))
+      print(paste0("  Downloading ", basename(genome.url), "..."))
+      dl.ok = FALSE
+      for (attempt in seq_len(max.retries)) {
+        if (file.exists(genome.gz)) file.remove(genome.gz)
+        dl.ret = tryCatch(
+          download.file(genome.url, destfile=genome.gz,
+                        method="curl", quiet=quiet, mode="wb"),
+          error=function(e) 1L
+        )
+        if (dl.ret == 0 && file.exists(genome.gz) && file.size(genome.gz) > 0) {
+          dl.ok = TRUE; break
+        }
+        if (attempt < max.retries) {
+          warning(paste0(acc, ": download attempt ", attempt, " failed — ",
+                         "retrying in ", retry.delay, "s..."))
+          Sys.sleep(retry.delay)
+        }
+      }
+      if (!dl.ok) {
+        warning(paste0(acc, ": download failed after ", max.retries,
+                       " attempt(s). Skipping."))
         if (file.exists(genome.gz)) file.remove(genome.gz)
         next
       }
 
-      # Decompress — delete the .gz immediately to free disk space
+      # ── Step 3: decompress — delete .gz immediately to free disk space ─────
       species.genome.path = file.path(species.dir, paste0(sample, "_genome.fa"))
       system(paste0("gzip -dc \"", genome.gz, "\" > \"", species.genome.path, "\""))
       file.remove(genome.gz)
@@ -775,7 +819,20 @@ extractGenomeTarget = function(genome.path = NULL,
                paste0(species.dir, "/", sample, "_target-matches.fa"),
                nbchar = 1000000, as.string = T)
 
-    print(paste0(sample, " Matching to the genome complete. ", length(final.loci), " targets extracted!"))
+    print(paste0("[", i, "/", length(genome.sources), "] ",
+                 sample, " complete — ", length(final.loci), " targets extracted."))
+
+    # Write a sentinel file so re-runs can skip this genome without re-checking
+    # every output file.  Includes a brief summary for auditing.
+    if (src$type == "accession") {
+      writeLines(
+        c(paste0("accession: ", src$accession),
+          paste0("sample:    ", sample),
+          paste0("targets:   ", length(final.loci)),
+          paste0("completed: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))),
+        con = file.path(species.dir, paste0(sample, "_COMPLETED"))
+      )
+    }
 
     # Clean up temporary genome files
     if (downloaded) {
