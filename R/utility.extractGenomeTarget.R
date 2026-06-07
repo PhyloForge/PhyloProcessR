@@ -48,9 +48,11 @@
 #'   download when using \code{genome.taxon}.  \code{NULL} (default) downloads
 #'   all that match the query.  Useful for large clades or testing.
 #'
-#' @param ncbi.datasets.path system path to the directory containing the NCBI
-#'   \code{datasets} executable.  \code{NULL} searches the system PATH.
-#'   Install via conda: \code{conda install -c conda-forge ncbi-datasets-cli}.
+#' @param ncbi.api.key optional NCBI API key string.  Without a key NCBI
+#'   allows 3 requests/second; with one it allows 10/second.  Obtain a free
+#'   key at \url{https://www.ncbi.nlm.nih.gov/account/}.  Only needed when
+#'   processing large numbers of accessions where rate-limiting would otherwise
+#'   slow the FTP-URL lookup step.
 #'
 #' @param input.file path to the target sequence file; either a multi-sequence
 #'   FASTA (when input.type = "fasta") or a BED coordinate file (when
@@ -128,7 +130,7 @@ extractGenomeTarget = function(genome.path = NULL,
                                genome.taxon = NULL,
                                assembly.level = c("scaffold", "chromosome", "complete"),
                                max.assemblies = NULL,
-                               ncbi.datasets.path = NULL,
+                               ncbi.api.key = NULL,
                                input.file = NULL,
                                input.type = c("fasta", "bed"),
                                output.name = NULL,
@@ -206,14 +208,6 @@ extractGenomeTarget = function(genome.path = NULL,
       blast.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
   } else { blast.path = "" }
-
-  # Normalise NCBI datasets CLI path
-  if (!is.null(ncbi.datasets.path)) {
-    d.string = unlist(strsplit(ncbi.datasets.path, ""))
-    if (d.string[length(d.string)] != "/") {
-      ncbi.datasets.path = paste0(append(d.string, "/"), collapse = "")
-    }
-  } else { ncbi.datasets.path = "" }
 
   # Validate choice parameters
   input.type        = match.arg(input.type)
@@ -296,74 +290,99 @@ extractGenomeTarget = function(genome.path = NULL,
     }
   }
 
-  # --- NCBI taxon search ---
+  # --- NCBI taxon search (pure R REST API — no CLI tool required) ---
   if (!is.null(genome.taxon)) {
     print(paste0("Querying NCBI for '", genome.taxon, "' assemblies (levels: ",
                  paste(assembly.level, collapse=", "), ")..."))
 
-    tmp.json = tempfile(fileext = ".jsonl")
-    level.str = paste(assembly.level, collapse = ",")
+    key.str      = if (!is.null(ncbi.api.key)) paste0("&api_key=", ncbi.api.key) else ""
+    level.params = paste(paste0("filters.assembly_level=", assembly.level), collapse="&")
+    base.url     = paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/genome/taxon/",
+                          utils::URLencode(genome.taxon, reserved=TRUE),
+                          "/dataset_report?", level.params, "&page_size=1000", key.str)
 
-    search.ret = system(
-      paste0(ncbi.datasets.path,
-             "datasets summary genome taxon \"", genome.taxon, "\"",
-             " --assembly-level ", level.str,
-             " --as-json-lines > \"", tmp.json, "\""),
-      ignore.stdout = quiet, ignore.stderr = quiet
-    )
+    # Page through results (NCBI returns max 1000 per page)
+    all.reports = list()
+    next.token  = NULL
+    repeat {
+      page.url = if (is.null(next.token)) base.url
+                 else paste0(base.url, "&page_token=",
+                             utils::URLencode(next.token, reserved=TRUE))
+      resp = tryCatch(jsonlite::fromJSON(page.url, simplifyVector=TRUE),
+                      error=function(e) NULL)
+      if (is.null(resp) || is.null(resp$reports)) break
+      all.reports = c(all.reports, list(resp$reports))
+      next.token  = resp$next_page_token
+      if (is.null(next.token) || identical(next.token, "")) break
+      Sys.sleep(if (!is.null(ncbi.api.key)) 0.1 else 0.35)
+    }
 
-    if (search.ret != 0 || !file.exists(tmp.json) || file.size(tmp.json) == 0) {
-      warning(paste0("NCBI query returned no results for taxon: '", genome.taxon, "'"))
+    if (length(all.reports) == 0) {
+      warning(paste0("No assemblies found for taxon: '", genome.taxon, "'"))
     } else {
-      # Parse JSON lines — each line is one assembly record
-      json.lines = readLines(tmp.json, warn = FALSE)
-      json.lines = json.lines[nchar(trimws(json.lines)) > 0]
-
-      taxon.entries = Filter(Negate(is.null), lapply(json.lines, function(line) {
+      reports = do.call(rbind, all.reports)
+      taxon.entries = Filter(Negate(is.null), lapply(seq_len(nrow(reports)), function(k) {
         tryCatch({
-          j   = jsonlite::fromJSON(line, simplifyVector = FALSE)
-          acc = j$accession
-          # organism name may be nested differently across datasets versions
-          nm  = if (!is.null(j$organism$organism_name))
-                  j$organism$organism_name
-                else if (!is.null(j$assembly$org$sci_name))
-                  j$assembly$org$sci_name
-                else acc
-          # Build sample name: Genus_species_GCAaccession
-          # Replace dots in accession (e.g. GCA_044758485.1 -> GCA_044758485_1)
-          # so the name is safe for phylip/newick taxon labels and filenames.
-          nm.clean  = gsub("[^A-Za-z0-9]", "_", nm)
-          nm.clean  = gsub("_+", "_", nm.clean)
-          nm.clean  = sub("_$", "", nm.clean)
+          acc = reports$accession[k]
+          nm  = reports$organism$organism_name[k]
+          if (is.null(nm) || is.na(nm)) nm = acc
+          nm.clean  = sub("_$", "", gsub("_+", "_", gsub("[^A-Za-z0-9]", "_", nm)))
           acc.clean = gsub("\\.", "_", acc)
-          list(accession = acc, sample = paste0(nm.clean, "_", acc.clean))
-        }, error = function(e) NULL)
+          list(accession=acc, sample=paste0(nm.clean, "_", acc.clean))
+        }, error=function(e) NULL)
       }))
 
-      file.remove(tmp.json)
-
       if (length(taxon.entries) == 0) {
-        warning(paste0("Could not parse any assembly records for taxon: '", genome.taxon, "'"))
+        warning(paste0("Could not parse assembly records for taxon: '", genome.taxon, "'"))
       } else {
-        # Apply max.assemblies cap
         if (!is.null(max.assemblies) && length(taxon.entries) > max.assemblies) {
           print(paste0("Found ", length(taxon.entries), " assemblies; limiting to ", max.assemblies))
           taxon.entries = taxon.entries[seq_len(max.assemblies)]
         } else {
           print(paste0("Found ", length(taxon.entries), " assemblies for '", genome.taxon, "'"))
         }
-
         for (entry in taxon.entries) {
           genome.sources = append(genome.sources,
-                                  list(list(type      = "accession",
-                                            accession = entry$accession,
-                                            sample    = entry$sample)))
+                                  list(list(type="accession",
+                                            accession=entry$accession,
+                                            sample=entry$sample)))
         }
       }
     }
   }
 
   if (length(genome.sources) == 0) { stop("Error: no genome sources found.") }
+
+  ##############################################################################
+  # Helper closure: resolve NCBI FTP download URL for a genome accession.
+  # Uses Entrez esearch (accession → UID) then esummary (UID → FTP path).
+  # Returns the HTTPS URL of the _genomic.fna.gz file, or NULL on failure.
+  ##############################################################################
+  ncbi.genome.url = function(acc) {
+    rate.sleep = if (!is.null(ncbi.api.key)) 0.1 else 0.4
+    key.str    = if (!is.null(ncbi.api.key)) paste0("&api_key=", ncbi.api.key) else ""
+
+    Sys.sleep(rate.sleep)
+    search.url = paste0("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?",
+                        "db=assembly&term=", utils::URLencode(acc, reserved=TRUE),
+                        "[Assembly Accession]&retmode=json", key.str)
+    sr = tryCatch(jsonlite::fromJSON(search.url), error=function(e) NULL)
+    if (is.null(sr) || length(sr$esearchresult$idlist) == 0) return(NULL)
+    uid = sr$esearchresult$idlist[1]
+
+    Sys.sleep(rate.sleep)
+    sum.url = paste0("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?",
+                     "db=assembly&id=", uid, "&retmode=json", key.str)
+    smr = tryCatch(jsonlite::fromJSON(sum.url), error=function(e) NULL)
+    if (is.null(smr)) return(NULL)
+
+    ftp = tryCatch(smr$result[[uid]]$ftppath_genbank, error=function(e) NULL)
+    if (is.null(ftp) || ftp %in% c("", "na", "NA")) return(NULL)
+
+    ftp.https = sub("^ftp://", "https://", ftp)
+    aname     = basename(ftp.https)
+    paste0(ftp.https, "/", aname, "_genomic.fna.gz")
+  }
 
 
   # if (match.by.chr == TRUE){
@@ -404,37 +423,45 @@ extractGenomeTarget = function(genome.path = NULL,
 
     ##########################################################################
     # NCBI download preamble — only for accession sources
+    # Uses pure R: Entrez API to resolve FTP URL, download.file() to fetch.
+    # No CLI tools required.
     ##########################################################################
     if (src$type == "accession") {
-      acc      = src$accession
-      zip.path = file.path(species.dir, paste0(acc, "_download.zip"))
-      tmp.dir  = file.path(species.dir, paste0(acc, "_tmp"))
+      acc = src$accession
 
       if (!overwrite && file.exists(file.path(species.dir,
                                                paste0(sample, "_target-matches.fa")))) {
         print(paste0(sample, " already done, skipping.")); next
       }
 
-      print(paste0("Downloading ", acc, " from NCBI..."))
-      dl.ret = system(paste0(ncbi.datasets.path, "datasets download genome accession ", acc,
-                             " --include genome --filename ", zip.path), ignore.stdout = quiet)
-      if (dl.ret != 0 || !file.exists(zip.path)) {
-        warning(paste0(acc, ": download failed. Skipping.")); next
-      }
-      system(paste0("unzip -o \"", zip.path, "\" -d \"", tmp.dir, "\""),
-             ignore.stdout = quiet)
-
-      fna.files = list.files(tmp.dir,
-                             pattern = "\\.fna$|\\.fa$|\\.fna\\.gz$|\\.fa\\.gz$",
-                             recursive = TRUE, full.names = TRUE)
-      if (length(fna.files) == 0) {
-        warning(paste0(acc, ": no genome FASTA found after download. Skipping."))
-        unlink(tmp.dir, recursive = TRUE); file.remove(zip.path); next
+      # Resolve the HTTPS FTP URL for this accession via Entrez
+      print(paste0("Resolving download URL for ", acc, "..."))
+      genome.url = ncbi.genome.url(acc)
+      if (is.null(genome.url)) {
+        warning(paste0(acc, ": could not resolve genome FTP URL. Skipping.")); next
       }
 
-      species.genome.path = fna.files[1]
-      downloaded  = TRUE
-      zipped.up   = integer(0)   # downloaded files are already unzipped
+      # Download the gzipped genome FASTA
+      genome.gz = file.path(species.dir, paste0(sample, "_genome.fna.gz"))
+      print(paste0("Downloading ", acc, " (", basename(genome.url), ")..."))
+      dl.ret = tryCatch(
+        download.file(genome.url, destfile=genome.gz,
+                      method="curl", quiet=quiet, mode="wb"),
+        error=function(e) 1L
+      )
+      if (dl.ret != 0 || !file.exists(genome.gz) || file.size(genome.gz) == 0) {
+        warning(paste0(acc, ": download failed. Skipping."))
+        if (file.exists(genome.gz)) file.remove(genome.gz)
+        next
+      }
+
+      # Decompress — delete the .gz immediately to free disk space
+      species.genome.path = file.path(species.dir, paste0(sample, "_genome.fa"))
+      system(paste0("gzip -dc \"", genome.gz, "\" > \"", species.genome.path, "\""))
+      file.remove(genome.gz)
+
+      downloaded = TRUE
+      zipped.up  = integer(0)
     }
 
     if (input.type == "fasta"){
@@ -669,10 +696,10 @@ extractGenomeTarget = function(genome.path = NULL,
     if (input.type == "bed"){
       # BED mode only makes sense for local files; skip accession sources
       if (src$type == "accession") {
-        warning(paste0(src$accession, ": input.type='bed' not supported for NCBI downloads. Skipping."))
-        unlink(file.path(species.dir, paste0(src$accession, "_tmp")), recursive=TRUE)
-        f <- file.path(species.dir, paste0(src$accession, "_download.zip"))
-        if (file.exists(f)) file.remove(f)
+        warning(paste0(acc, ": input.type='bed' not supported for NCBI downloads. Skipping."))
+        # Clean up any partially downloaded genome file
+        genome.fa = file.path(species.dir, paste0(sample, "_genome.fa"))
+        if (file.exists(genome.fa)) file.remove(genome.fa)
         next
       }
 
@@ -726,12 +753,12 @@ extractGenomeTarget = function(genome.path = NULL,
 
     # Clean up temporary genome files
     if (downloaded) {
-      # Accession source: delete entire downloaded tmp dir and zip
-      unlink(file.path(species.dir, paste0(src$accession, "_tmp")), recursive = TRUE)
-      zip.path = file.path(species.dir, paste0(src$accession, "_download.zip"))
-      if (file.exists(zip.path)) file.remove(zip.path)
-      fai.path = paste0(species.genome.path, ".fai")
-      if (file.exists(fai.path)) file.remove(fai.path)
+      # Accession source: the .gz was already deleted after decompression.
+      # Remove the decompressed genome FASTA and its index — output files are kept.
+      genome.fa = file.path(species.dir, paste0(sample, "_genome.fa"))
+      fai.path  = paste0(genome.fa, ".fai")
+      if (file.exists(genome.fa)) file.remove(genome.fa)
+      if (file.exists(fai.path))  file.remove(fai.path)
     } else if (length(zipped.up) == 1) {
       # Local gzipped file: delete the decompressed copy
       system(paste0("rm \"", file.path(species.dir, paste0(sample, "_genome.fa")), "\""))
