@@ -295,21 +295,34 @@ extractGenomeTarget = function(genome.path = NULL,
     print(paste0("Querying NCBI for '", genome.taxon, "' assemblies (levels: ",
                  paste(assembly.level, collapse=", "), ")..."))
 
-    key.str      = if (!is.null(ncbi.api.key)) paste0("&api_key=", ncbi.api.key) else ""
-    level.params = paste(paste0("filters.assembly_level=", assembly.level), collapse="&")
+    key.str = if (!is.null(ncbi.api.key)) paste0("&api_key=", ncbi.api.key) else ""
+    # Map user-facing level names to the NCBI v2 API filter values:
+    # "complete" must be sent as "complete_genome" in the query string.
+    api.levels   = ifelse(assembly.level == "complete", "complete_genome", assembly.level)
+    level.params = paste(paste0("filters.assembly_level=", api.levels), collapse="&")
     base.url     = paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/genome/taxon/",
                           utils::URLencode(genome.taxon, reserved=TRUE),
                           "/dataset_report?", level.params, "&page_size=1000", key.str)
 
-    # Page through results (NCBI returns max 1000 per page)
+    # Page through results (NCBI returns max 1000 per page).
+    # Use url() + readLines to fetch and jsonlite::fromJSON() to parse,
+    # which is more robust than passing the URL string directly to fromJSON.
+    ncbi.get.json = function(query.url) {
+      tryCatch({
+        con  = url(query.url, open="rb")
+        on.exit(close(con), add=TRUE)
+        txt  = paste(readLines(con, warn=FALSE), collapse="")
+        jsonlite::fromJSON(txt, simplifyVector=TRUE)
+      }, error=function(e) NULL)
+    }
+
     all.reports = list()
     next.token  = NULL
     repeat {
       page.url = if (is.null(next.token)) base.url
                  else paste0(base.url, "&page_token=",
                              utils::URLencode(next.token, reserved=TRUE))
-      resp = tryCatch(jsonlite::fromJSON(page.url, simplifyVector=TRUE),
-                      error=function(e) NULL)
+      resp = ncbi.get.json(page.url)
       if (is.null(resp) || is.null(resp$reports)) break
       all.reports = c(all.reports, list(resp$reports))
       next.token  = resp$next_page_token
@@ -362,18 +375,31 @@ extractGenomeTarget = function(genome.path = NULL,
     rate.sleep = if (!is.null(ncbi.api.key)) 0.1 else 0.4
     key.str    = if (!is.null(ncbi.api.key)) paste0("&api_key=", ncbi.api.key) else ""
 
+    # Robust JSON fetch helper (reuses the closure defined above if in scope,
+    # but redefined here so the helper is self-contained)
+    get.json = function(u) {
+      tryCatch({
+        con = url(u, open="rb")
+        on.exit(close(con), add=TRUE)
+        jsonlite::fromJSON(paste(readLines(con, warn=FALSE), collapse=""),
+                           simplifyVector=TRUE)
+      }, error=function(e) NULL)
+    }
+
     Sys.sleep(rate.sleep)
+    # Square brackets in the Entrez field qualifier must be percent-encoded
+    # so they are not misinterpreted as URL syntax by url() / curl.
     search.url = paste0("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?",
                         "db=assembly&term=", utils::URLencode(acc, reserved=TRUE),
-                        "[Assembly Accession]&retmode=json", key.str)
-    sr = tryCatch(jsonlite::fromJSON(search.url), error=function(e) NULL)
+                        "%5BAssembly%20Accession%5D&retmode=json", key.str)
+    sr = get.json(search.url)
     if (is.null(sr) || length(sr$esearchresult$idlist) == 0) return(NULL)
     uid = sr$esearchresult$idlist[1]
 
     Sys.sleep(rate.sleep)
     sum.url = paste0("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?",
                      "db=assembly&id=", uid, "&retmode=json", key.str)
-    smr = tryCatch(jsonlite::fromJSON(sum.url), error=function(e) NULL)
+    smr = get.json(sum.url)
     if (is.null(smr)) return(NULL)
 
     ftp = tryCatch(smr$result[[uid]]$ftppath_genbank, error=function(e) NULL)
