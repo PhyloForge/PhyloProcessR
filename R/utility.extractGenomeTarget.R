@@ -29,6 +29,25 @@
 #'   that holds a human-readable sample label.  When \code{NULL} (default) the
 #'   accession string is used as the sample name.
 #'
+#' @param genome.taxon optional taxonomic name or NCBI taxon ID (e.g.
+#'   \code{"Centrolenidae"} or \code{"8404"}) to search NCBI automatically for
+#'   matching genome assemblies.  All assemblies at the requested
+#'   \code{assembly.level}(s) are discovered, their accessions resolved, and
+#'   each is downloaded, processed, and deleted in sequence — no user-provided
+#'   table required.  Can be combined with \code{genome.path} and/or
+#'   \code{genome.accessions}; results are pooled.
+#'
+#' @param assembly.level character vector of NCBI assembly level(s) to include
+#'   when \code{genome.taxon} is supplied.  One or more of \code{"contig"},
+#'   \code{"scaffold"}, \code{"chromosome"}, \code{"complete"}.  Default
+#'   \code{c("scaffold","chromosome","complete")} excludes raw contig-level
+#'   assemblies, which are usually too fragmented for reliable target
+#'   extraction.
+#'
+#' @param max.assemblies optional integer; maximum number of assemblies to
+#'   download when using \code{genome.taxon}.  \code{NULL} (default) downloads
+#'   all that match the query.  Useful for large clades or testing.
+#'
 #' @param ncbi.datasets.path system path to the directory containing the NCBI
 #'   \code{datasets} executable.  \code{NULL} searches the system PATH.
 #'   Install via conda: \code{conda install -c conda-forge ncbi-datasets-cli}.
@@ -106,6 +125,9 @@ extractGenomeTarget = function(genome.path = NULL,
                                genome.accessions = NULL,
                                accession.column = "Accession",
                                name.column = NULL,
+                               genome.taxon = NULL,
+                               assembly.level = c("scaffold", "chromosome", "complete"),
+                               max.assemblies = NULL,
                                ncbi.datasets.path = NULL,
                                input.file = NULL,
                                input.type = c("fasta", "bed"),
@@ -198,8 +220,17 @@ extractGenomeTarget = function(genome.path = NULL,
   duplicate.matches = match.arg(duplicate.matches)
 
   #Initial checks
-  if (is.null(genome.path) && is.null(genome.accessions)) {
-    stop("Error: supply genome.path (files) and/or genome.accessions (CSV of NCBI accessions).")
+  if (is.null(genome.path) && is.null(genome.accessions) && is.null(genome.taxon)) {
+    stop("Error: supply at least one of genome.path, genome.accessions, or genome.taxon.")
+  }
+
+  # Validate assembly.level values
+  valid.levels = c("contig", "scaffold", "chromosome", "complete")
+  bad.levels = assembly.level[!assembly.level %in% valid.levels]
+  if (length(bad.levels) > 0) {
+    stop(paste0("Error: invalid assembly.level value(s): ",
+                paste(bad.levels, collapse=", "),
+                ". Must be one or more of: ", paste(valid.levels, collapse=", ")))
   }
   if (!is.null(output.name) && !is.null(genome.path) && output.name == genome.path){
     stop("You should not overwrite the original genome file.")
@@ -262,6 +293,70 @@ extractGenomeTarget = function(genome.path = NULL,
                               list(list(type="accession",
                                         accession = accessions[k],
                                         sample    = sample.nms[k])))
+    }
+  }
+
+  # --- NCBI taxon search ---
+  if (!is.null(genome.taxon)) {
+    print(paste0("Querying NCBI for '", genome.taxon, "' assemblies (levels: ",
+                 paste(assembly.level, collapse=", "), ")..."))
+
+    tmp.json = tempfile(fileext = ".jsonl")
+    level.str = paste(assembly.level, collapse = ",")
+
+    search.ret = system(
+      paste0(ncbi.datasets.path,
+             "datasets summary genome taxon \"", genome.taxon, "\"",
+             " --assembly-level ", level.str,
+             " --as-json-lines > \"", tmp.json, "\""),
+      ignore.stdout = quiet, ignore.stderr = quiet
+    )
+
+    if (search.ret != 0 || !file.exists(tmp.json) || file.size(tmp.json) == 0) {
+      warning(paste0("NCBI query returned no results for taxon: '", genome.taxon, "'"))
+    } else {
+      # Parse JSON lines — each line is one assembly record
+      json.lines = readLines(tmp.json, warn = FALSE)
+      json.lines = json.lines[nchar(trimws(json.lines)) > 0]
+
+      taxon.entries = Filter(Negate(is.null), lapply(json.lines, function(line) {
+        tryCatch({
+          j   = jsonlite::fromJSON(line, simplifyVector = FALSE)
+          acc = j$accession
+          # organism name may be nested differently across datasets versions
+          nm  = if (!is.null(j$organism$organism_name))
+                  j$organism$organism_name
+                else if (!is.null(j$assembly$org$sci_name))
+                  j$assembly$org$sci_name
+                else acc
+          # Sanitise name for use as a directory / file prefix
+          nm.clean = gsub("[^A-Za-z0-9]", "_", nm)
+          nm.clean = gsub("_+", "_", nm.clean)
+          nm.clean = sub("_$", "", nm.clean)
+          list(accession = acc, sample = nm.clean)
+        }, error = function(e) NULL)
+      }))
+
+      file.remove(tmp.json)
+
+      if (length(taxon.entries) == 0) {
+        warning(paste0("Could not parse any assembly records for taxon: '", genome.taxon, "'"))
+      } else {
+        # Apply max.assemblies cap
+        if (!is.null(max.assemblies) && length(taxon.entries) > max.assemblies) {
+          print(paste0("Found ", length(taxon.entries), " assemblies; limiting to ", max.assemblies))
+          taxon.entries = taxon.entries[seq_len(max.assemblies)]
+        } else {
+          print(paste0("Found ", length(taxon.entries), " assemblies for '", genome.taxon, "'"))
+        }
+
+        for (entry in taxon.entries) {
+          genome.sources = append(genome.sources,
+                                  list(list(type      = "accession",
+                                            accession = entry$accession,
+                                            sample    = entry$sample)))
+        }
+      }
     }
   }
 
