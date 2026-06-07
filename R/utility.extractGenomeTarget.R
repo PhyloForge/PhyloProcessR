@@ -329,11 +329,14 @@ extractGenomeTarget = function(genome.path = NULL,
                 else if (!is.null(j$assembly$org$sci_name))
                   j$assembly$org$sci_name
                 else acc
-          # Sanitise name for use as a directory / file prefix
-          nm.clean = gsub("[^A-Za-z0-9]", "_", nm)
-          nm.clean = gsub("_+", "_", nm.clean)
-          nm.clean = sub("_$", "", nm.clean)
-          list(accession = acc, sample = nm.clean)
+          # Build sample name: Genus_species_GCAaccession
+          # Replace dots in accession (e.g. GCA_044758485.1 -> GCA_044758485_1)
+          # so the name is safe for phylip/newick taxon labels and filenames.
+          nm.clean  = gsub("[^A-Za-z0-9]", "_", nm)
+          nm.clean  = gsub("_+", "_", nm.clean)
+          nm.clean  = sub("_$", "", nm.clean)
+          acc.clean = gsub("\\.", "_", acc)
+          list(accession = acc, sample = paste0(nm.clean, "_", acc.clean))
         }, error = function(e) NULL)
       }))
 
