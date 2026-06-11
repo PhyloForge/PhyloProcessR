@@ -208,9 +208,14 @@ sraDownload = function(sra.info.file           = NULL,
     if (!quiet) message(sprintf("[%d/%d] %s  (%s)", i, n.total, samp, acc))
 
     # Completion sentinel — fast skip on re-runs.
-    # Named SampleName.sra_done (dot separator, non-fastq extension) so it is
-    # invisible to list.dirs() and won't match any fastq file grep pattern.
-    sentinel = file.path(output.directory, paste0(samp, ".sra_done"))
+    # Named SampleName.fastq.sra_done so that fastqStats (and every other
+    # PhyloProcessR function that scans a flat reads directory) collapses it
+    # into the real sample name rather than treating it as a separate sample:
+    #   gsub("\\.fastq.*", "", "SampleName.fastq.sra_done") → "SampleName"
+    #   unique() merges it with the FASTQ-derived entry → no extra sample
+    # The dot separator (not underscore) also means grep(paste0(name,"_"),...)
+    # never matches the sentinel when building the per-sample read list.
+    sentinel = file.path(output.directory, paste0(samp, ".fastq.sra_done"))
     if (file.exists(sentinel)) {
       if (!quiet) message("  already completed — skipping")
       rename.out = rbind(rename.out,
