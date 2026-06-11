@@ -22,14 +22,17 @@ quiet = FALSE
 
 # Read input settings
 #########################
-# TRUE  = download reads from Dropbox (requires dropbox settings below)
-# FALSE = use a local directory of reads (set read.directory below)
-use.dropbox = TRUE
-# Path to a local directory of raw reads; used when use.dropbox = FALSE.
+# Select the read source — set exactly one to TRUE (or both FALSE for local):
+#   use.dropbox = TRUE  → download each sample one at a time from Dropbox
+#   use.sra     = TRUE  → download each sample one at a time from NCBI SRA
+#   both FALSE          → use a local directory of reads (set read.directory)
+use.dropbox = FALSE
+use.sra     = FALSE
+# Path to a local directory of raw reads; used when both flags above are FALSE.
 # Reads may be in per-sample sub-directories or flat with a shared filename prefix.
 read.directory = "/Path/to/local/raw-reads"
 # CSV with two columns: "File" (filename prefix) and "Sample" (desired sample name).
-# Used for Dropbox download sample matching; set to NULL if use.dropbox = FALSE.
+# Used for Dropbox sample matching only; not needed for SRA or local runs.
 sample.file = "file_rename.csv"
 # Expected read length in bp, used for MegaBasePairs calculation
 read.length = 150
@@ -42,6 +45,23 @@ processed.reads = "processed-reads"
 dropbox.token = "/Local/Path/to/Token/token.RDS"
 # The Dropbox directory containing all sample read folders
 dropbox.directory = "/Dropbox/Path/to/Reads"
+
+# SRA download settings (only needed when use.sra = TRUE)
+#########################
+# Path to the SraRunInfo CSV exported from the NCBI SRA Run Selector.
+# Must contain at minimum a 'Run' column with SRR/ERR/DRR accession numbers.
+sra.info.file = "SraRunInfo.csv"
+# Column to use directly as sample names. NULL (default) auto-builds names
+# as Genus_species_SampleName (or Genus_species_SRRaccession when SampleName
+# is blank). Set to a quoted column name to override.
+sra.sample.name.column = NULL
+# Only download rows whose LibraryStrategy matches this value
+# (e.g. "Targeted-Capture"). NULL downloads all rows.
+sra.filter.strategy = NULL
+# Number of retry attempts per file before skipping a sample.
+sra.max.retries = 3
+# Seconds to wait between retry attempts.
+sra.retry.delay = 10
 
 # Cleanup settings
 #########################

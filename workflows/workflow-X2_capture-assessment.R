@@ -36,6 +36,9 @@ cleaned.dir = paste0(processed.reads, "/cleaned-reads")
 dir.create(raw.dir, showWarnings = FALSE)
 dir.create(cleaned.dir, showWarnings = FALSE)
 
+# Defensive default for configs that pre-date the use.sra setting
+if (!exists("use.sra")) use.sra = FALSE
+
 # Set up read source and sample list
 if (use.dropbox == TRUE) {
 
@@ -49,6 +52,36 @@ if (use.dropbox == TRUE) {
   sample.data  = read.csv(sample.file)
   sample.names = unique(sample.data$Sample)
   cat("Found", length(sample.names), "unique samples in", sample.file, "\n")
+
+} else if (use.sra == TRUE) {
+
+  # Read SRA run info and build the same sample names that sraDownload will use,
+  # so the loop variable matches what gets downloaded.
+  sra.data = read.csv(sra.info.file, stringsAsFactors = FALSE)
+
+  if (!"Run" %in% names(sra.data))
+    stop("sra.info.file must contain a 'Run' column with SRR/ERR/DRR accessions.")
+
+  if (!is.null(sra.filter.strategy) && "LibraryStrategy" %in% names(sra.data))
+    sra.data = sra.data[sra.data$LibraryStrategy == sra.filter.strategy, ]
+
+  if (!is.null(sra.sample.name.column)) {
+    sra.data$sample.name = as.character(sra.data[[sra.sample.name.column]])
+  } else if ("ScientificName" %in% names(sra.data)) {
+    sci = gsub("[[:space:]]+", "_", trimws(sra.data$ScientificName))
+    if ("SampleName" %in% names(sra.data)) {
+      sn = trimws(as.character(sra.data$SampleName))
+      specimen.id = ifelse(nchar(sn) > 0 & !is.na(sn), sn, sra.data$Run)
+      sra.data$sample.name = paste0(sci, "_", specimen.id)
+    } else {
+      sra.data$sample.name = paste0(sci, "_", sra.data$Run)
+    }
+  } else {
+    sra.data$sample.name = sra.data$Run
+  }
+
+  sample.names = sra.data$sample.name
+  cat("Found", length(sample.names), "samples in", sra.info.file, "\n")
 
 } else {
 
@@ -177,6 +210,60 @@ for (i in 1:length(sample.names)) {
           "failed attempts. Last error:", last.error, "\n")
       writeLines(paste0("Download failed after ", max.attempts, " attempts. Last error: ", last.error),
                  paste0("logs/sample_logs/FAILURE_", sample.name, "_download-failed.txt"))
+      next
+    }
+
+    cat(" Downloaded", length(input.files), "file(s) for", sample.name, "\n")
+    input.dir = raw.dir
+
+  } else if (use.sra == TRUE) {
+
+    # Download this sample's single row from ENA via sraDownload.
+    # Pass sample.name as a pre-built column so naming is consistent with the
+    # sample list built in the setup section above.
+    sra.row      = sra.data[sra.data$sample.name == sample.name, ]
+    temp.sra.csv = tempfile(fileext = ".csv")
+    write.csv(sra.row, temp.sra.csv, row.names = FALSE)
+
+    last.error = tryCatch({
+      sraDownload(sra.info.file      = temp.sra.csv,
+                  sample.name.column = "sample.name",
+                  output.directory   = raw.dir,
+                  max.retries        = sra.max.retries,
+                  retry.delay        = sra.retry.delay,
+                  skip.not.found     = TRUE,
+                  overwrite          = FALSE,
+                  quiet              = quiet)
+      NULL
+    }, error = function(e) conditionMessage(e))
+
+    unlink(temp.sra.csv)
+
+    if (!is.null(last.error)) {
+      cat(" Download error:", last.error, "\n")
+      writeLines(paste0("Download failed. Error: ", last.error),
+                 paste0("logs/sample_logs/FAILURE_", sample.name, "_download-failed.txt"))
+      next
+    }
+
+    input.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
+    input.files = input.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", input.files)]
+
+    if (length(input.files) == 0) {
+      cat(" WARNING: no files found after SRA download for", sample.name, "— skipping.\n")
+      next
+    }
+
+    # gzip integrity check
+    corrupt = sapply(input.files, function(f) {
+      system(paste0("gzip -t ", shQuote(f), " 2>/dev/null"),
+             ignore.stdout = TRUE, ignore.stderr = TRUE) != 0
+    })
+    if (any(corrupt)) {
+      cat(" WARNING: corrupted file(s) for", sample.name, "— skipping.\n")
+      file.remove(input.files)
+      writeLines(paste0("Corrupted gzip: ", paste(basename(input.files[corrupt]), collapse = ", ")),
+                 paste0("logs/sample_logs/FAILURE_", sample.name, "_corrupted-file.txt"))
       next
     }
 
@@ -314,6 +401,19 @@ for (i in 1:length(sample.names)) {
       file.remove(raw.files)
       cat(" Deleted", length(raw.files), "raw read file(s) for", sample.name, "\n")
     }
+  }
+
+  if (use.sra == TRUE && delete.raw.reads == TRUE) {
+    raw.files = list.files(raw.dir, pattern = sample.name, full.names = TRUE)
+    raw.files = raw.files[grep("\\.fastq\\.gz$|\\.fq\\.gz$", raw.files)]
+    if (length(raw.files) > 0) {
+      file.remove(raw.files)
+      cat(" Deleted", length(raw.files), "raw read file(s) for", sample.name, "\n")
+    }
+    # Remove the download sentinel so that a re-run (e.g. if assessment failed)
+    # triggers a fresh download rather than silently skipping.
+    sentinel = file.path(raw.dir, paste0(sample.name, "_COMPLETED"))
+    if (file.exists(sentinel)) file.remove(sentinel)
   }
 
   if (delete.cleaned.reads == TRUE) {
