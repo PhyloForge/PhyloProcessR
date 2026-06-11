@@ -187,12 +187,11 @@ sraDownload = function(sra.info.file           = NULL,
   }
 
   # ── Main download loop ───────────────────────────────────────────────────────
-  # Sentinels are stored in a hidden subdirectory so they are never picked up
-  # by downstream tools (fastqStats, organizeReads, etc.) that scan the reads
-  # directory for sample files.
-  sentinels.dir = file.path(output.directory, ".sra-sentinels")
-  dir.create(sentinels.dir, showWarnings = FALSE, recursive = TRUE)
-
+  # Sentinels are plain files named SampleName.sra_done in the output directory.
+  # A file (not a subdirectory) is invisible to list.dirs(), and the .sra_done
+  # extension means no pattern-based list.files("*.fastq.gz") call finds it.
+  # The dot separator also means grep(paste0(name, "_"), ...) inside fastqStats
+  # / readStats won't match it against any sample name.
   n.total    = nrow(sra.data)
   rename.out = data.frame(File = character(), Sample = character(),
                           stringsAsFactors = FALSE)
@@ -209,8 +208,9 @@ sraDownload = function(sra.info.file           = NULL,
     if (!quiet) message(sprintf("[%d/%d] %s  (%s)", i, n.total, samp, acc))
 
     # Completion sentinel — fast skip on re-runs.
-    # Stored in .sra-sentinels/ so it is never mistaken for a read file.
-    sentinel = file.path(sentinels.dir, paste0(samp, "_COMPLETED"))
+    # Named SampleName.sra_done (dot separator, non-fastq extension) so it is
+    # invisible to list.dirs() and won't match any fastq file grep pattern.
+    sentinel = file.path(output.directory, paste0(samp, ".sra_done"))
     if (file.exists(sentinel)) {
       if (!quiet) message("  already completed — skipping")
       rename.out = rbind(rename.out,
@@ -254,7 +254,7 @@ sraDownload = function(sra.info.file           = NULL,
       }
     }
 
-    # Write completion sentinel (in .sra-sentinels/ subdirectory)
+    # Write completion sentinel
     writeLines(c(
       paste0("accession: ", acc),
       paste0("sample:    ", samp),

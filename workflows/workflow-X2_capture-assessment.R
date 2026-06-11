@@ -412,7 +412,7 @@ for (i in 1:length(sample.names)) {
     }
     # Remove the download sentinel so that a re-run (e.g. if assessment failed)
     # triggers a fresh download rather than silently skipping.
-    sentinel = file.path(raw.dir, ".sra-sentinels", paste0(sample.name, "_COMPLETED"))
+    sentinel = file.path(raw.dir, paste0(sample.name, ".sra_done"))
     if (file.exists(sentinel)) file.remove(sentinel)
   }
 
