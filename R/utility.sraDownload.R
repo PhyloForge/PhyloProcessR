@@ -17,9 +17,12 @@
 #'
 #' @param sample.name.column character or NULL; name of a column in
 #'   sra.info.file to use directly as sample names. If NULL (default), names
-#'   are built automatically: if a 'ScientificName' column is present, the
-#'   name is Genus_species_SRRaccession (spaces replaced with underscores);
-#'   otherwise the bare accession (Run column) is used.
+#'   are built automatically in priority order: (1) if both 'ScientificName'
+#'   and 'SampleName' columns are present the name is Genus_species_SampleName
+#'   (e.g. Hylarana_macrodactyla_CAS12345), falling back to
+#'   Genus_species_SRRaccession for any row where SampleName is blank; (2) if
+#'   only 'ScientificName' is present, Genus_species_SRRaccession; (3)
+#'   otherwise the bare SRR accession alone.
 #'
 #' @param output.directory character; local directory where the FASTQ.gz files
 #'   will be saved. Created if it does not exist.
@@ -97,13 +100,26 @@ sraDownload = function(sra.info.file           = NULL,
     stop("No rows remain in sra.info.file after applying filters.")
 
   # ── Build sample names ───────────────────────────────────────────────────────
+  # Priority:
+  #   1. sample.name.column explicitly set → use that column directly
+  #   2. ScientificName + SampleName both present → Genus_species_SampleName
+  #      (falls back to Genus_species_Run for rows where SampleName is blank)
+  #   3. ScientificName only              → Genus_species_Run
+  #   4. Neither                          → Run accession alone
   if (!is.null(sample.name.column)) {
     if (!sample.name.column %in% names(sra.data))
       stop("sample.name.column '", sample.name.column, "' not found in sra.info.file.")
     sra.data$sample.name = as.character(sra.data[[sample.name.column]])
   } else if ("ScientificName" %in% names(sra.data)) {
     sci = gsub("[[:space:]]+", "_", trimws(sra.data$ScientificName))
-    sra.data$sample.name = paste0(sci, "_", sra.data$Run)
+    if ("SampleName" %in% names(sra.data)) {
+      sn = trimws(as.character(sra.data$SampleName))
+      # Use SampleName where non-empty; fall back to Run accession for blank rows
+      specimen.id = ifelse(nchar(sn) > 0 & !is.na(sn), sn, sra.data$Run)
+      sra.data$sample.name = paste0(sci, "_", specimen.id)
+    } else {
+      sra.data$sample.name = paste0(sci, "_", sra.data$Run)
+    }
   } else {
     sra.data$sample.name = sra.data$Run
   }
