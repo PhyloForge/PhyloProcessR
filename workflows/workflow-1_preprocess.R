@@ -47,6 +47,16 @@ if (sra.download == TRUE){
   sample.file    = "file_rename_sra.csv"
 }#end if
 
+# If both sources were active, merge their rename tables into one file so that
+# organizeReads sees all samples regardless of origin.
+if (dropbox.download == TRUE && sra.download == TRUE) {
+  combined.rename = rbind(read.csv("file_rename_dropbox.csv"),
+                          read.csv("file_rename_sra.csv"))
+  write.csv(combined.rename, "file_rename_combined.csv",
+            row.names = FALSE, quote = FALSE)
+  sample.file = "file_rename_combined.csv"
+}
+
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.directory,
