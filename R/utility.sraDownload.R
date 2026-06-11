@@ -150,11 +150,29 @@ sraDownload = function(sra.info.file           = NULL,
   }
 
   # ── Internal: download one file with retries ─────────────────────────────────
+  # utils::download.file only *warns* on timeout or length mismatch — it never
+  # throws an error — so a plain tryCatch misses truncated files. We use
+  # withCallingHandlers to intercept those warnings and treat them as failures.
+  # The global timeout option is raised to 3600 s for the duration of the call
+  # (large FASTQ files easily exceed the 60-second default).
   .dl = function(src.url, dest.path, max.retries, retry.delay, quiet) {
+    old.timeout = getOption("timeout")
+    options(timeout = 3600)
+    on.exit(options(timeout = old.timeout), add = TRUE)
+
     for (attempt in seq_len(max.retries)) {
+      bad.warn = FALSE
       ok = tryCatch({
-        utils::download.file(src.url, dest.path, mode = "wb", quiet = TRUE)
-        file.exists(dest.path) && file.size(dest.path) > 0
+        withCallingHandlers(
+          utils::download.file(src.url, dest.path, mode = "wb", quiet = TRUE),
+          warning = function(w) {
+            msg = conditionMessage(w)
+            if (grepl("downloaded length|Timeout|timed out", msg, ignore.case = TRUE))
+              bad.warn <<- TRUE
+            invokeRestart("muffleWarning")
+          }
+        )
+        !bad.warn && file.exists(dest.path) && file.size(dest.path) > 0
       }, error = function(e) FALSE)
 
       if (ok) return(TRUE)
@@ -169,6 +187,12 @@ sraDownload = function(sra.info.file           = NULL,
   }
 
   # ── Main download loop ───────────────────────────────────────────────────────
+  # Sentinels are stored in a hidden subdirectory so they are never picked up
+  # by downstream tools (fastqStats, organizeReads, etc.) that scan the reads
+  # directory for sample files.
+  sentinels.dir = file.path(output.directory, ".sra-sentinels")
+  dir.create(sentinels.dir, showWarnings = FALSE, recursive = TRUE)
+
   n.total    = nrow(sra.data)
   rename.out = data.frame(File = character(), Sample = character(),
                           stringsAsFactors = FALSE)
@@ -184,8 +208,9 @@ sraDownload = function(sra.info.file           = NULL,
 
     if (!quiet) message(sprintf("[%d/%d] %s  (%s)", i, n.total, samp, acc))
 
-    # Completion sentinel — fast skip on re-runs
-    sentinel = file.path(output.directory, paste0(samp, "_COMPLETED"))
+    # Completion sentinel — fast skip on re-runs.
+    # Stored in .sra-sentinels/ so it is never mistaken for a read file.
+    sentinel = file.path(sentinels.dir, paste0(samp, "_COMPLETED"))
     if (file.exists(sentinel)) {
       if (!quiet) message("  already completed — skipping")
       rename.out = rbind(rename.out,
@@ -229,7 +254,7 @@ sraDownload = function(sra.info.file           = NULL,
       }
     }
 
-    # Write completion sentinel
+    # Write completion sentinel (in .sra-sentinels/ subdirectory)
     writeLines(c(
       paste0("accession: ", acc),
       paste0("sample:    ", samp),
