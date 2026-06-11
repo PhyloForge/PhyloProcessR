@@ -51,6 +51,32 @@ dropbox.token = "/Local/Path/to/Token/token.RDS"
 # Skips files not found in file_rename.csv spreadsheet.
 skip.not.found = FALSE
 
+# For downloading reads from NCBI SRA (Sequence Read Archive)
+#########################
+# TRUE to download reads from NCBI SRA using an SraRunInfo CSV file.
+# Export your SRA Run Selector results as SraRunInfo.csv from the NCBI SRA
+# Run Selector (https://www.ncbi.nlm.nih.gov/Traces/study/) and provide the
+# path below. Cannot be used together with dropbox.download = TRUE.
+sra.download = FALSE
+# Path to the SraRunInfo CSV downloaded from the NCBI SRA Run Selector.
+# Must contain at minimum a 'Run' column with SRR/ERR/DRR accession numbers.
+sra.info.file = "SraRunInfo.csv"
+# Column in sra.info.file to use directly as sample names.
+# NULL (default) auto-builds names from ScientificName_SRRaccession
+# (e.g. Hylarana_macrodactyla_SRR11853236). Set to a column name (quoted
+# string) to use that column instead.
+sra.sample.name.column = NULL
+# Only download rows with this LibraryStrategy value (e.g. "Targeted-Capture").
+# Set to NULL to download everything in the file regardless of strategy.
+sra.filter.strategy = NULL
+# Number of retry attempts for a failed file download before skipping.
+sra.max.retries = 3
+# Seconds to wait between retry attempts.
+sra.retry.delay = 10
+# TRUE skips samples that fail after all retries (prints a warning).
+# FALSE raises an error and stops the run.
+sra.skip.not.found = TRUE
+
 #FASTP read cleaning
 #########################
 # = TRUE to run all processing steps at once (much faster). Overrides settings below.

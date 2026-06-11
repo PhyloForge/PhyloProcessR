@@ -29,6 +29,24 @@ if (dropbox.download == TRUE){
   sample.file = "file_rename_dropbox.csv"
 }#end if
 
+# Download reads directly from NCBI SRA via ENA HTTPS mirrors.
+# Provide sra.info.file = path to SraRunInfo.csv from the NCBI SRA Run Selector.
+if (sra.download == TRUE){
+  sraDownload(sra.info.file          = sra.info.file,
+              sample.name.column      = sra.sample.name.column,
+              output.directory        = paste0(processed.reads, "/raw-reads"),
+              filter.library.strategy = sra.filter.strategy,
+              max.retries             = sra.max.retries,
+              retry.delay             = sra.retry.delay,
+              skip.not.found          = sra.skip.not.found,
+              overwrite               = overwrite,
+              quiet                   = quiet)
+
+  read.directory = paste0(processed.reads, "/raw-reads")
+  organize.reads = TRUE
+  sample.file    = "file_rename_sra.csv"
+}#end if
+
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.directory,
