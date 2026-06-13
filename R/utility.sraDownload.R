@@ -187,92 +187,115 @@ sraDownload = function(sra.info.file           = NULL,
   }
 
   # ── Main download loop ───────────────────────────────────────────────────────
-  # Sentinels are plain files named SampleName.sra_done in the output directory.
-  # A file (not a subdirectory) is invisible to list.dirs(), and the .sra_done
-  # extension means no pattern-based list.files("*.fastq.gz") call finds it.
-  # The dot separator also means grep(paste0(name, "_"), ...) inside fastqStats
-  # / readStats won't match it against any sample name.
-  n.total    = nrow(sra.data)
-  rename.out = data.frame(File = character(), Sample = character(),
-                          stringsAsFactors = FALSE)
+  # Multiple SRR accessions that resolve to the same sample name (same
+  # ScientificName + SampleName) are treated as sequencing lanes of a single
+  # individual, exactly as dropboxDownload handles multi-lane samples.
+  # They are downloaded as L001, L002, … and share one Sample entry in the
+  # rename CSV so organizeReads merges them automatically.
+  #
+  # Sentinel: one file per sample named SampleName.fastq.sra_done, written
+  # only after ALL lanes for that sample complete. The .fastq.* component
+  # matches the gsub strip used by fastqStats / readStats so the sentinel
+  # collapses to SampleName and is never treated as a separate sample.
+  # The dot separator (not underscore) means grep(paste0(name,"_"),...) in
+  # those same functions never picks it up as a read file.
+  unique.samples  = unique(sra.data$sample.name)
+  n.total         = length(unique.samples)
+  rename.out      = data.frame(File = character(), Sample = character(),
+                               stringsAsFactors = FALSE)
 
   for (i in seq_len(n.total)) {
 
-    acc   = sra.data$Run[i]
-    samp  = sra.data$sample.name[i]
-    layout = if ("LibraryLayout" %in% names(sra.data)) {
-               sra.data$LibraryLayout[i]
-             } else "PAIRED"
-    is.paired = toupper(layout) == "PAIRED"
+    samp      = unique.samples[i]
+    samp.rows = sra.data[sra.data$sample.name == samp, ]
+    n.lanes   = nrow(samp.rows)
 
-    if (!quiet) message(sprintf("[%d/%d] %s  (%s)", i, n.total, samp, acc))
+    if (!quiet) message(sprintf("[%d/%d] %s  (%d run(s))", i, n.total, samp, n.lanes))
 
-    # Completion sentinel — fast skip on re-runs.
-    # Named SampleName.fastq.sra_done so that fastqStats (and every other
-    # PhyloProcessR function that scans a flat reads directory) collapses it
-    # into the real sample name rather than treating it as a separate sample:
-    #   gsub("\\.fastq.*", "", "SampleName.fastq.sra_done") → "SampleName"
-    #   unique() merges it with the FASTQ-derived entry → no extra sample
-    # The dot separator (not underscore) also means grep(paste0(name,"_"),...)
-    # never matches the sentinel when building the per-sample read list.
+    # Sample-level sentinel — fast skip when all lanes completed in a prior run.
     sentinel = file.path(output.directory, paste0(samp, ".fastq.sra_done"))
     if (file.exists(sentinel)) {
-      if (!quiet) message("  already completed — skipping")
-      rename.out = rbind(rename.out,
-                         data.frame(File   = paste0(samp, "_L001"),
-                                    Sample = samp, stringsAsFactors = FALSE))
-      next
-    }
-
-    # Destination paths
-    r1.dest = file.path(output.directory, paste0(samp, "_L001_READ1.fastq.gz"))
-    r2.dest = if (is.paired)
-                file.path(output.directory, paste0(samp, "_L001_READ2.fastq.gz"))
-              else NULL
-
-    # Skip if files already exist (prior run without sentinel)
-    if (file.exists(r1.dest) && (!is.paired || file.exists(r2.dest))) {
-      if (!quiet) message("  output files exist — skipping")
-      rename.out = rbind(rename.out,
-                         data.frame(File   = paste0(samp, "_L001"),
-                                    Sample = samp, stringsAsFactors = FALSE))
-      next
-    }
-
-    # Build ENA URLs and download
-    urls  = .ena.urls(acc, layout)
-
-    r1.ok = .dl(urls["r1"], r1.dest, max.retries, retry.delay, quiet)
-    if (!r1.ok) {
-      if (file.exists(r1.dest)) file.remove(r1.dest)
-      msg = sprintf("  READ1 download failed for %s after %d attempts", acc, max.retries)
-      if (!skip.not.found) stop(msg) else { warning(msg); next }
-    }
-
-    if (is.paired) {
-      r2.ok = .dl(urls["r2"], r2.dest, max.retries, retry.delay, quiet)
-      if (!r2.ok) {
-        if (file.exists(r1.dest)) file.remove(r1.dest)
-        if (file.exists(r2.dest)) file.remove(r2.dest)
-        msg = sprintf("  READ2 download failed for %s after %d attempts", acc, max.retries)
-        if (!skip.not.found) stop(msg) else { warning(msg); next }
+      if (!quiet) message("  all lanes already completed — skipping")
+      # Recover rename entries from the files that actually exist on disk
+      existing.lanes = list.files(output.directory,
+                                  pattern = paste0("^", samp, "_L[0-9]+_READ1\\.fastq\\.gz$"),
+                                  full.names = FALSE)
+      lane.tags = gsub(paste0("^", samp, "_|_READ1\\.fastq\\.gz$"), "", existing.lanes)
+      for (lt in sort(lane.tags)) {
+        rename.out = rbind(rename.out,
+                           data.frame(File   = paste0(samp, "_", lt),
+                                      Sample = samp, stringsAsFactors = FALSE))
       }
+      next
     }
 
-    # Write completion sentinel
-    writeLines(c(
-      paste0("accession: ", acc),
-      paste0("sample:    ", samp),
-      paste0("layout:    ", layout),
-      paste0("completed: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-    ), sentinel)
+    # ── Inner lane loop ────────────────────────────────────────────────────────
+    all.lanes.ok = TRUE
 
-    if (!quiet) message("  done")
+    for (j in seq_len(n.lanes)) {
 
-    rename.out = rbind(rename.out,
-                       data.frame(File   = paste0(samp, "_L001"),
-                                  Sample = samp, stringsAsFactors = FALSE))
-  } # end for i
+      acc       = samp.rows$Run[j]
+      layout    = if ("LibraryLayout" %in% names(samp.rows)) samp.rows$LibraryLayout[j] else "PAIRED"
+      is.paired = toupper(layout) == "PAIRED"
+      lane.tag  = sprintf("L%03d", j)
+
+      if (!quiet && n.lanes > 1)
+        message(sprintf("  lane %d/%d (%s)", j, n.lanes, acc))
+
+      # Destination paths for this lane
+      r1.dest = file.path(output.directory, paste0(samp, "_", lane.tag, "_READ1.fastq.gz"))
+      r2.dest = if (is.paired)
+                  file.path(output.directory, paste0(samp, "_", lane.tag, "_READ2.fastq.gz"))
+                else NULL
+
+      # Skip this lane if its files already exist (prior partial run)
+      if (file.exists(r1.dest) && (!is.paired || file.exists(r2.dest))) {
+        if (!quiet) message("    ", lane.tag, " files exist — skipping")
+        rename.out = rbind(rename.out,
+                           data.frame(File   = paste0(samp, "_", lane.tag),
+                                      Sample = samp, stringsAsFactors = FALSE))
+        next
+      }
+
+      # Download READ1
+      urls  = .ena.urls(acc, layout)
+      r1.ok = .dl(urls["r1"], r1.dest, max.retries, retry.delay, quiet)
+      if (!r1.ok) {
+        if (file.exists(r1.dest)) file.remove(r1.dest)
+        msg = sprintf("  READ1 download failed for %s (%s) after %d attempts",
+                      acc, lane.tag, max.retries)
+        if (!skip.not.found) stop(msg) else { warning(msg); all.lanes.ok = FALSE; next }
+      }
+
+      # Download READ2 (PAIRED only)
+      if (is.paired) {
+        r2.ok = .dl(urls["r2"], r2.dest, max.retries, retry.delay, quiet)
+        if (!r2.ok) {
+          if (file.exists(r1.dest)) file.remove(r1.dest)
+          if (file.exists(r2.dest)) file.remove(r2.dest)
+          msg = sprintf("  READ2 download failed for %s (%s) after %d attempts",
+                        acc, lane.tag, max.retries)
+          if (!skip.not.found) stop(msg) else { warning(msg); all.lanes.ok = FALSE; next }
+        }
+      }
+
+      if (!quiet) message("    ", lane.tag, " done")
+      rename.out = rbind(rename.out,
+                         data.frame(File   = paste0(samp, "_", lane.tag),
+                                    Sample = samp, stringsAsFactors = FALSE))
+    } # end lane loop
+
+    # Write sample-level sentinel only when every lane succeeded
+    if (all.lanes.ok) {
+      writeLines(c(
+        paste0("sample:    ", samp),
+        paste0("lanes:     ", n.lanes),
+        paste0("accessions:", paste(samp.rows$Run, collapse = " ")),
+        paste0("completed: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+      ), sentinel)
+    }
+
+  } # end sample loop
 
   # ── Write rename CSV ─────────────────────────────────────────────────────────
   write.csv(rename.out,

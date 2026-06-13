@@ -80,8 +80,8 @@ if (use.dropbox == TRUE) {
     sra.data$sample.name = sra.data$Run
   }
 
-  sample.names = sra.data$sample.name
-  cat("Found", length(sample.names), "samples in", sra.info.file, "\n")
+  sample.names = unique(sra.data$sample.name)
+  cat("Found", length(sample.names), "unique samples in", sra.info.file, "\n")
 
 } else {
 
