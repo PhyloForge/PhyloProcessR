@@ -98,8 +98,9 @@ alignMACSE = function(alignment.folder = NULL,
       "-out_AA ", out.aa.file
     )
     
+    log_file = paste0(output.folder, "/temp_macse_error_log.txt")
     if (quiet == TRUE) {
-      macse_cmd = paste0(macse_cmd, " > /dev/null 2>&1")
+      macse_cmd = paste0(macse_cmd, " > ", log_file, " 2>&1")
     }
     
     system(macse_cmd)
