@@ -65,6 +65,7 @@ alignMACSE = function(alignment.folder = NULL,
     file.base = strsplit(file.name, "\\.")[[1]][1]
     
     out.file = paste0(output.folder, "/", file.base, ".fa")
+    out.aa.file = paste0(output.folder, "/temp_", file.base, "_AA.fa")
     
     if (file.exists(out.file) && overwrite == FALSE) {
       return(NULL)
@@ -94,7 +95,7 @@ alignMACSE = function(alignment.folder = NULL,
       "-seq ", macse_input, " ",
       "-gc_def ", genetic.code, " ",
       "-out_NT ", out.file, " ",
-      "-out_AA /dev/null"
+      "-out_AA ", out.aa.file
     )
     
     if (quiet == TRUE) {
@@ -103,9 +104,12 @@ alignMACSE = function(alignment.folder = NULL,
     
     system(macse_cmd)
     
-    # Cleanup temp file if created
+    # Cleanup temp files
     if (alignment.format == "phylip" && file.exists(temp.fa)) {
       file.remove(temp.fa)
+    }
+    if (file.exists(out.aa.file)) {
+      file.remove(out.aa.file)
     }
   }
 
