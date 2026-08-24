@@ -4,6 +4,7 @@
 #'
 #' @param alignment.folder character string; path to the folder containing the alignments.
 #' @param output.folder character string; path to the folder to save the MACSE-refined alignments.
+#' @param alignment.format character string; the format of the input alignments (e.g. "phylip", "fasta").
 #' @param macse.path character string; system path to the directory containing the macse executable. If NULL, searches the system PATH.
 #' @param genetic.code integer; the genetic code table to use (default: 1 for standard nuclear).
 #' @param threads integer; number of threads to use.
@@ -17,6 +18,7 @@
 
 alignMACSE = function(alignment.folder = NULL,
                       output.folder = NULL,
+                      alignment.format = "phylip",
                       macse.path = NULL,
                       genetic.code = 1,
                       threads = 1,
@@ -40,7 +42,12 @@ alignMACSE = function(alignment.folder = NULL,
   } else { macse.path = "" }
 
   # Gets all alignment files
-  align.files = list.files(alignment.folder, full.names = TRUE, pattern = "\\.phy$|\\.fa$|\\.fasta$")
+  if (alignment.format == "phylip") {
+    align.files = list.files(alignment.folder, full.names = TRUE, pattern = "\\.phy$")
+  } else {
+    align.files = list.files(alignment.folder, full.names = TRUE, pattern = "\\.fa$|\\.fasta$")
+  }
+
   if (length(align.files) == 0) { stop("No alignments found in the input folder.") }
 
   # Sets up foreach loop
@@ -52,7 +59,7 @@ alignMACSE = function(alignment.folder = NULL,
 
   cat(paste0("Refining ", length(align.files), " alignments using MACSE...\n"))
 
-  foreach(i = 1:length(align.files), .packages = c("Biostrings", "ape")) %dopar% {
+  foreach(i = 1:length(align.files), .packages = c("Biostrings", "ape", "seqinr")) %dopar% {
     
     file.name = basename(align.files[i])
     file.base = strsplit(file.name, "\\.")[[1]][1]
@@ -63,15 +70,28 @@ alignMACSE = function(alignment.folder = NULL,
       return(NULL)
     }
 
-    # MACSE requires java. The bioconda macse wrapper can be called directly
-    # -prog refineAlignment requires -align. -prog alignSequences requires -seq.
-    # To be safe against gappy untrimmed sequences, alignSequences is typically best,
-    # but since these are already aligned exons, refineAlignment is also good. 
-    # Let's use alignSequences to do a fresh robust codon alignment, or refineAlignment.
-    # We will use alignSequences since it cleans things up beautifully.
+    # MACSE requires FASTA format. If input is phylip, we need to convert to a temp fasta file.
+    macse_input = align.files[i]
+    
+    if (alignment.format == "phylip") {
+      align = ape::read.dna(align.files[i], format = "sequential")
+      temp.align = as.character(as.list(align))
+      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
+      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
+      
+      temp.fa = paste0(output.folder, "/temp_", file.base, ".fa")
+      
+      write.loci = as.list(as.character(align.out))
+      seqinr::write.fasta(sequences = write.loci, names = names(write.loci),
+                          file.out = temp.fa, nbchar = 1000000, as.string = TRUE)
+                          
+      macse_input = temp.fa
+    }
+
+    # MACSE command
     macse_cmd = paste0(
       macse.path, "macse -prog alignSequences ",
-      "-seq ", align.files[i], " ",
+      "-seq ", macse_input, " ",
       "-gc_def ", genetic.code, " ",
       "-out_NT ", out.file, " ",
       "-out_AA /dev/null"
@@ -82,6 +102,11 @@ alignMACSE = function(alignment.folder = NULL,
     }
     
     system(macse_cmd)
+    
+    # Cleanup temp file if created
+    if (alignment.format == "phylip" && file.exists(temp.fa)) {
+      file.remove(temp.fa)
+    }
   }
 
   stopCluster(cl)

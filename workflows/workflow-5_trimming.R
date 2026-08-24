@@ -32,6 +32,7 @@ if (trim.to.targets == TRUE) {
     alignMACSE(
       alignment.folder = "data-analysis/alignments/untrimmed_no-flanks",
       output.folder = "data-analysis/alignments/trimmed_exons",
+      alignment.format = "phylip",
       macse.path = macse.path,
       genetic.code = macse.genetic.code,
       threads = threads,
