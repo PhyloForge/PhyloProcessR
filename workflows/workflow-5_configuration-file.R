@@ -12,7 +12,7 @@ target.file = "marker-seqs.fa"
 #feature gene name metadata file, column one: "Marker"; column: "Gene"
 feature.gene.names = "/data-analysis/gene_metadata.txt"
 
-#Global settings
+# Global settings
 #########################
 #number of threads
 threads = 8
@@ -22,6 +22,13 @@ memory = 40
 overwrite = FALSE
 #Print verbose output for each function
 quiet = TRUE
+
+# MACSE Exon alignment refinement
+#########################
+# TRUE = run MACSE to refine alignments and ensure proper reading frames
+run.macse = TRUE
+# The genetic code to use for MACSE (default: 1 for standard nuclear, 2 for vertebrate mitochondrial)
+macse.genetic.code = 1
 
 # Alignment subset
 #########################
@@ -98,5 +105,6 @@ conda.env = "PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 blast.path = conda.env
 mafft.path = conda.env
 trimAl.path = conda.env
+macse.path = conda.env
 
 #### End configuration

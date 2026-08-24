@@ -28,6 +28,33 @@ if (trim.to.targets == TRUE) {
     mafft.path = mafft.path
   )
 
+  if (run.macse == TRUE) {
+    alignMACSE(
+      alignment.folder = "data-analysis/alignments/untrimmed_no-flanks",
+      output.folder = "data-analysis/alignments/trimmed_exons",
+      macse.path = macse.path,
+      genetic.code = macse.genetic.code,
+      threads = threads,
+      memory = memory,
+      overwrite = overwrite,
+      quiet = quiet
+    )
+
+    # Concatenates genes from the MACSE refined exons
+    concatenateGenes(
+      alignment.folder = "data-analysis/alignments/trimmed_exons",
+      output.folder = "data-analysis/alignments/trimmed_genes",
+      feature.gene.names = feature.gene.names,
+      input.format = "fasta",
+      output.format = "phylip",
+      minimum.exons = minimum.exons,
+      remove.reverse = FALSE,
+      overwrite = overwrite,
+      threads = threads,
+      memory = memory
+    )
+  }
+
   # Concatenates genes from the untrimmed-markers original alignments
   concatenateGenes(
     alignment.folder = "data-analysis/alignments/untrimmed_no-flanks",
