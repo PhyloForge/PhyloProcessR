@@ -19,6 +19,7 @@
 alignMACSE = function(alignment.folder = NULL,
                       output.folder = NULL,
                       alignment.format = "phylip",
+                      output.format = "phylip",
                       macse.path = NULL,
                       genetic.code = 1,
                       threads = 1,
@@ -104,6 +105,19 @@ alignMACSE = function(alignment.folder = NULL,
     }
     
     system(macse_cmd)
+    
+    # Format conversion if needed
+    if (output.format == "phylip" && file.exists(out.file)) {
+      align_macse = ape::read.FASTA(out.file, type = "DNA")
+      align_mat = as.matrix(align_macse)
+      rownames(align_mat) = labels(align_macse)
+      
+      out.phy = paste0(output.folder, "/", file.base, ".phy")
+      PhyloProcessR::writePhylip(align_mat, file = out.phy)
+      
+      # Delete the fasta output from MACSE
+      file.remove(out.file)
+    }
     
     # Cleanup temp files
     if (alignment.format == "phylip" && file.exists(temp.fa)) {

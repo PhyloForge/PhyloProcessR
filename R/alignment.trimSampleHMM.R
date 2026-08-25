@@ -1,12 +1,14 @@
 #' @title trimSampleHMM
 #'
-#' @description Masks aberrant, misaligned, or chimeric sequence segments within individual samples in an alignment using Leave-One-Out Profile HMM posterior match decoding (similar to TAPIR / HMMCleaner). For each column in the alignment, a position-specific emission profile is computed from all other samples (with Dirichlet smoothing), and the posterior match confidence is evaluated for every residue. Contiguous stretches of residues whose posterior match probability falls below `min.posterior` for at least `min.segment.length` base pairs are replaced with gaps. Alignments with two or fewer sequences are returned unmodified.
+#' @description Masks aberrant, misaligned, or chimeric sequence segments within individual samples in an alignment using Leave-One-Out Profile HMM posterior match decoding (similar to TAPIR / HMMCleaner). For each column in the alignment, a position-specific emission profile is computed from all other samples (with Dirichlet smoothing), and the posterior match confidence is evaluated for every residue. A rolling average of the posterior is computed over a window to prevent random sequence matches from disrupting the detection of contiguous bad segments. Windows whose average confidence falls below `min.posterior` are replaced with gaps. Alignments with two or fewer sequences are returned unmodified.
 #'
 #' @param alignment a DNAStringSet containing the aligned sequences to clean
 #'
-#' @param min.posterior numeric threshold (0-1): residues with a Leave-One-Out Profile HMM posterior match confidence below this value are considered aberrant (default: 0.45)
+#' @param min.posterior numeric threshold (0-1): residues with a smoothed Leave-One-Out Profile HMM posterior match confidence below this value are considered aberrant (default: 0.45)
 #'
-#' @param min.segment.length integer: minimum number of contiguous aberrant residues required to trigger masking (default: 8)
+#' @param min.segment.length integer: the window size for smoothing and the minimum length of aberrant segments targeted for masking (default: 8)
+#'
+#' @param min.island.length integer: minimum span of unmasked bases required to be kept between masked segments (default: 20)
 #'
 #' @param mask.char character to replace aberrant bases with; defaults to "-"
 #'
@@ -17,13 +19,8 @@
 trimSampleHMM = function(alignment = NULL,
                          min.posterior = 0.45,
                          min.segment.length = 8,
+                         min.island.length = 20,
                          mask.char = "-") {
-
-  #Debug section
-  # alignment = align
-  # min.posterior = 0.45
-  # min.segment.length = 8
-  # mask.char = "-"
 
   if (length(alignment) <= 2){ return(alignment) }
 
@@ -48,6 +45,7 @@ trimSampleHMM = function(alignment = NULL,
   col_totals = counts_A + counts_C + counts_G + counts_T
 
   out_matrix = char_matrix
+  half_w = floor(min.segment.length / 2)
 
   #Scores each sample using Leave-One-Out Jackknife Profile HMM
   for (i in 1:num_taxa) {
@@ -74,16 +72,35 @@ trimSampleHMM = function(alignment = NULL,
     #Posterior match confidence
     confidences[is_valid] = p_emit[is_valid] / (p_emit[is_valid] + null_prob)
 
-    #Finds contiguous runs of low-confidence residues >= min.segment.length
-    low_runs = rle(confidences < min.posterior)
-    run_starts = c(1, cumsum(low_runs$lengths) + 1)[1:length(low_runs$lengths)]
-    run_ends = cumsum(low_runs$lengths)
-
-    for (k in seq_along(low_runs$lengths)) {
-      if (low_runs$values[k] == TRUE && low_runs$lengths[k] >= min.segment.length) {
-        out_matrix[i, run_starts[k]:run_ends[k]] = mask.char
+    # Calculate rolling mean over window (O(N) using cumsum)
+    cum_conf = c(0, cumsum(confidences))
+    start_cols = pmax(1, 1:num_cols - half_w)
+    end_cols = pmin(num_cols, 1:num_cols + half_w)
+    
+    smoothed = (cum_conf[end_cols + 1] - cum_conf[start_cols]) / (end_cols - start_cols + 1)
+    
+    # Identify windows that drop below threshold
+    bad_centers = which(smoothed < min.posterior)
+    if (length(bad_centers) > 0) {
+      out_matrix[i, bad_centers] = mask.char
+    }
+    
+    if (min.island.length > 0) {
+      is_masked = out_matrix[i, ] == mask.char
+      runs = rle(is_masked)
+      
+      if (length(runs$lengths) > 1) {
+        run_starts = c(1, cumsum(runs$lengths)[-length(runs$lengths)] + 1)
+        for (r in 1:length(runs$lengths)) {
+          # if it's an island of FALSE (not masked) and shorter than island length
+          if (!runs$values[r] && runs$lengths[r] < min.island.length) {
+            start_idx = run_starts[r]
+            end_idx = run_starts[r] + runs$lengths[r] - 1
+            out_matrix[i, start_idx:end_idx] = mask.char
+          }
+        }
       }
-    }#end k loop
+    }
   }#end i loop
 
   #Converts matrix back to DNAStringSet preserving names

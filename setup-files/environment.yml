@@ -11,7 +11,8 @@ dependencies:
   - r-doparallel=1.0.17
   - r-ape=5.7_1
   - r-data.table=1.14.8
-  - r-essentials=4.2
+  - r-base>=4.2
+  - r-ggplot2
   - r-rdrop2=0.8.2.1
   - r-seqinr=4.2_30
   - r-stringr=1.5.0

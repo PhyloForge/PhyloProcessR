@@ -1,0 +1,23 @@
+BootStrap: docker
+From: mambaorg/micromamba:1.5.8
+
+%files
+    environment.yml /tmp/environment.yml
+
+%post
+    # Install dependencies into the base environment of micromamba
+    micromamba install -y -n base -f /tmp/environment.yml
+    micromamba clean --all --yes
+
+%environment
+    # Expose the installed conda tools to the system PATH
+    export PATH="/opt/conda/bin:$PATH"
+
+%runscript
+    # Default execution command
+    exec "$@"
+
+%labels
+    Author "PhyloProcessR Pipeline"
+    Version "1.0"
+    Description "Apptainer container for the PhyloProcessR pipeline"

@@ -44,21 +44,72 @@ First, clone this repository to your computer to obtain the setup files. Or alte
 git clone https://github.com/chutter/PhyloProcessR.git
 ```
 
-Second, change your working directory in the terminal to the downloaded repository. The key file here is the "environment.yml" anaconda environment file, which must be present in the working directory being used. 
+Second, change your working directory in the terminal to the downloaded repository. The setup files are located in this directory.
 
 ```bash
 cd PhyloProcessR/setup-files/
 ```
 
-The R packages and outside programs can be installed manually or more easily through the anaconda environment file provided (version numbers are provided in environment file for reporting and exact replication). To install with the environment file, the easiest and quickest way is to first install the Anaconda package manager. Anaconda can be downloaded and installed for different operating systems from https://anaconda.org. Miniconda is recommended as it has a smaller footprint (smaller size and fewer files). Once installed, you can create a new environment for PhyloProcessR by: 
+The preferred and most reliable way to run PhyloProcessR is through containerization (Docker for local Mac/Linux, or Apptainer/Singularity for HPC clusters). This ensures all the complex bioinformatics dependencies (Java, R, MACSE, MAFFT, etc.) are perfectly configured without conflicting with your system.
+
+### Option 1: Run via pre-built containers (Preferred)
+
+The easiest way to get started is to pull the pre-built image directly from Docker Hub. 
+
+**For Docker (Local Mac or Linux):**
+Simply pull the latest image to your machine:
+```bash
+docker pull chutter/phyloprocessr:latest
+```
+
+To run your workflows, mount your local working directory and execute the R script using the container:
+```bash
+docker run -v $(pwd):/app -w /app chutter/phyloprocessr:latest Rscript workflow-5_trimming.R
+```
+
+**For Apptainer / Singularity (HPC clusters):**
+Computing clusters are almost entirely Linux systems where Apptainer is the standard. You can pull the pre-built image directly from Docker Hub and save it as a cluster-ready `.sif` file:
+```bash
+apptainer pull phyloprocessr.sif docker://chutter/phyloprocessr:latest
+```
+
+To run your jobs on the cluster, Apptainer automatically handles mounting your directories:
+```bash
+apptainer exec phyloprocessr.sif Rscript workflow-5_trimming.R
+```
+
+*(Note: When using either container method, you can set `conda.env = ""` or `conda.env = "/opt/conda/bin/"` in your R configuration files, as all tools are already on the system path!)*
+
+### Option 2: Build containers from recipes (Advanced)
+
+If you need to modify the dependencies or build the containers manually from the provided `setup-files`, you can do so easily. 
+
+**Building Docker locally:**
+Run the following command from the `setup-files` directory. 
+*Note: For Mac users (especially Apple Silicon M1/M2/M3), forcing the `linux/amd64` platform ensures compatibility with all x86_64 bioinformatics tools.*
+```bash
+docker build --platform linux/amd64 -t chutter/phyloprocessr:1.0.0 -t chutter/phyloprocessr:latest .
+```
+
+**Building Apptainer locally:**
+You can build the portable `.sif` file using the provided `Apptainer.def` recipe from the `setup-files` directory:
+```bash
+apptainer build phyloprocessr.sif Apptainer.def
+```
+
+### Option 3: Anaconda Environment (Alternative Installation)
+
+If you prefer to install the dependencies directly on your machine, the R packages and outside programs can be installed via the provided anaconda environment file (`environment.yml`). 
+
+To install with the environment file, first install the Anaconda package manager (Miniconda is recommended). Once installed, you can create a new environment for PhyloProcessR by running:
 
 ```bash
 conda env create -f environment.yml -n PhyloProcessR
 ```
 
-**** WARNING: It is possible that the environment file may fail, however, it has been tested on Linux and MacOS on April 3 2023 and installed fine. For MacOS, you must use the X84 (not M1) version of anaconda as most packages are not available for M1 but can be emulated through X84. Occasionally things break and there are manual installation methods in the Wiki (the first tutorial). 
+**** WARNING: It is possible that the environment file may fail depending on your OS. For MacOS, you must use the x86_64 (not M1) version of Anaconda as most packages are not natively available for Apple Silicon but can be emulated. Occasionally things break and there are manual installation methods in the Wiki. 
 
-And finally, the cloned GitHub directory may be deleted after installing the prerequisites through the conda env file that manually installs the anaconda environment. There are some useful example files (also in the tutorial here), which could be saved.   
+And finally, the cloned GitHub directory may be deleted after installing the prerequisites. There are some useful example files (also in the tutorial here), which could be saved.   
 
 To use the environment, it must first be activated in your current terminal session or placed in your cluster job script. 
 
