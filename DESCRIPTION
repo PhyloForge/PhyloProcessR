@@ -37,12 +37,9 @@ Imports:
 Suggests:
     binr,
     BSgenome,
-    rdrop2,
     readxl,
     ShortRead,
     testthat (>= 3.0.0)
-Remotes:
-    limnotrack/rdrop2
 SystemRequirements: External command-line tools are required only by the
     corresponding workflows; see README.md for details.
 Config/testthat/edition: 3

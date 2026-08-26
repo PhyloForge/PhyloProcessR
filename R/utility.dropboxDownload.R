@@ -50,7 +50,7 @@
 #'   to search for read files.
 #'
 #' @param dropbox.token path to an RDS file containing a saved Dropbox OAuth2
-#'   token produced by rdrop2::drop_auth(). If NULL, the function attempts to
+#'   token produced by utils::getFromNamespace("drop_auth", "rdrop2")(). If NULL, the function attempts to
 #'   retrieve a token from the rdrop2 cache.
 #'
 #' @param output.directory local path where downloaded files will be saved.
@@ -72,6 +72,8 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                           output.directory = NULL,
                           skip.not.found = FALSE,
                           overwrite = FALSE){
+  if (!requireNamespace("rdrop2", quietly = TRUE)) { stop("Package rdrop2 must be installed to use this function. Please install it using remotes::install_github('limnotrack/rdrop2')") }
+
 
   # # ### Example usage
   # setwd("/Volumes/LaCie/Bufonidae")
@@ -93,7 +95,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     }
   } # end else
 
-  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else rdrop2::drop_auth()
+  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else utils::getFromNamespace("drop_auth", "rdrop2")()
   all.reads = .dropbox_list_files(dropbox.directory, token)
 
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]
@@ -147,13 +149,13 @@ dropboxDownload = function(sample.spreadsheet = NULL,
       } # end if
 
       # Save the read files with the new names in the new directory
-      rdrop2::drop_download(
+      utils::getFromNamespace("drop_download", "rdrop2")(
         path = sample.reads[1],
         local_path = paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ1.fastq.gz"),
         overwrite = TRUE
       )
 
-      rdrop2::drop_download(
+      utils::getFromNamespace("drop_download", "rdrop2")(
         path = sample.reads[2],
         local_path = paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ2.fastq.gz"),
         overwrite = TRUE
