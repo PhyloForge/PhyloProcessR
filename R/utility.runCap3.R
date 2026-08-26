@@ -34,7 +34,7 @@
 #'
 #' @export
 
-runCap3 = function(contigs = input.contigs,
+runCap3 = function(contigs = NULL,
                    output.name = NULL,
                    cap3.path = NULL,
                    read.R = FALSE,
@@ -61,6 +61,10 @@ runCap3 = function(contigs = input.contigs,
                    v = 2,
                    y = 100,
                    z = 3) {
+
+  if (is.null(contigs)) {
+    stop("contigs must be a FASTA path or a DNAStringSet.")
+  }
 
   # If the file of reads is named 'xyz', then
   # the file of quality values must be named 'xyz.qual',
@@ -108,7 +112,7 @@ runCap3 = function(contigs = input.contigs,
 
   if (class(contigs) != "character") {
     write.loci = as.list(as.character(contigs))
-    PhyloCap::writeFasta(sequences = write.loci, names = names(write.loci),
+    writeFasta(sequences = write.loci, names = names(write.loci),
                          "input_contigs.fa", nbchar = 1000000, as.string = T)
     contig.file = "input_contigs.fa"
   } else { contig.file = contigs }

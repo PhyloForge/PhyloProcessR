@@ -48,7 +48,7 @@ utility.checkFileSize = function(read.directory = NULL,
   reads = list.files(read.directory, recursive = T, full.names = T)
   reads = reads[grep("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", reads)]
 
-  check.size = read.table(check.file, header = FALSE)
+  check.size = read.table(check.file.name, header = FALSE)
 
   #Creates the summary log
   summary.data =  data.frame(File_Name = as.character(),
@@ -86,4 +86,3 @@ utility.checkFileSize = function(read.directory = NULL,
   write.csv(summary.data, file = paste0(output.name, ".csv"), row.names = FALSE)
   return(summary.data)
 }
-

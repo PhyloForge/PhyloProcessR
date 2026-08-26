@@ -4,7 +4,7 @@
 #' \code{assembleSharedRegions} into a single to-align FASTA suitable for
 #' \code{alignTargets}. Because \code{assembleSharedRegions} names each contig
 #' \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}), the
-#' locus-to-contig assignment is already encoded in the name — no BLAST against
+#' locus-to-contig assignment is already encoded in the name -- no BLAST against
 #' the probe set is needed or used. For each (region, sample) pair the longest
 #' assembled contig is selected as the representative sequence. Output contig names
 #' follow the \code{locus_|_sample} convention expected by \code{alignTargets}.
@@ -32,8 +32,8 @@
 #'
 #' @return Invisibly returns a data.frame summary. Writes:
 #' \itemize{
-#'   \item \code{<output.name>_to-align.fa} — combined FASTA for \code{alignTargets}
-#'   \item \code{logs/novel_contig_summary.csv} — per-sample contig counts
+#'   \item \code{<output.name>_to-align.fa} -- combined FASTA for \code{alignTargets}
+#'   \item \code{logs/novel_contig_summary.csv} -- per-sample contig counts
 #' }
 #'
 #' @export
@@ -98,7 +98,7 @@ collectNovelContigs = function(contig.directory = NULL,
       }
 
       # Extract region name: everything up to the last "_contig_" occurrence
-      # e.g. "chr3_450000_450800_contig_2" → "chr3_450000_450800"
+      # e.g. "chr3_450000_450800_contig_2" -> "chr3_450000_450800"
       region.keys = sub("_contig_[0-9]+$", "", names(ctgs))
       # Sanitize to match novel_targets.fa sequence names (handles contigs assembled
       # before scaffold-name sanitization was applied)

@@ -46,9 +46,9 @@
 #' @param phase2.reference what to use as the HISAT2 mapping scaffold for loci
 #'   that are missing from a given sample but present in at least one other
 #'   sample. \code{"contig"} (default) uses the best assembled contig for that
-#'   target from across all other samples — a closer match to the true sequence,
+#'   target from across all other samples -- a closer match to the true sequence,
 #'   giving better read recovery. \code{"reference"} uses the original probe/
-#'   bait sequence from the reference file — useful when cross-sample contigs
+#'   bait sequence from the reference file -- useful when cross-sample contigs
 #'   are unavailable or of low quality.
 #'
 #' @param recover.all.missing logical; if \code{TRUE}, a second recovery pass
@@ -179,7 +179,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
               "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
   ###############################################################################
-  ## Build BLAST reference DB once (major speedup — was rebuilt per sample)
+  ## Build BLAST reference DB once (major speedup -- was rebuilt per sample)
   ###############################################################################
   db.dir = paste0(output.directory, "/blast_ref_db")
   if (!dir.exists(db.dir)) dir.create(db.dir)
@@ -188,7 +188,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
          ignore.stdout = quiet, ignore.stderr = quiet)
 
   ###############################################################################
-  ## Phase 1: BLAST each assembly against reference — parallelized
+  ## Phase 1: BLAST each assembly against reference -- parallelized
   ###############################################################################
   parallel::mclapply(seq_along(file.names), function(i) {
   tryCatch({
@@ -299,13 +299,13 @@ expandMissingAssembly = function(assembly.directory = NULL,
   }
 
   # Load reference sequences if needed for phase2.reference="reference" or
-  # recover.all.missing=TRUE (lazy — only pay the I/O cost when required)
+  # recover.all.missing=TRUE (lazy -- only pay the I/O cost when required)
   if (phase2.reference == "reference" || recover.all.missing == TRUE) {
     reference.seqs = Biostrings::readDNAStringSet(reference)
   }
 
   ###############################################################################
-  ## Phase 2: Map reads to missing targets, assemble, expand — sequential so
+  ## Phase 2: Map reads to missing targets, assemble, expand -- sequential so
   ##           each tool (HISAT2, SPAdes, samtools) gets the full thread budget
   ###############################################################################
   for (i in seq_along(file.names)) {
@@ -355,7 +355,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     # If all targets were already found, just save originals
     if (length(mapping.ref) == 0) {
-      print(paste0(sample, ": all targets already assembled — saving originals."))
+      print(paste0(sample, ": all targets already assembled -- saving originals."))
       found.contigs = Biostrings::readDNAStringSet(
         paste0(species.dir, "/", sample, "_matching-contigs.fa"))
       Biostrings::writeXStringSet(found.contigs, out.file)
@@ -472,7 +472,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     spades.contigs = spades.contigs[Biostrings::width(spades.contigs) >= 100]
 
     if (length(spades.contigs) == 0) {
-      print(paste0(sample, ": SPAdes produced no contigs — saving original matches only."))
+      print(paste0(sample, ": SPAdes produced no contigs -- saving original matches only."))
       found.contigs = Biostrings::readDNAStringSet(
         paste0(species.dir, "/", sample, "_matching-contigs.fa"))
       Biostrings::writeXStringSet(found.contigs, out.file)
@@ -501,7 +501,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     blast.out2 = paste0(species.dir, "/blast_match.txt")
     if (!file.exists(blast.out2) || file.size(blast.out2) == 0) {
-      print(paste0(sample, ": no new contigs matched missing targets — saving originals."))
+      print(paste0(sample, ": no new contigs matched missing targets -- saving originals."))
       found.contigs = Biostrings::readDNAStringSet(
         paste0(species.dir, "/", sample, "_matching-contigs.fa"))
       Biostrings::writeXStringSet(found.contigs, out.file)
@@ -519,7 +519,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     filt.data2 = filt.data2[filt.data2$matches >= ((min.match.coverage / 100) * filt.data2$tLen), ]
 
     if (nrow(filt.data2) == 0) {
-      print(paste0(sample, ": no new contigs passed filters — saving originals."))
+      print(paste0(sample, ": no new contigs passed filters -- saving originals."))
       found.contigs = Biostrings::readDNAStringSet(
         paste0(species.dir, "/", sample, "_matching-contigs.fa"))
       Biostrings::writeXStringSet(found.contigs, out.file)

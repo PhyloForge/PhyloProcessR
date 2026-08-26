@@ -5,7 +5,7 @@
 #'   bbmap reformat.sh. For each simulated library size, reads are mapped to the
 #'   genome with BWA, depth is estimated with mosdepth over a random subset of
 #'   contigs, and coverage statistics (mean/median depth, proportion of bases at
-#'   1x–20x) are recorded. All results are written to a CSV file.
+#'   1x-20x) are recorded. All results are written to a CSV file.
 #'
 #' @param genome.directory not used in the current implementation; the genome
 #'   file path is set internally. Included for interface consistency.

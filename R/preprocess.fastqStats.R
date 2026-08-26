@@ -66,7 +66,7 @@ fastqStats = function(read.directory = NULL,
   } else {
     sample.names = list.dirs(read.directory, recursive = F, full.names = F)
     if (length(sample.names) == 0) {
-      # Flat directory — strip lane/read suffixes to recover sample names
+      # Flat directory -- strip lane/read suffixes to recover sample names
       sample.names = list.files(read.directory, recursive = F, full.names = F)
       sample.names = unique(gsub("_L00.*|_R[12][._].*|_READ[123][._].*|\\.fastq.*|\\.fq.*", "", sample.names))
       sample.names = sample.names[nchar(sample.names) > 0]

@@ -198,7 +198,7 @@ convertNexusPartitions = function(nexus.file = NULL,
       next
     }
 
-    # Convert list of character vectors → DNAbin matrix
+    # Convert list of character vectors -> DNAbin matrix
     align.mat = as.matrix(ape::as.DNAbin(gene.seqs))
 
     # Write output

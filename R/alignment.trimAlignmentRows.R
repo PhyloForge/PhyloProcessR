@@ -50,8 +50,8 @@ trimAlignmentRows = function(alignment = NULL,
 
   m.align = as.matrix(ape::as.DNAbin(del.align))
 
-  out.align = PhyloCap::alignmentConversion(input.alignment = m.align,
-                                            end.format = "DNAStringSet")
+  out.align = alignmentConversion(input.alignment = m.align,
+                                  end.format = "DNAStringSet")
 
   return(out.align)
 

@@ -22,7 +22,7 @@
 #'
 #' @return saves two tab-delimited text files to output.name: one with raw per-sample per-marker distances and one with per-sample summary statistics; nothing is returned to R
 #'
-#' @export
+#' @export summary.sampleGeneticDistance
 
 summary.sampleGeneticDistance = function(alignment.directory = NULL,
                                          output.name = "sample-genetic-distance",

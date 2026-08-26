@@ -1,150 +1,149 @@
 # PhyloProcessR
 
-R package for processing high-throughput sequencing data from raw reads to alignments for many samples from targeted sequence capture for use in phylogenomic/phylogenetic analyses. 
+[![R CMD check](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml)
+[![License: GPL v3+](https://img.shields.io/badge/License-GPL_v3%2B-blue.svg)](LICENSE)
 
-The R package and pipeline does the following:
+PhyloProcessR is an R-based workflow framework for converting raw targeted
+sequence-capture reads into curated, analysis-ready phylogenomic datasets. It
+combines domain-specific R functions with established bioinformatics programs
+for stages that require external executables.
 
-1) Organize raw read data
-2) Remove adaptor contamination and merge paired-end reads
-3) Decontaminate reads from other organisms
-4) Assemble cleaned reads into contigs 
-5) Use a sample-based iterative mapping approach to call SNPs and export for popular programs
-6) Match contigs to design targets for sequence capture
-7) Align and trim contigs from samples
-8) Concatenate all targets or only targets from the same gene
+The package and supplied workflows support:
 
+1. Organizing raw read data.
+2. Removing adapters, quality filtering, normalizing, and merging paired-end reads.
+3. Removing contaminant reads.
+4. Assembling cleaned reads and recovering targeted loci.
+5. Mapping reads, calling variants, and generating IUPAC or haplotype consensuses.
+6. Aligning, filtering, and trimming recovered loci.
+7. Assessing capture, missing data, depth, paralogy, and alignment quality.
+8. Integrating legacy sequences and discovering shared novel loci.
+9. Concatenating loci by target or gene for downstream analyses.
 
-# PhyloProcessR prerequisites 
+The R package can be installed and tested without every external program.
+Individual workflow stages require only the command-line tools they invoke; the
+provided container and Conda environment install the complete environment.
 
-PhyloProcessR uses several R packages and other outside programs for certain functions, which will be installed all at once below using an anaconda environment file.
+## Prerequisites
 
-1. R packages (R version 4.2.2 tested)
-- From CRAN: devtools, ape, stringr, data.table, seqinr, foreach, doparallel, rdrop2, biomartr
-- From BioConductor: rsamtools, genomicranges, biostrings
+PhyloProcessR requires R 4.0 or later. Its R package dependencies are declared
+in `DESCRIPTION` and installed by standard R package installers. Depending on
+the workflow, external tools can include fastp, BWA, HISAT2, SPAdes, BLAST,
+MAFFT, trimAl, IQ-TREE, GATK, and Samtools. See the workflow configuration files
+for the programs used by each stage.
 
-2. Stand alone programs
-- fastp: adaptor trimming and paired-end read merging
-- ORNA: read normalization
-- bwa: read mapping
-- hisat2: alternative mapper
-- spades: assembly
-- BLAST: matching assembled contigs to targets, other utilities
-- mafft: creating alignments
-- trimal: trimming alignments
-- IqTree: gene tree and concatenation trees
-- GATK4: variant calling functions
-- SamTools: variant calling and read mapping tools
+## Complete workflow environment
 
-
-# Quick installation instructions
-
-First, clone this repository to your computer to obtain the setup files. Or alternatively go to the green "Code" button in top right of this repository and select "download ZIP".
+Clone the repository to obtain the container recipes, Conda environment, and
+workflow configuration files:
 
 ```bash
 git clone https://github.com/chutter/PhyloProcessR.git
 ```
 
-Second, change your working directory in the terminal to the downloaded repository. The setup files are located in this directory.
+Then change to the setup directory:
 
 ```bash
 cd PhyloProcessR/setup-files/
 ```
 
-The preferred and most reliable way to run PhyloProcessR is through containerization (Docker for local Mac/Linux, or Apptainer/Singularity for HPC clusters). This ensures all the complex bioinformatics dependencies (Java, R, MACSE, MAFFT, etc.) are perfectly configured without conflicting with your system.
+The recommended way to run the full pipeline is with Docker for local Linux or
+macOS use, or Apptainer/Singularity on an HPC system. This keeps the R and
+bioinformatics dependencies in a reproducible environment.
 
-### Option 1: Run via pre-built containers (Preferred)
+### Option 1: Run a pre-built container (recommended)
 
-The easiest way to get started is to pull the pre-built image directly from Docker Hub. 
+Pull the published image from Docker Hub.
 
-**For Docker (Local Mac or Linux):**
-Simply pull the latest image to your machine:
+For Docker:
 ```bash
 docker pull chutter/phyloprocessr:latest
 ```
 
-To run your workflows, mount your local working directory and execute the R script using the container:
+Mount the current working directory and run a workflow script:
 ```bash
 docker run -v $(pwd):/app -w /app chutter/phyloprocessr:latest Rscript workflow-5_trimming.R
 ```
 
-**For Apptainer / Singularity (HPC clusters):**
-Computing clusters are almost entirely Linux systems where Apptainer is the standard. You can pull the pre-built image directly from Docker Hub and save it as a cluster-ready `.sif` file:
+For Apptainer or Singularity, convert the same image to a local `.sif` file:
 ```bash
 apptainer pull phyloprocessr.sif docker://chutter/phyloprocessr:latest
 ```
 
-To run your jobs on the cluster, Apptainer automatically handles mounting your directories:
+Then run a workflow:
 ```bash
 apptainer exec phyloprocessr.sif Rscript workflow-5_trimming.R
 ```
 
-*(Note: When using either container method, you can set `conda.env = ""` or `conda.env = "/opt/conda/bin/"` in your R configuration files, as all tools are already on the system path!)*
+Inside either container, tools are on `PATH`; workflow configurations can use
+`conda.env = ""` or `/opt/conda/bin/` where a tool-directory argument is
+required.
 
-### Option 2: Build containers from recipes (Advanced)
+### Option 2: Build a container from the recipes
 
-If you need to modify the dependencies or build the containers manually from the provided `setup-files`, you can do so easily. 
+Use this option when you need to modify the supplied environment.
 
-**Building Docker locally:**
-Run the following command from the `setup-files` directory. 
-*Note: For Mac users (especially Apple Silicon M1/M2/M3), forcing the `linux/amd64` platform ensures compatibility with all x86_64 bioinformatics tools.*
+Build Docker from the `setup-files` directory. On Apple Silicon, the
+`linux/amd64` platform maintains compatibility with tools distributed only for
+x86_64 Linux.
 ```bash
 docker build --platform linux/amd64 -t chutter/phyloprocessr:1.0.0 -t chutter/phyloprocessr:latest .
 ```
 
-**Building Apptainer locally:**
-You can build the portable `.sif` file using the provided `Apptainer.def` recipe from the `setup-files` directory:
+Build an Apptainer image from the supplied definition:
 ```bash
 apptainer build phyloprocessr.sif Apptainer.def
 ```
 
-### Option 3: Anaconda Environment (Alternative Installation)
+### Option 3: Create the Conda environment
 
-If you prefer to install the dependencies directly on your machine, the R packages and outside programs can be installed via the provided anaconda environment file (`environment.yml`). 
-
-To install with the environment file, first install the Anaconda package manager (Miniconda is recommended). Once installed, you can create a new environment for PhyloProcessR by running:
+After installing a Conda-compatible package manager, create the environment
+from `setup-files/environment.yml`:
 
 ```bash
 conda env create -f environment.yml -n PhyloProcessR
 ```
 
-**** WARNING: It is possible that the environment file may fail depending on your OS. For MacOS, you must use the x86_64 (not M1) version of Anaconda as most packages are not natively available for Apple Silicon but can be emulated. Occasionally things break and there are manual installation methods in the Wiki. 
-
-And finally, the cloned GitHub directory may be deleted after installing the prerequisites. There are some useful example files (also in the tutorial here), which could be saved.   
-
-To use the environment, it must first be activated in your current terminal session or placed in your cluster job script. 
+Activate it before running a workflow:
 
 ```bash
 conda activate PhyloProcessR
 ```
 
-# Installation of R package
+## Install the R package
 
-The main functions of PhyloProcessR are contained in an R package that has been tested on R version 4.0.2 and use the listed programs above along with custom scripts. To install PhyloProcessR from GitHub, you can use the R package devtools included in the environment above. When running in a cluster environment, the code for installation here should be included at the top of your R script with your selected PhyloProcessR functions. Here are step-by-step instructions for installation:
-
-1) Install PhyloProcessR by typing in your R console: 
+Install the development version from GitHub:
 
 ```R
-devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
+install.packages("remotes")
+remotes::install_github("chutter/PhyloProcessR")
 ```
 
-The update = "never" flag ensures that packages already installed via the anaconda environment are not changed, which will often break things. Additionally, dependencies = FALSE is set for the same reason. 
+When working inside the supplied Conda environment or container, its pinned R
+dependencies are already present. Install a local checkout without upgrading
+them:
 
+```R
+remotes::install_local(".", upgrade = "never", dependencies = FALSE)
+```
 
-2) Devtools should finish and say the package loaded properly with no errors. Load the package in your R script with:
+Load the package with:
 
 ```R
 library(PhyloProcessR)
 ```
 
-And installation should be done! All the functions for PhyloProcessR should be ready to go! It is recommended to keep the install line above in your R script as the package is frequently updated for bugs and other features. 
+For reproducible analyses, record the installed package version or Git commit
+rather than reinstalling the moving development branch in every script.
+
+To check external programs in the active Conda environment:
+
+```R
+setupCheck(anaconda.environment = Sys.getenv("CONDA_PREFIX"))
+```
 
 
-3) You can run the following function to see if PhyloProcessR can find the dependencies: 
-
-< coming soon a function to test if they can found >
-
-
-# PhyloProcessR workflows
+## Workflows
 
 PhyloProcessR is organised into a series of workflows, each covering a distinct stage of the pipeline. Configuration files and R scripts for each workflow are provided in the `workflows/` directory.
 
@@ -161,7 +160,7 @@ PhyloProcessR is organised into a series of workflows, each covering a distinct 
 Each workflow has a matching configuration file (e.g. `workflow-1_configuration-file.R`) where all parameters are set. See the tutorials below for detailed guidance.
 
 
-# PhyloProcessR pipeline tutorials
+## Tutorials
 
 [Installation: detailed installation instructions and trouble-shooting](https://github.com/chutter/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
@@ -177,3 +176,9 @@ Each workflow has a matching configuration file (e.g. `workflow-1_configuration-
 [Tutorial 4: Legacy data integration (Workflow X3)](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
 — Full guide to integrating Sanger or GenBank alignments into a sequence-capture dataset, including NEXUS conversion, name-matching strategies, mitochondrial loci, and gene concatenation.
 
+## Citation, contributing, and license
+
+Citation metadata are provided in [`CITATION.cff`](CITATION.cff). Contributions
+are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). PhyloProcessR is distributed under
+the [GNU General Public License, version 3 or later](LICENSE).

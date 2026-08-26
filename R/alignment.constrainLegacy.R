@@ -121,7 +121,7 @@ constrainLegacy = function(capture.tree     = NULL,
     # --- 2a. Derive species name for every tip --------------------------------
     # Take the first two underscore-delimited tokens as Genus_species.
     # Exception: if the second token is "cf", "aff", or "sp", include the third
-    # token too (e.g. Centrolene_cf_venezuelense_MAR371 → Centrolene_cf_venezuelense).
+    # token too (e.g. Centrolene_cf_venezuelense_MAR371 -> Centrolene_cf_venezuelense).
     # This handles voucher IDs that themselves contain underscores
     # (e.g. MNCN-ADN_51750) which would leave fragments if we simply stripped
     # the last token.
@@ -137,7 +137,7 @@ constrainLegacy = function(capture.tree     = NULL,
 
     if (!quiet) {
       print(paste0("constrainLegacy (species-collapse): ",
-                   length(cap.tips), " tips → ", length(unique.sp), " species"))
+                   length(cap.tips), " tips -> ", length(unique.sp), " species"))
     }
 
     # --- 2b. Tally non-gap bases per specimen (if alignment.dir supplied) ----
@@ -267,7 +267,7 @@ constrainLegacy = function(capture.tree     = NULL,
   }#end collapse.to.species
 
   ##############################################################################
-  # BRANCH: default mode — match capture tips to legacy names
+  # BRANCH: default mode -- match capture tips to legacy names
   ##############################################################################
 
   # 2. Resolve legacy.taxa
@@ -313,7 +313,7 @@ constrainLegacy = function(capture.tree     = NULL,
       } else {
         matched.legacy.names[i] = leg.names[hit[1]]
         ambiguous.tips = c(ambiguous.tips,
-                           paste0("  '", cap.tips[i], "' → ",
+                           paste0("  '", cap.tips[i], "' -> ",
                                   paste0("'", leg.names[hit], "'", collapse = ", ")))
       }
     }
@@ -351,7 +351,7 @@ constrainLegacy = function(capture.tree     = NULL,
     dup.nms    = unique(matched.legacy.names[dup.mapped])
     dup.detail = sapply(dup.nms, function(nm) {
       src = cap.tips[matched.legacy.names == nm]
-      paste0("  '", nm, "' ← ", paste0("'", src, "'", collapse = ", "))
+      paste0("  '", nm, "' <- ", paste0("'", src, "'", collapse = ", "))
     })
     stop(paste0("Error: ", length(dup.nms), " legacy name(s) matched by >1 capture tip:\n",
                 paste(dup.detail, collapse = "\n"), "\n",
@@ -367,7 +367,7 @@ constrainLegacy = function(capture.tree     = NULL,
   }
 
   if (!quiet) {
-    print(paste0("constrainLegacy: ", length(cap.tips), " capture tips → ",
+    print(paste0("constrainLegacy: ", length(cap.tips), " capture tips -> ",
                  length(matched.legacy.names), " legacy names matched",
                  if (length(unmatched.tips) > 0)
                    paste0(" (", length(unmatched.tips), " dropped)")

@@ -68,12 +68,12 @@ sraDownload = function(sra.info.file           = NULL,
                        overwrite                = FALSE,
                        quiet                    = FALSE) {
 
-  # ── Argument checks ─────────────────────────────────────────────────────────
+  # -- Argument checks ---------------------------------------------------------
   if (is.null(sra.info.file))      stop("Please provide an sra.info.file path.")
   if (!file.exists(sra.info.file)) stop("sra.info.file not found: ", sra.info.file)
   if (is.null(output.directory))   stop("Please provide an output.directory.")
 
-  # ── Output directory ─────────────────────────────────────────────────────────
+  # -- Output directory ---------------------------------------------------------
   if (dir.exists(output.directory)) {
     if (overwrite) {
       system(paste0("rm -r ", shQuote(output.directory)))
@@ -83,7 +83,7 @@ sraDownload = function(sra.info.file           = NULL,
     dir.create(output.directory, recursive = TRUE)
   }
 
-  # ── Read SRA info table ──────────────────────────────────────────────────────
+  # -- Read SRA info table ------------------------------------------------------
   sra.data = read.csv(sra.info.file, stringsAsFactors = FALSE)
 
   if (!"Run" %in% names(sra.data))
@@ -99,13 +99,13 @@ sraDownload = function(sra.info.file           = NULL,
   if (nrow(sra.data) == 0)
     stop("No rows remain in sra.info.file after applying filters.")
 
-  # ── Build sample names ───────────────────────────────────────────────────────
+  # -- Build sample names -------------------------------------------------------
   # Priority:
-  #   1. sample.name.column explicitly set → use that column directly
-  #   2. ScientificName + SampleName both present → Genus_species_SampleName
+  #   1. sample.name.column explicitly set -> use that column directly
+  #   2. ScientificName + SampleName both present -> Genus_species_SampleName
   #      (falls back to Genus_species_Run for rows where SampleName is blank)
-  #   3. ScientificName only              → Genus_species_Run
-  #   4. Neither                          → Run accession alone
+  #   3. ScientificName only              -> Genus_species_Run
+  #   4. Neither                          -> Run accession alone
   if (!is.null(sample.name.column)) {
     if (!sample.name.column %in% names(sra.data))
       stop("sample.name.column '", sample.name.column, "' not found in sra.info.file.")
@@ -124,7 +124,7 @@ sraDownload = function(sra.info.file           = NULL,
     sra.data$sample.name = sra.data$Run
   }
 
-  # ── Internal: ENA HTTPS URL(s) for an accession ─────────────────────────────
+  # -- Internal: ENA HTTPS URL(s) for an accession -----------------------------
   # ENA mirrors all public SRA data as pre-formatted FASTQ.gz.
   # URL structure:
   #   ftp.sra.ebi.ac.uk/vol1/fastq/{first6}/[subdir]/{acc}/{acc}_[1|2].fastq.gz
@@ -149,9 +149,9 @@ sraDownload = function(sra.info.file           = NULL,
     }
   }
 
-  # ── Internal: download one file with retries ─────────────────────────────────
-  # utils::download.file only *warns* on timeout or length mismatch — it never
-  # throws an error — so a plain tryCatch misses truncated files. We use
+  # -- Internal: download one file with retries ---------------------------------
+  # utils::download.file only *warns* on timeout or length mismatch -- it never
+  # throws an error -- so a plain tryCatch misses truncated files. We use
   # withCallingHandlers to intercept those warnings and treat them as failures.
   # The global timeout option is raised to 3600 s for the duration of the call
   # (large FASTQ files easily exceed the 60-second default).
@@ -179,18 +179,18 @@ sraDownload = function(sra.info.file           = NULL,
 
       if (file.exists(dest.path)) file.remove(dest.path)
       if (attempt < max.retries) {
-        if (!quiet) message("    attempt ", attempt, " failed — retrying in ", retry.delay, "s")
+        if (!quiet) message("    attempt ", attempt, " failed -- retrying in ", retry.delay, "s")
         Sys.sleep(retry.delay)
       }
     }
     FALSE
   }
 
-  # ── Main download loop ───────────────────────────────────────────────────────
+  # -- Main download loop -------------------------------------------------------
   # Multiple SRR accessions that resolve to the same sample name (same
   # ScientificName + SampleName) are treated as sequencing lanes of a single
   # individual, exactly as dropboxDownload handles multi-lane samples.
-  # They are downloaded as L001, L002, … and share one Sample entry in the
+  # They are downloaded as L001, L002, ... and share one Sample entry in the
   # rename CSV so organizeReads merges them automatically.
   #
   # Sentinel: one file per sample named SampleName.fastq.sra_done, written
@@ -212,10 +212,10 @@ sraDownload = function(sra.info.file           = NULL,
 
     if (!quiet) message(sprintf("[%d/%d] %s  (%d run(s))", i, n.total, samp, n.lanes))
 
-    # Sample-level sentinel — fast skip when all lanes completed in a prior run.
+    # Sample-level sentinel -- fast skip when all lanes completed in a prior run.
     sentinel = file.path(output.directory, paste0(samp, ".fastq.sra_done"))
     if (file.exists(sentinel)) {
-      if (!quiet) message("  all lanes already completed — skipping")
+      if (!quiet) message("  all lanes already completed -- skipping")
       # Recover rename entries from the files that actually exist on disk
       existing.lanes = list.files(output.directory,
                                   pattern = paste0("^", samp, "_L[0-9]+_READ1\\.fastq\\.gz$"),
@@ -229,7 +229,7 @@ sraDownload = function(sra.info.file           = NULL,
       next
     }
 
-    # ── Inner lane loop ────────────────────────────────────────────────────────
+    # -- Inner lane loop --------------------------------------------------------
     all.lanes.ok = TRUE
 
     for (j in seq_len(n.lanes)) {
@@ -250,7 +250,7 @@ sraDownload = function(sra.info.file           = NULL,
 
       # Skip this lane if its files already exist (prior partial run)
       if (file.exists(r1.dest) && (!is.paired || file.exists(r2.dest))) {
-        if (!quiet) message("    ", lane.tag, " files exist — skipping")
+        if (!quiet) message("    ", lane.tag, " files exist -- skipping")
         rename.out = rbind(rename.out,
                            data.frame(File   = paste0(samp, "_", lane.tag),
                                       Sample = samp, stringsAsFactors = FALSE))
@@ -297,7 +297,7 @@ sraDownload = function(sra.info.file           = NULL,
 
   } # end sample loop
 
-  # ── Write rename CSV ─────────────────────────────────────────────────────────
+  # -- Write rename CSV ---------------------------------------------------------
   write.csv(rename.out,
             file      = "file_rename_sra.csv",
             row.names = FALSE,

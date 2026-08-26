@@ -49,10 +49,14 @@ informativeSites = function(alignment = NULL,
   if (ambiguities == FALSE){
     n = append(n, c( "r", "y", "k", "m", "s", "w", "b", "d", "h", "v")) }
 
-  #alignment length
-  x.len = dim(alignment)[2]
+  # Preserve matrix dimensions when converting DNAbin's raw representation to
+  # characters. Calling as.character() directly drops the dimensions.
+  x.len = ncol(alignment)
+  alignment = matrix(as.character(alignment),
+                     nrow = nrow(alignment),
+                     ncol = ncol(alignment),
+                     dimnames = dimnames(alignment))
   #goes through each column and sees if they are different
-  alignment = as.character(alignment)
   col.pis = apply(alignment, 2, column.pars)
   out = length(col.pis[col.pis == TRUE])
 

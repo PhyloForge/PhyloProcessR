@@ -31,7 +31,7 @@ trimSampleSegments = function(alignment = NULL,
   if (is.null(reference.name) != T){
     comb.align = alignment
   } else {
-    input.con = PhyloCap::makeConsensus(alignment = alignment,
+    input.con = makeConsensus(alignment = alignment,
                               method = "majority",
                               remove.gaps = F)
 
@@ -55,17 +55,17 @@ trimSampleSegments = function(alignment = NULL,
   for (x in 1:slice.no){
 
     #Slice alignment into number of slices
-    sliced.align = subseq(comb.align, start = slice.start, end = slice.end)
+    sliced.align = Biostrings::subseq(comb.align, start = slice.start, end = slice.end)
 
     #Checks for badly aligned sequences
-    bad.align = PhyloCap::pairwiseDistanceTarget(sliced.align, reference.name)
+    bad.align = pairwiseDistanceTarget(sliced.align, reference.name)
 
     #Remove bad sequence chunks
     rem.seqs = bad.align[bad.align >= threshold]
     good.align = sliced.align[!names(sliced.align) %in% names(rem.seqs)]
 
     #Makes replacement gap seqs for the bad ones
-    blank.align = DNAStringSet()
+    blank.align = Biostrings::DNAStringSet()
     if (length(rem.seqs) != 0){
       for (y in 1:length(rem.seqs)){
         blank.align = append(blank.align, Biostrings::DNAStringSet(paste0(rep("-", slice.end-slice.start+1), collapse = "")) )
@@ -119,4 +119,3 @@ trimSampleSegments = function(alignment = NULL,
   return(return.align)
 
 }#end FUNCTION
-

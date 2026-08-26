@@ -45,7 +45,7 @@ makeUniqueFastaHeaders = function(fasta.file = NULL,
   #Overwrites
   if (file.exists(output.name) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm ", output.directory))
+      unlink(output.name)
     } else { stop("file exists and overwrite = FALSE") }
   }
 
@@ -78,5 +78,4 @@ makeUniqueFastaHeaders = function(fasta.file = NULL,
              as.string = T)
 
 }#end funtion
-
 

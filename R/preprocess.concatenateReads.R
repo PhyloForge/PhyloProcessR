@@ -20,6 +20,9 @@
 #' @param fastqsplitter.path system path to the fastqsplitter executable; NULL
 #'   searches the system PATH.
 #'
+#' @param cap3.path system path to the CAP3 executable; defaults to `cap3` on
+#'   the system PATH.
+#'
 #' @param number.chunks integer number of chunks to split the reads into before
 #'   running SPAdes on each chunk independently.
 #'
@@ -37,6 +40,9 @@
 #'
 #' @param save.all.files logical; if FALSE intermediate per-chunk SPAdes
 #'   directories are deleted after each chunk is processed.
+#'
+#' @param quiet logical; if TRUE, suppress output from external programs where
+#'   supported.
 #'
 #' @return invisibly; side effect is the production of merged contig files in
 #'   assembly.directory.
@@ -243,4 +249,3 @@ concatenateReads = function(input.reads = NULL,
   }#end sample loop
 
 }#end function
-

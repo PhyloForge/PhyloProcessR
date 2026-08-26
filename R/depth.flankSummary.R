@@ -57,7 +57,6 @@ flankDepthSummary = function(depth.directory = NULL,
   setwd(work.dir)
   locus.names = list.files(work.dir)
 
-  library(ggplot2)
   parameters = theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                                  plot.margin = unit(c(1.5, 1, 1, 1), "cm"), #top, right, bottom, left
                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -153,7 +152,7 @@ flankDepthSummary = function(depth.directory = NULL,
   #Gets the subdata
   #setwd(sample.folders[6])
   #sample.names<-list.files(".", recursive = F)
-  sample.sheet = read_excel("/Users/chutter/Dropbox/Research/2_WIP/Anura_Seqcap/Sample_Rename_Master_Mar132019.xlsx")
+  sample.sheet = readxl::read_excel("/Users/chutter/Dropbox/Research/2_WIP/Anura_Seqcap/Sample_Rename_Master_Mar132019.xlsx")
   sample.sheet = sample.sheet[sample.sheet$FrogCap_Paper == 1,]
   sample.names = sample.sheet[sample.sheet$Ranoidea == 1,]$Sample
 
@@ -300,7 +299,6 @@ flankDepthSummary = function(depth.directory = NULL,
 
 
 }#end function
-
 
 
 

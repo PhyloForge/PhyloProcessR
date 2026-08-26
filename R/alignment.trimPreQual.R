@@ -25,14 +25,6 @@ trimPreQual = function(alignment = NULL,
                        quiet = FALSE,
                        delete.temp = TRUE){
 
-  #Debug section
-  alignment = non.align
-  specificity = TRUE
-  large = FALSE
-  hmmcleaner.path = hmm.path
-  quiet = FALSE
-  delete.temp = TRUE
-
   #Creates random name and saves it
   write.align = as.list(as.character(alignment))
   input.file = paste0("temp", sample(1:10000, 1), ".fa")

@@ -12,7 +12,7 @@
 #'   paralogous copies: when two divergent sequences are merged into one contig
 #'   the sites where they differ all become ambiguous. Genuine diploid
 #'   heterozygosity is also flagged, so choose the threshold with your taxon in
-#'   mind — 5 \% is reasonable for vertebrates but may be too strict for
+#'   mind -- 5 percent is reasonable for vertebrates but may be too strict for
 #'   high-diversity invertebrate groups.
 #'
 #'   Note: this filter does NOT detect clean contamination from another organism
@@ -21,10 +21,10 @@
 #'
 #'   Two levels of logging are written:
 #'   \itemize{
-#'     \item \code{logs/sample_logs/<Sample>_heterozygosity.csv} — one row per
+#'     \item \code{logs/sample_logs/<Sample>_heterozygosity.csv} -- one row per
 #'       contig with its length, IUPAC count, proportion, exempt flag, and
 #'       pass/fail result.
-#'     \item \code{logs/filterHeterozygosity_summary.csv} — one row per sample
+#'     \item \code{logs/filterHeterozygosity_summary.csv} -- one row per sample
 #'       summarising total, kept, removed, exempt contig counts, percentage
 #'       removed, and mean / max IUPAC proportion.
 #'   }
@@ -39,12 +39,12 @@
 #' @param removed.directory path where per-sample FASTA files containing only
 #'   the removed contigs will be saved (for inspection).
 #'
-#' @param threshold numeric (0–1); maximum allowed proportion of IUPAC
+#' @param threshold numeric (0-1); maximum allowed proportion of IUPAC
 #'   ambiguity characters per contig. Contigs at or above this value are
-#'   flagged. Default: \code{0.05} (5 \%).
+#'   flagged. Default: \code{0.05} (5 percent).
 #'
 #' @param min.length integer; contigs shorter than this value (bp) are exempt
-#'   from the proportion filter — their pass/fail is recorded in the per-sample
+#'   from the proportion filter -- their pass/fail is recorded in the per-sample
 #'   log but they are always kept. Default: \code{100}.
 #'
 #' @param threads number of parallel samples to process simultaneously.
@@ -125,7 +125,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
       )
 
       if (length(contigs) == 0) {
-        warning(file.names[i], ": empty FASTA — skipping.")
+        warning(file.names[i], ": empty FASTA -- skipping.")
         return(data.frame(Sample = sample.name, TotalContigs = 0L,
                           KeptContigs = 0L, RemovedContigs = 0L,
                           PctRemoved = NA_real_, MeanIUPACprop = NA_real_,
@@ -141,7 +141,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
       iupac.counts = nchar(gsub("[^RYKMSWBDHV]", "", seqs))
       iupac.prop   = iupac.counts / widths
 
-      # Exempt flag: contig is below min.length — always kept regardless of proportion
+      # Exempt flag: contig is below min.length -- always kept regardless of proportion
       exempt  = widths < min.length
 
       # Flagged: long enough AND proportion meets/exceeds threshold

@@ -146,7 +146,7 @@ paralogStats = function(assembly.directory = NULL,
 
     #Finds probes that match to two or more contigs
     final.loci = as.list(as.character(contigs))
-    PhyloCap::writeFasta(sequences = final.loci, names = names(final.loci),
+    writeFasta(sequences = final.loci, names = names(final.loci),
                paste0(species.dir, "/", sample, "_renamed-contigs.fa"), nbchar = 1000000, as.string = T)
 
     #Make blast database for the probe loci

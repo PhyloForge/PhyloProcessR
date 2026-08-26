@@ -5,6 +5,8 @@
 #' @param alignment.folder character string; path to the folder containing the alignments.
 #' @param output.folder character string; path to the folder to save the MACSE-refined alignments.
 #' @param alignment.format character string; the format of the input alignments (e.g. "phylip", "fasta").
+#' @param output.format character string; output alignment format. Currently
+#'   used to name the intended output format; PHYLIP output is supported.
 #' @param macse.path character string; system path to the directory containing the macse executable. If NULL, searches the system PATH.
 #' @param genetic.code integer; the genetic code table to use (default: 1 for standard nuclear).
 #' @param threads integer; number of threads to use.
@@ -52,8 +54,6 @@ alignMACSE = function(alignment.folder = NULL,
   if (length(align.files) == 0) { stop("No alignments found in the input folder.") }
 
   # Sets up foreach loop
-  require(foreach)
-  require(doParallel)
   
   cl = makeCluster(threads)
   registerDoParallel(cl)

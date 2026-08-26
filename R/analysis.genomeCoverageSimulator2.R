@@ -1,7 +1,7 @@
 #' @title genomeCoverageSimulator2
 #'
 #' @description A second variant of the genome coverage simulator that sweeps a
-#'   finer-grained set of simulated library sizes (internally set to 1–10 GB in
+#'   finer-grained set of simulated library sizes (internally set to 1-10 GB in
 #'   1 GB steps) and additionally produces a coverage-versus-depth line plot
 #'   using ggplot2 after all subsampling is complete. Otherwise identical in
 #'   approach to \code{genomeCoverageSimulator}: reads are subsampled with
@@ -276,7 +276,6 @@ genomeCoverage = function(genome.directory = NULL,
 
   }#end i loop
 
-  library(ggplot2)
 
   plot.data = plot.data[plot.data$Coverage <= 20,]
 
@@ -285,4 +284,3 @@ genomeCoverage = function(genome.directory = NULL,
 
 
 } #End function
-

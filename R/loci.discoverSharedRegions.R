@@ -56,9 +56,9 @@
 #'
 #' @return Writes to \code{output.directory}:
 #' \itemize{
-#'   \item \code{sample-bams/} — per-sample genome-mapped BAM files
-#'   \item \code{novel_regions.bed} — BED file of shared novel regions
-#'   \item \code{novel_targets.fa} — genome sequences at shared regions (use as target file
+#'   \item \code{sample-bams/} -- per-sample genome-mapped BAM files
+#'   \item \code{novel_regions.bed} -- BED file of shared novel regions
+#'   \item \code{novel_targets.fa} -- genome sequences at shared regions (use as target file
 #'         for \code{annotateTargets})
 #' }
 #' No value is returned to R.
@@ -139,7 +139,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
          "Run 'which bedtools' on the cluster and update bedtools.path in your config.")
   }
 
-  # Create output directories; never wipe on resume — overwrite controls per-step redo
+  # Create output directories; never wipe on resume -- overwrite controls per-step redo
   dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
   dir.create(paste0(output.directory, "/sample-bams"), showWarnings = FALSE)
   dir.create(paste0(output.directory, "/covered-beds"), showWarnings = FALSE)
@@ -178,7 +178,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
     rm(all.consensus)
     gc()
   } else {
-    print("Known-loci consensus already exists — skipping Step 1.")
+    print("Known-loci consensus already exists -- skipping Step 1.")
   }
 
   ##################################################################################################
@@ -191,11 +191,11 @@ discoverSharedRegions = function(alignment.directory = NULL,
     system(paste0(hisat2.path, "hisat2-build ", genome.file, " ", genome.index),
            ignore.stdout = quiet, ignore.stderr = quiet)
   } else {
-    print("HISAT2 indices already exist — skipping Step 2.")
+    print("HISAT2 indices already exist -- skipping Step 2.")
   }
 
   ##################################################################################################
-  ## Step 3: Per-sample — map to known loci, extract unmapped, map to genome
+  ## Step 3: Per-sample -- map to known loci, extract unmapped, map to genome
   ##################################################################################################
   sample.names = list.dirs(read.directory, recursive = FALSE, full.names = FALSE)
   if (length(sample.names) == 0) {
@@ -208,7 +208,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
 
       bed.out = paste0(output.directory, "/covered-beds/", samp, "_covered.bed")
       if (overwrite == FALSE && file.exists(bed.out) && file.size(bed.out) > 0) {
-        print(paste0(samp, ": coverage BED already exists — skipping."))
+        print(paste0(samp, ": coverage BED already exists -- skipping."))
         return(NULL)
       }
 
@@ -277,11 +277,11 @@ discoverSharedRegions = function(alignment.directory = NULL,
         system(paste0(samtools.path, "samtools view -c -F 4 ", bam.out), intern = TRUE)))
 
       if (is.na(n.mapped) || n.mapped == 0) {
-        print(paste0(samp, ": no reads mapped to genome — covered BED will be empty."))
+        print(paste0(samp, ": no reads mapped to genome -- covered BED will be empty."))
         file.create(bed.out)
         print(paste0("Finished mapping ", samp, " (0 genome-mapped reads)"))
       } else {
-        # Pipe genomecov → awk filter → merge in one shot (no intermediate file on disk)
+        # Pipe genomecov -> awk filter -> merge in one shot (no intermediate file on disk)
         # ignore.stderr = FALSE so bedtools errors are always visible
         system(paste0(bedtools.path, "bedtools genomecov -ibam ", bam.out, " -bg | ",
                       "awk '$4 >= ", min.coverage, "' | ",
@@ -324,7 +324,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
                  " samples had covered genomic regions."))
 
     if (length(non.empty.beds) == 0) {
-      print("All per-sample coverage BEDs are empty — no reads mapped to novel genomic regions.")
+      print("All per-sample coverage BEDs are empty -- no reads mapped to novel genomic regions.")
       print("Possible causes: reads fully explained by known loci; MAPQ threshold too strict;")
       print("or genome/read mismatch. Try lowering min.coverage or min.mapping.quality.")
       return(NULL)
@@ -351,11 +351,11 @@ discoverSharedRegions = function(alignment.directory = NULL,
     }
     print(paste0("Found ", n.regions, " novel regions covered in >= ", min.samples, " samples."))
   } else {
-    print("Shared regions BED already exists — skipping Step 4.")
+    print("Shared regions BED already exists -- skipping Step 4.")
   }
 
   ##################################################################################################
-  ## Step 5: Extract genome sequences at shared regions → novel_targets.fa
+  ## Step 5: Extract genome sequences at shared regions -> novel_targets.fa
   ##################################################################################################
   if (overwrite == TRUE || !file.exists(novel.fa) || file.size(novel.fa) == 0) {
     raw.fa = paste0(output.directory, "/novel_targets_raw.fa")
@@ -364,7 +364,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
            ignore.stdout = quiet, ignore.stderr = quiet)
 
     raw.seqs = Biostrings::readDNAStringSet(raw.fa)
-    # Rename chr:start-end → chr_start_end (phylip-safe, no colons)
+    # Rename chr:start-end -> chr_start_end (phylip-safe, no colons)
     # Sanitize sequence names: bedtools getfasta produces "chrom:start-end".
     # Replace ":" and "-" first (coordinate delimiters), then replace any remaining
     # shell-unsafe character (;  =  space  etc.) with "_" so names are safe to use
@@ -377,7 +377,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
     # Cleanup indices and temp consensus (only after first successful run)
     system(paste0("rm -f ", known.ref, " ", known.index, ".* ", genome.index, ".*"))
   } else {
-    print("Novel targets FASTA already exists — skipping Step 5.")
+    print("Novel targets FASTA already exists -- skipping Step 5.")
   }
 
   print(paste0("Novel target sequences written to: ", novel.fa))

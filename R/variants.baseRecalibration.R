@@ -19,6 +19,9 @@
 #' @param gatk4.path system path to the directory containing the gatk
 #'   executable; NULL searches the system PATH.
 #'
+#' @param temp.directory directory for temporary recalibration files; when
+#'   NULL, the current working directory is used.
+#'
 #' @param threads number of parallel samples to process simultaneously.
 #'
 #' @param memory total RAM in GB to allocate; used per-thread as a JVM heap
@@ -215,7 +218,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
     }, error = function(e) {
       msg = paste0("Unexpected R error: ", conditionMessage(e))
       writeLines(msg, log.file)
-      warning(sample.id, ": baseRecalibration failed — see ", log.file)
+      warning(sample.id, ": baseRecalibration failed -- see ", log.file)
     })
 
   }, mc.cores = threads)

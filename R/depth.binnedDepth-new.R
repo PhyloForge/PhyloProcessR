@@ -29,7 +29,9 @@
 #'
 #' @return Not yet implemented.
 #'
-#' @export
+#' @noRd
+
+NULL
 
 # binnedDepth = function(read.directory = NULL,
 #                        sub.directory = NULL,

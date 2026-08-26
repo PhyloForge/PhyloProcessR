@@ -5,8 +5,8 @@
 #'   concatenation, jackknife, SVDquartets). For each tree file and each
 #'   user-defined set of taxa, monophyly is tested and the corresponding node
 #'   support is extracted. Support values are binned into colour categories
-#'   (not recovered = black, <50 = blue, 50–69 = orange, 70–94 = yellow,
-#'   >=95 = red) and plotted in a grid with rows for analyses and columns for
+#'   (not recovered = black, <50 = blue, 50-69 = orange, 70-94 = yellow,
+#'   95 or greater = red) and plotted in a grid with rows for analyses and columns for
 #'   taxon sets. Row colours reflect the analysis type.
 #'
 #' @param species.tree not used in the current implementation; included for

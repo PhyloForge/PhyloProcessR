@@ -54,9 +54,9 @@
 #' FASTA file for alignment, and a summary CSV to the working directory. Two log files are
 #' also written:
 #' \itemize{
-#'   \item \code{logs/sample_logs/<Sample>_blast-matches.csv} — the filtered BLAST table
+#'   \item \code{logs/sample_logs/<Sample>_blast-matches.csv} -- the filtered BLAST table
 #'     for each sample (one row per hit: target, contig, pident, bitscore, evalue, lengths).
-#'   \item \code{logs/annotateTargets_summary.csv} — one row per sample summarising
+#'   \item \code{logs/annotateTargets_summary.csv} -- one row per sample summarising
 #'     deduplicated contig count, number of targets matched, annotated target count, and
 #'     mean/max BLAST identity and bitscore.
 #' }
@@ -620,7 +620,7 @@ annotateTargets = function(assembly.directory = NULL,
     og.contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", samples[i], ".fa"))
     out.fa = paste0(output.directory, "/", samples[i], ".fa")
     if (!file.exists(out.fa)) {
-      warning(samples[i], ": no annotated output file found — sample had no targets passing filters, skipping.")
+      warning(samples[i], ": no annotated output file found -- sample had no targets passing filters, skipping.")
       next
     }
     cd.contigs = Biostrings::readDNAStringSet(out.fa)

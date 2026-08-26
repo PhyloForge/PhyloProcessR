@@ -1,37 +1,3 @@
-#' @title dropboxDownload
-#'
-#' @description Downloads paired-end fastq.gz read files from a Dropbox account
-#'   using the rdrop2 package and the Dropbox API v2. A sample spreadsheet maps
-#'   source file names to desired sample names and the function renames files to
-#'   the standard convention (SampleName_L00N_READ1/2.fastq.gz) on download.
-#'   A file_rename_dropbox.csv is written on completion for use in downstream
-#'   functions.
-#'
-#' @param sample.spreadsheet path to a CSV file with at least two columns: File
-#'   (the file name prefix in Dropbox to search for) and Sample (the desired
-#'   output sample name). Multiple rows per sample are treated as separate
-#'   sequencing lanes.
-#'
-#' @param dropbox.directory the Dropbox path (starting with /) to the directory
-#'   to search for read files.
-#'
-#' @param dropbox.token path to an RDS file containing a saved Dropbox OAuth2
-#'   token produced by rdrop2::drop_auth(). If NULL, the function attempts to
-#'   retrieve a token from the rdrop2 cache.
-#'
-#' @param output.directory local path where downloaded files will be saved.
-#'
-#' @param skip.not.found logical; if TRUE samples whose files cannot be located
-#'   in Dropbox are silently skipped. If FALSE an error is raised.
-#'
-#' @param overwrite logical; if TRUE the output directory is deleted and
-#'   recreated before downloading.
-#'
-#' @return invisibly; writes downloaded fastq.gz files to output.directory and
-#'   a file_rename_dropbox.csv in the working directory.
-#'
-#' @export
-
 # Internal helper: lists all files recursively in a Dropbox folder via API v2,
 # avoiding the rdrop2::drop_dir() LinearizeNestedList bug on empty entries.
 .dropbox_list_files = function(path, token) {
@@ -66,6 +32,40 @@
   paths[!is.na(paths)]
 }
 
+#' @title dropboxDownload
+#'
+#' @description Downloads paired-end fastq.gz read files from a Dropbox account
+#'   using the rdrop2 package and the Dropbox API v2. A sample spreadsheet maps
+#'   source file names to desired sample names and the function renames files to
+#'   the standard convention (SampleName_L00N_READ1/2.fastq.gz) on download.
+#'   A file_rename_dropbox.csv is written on completion for use in downstream
+#'   functions.
+#'
+#' @param sample.spreadsheet path to a CSV file with at least two columns: File
+#'   (the file name prefix in Dropbox to search for) and Sample (the desired
+#'   output sample name). Multiple rows per sample are treated as separate
+#'   sequencing lanes.
+#'
+#' @param dropbox.directory the Dropbox path (starting with /) to the directory
+#'   to search for read files.
+#'
+#' @param dropbox.token path to an RDS file containing a saved Dropbox OAuth2
+#'   token produced by rdrop2::drop_auth(). If NULL, the function attempts to
+#'   retrieve a token from the rdrop2 cache.
+#'
+#' @param output.directory local path where downloaded files will be saved.
+#'
+#' @param skip.not.found logical; if TRUE samples whose files cannot be located
+#'   in Dropbox are silently skipped. If FALSE an error is raised.
+#'
+#' @param overwrite logical; if TRUE the output directory is deleted and
+#'   recreated before downloading.
+#'
+#' @return invisibly; writes downloaded fastq.gz files to output.directory and
+#'   a file_rename_dropbox.csv in the working directory.
+#'
+#' @export
+
 dropboxDownload = function(sample.spreadsheet = NULL,
                           dropbox.directory = NULL,
                           dropbox.token = NULL,
@@ -93,7 +93,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     }
   } # end else
 
-  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else rdrop2:::get_dropbox_token()
+  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else rdrop2::drop_auth()
   all.reads = .dropbox_list_files(dropbox.directory, token)
 
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]

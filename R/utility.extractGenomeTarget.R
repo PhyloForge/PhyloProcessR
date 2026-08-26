@@ -13,7 +13,7 @@
 #'
 #' @param genome.accessions optional path to a CSV file whose rows each
 #'   identify one NCBI genome assembly to download, extract targets from, and
-#'   then delete.  Use \strong{GCA accession numbers} (GenBank assemblies) —
+#'   then delete.  Use \strong{GCA accession numbers} (GenBank assemblies) --
 #'   they cover every genome, including those without a RefSeq (GCF) record.
 #'   Required column: \code{Accession} (or the name given in
 #'   \code{accession.column}).  Optional column: \code{Name} (or
@@ -33,7 +33,7 @@
 #'   \code{"Centrolenidae"} or \code{"8404"}) to search NCBI automatically for
 #'   matching genome assemblies.  All assemblies at the requested
 #'   \code{assembly.level}(s) are discovered, their accessions resolved, and
-#'   each is downloaded, processed, and deleted in sequence — no user-provided
+#'   each is downloaded, processed, and deleted in sequence -- no user-provided
 #'   table required.  Can be combined with \code{genome.path} and/or
 #'   \code{genome.accessions}; results are pooled.
 #'
@@ -253,8 +253,8 @@ extractGenomeTarget = function(genome.path = NULL,
   ##############################################################################
   # Build a unified list of genome sources.
   # Each entry: list(type, file, path, sample, accession)
-  #   type="file"      — local genome file (existing behaviour)
-  #   type="accession" — download from NCBI, extract, delete
+  #   type="file"      -- local genome file (existing behaviour)
+  #   type="accession" -- download from NCBI, extract, delete
   ##############################################################################
   genome.sources = list()
 
@@ -301,7 +301,7 @@ extractGenomeTarget = function(genome.path = NULL,
     }
   }
 
-  # --- NCBI taxon search (pure R REST API — no CLI tool required) ---
+  # --- NCBI taxon search (pure R REST API -- no CLI tool required) ---
   if (!is.null(genome.taxon)) {
     print(paste0("Querying NCBI for '", genome.taxon, "' assemblies (levels: ",
                  paste(assembly.level, collapse=", "), ")..."))
@@ -379,7 +379,7 @@ extractGenomeTarget = function(genome.path = NULL,
 
   ##############################################################################
   # Helper closure: resolve NCBI FTP download URL for a genome accession.
-  # Uses Entrez esearch (accession → UID) then esummary (UID → FTP path).
+  # Uses Entrez esearch (accession -> UID) then esummary (UID -> FTP path).
   # Returns the HTTPS URL of the _genomic.fna.gz file, or NULL on failure.
   ##############################################################################
   ncbi.genome.url = function(acc) {
@@ -459,7 +459,7 @@ extractGenomeTarget = function(genome.path = NULL,
     if (!dir.exists(species.dir)) { dir.create(species.dir) }
 
     ##########################################################################
-    # NCBI download preamble — only for accession sources
+    # NCBI download preamble -- only for accession sources
     # Uses pure R: Entrez API to resolve FTP URL, download.file() to fetch.
     # No CLI tools required.
     ##########################################################################
@@ -468,18 +468,18 @@ extractGenomeTarget = function(genome.path = NULL,
       sentinel     = file.path(species.dir, paste0(sample, "_COMPLETED"))
       matches.file = file.path(species.dir, paste0(sample, "_target-matches.fa"))
 
-      # ── Already-done check ─────────────────────────────────────────────────
+      # -- Already-done check -------------------------------------------------
       # A COMPLETED sentinel file is written at the very end of a successful
       # run.  The output FASTA is also checked as a fallback for runs that
       # finished before the sentinel was introduced.
       if (!overwrite &&
           (file.exists(sentinel) || file.exists(matches.file))) {
         print(paste0("[", i, "/", length(genome.sources), "] ",
-                     sample, " already completed — skipping."))
+                     sample, " already completed -- skipping."))
         next
       }
 
-      # ── Step 1: resolve FTP URL via Entrez (with retries) ─────────────────
+      # -- Step 1: resolve FTP URL via Entrez (with retries) -----------------
       print(paste0("[", i, "/", length(genome.sources), "] ",
                    "Resolving download URL for ", acc, "..."))
       genome.url = NULL
@@ -487,7 +487,7 @@ extractGenomeTarget = function(genome.path = NULL,
         genome.url = ncbi.genome.url(acc)
         if (!is.null(genome.url)) break
         if (attempt < max.retries) {
-          warning(paste0(acc, ": URL lookup attempt ", attempt, " failed — ",
+          warning(paste0(acc, ": URL lookup attempt ", attempt, " failed -- ",
                          "retrying in ", retry.delay, "s..."))
           Sys.sleep(retry.delay)
         }
@@ -498,7 +498,7 @@ extractGenomeTarget = function(genome.path = NULL,
         next
       }
 
-      # ── Step 2: download gzipped genome FASTA (with retries) ──────────────
+      # -- Step 2: download gzipped genome FASTA (with retries) --------------
       genome.gz = file.path(species.dir, paste0(sample, "_genome.fna.gz"))
       print(paste0("  Downloading ", basename(genome.url), "..."))
       dl.ok = FALSE
@@ -513,7 +513,7 @@ extractGenomeTarget = function(genome.path = NULL,
           dl.ok = TRUE; break
         }
         if (attempt < max.retries) {
-          warning(paste0(acc, ": download attempt ", attempt, " failed — ",
+          warning(paste0(acc, ": download attempt ", attempt, " failed -- ",
                          "retrying in ", retry.delay, "s..."))
           Sys.sleep(retry.delay)
         }
@@ -525,7 +525,7 @@ extractGenomeTarget = function(genome.path = NULL,
         next
       }
 
-      # ── Step 3: decompress — delete .gz immediately to free disk space ─────
+      # -- Step 3: decompress -- delete .gz immediately to free disk space -----
       species.genome.path = file.path(species.dir, paste0(sample, "_genome.fa"))
       system(paste0("gzip -dc \"", genome.gz, "\" > \"", species.genome.path, "\""))
       file.remove(genome.gz)
@@ -705,7 +705,7 @@ extractGenomeTarget = function(genome.path = NULL,
       Rsamtools::indexFa(species.genome.path)
       fa = Rsamtools::FaFile(species.genome.path)
 
-      #adds genome columns — initialise to NA so skipped rows are filtered below
+      #adds genome columns -- initialise to NA so skipped rows are filtered below
       final.table[, gStart:=NA_real_]
       final.table[, gEnd:=NA_real_]
       header.data = colnames(final.table)
@@ -820,7 +820,7 @@ extractGenomeTarget = function(genome.path = NULL,
                nbchar = 1000000, as.string = T)
 
     print(paste0("[", i, "/", length(genome.sources), "] ",
-                 sample, " complete — ", length(final.loci), " targets extracted."))
+                 sample, " complete -- ", length(final.loci), " targets extracted."))
 
     # Write a sentinel file so re-runs can skip this genome without re-checking
     # every output file.  Includes a brief summary for auditing.
@@ -837,7 +837,7 @@ extractGenomeTarget = function(genome.path = NULL,
     # Clean up temporary genome files
     if (downloaded) {
       # Accession source: the .gz was already deleted after decompression.
-      # Remove the decompressed genome FASTA and its index — output files are kept.
+      # Remove the decompressed genome FASTA and its index -- output files are kept.
       genome.fa = file.path(species.dir, paste0(sample, "_genome.fa"))
       fai.path  = paste0(genome.fa, ".fai")
       if (file.exists(genome.fa)) file.remove(genome.fa)

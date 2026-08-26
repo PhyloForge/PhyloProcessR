@@ -166,7 +166,7 @@ integrateLegacy = function(alignment.directory = NULL,
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
-  #Overwrite — check for non-empty directories only; empty dirs are left by interrupted runs
+  #Overwrite -- check for non-empty directories only; empty dirs are left by interrupted runs
   only.has.files = length(list.files(paste0(output.directory, "-only"))) > 0
   all.has.files  = length(list.files(paste0(output.directory, "-all")))  > 0
   if (only.has.files || all.has.files) {
@@ -257,7 +257,7 @@ integrateLegacy = function(alignment.directory = NULL,
   # Build the key function once here (outside the per-locus loop) so it is
   # available both in the uncaptured-legacy save paths and in the MAFFT
   # integration path.  (The MAFFT path also defines key.fn locally inside the
-  # combine.same.sample block — that definition now just shadows this one.)
+  # combine.same.sample block -- that definition now just shadows this one.)
   if (name.match == "species") {
     key.fn = function(x) gsub("_[^_]+$", "", x)
   } else if (name.match == "fuzzy") {
@@ -270,8 +270,8 @@ integrateLegacy = function(alignment.directory = NULL,
   # before the per-locus loop.  Uncaptured-legacy loci (Legacy_M30*, nuclear
   # genes absent from the capture panel) are saved directly with raw legacy
   # names.  Without renaming, the same specimen can appear as two separate
-  # taxa in the supermatrix — e.g. "Ikakogi_tayrona_MAR545" (legacy) and
-  # "Ikakogi_tayrona_MAR-545" (capture) — causing IQ-TREE to place them in
+  # taxa in the supermatrix -- e.g. "Ikakogi_tayrona_MAR545" (legacy) and
+  # "Ikakogi_tayrona_MAR-545" (capture) -- causing IQ-TREE to place them in
   # completely different parts of the tree.  We rename legacy taxa to the
   # capture name wherever a fuzzy key match is found before writing any
   # uncaptured alignment.
@@ -352,7 +352,7 @@ integrateLegacy = function(alignment.directory = NULL,
     #Writes representative sequence to temp file for BLAST
     Biostrings::writeXStringSet(blast.seq, filepath = paste0(save.name, "_query.fa"))
 
-    #Matches samples to loci — use standard blastn for full sensitivity across divergent taxa
+    #Matches samples to loci -- use standard blastn for full sensitivity across divergent taxa
     system(paste0(blast.path, "blastn -task blastn -db target_nucl-blast_db -evalue 0.001",
                   " -query ", save.name, "_query.fa -out ", save.name, "_target-blast-match.txt",
                   " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
@@ -363,7 +363,7 @@ integrateLegacy = function(alignment.directory = NULL,
     if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
     if (nrow(match.data) == 0) {
-      # Nuclear BLAST failed — try mitochondrial DB if enabled
+      # Nuclear BLAST failed -- try mitochondrial DB if enabled
       if (include.mitochondrial == TRUE) {
         system(paste0(blast.path, "blastn -task blastn -db mito_nucl-blast_db -evalue 0.001",
                       " -query ", save.name, "_query.fa -out ", save.name, "_mito-blast-match.txt",
@@ -485,7 +485,7 @@ integrateLegacy = function(alignment.directory = NULL,
           align = align[-drop.idx]
         }
 
-        #Saves them — rename legacy taxa to capture names first so the same
+        #Saves them -- rename legacy taxa to capture names first so the same
         # specimen does not appear under two different names in the supermatrix
         align = rename.to.capture.names(align)
         write.temp = strsplit(as.character(align), "")
@@ -545,7 +545,7 @@ integrateLegacy = function(alignment.directory = NULL,
           if (length(cap.match) > 0) {
             selected.seqs = append(selected.seqs, cap.match[1])
           } else {
-            # No museum ID match — pick the sequence with the most informative bases
+            # No museum ID match -- pick the sequence with the most informative bases
             n.informative = sapply(as.character(candidates), function(s) {
               nchar(gsub("[-?nN]", "", s, ignore.case = TRUE))
             })
@@ -748,7 +748,7 @@ integrateLegacy = function(alignment.directory = NULL,
                                interleave = F,
                                strict = F)
 
-    print(paste0("Finished ", save.name, " → ", found.name, " legacy integration successfully!"))
+    print(paste0("Finished ", save.name, " -> ", found.name, " legacy integration successfully!"))
     legacy.loci = c(legacy.loci, found.name)
     if (use.mito == TRUE) { mito.loci = c(mito.loci, found.name) }
     system(paste0("rm ", save.name, "*"))

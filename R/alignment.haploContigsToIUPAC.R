@@ -55,7 +55,6 @@ haploContigsToIUPAC = function(alignment.directory = NULL,
   # quiet = TRUE
 
 
-  require(PhyloCap)
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
@@ -140,5 +139,4 @@ haploContigsToIUPAC = function(alignment.directory = NULL,
 #########################
 ###### END SCRIPT
 #########################
-
 

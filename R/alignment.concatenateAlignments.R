@@ -43,7 +43,6 @@ concatenateAlignments = function(alignment.folder = NULL,
 #  output.format = "fasta"
 #  partition.format = "all"
 
-  require(data.table)
 
   #Parameter checks
   if(is.null(alignment.folder) == TRUE){ stop("Error: a folder of alignments is needed.") }
@@ -265,4 +264,3 @@ concatenateAlignments = function(alignment.folder = NULL,
   }#end partition if
 
 }#end function
-

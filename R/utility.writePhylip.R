@@ -64,7 +64,7 @@ writePhylip = function(alignment = NULL,
   nchar <- ncol(x)
   taxnames <- rownames(x)
   if (strict) {
-    taxnames <- substring(taxnames, 1, truncate)
+    taxnames <- substring(taxnames, 1, 10)
     missing <- 10 - unlist(lapply(strsplit(taxnames, ""),
                                   length))
     for (i in seq(along = taxnames)) taxnames[i] <- paste(taxnames[i],

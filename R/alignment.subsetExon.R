@@ -4,7 +4,9 @@
 #'
 #' @return this function currently has no active code and produces no output
 #'
-#' @export
+#' @noRd
+
+NULL
 
 # makeExonAlignments = function(alignment.directory = NULL,
 #                               alignment.format = "phylip",

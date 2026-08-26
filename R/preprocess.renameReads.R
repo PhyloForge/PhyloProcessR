@@ -12,6 +12,9 @@
 #' @param output.directory path to the directory where renamed files will be
 #'   copied.
 #'
+#' @param read.directory path to the directory containing the raw fastq.gz
+#'   files. Defaults to the current working directory.
+#'
 #' @param skip.not.found logical; if TRUE samples in the spreadsheet whose
 #'   files cannot be located are silently skipped rather than raising an error.
 #'
@@ -29,6 +32,7 @@
 
 renameReads = function(sample.spreadsheet = NULL,
                        output.directory = NULL,
+                       read.directory = ".",
                        skip.not.found = FALSE,
                        lane.names = NULL,
                        overwrite = FALSE){
@@ -95,4 +99,3 @@ renameReads = function(sample.spreadsheet = NULL,
   }#end i loop
 
 }#end function
-

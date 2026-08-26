@@ -45,7 +45,6 @@ binnedDepthSummary = function(depth.directory = NULL,
   overwrite = TRUE
   max.value = 40000000
 
-  library(ggplot2)
   parameters = theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                                  plot.margin = unit(c(1.5, 1, 1, 1), "cm"), #top, right, bottom, left
                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -130,7 +129,6 @@ binnedDepthSummary = function(depth.directory = NULL,
 
 
 }#end function
-
 
 
 

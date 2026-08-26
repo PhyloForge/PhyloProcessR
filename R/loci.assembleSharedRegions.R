@@ -8,7 +8,7 @@
 #' \code{min.reads.assemble} or more reads are retained. Contigs are named
 #' \code{region_contig_N} (e.g. \code{chr3_450000_450800_contig_1}) and written as one
 #' FASTA per sample to \code{output.directory}, compatible with the downstream
-#' \code{filterHeterozygosity} → \code{collectNovelContigs} → \code{alignTargets} pipeline
+#' \code{filterHeterozygosity} -> \code{collectNovelContigs} -> \code{alignTargets} pipeline
 #' (workflow X4).
 #'
 #' @param discover.directory path to the output directory from \code{discoverSharedRegions}.
@@ -110,12 +110,12 @@ assembleSharedRegions = function(discover.directory = NULL,
   # Load region BED
   regions = data.table::fread(region.bed, sep = "\t", header = FALSE)
   if (is.null(regions) || nrow(regions) == 0) {
-    print("novel_regions.bed is empty — no shared regions were found.")
+    print("novel_regions.bed is empty -- no shared regions were found.")
     return(NULL)
   }
   data.table::setnames(regions, c("chrom", "start", "end", "sample_count"))
   # Sanitize region names the same way discoverSharedRegions sanitizes novel_targets.fa
-  # sequence names — must match exactly so the BLAST tName lookup works.
+  # sequence names -- must match exactly so the BLAST tName lookup works.
   # Scaffold names from some genome assemblies contain shell-unsafe characters
   # (e.g. "ScWFrIx_100724;HRSCAF=196187") that break file paths and MAFFT commands.
   region.names = gsub("[^A-Za-z0-9_.]", "_",
@@ -153,7 +153,7 @@ assembleSharedRegions = function(discover.directory = NULL,
       bam  = bam.files[s]
 
       if (overwrite == FALSE && file.exists(paste0(output.directory, "/", samp, ".fa"))) {
-        print(paste0(samp, ": contig FASTA already exists — skipping."))
+        print(paste0(samp, ": contig FASTA already exists -- skipping."))
         return(NULL)
       }
 
@@ -181,7 +181,7 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       if (is.na(n.novel) || n.novel == 0) {
         system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": no reads in novel regions — skipping."))
+        print(paste0(samp, ": no reads in novel regions -- skipping."))
         return(NULL)
       }
 
@@ -195,14 +195,14 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       if (length(cov.out) == 0) {
         system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": bedtools coverage produced no output — skipping."))
+        print(paste0(samp, ": bedtools coverage produced no output -- skipping."))
         return(NULL)
       }
 
       region.counts    = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
       if (ncol(region.counts) == 0) {
         system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": bedtools coverage output could not be parsed — skipping."))
+        print(paste0(samp, ": bedtools coverage output could not be parsed -- skipping."))
         return(NULL)
       }
       reads.per.region = region.counts[[ncol(region.counts)]]
@@ -213,7 +213,7 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       if (length(active.regions) == 0) {
         system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": no regions with sufficient reads — skipping."))
+        print(paste0(samp, ": no regions with sufficient reads -- skipping."))
         return(NULL)
       }
 

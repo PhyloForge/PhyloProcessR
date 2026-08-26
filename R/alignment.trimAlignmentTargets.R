@@ -108,11 +108,11 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     #Loads in and pulls out relevant target sequence
     target.seq = target.loci[names(target.loci) %in% save.name]
     if (length(target.seq) == 0) {
-      print(paste0(save.name, ": no matching reference found in target file — skipping."))
+      print(paste0(save.name, ": no matching reference found in target file -- skipping."))
       return(NULL)
     }
     if (length(target.seq) >= 2) {
-      print(paste0(save.name, ": duplicate entries found in target file — skipping."))
+      print(paste0(save.name, ": duplicate entries found in target file -- skipping."))
       return(NULL)
     }
 

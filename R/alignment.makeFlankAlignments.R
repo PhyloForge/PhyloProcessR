@@ -117,7 +117,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       #Loads in a pulls out relevant target file
       target.seq = target.loci[names(target.loci) %in% save.name]
       if (length(target.seq) == 0) {
-        print(paste0(save.name, ": no matching reference found in target file — skipping."))
+        print(paste0(save.name, ": no matching reference found in target file -- skipping."))
         return(NULL)
       }
       names(target.seq) = "Reference_Locus"

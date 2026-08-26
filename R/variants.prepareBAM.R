@@ -158,7 +158,7 @@ prepareBAM = function(read.directory = NULL,
 
   # Helper: run a GATK command, capture stderr to a log file, and stop with a
   # descriptive message if the exit code is non-zero.  system() does not throw
-  # R errors on GATK failures — exit code checking is the only reliable way to
+  # R errors on GATK failures -- exit code checking is the only reliable way to
   # detect a crash.
   run.gatk = function(cmd, stderr.log) {
     exit.code = system(paste0(cmd, " 2>> ", stderr.log))
@@ -277,7 +277,7 @@ prepareBAM = function(read.directory = NULL,
       }
       msg = conditionMessage(e)
       writeLines(msg, log.file)
-      warning(sample.id, ": prepareBAM failed — see ", log.file)
+      warning(sample.id, ": prepareBAM failed -- see ", log.file)
     })
 
   }, mc.cores = threads) # end i loop

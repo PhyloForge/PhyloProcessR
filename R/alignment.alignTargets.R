@@ -160,7 +160,7 @@ alignTargets = function(targets.to.align = NULL,
     #Gets reference locus
     ref.locus = target.seqs[grep(pattern = paste(locus.names[i], "$", sep = ""), x = gsub("_\\|_.*", "", names(target.seqs) ) )]
     if (length(ref.locus) == 0) {
-      print(paste0(locus.names[i], ": no reference sequence found in target file — skipping."))
+      print(paste0(locus.names[i], ": no reference sequence found in target file -- skipping."))
       locus.log[[i - sub.start + 1]] = data.frame(
         Locus = locus.names[i], N_taxa_initial = length(match.data),
         N_taxa_aligned = 0L, Alignment_length = NA_integer_,

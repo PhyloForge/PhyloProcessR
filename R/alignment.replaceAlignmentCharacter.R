@@ -17,12 +17,16 @@ replaceAlignmentCharacter = function(alignment = NULL,
                                      char.find = "N",
                                      char.replace = "-"){
 
-  #applies across DNASTringSet. Convert formats?
-  t.align = lapply(alignment, function (x) gsub("N", "-", x))
-  n.align = Biostrings::DNAStringSet(unlist(t.align))
+  if (length(char.find) != 1 || length(char.replace) != 1) {
+    stop("char.find and char.replace must each contain one character.")
+  }
+
+  replaced = gsub(char.find, char.replace, as.character(alignment),
+                  fixed = TRUE)
+  n.align = Biostrings::DNAStringSet(replaced)
+  names(n.align) = names(alignment)
 
   return(n.align)
 
 }#end function
-
 

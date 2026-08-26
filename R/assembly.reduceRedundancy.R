@@ -14,7 +14,7 @@
 #'   will be written. Default: \code{"reduced-redundancy"}.
 #'
 #' @param similarity sequence identity threshold for cd-hit-est clustering
-#'   (0.6–1.0). Must be >= 0.6. Default: \code{0.95}.
+#'   (0.6-1.0). Must be >= 0.6. Default: \code{0.95}.
 #'
 #' @param cdhit.path path to the directory containing \code{cd-hit-est}. If
 #'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
@@ -112,7 +112,7 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   # Use mclapply (fork-based) instead of a SOCK cluster.
   # Fork workers die silently per-sample rather than crashing the whole session
-  # when a socket connection is lost — the primary cause of the previous crash.
+  # when a socket connection is lost -- the primary cause of the previous crash.
   parallel::mclapply(seq_along(file.names), function(i) {
 
     sample.id  = file.names[i]
@@ -144,7 +144,7 @@ reduceRedundancy = function(assembly.directory = NULL,
         msg = paste0("cd-hit-est exited with code ", exit.code, ".\n\ncd-hit-est stderr:\n", cdhit.msg)
         writeLines(msg, log.file)
         warning(sample.id, ": cd-hit-est failed (exit code ", exit.code,
-                ") — see ", log.file)
+                ") -- see ", log.file)
         return(invisible(NULL))
       }
 
@@ -176,14 +176,14 @@ reduceRedundancy = function(assembly.directory = NULL,
       clstr = paste0(out.file, ".clstr")
       if (file.exists(clstr)) { system(paste0("rm ", clstr)) }
 
-      # Clean up the stderr log on success — only keep it for failures
+      # Clean up the stderr log on success -- only keep it for failures
       if (file.exists(cdhit.log)) { file.remove(cdhit.log) }
 
     }, error = function(e) {
       msg = paste0("Unexpected R error: ", conditionMessage(e), "\n\n",
                    paste(capture.output(traceback()), collapse = "\n"))
       writeLines(msg, log.file)
-      warning(sample.id, ": unexpected error — see ", log.file)
+      warning(sample.id, ": unexpected error -- see ", log.file)
     })
 
   }, mc.cores = threads)

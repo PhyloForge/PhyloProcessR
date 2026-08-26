@@ -60,16 +60,17 @@ makeConsensus = function(alignment = NULL,
   }
   if (method == "profile") {
     obsvalue <- levels(factor(align.in))
-    nrow <- length(obsvalue)
     row.names(align.in) <- NULL
     res <- apply(align.in, 2, function(x) table(factor(x, levels = obsvalue)))
+    return(res)
   }
   if (method == "threshold") {
-    profile <- consensus(align.in, method = "profile")
+    profile <- makeConsensus(alignment = alignment, method = "profile",
+                             remove.gaps = FALSE)
     profile.rf <- apply(profile, 2, function(x) x/sum(x))
     res <- rownames(profile.rf)[apply(profile.rf, 2, which.max)]
     res <- ifelse(apply(profile.rf, 2, max) >= threshold,
-                  res, NA)
+                  res, "N")
     names(res) <- NULL
   }
 

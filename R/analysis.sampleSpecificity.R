@@ -1,6 +1,6 @@
 #' @title sampleSpecificity
 #'
-#' @description Measures per-sample specificity — the proportion of cleaned
+#' @description Measures per-sample specificity -- the proportion of cleaned
 #'   reads that can be mapped to the target marker sequences. For each sample,
 #'   paired reads are mapped to the target sequences with BWA mem, duplicates
 #'   are marked with GATK4 MarkDuplicates, and read counts per target marker

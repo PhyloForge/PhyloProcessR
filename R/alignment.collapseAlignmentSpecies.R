@@ -86,13 +86,13 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
   }
 
   ##############################################################################
-  # 1. NEXUS → per-locus phylip conversion (optional)
+  # 1. NEXUS -> per-locus phylip conversion (optional)
   ##############################################################################
   if (!is.null(nexus.file)) {
     if (!file.exists(nexus.file)) {
       stop(paste0("Error: nexus.file not found: ", nexus.file))
     }
-    print(paste0("Splitting NEXUS → per-locus phylip in: ", nexus.output.dir))
+    print(paste0("Splitting NEXUS -> per-locus phylip in: ", nexus.output.dir))
     PhyloProcessR::convertNexusPartitions(
       nexus.file          = nexus.file,
       output.directory    = nexus.output.dir,
@@ -132,7 +132,7 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
     stop(paste0("Error: no alignment files found in: ", alignment.dir))
   }
   print(paste0("collapseAlignmentSpecies: processing ", length(align.files),
-               " alignment(s) → ", output.dir))
+               " alignment(s) -> ", output.dir))
 
   ##############################################################################
   # 4. Helper: species key from a tip label
@@ -184,7 +184,7 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
         raw = Biostrings::readDNAMultipleAlignment(aln.path, format = "phylip")
         Biostrings::DNAStringSet(raw)
       }, error = function(e) {
-        # Some phylip files written with '?' — sanitise and retry
+        # Some phylip files written with '?' -- sanitise and retry
         tmp = tempfile(fileext = ".phy")
         writeLines(gsub("\\?", "N", readLines(aln.path, warn = FALSE)), tmp)
         on.exit(unlink(tmp), add = TRUE)
@@ -209,10 +209,10 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
       seqs = as.character(aln[idx])
 
       if (length(seqs) == 1L) {
-        # Single individual — just rename
+        # Single individual -- just rename
         consensus.str = seqs
       } else {
-        # Multiple individuals — column-by-column merge
+        # Multiple individuals -- column-by-column merge
         consensus.str = paste(col.consensus(seqs), collapse = "")
       }
 
@@ -232,7 +232,7 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
       if (!quiet) {
         print(paste0(save.name, ": only ", length(collapsed),
                      " species after collapse (< min.taxa.alignment = ",
-                     min.taxa.alignment, ") — skipping."))
+                     min.taxa.alignment, ") -- skipping."))
       }
       return(NULL)
     }
@@ -246,7 +246,7 @@ collapseAlignmentSpecies = function(alignment.dir       = NULL,
                                strict     = FALSE)
 
     if (!quiet) {
-      print(paste0(save.name, ": ", length(aln), " individuals → ",
+      print(paste0(save.name, ": ", length(aln), " individuals -> ",
                    length(collapsed), " species (_COMBINED)"))
     }
 
