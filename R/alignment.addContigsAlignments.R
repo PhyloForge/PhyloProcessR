@@ -155,14 +155,11 @@ addContigsAlignments = function(alignment.directory = NULL,
                min.match.percent = 50,
                min.match.length = 40,
                min.match.coverage = 35,
-               trim.target = FALSE,
                threads = threads,
                memory = memory,
                overwrite = TRUE,
-               resume = TRUE,
                quiet = TRUE,
-               blast.path = blast.path,
-               bbmap.path = bbmap.path)
+               blast.path = blast.path)
 
   # Go through each alignment and add the sample in
 
