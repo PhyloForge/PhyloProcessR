@@ -32,6 +32,33 @@
   paths[!is.na(paths)]
 }
 
+
+# Internal helper: interactive authentication
+.drop_auth = function() {
+  dropbox <- httr::oauth_endpoint(
+    authorize = "https://www.dropbox.com/oauth2/authorize",
+    access = "https://api.dropbox.com/oauth2/token"
+  )
+  dropbox_app <- httr::oauth_app("dropbox", "mmhfsptq2tx24r8", "m5q4zeqq5caxndr")
+  httr::oauth2.0_token(dropbox, dropbox_app, cache = TRUE)
+}
+
+# Internal helper: download file
+.drop_download = function(path, local_path, token, overwrite = FALSE) {
+  if (file.exists(local_path) && !overwrite) stop("File exists")
+  resp <- httr::POST(
+    url = "https://content.dropboxapi.com/2/files/download",
+    httr::config(token = token),
+    httr::add_headers(
+      `Dropbox-API-Arg` = jsonlite::toJSON(list(path = path), auto_unbox = TRUE)
+    ),
+    httr::write_disk(local_path, overwrite = overwrite)
+  )
+  httr::stop_for_status(resp)
+  return(TRUE)
+}
+
+
 #' @title dropboxDownload
 #'
 #' @description Downloads paired-end fastq.gz read files from a Dropbox account
@@ -50,7 +77,7 @@
 #'   to search for read files.
 #'
 #' @param dropbox.token path to an RDS file containing a saved Dropbox OAuth2
-#'   token produced by utils::getFromNamespace("drop_auth", "rdrop2")(). If NULL, the function attempts to
+#'   token produced by .drop_auth(). If NULL, the function attempts to
 #'   retrieve a token from the rdrop2 cache.
 #'
 #' @param output.directory local path where downloaded files will be saved.
@@ -72,7 +99,6 @@ dropboxDownload = function(sample.spreadsheet = NULL,
                           output.directory = NULL,
                           skip.not.found = FALSE,
                           overwrite = FALSE){
-  if (!requireNamespace("rdrop2", quietly = TRUE)) { stop("Package rdrop2 must be installed to use this function. Please install it using remotes::install_github('limnotrack/rdrop2')") }
 
 
   # # ### Example usage
@@ -95,7 +121,7 @@ dropboxDownload = function(sample.spreadsheet = NULL,
     }
   } # end else
 
-  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else utils::getFromNamespace("drop_auth", "rdrop2")()
+  token = if (!is.null(dropbox.token)) readRDS(dropbox.token) else .drop_auth()
   all.reads = .dropbox_list_files(dropbox.directory, token)
 
   all.reads = all.reads[grep("fastq.gz$|fq.gz$", all.reads)]
@@ -149,13 +175,13 @@ dropboxDownload = function(sample.spreadsheet = NULL,
       } # end if
 
       # Save the read files with the new names in the new directory
-      utils::getFromNamespace("drop_download", "rdrop2")(
+      .drop_download(token = token, 
         path = sample.reads[1],
         local_path = paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ1.fastq.gz"),
         overwrite = TRUE
       )
 
-      utils::getFromNamespace("drop_download", "rdrop2")(
+      .drop_download(token = token, 
         path = sample.reads[2],
         local_path = paste0(output.directory, "/", temp.data$Sample[j], "_L00", j, "_READ2.fastq.gz"),
         overwrite = TRUE
