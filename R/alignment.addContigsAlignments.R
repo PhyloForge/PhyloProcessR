@@ -148,7 +148,7 @@ addContigsAlignments = function(alignment.directory = NULL,
   contig.files = list.files(sample.contigs)
 
   #Uses the match targets function
-  matchTargets(assembly.directory = sample.contigs,
+  annotateTargets(assembly.directory = sample.contigs,
                target.file = "consensus_alignments.fa",
                alignment.contig.name = "add_contigs",
                output.directory = "match-targets",

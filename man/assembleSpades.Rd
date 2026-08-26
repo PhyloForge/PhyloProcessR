@@ -16,6 +16,7 @@ assembleSpades(
   memory = 4,
   overwrite = FALSE,
   save.corrected.reads = FALSE,
+  temp.directory = NULL,
   clean.up.spades = FALSE,
   quiet = TRUE
 )
@@ -60,6 +61,8 @@ directories are deleted and recreated and all samples are rerun. Default:
 \code{corrected/} subdirectory produced by SPAdes is deleted after assembly
 to save disk space. Ignored when \code{clean.up.spades = TRUE}. Default:
 \code{FALSE}.}
+
+\item{temp.directory}{path to a dedicated directory for temporary files; NULL defaults to R tempdir().}
 
 \item{clean.up.spades}{logical; if \code{TRUE} the entire SPAdes working
 directory for each sample is deleted after scaffolds are copied, keeping

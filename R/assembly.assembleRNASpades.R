@@ -59,6 +59,7 @@ assembleRNASpades = function(input.reads = NULL,
                              memory = 4,
                              overwrite = FALSE,
                              save.corrected.reads = FALSE,
+                             temp.directory = NULL,
                              quiet = TRUE) {
 
   # #debug
@@ -157,8 +158,6 @@ assembleRNASpades = function(input.reads = NULL,
     dir.create(tmp.dir, showWarnings = FALSE)
 
     tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
-    dir.create(tmp.dir, showWarnings = FALSE)
-
     #Runs spades command
     system(paste0(spades.path, "spades.py --rna ", final.read.string,
                   "--tmp-dir ", tmp.dir, " -o ", save.assem, " -k ", k.val, " ",

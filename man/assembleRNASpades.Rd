@@ -14,6 +14,7 @@ assembleRNASpades(
   memory = 4,
   overwrite = FALSE,
   save.corrected.reads = FALSE,
+  temp.directory = NULL,
   quiet = TRUE
 )
 }
@@ -49,6 +50,8 @@ directories are deleted and recreated and all samples are rerun. Default:
 \item{save.corrected.reads}{logical; if \code{FALSE} (default) the
 \code{corrected/} subdirectory produced by rnaSPAdes is deleted after
 assembly to save disk space. Default: \code{FALSE}.}
+
+\item{temp.directory}{path to a dedicated directory for temporary files; NULL defaults to R tempdir().}
 
 \item{quiet}{logical; if \code{TRUE} rnaSPAdes screen output is suppressed.
 Default: \code{TRUE}.}

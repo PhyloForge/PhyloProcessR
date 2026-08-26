@@ -23,7 +23,7 @@ sequencing lanes.}
 to search for read files.}
 
 \item{dropbox.token}{path to an RDS file containing a saved Dropbox OAuth2
-token produced by rdrop2::drop_auth(). If NULL, the function attempts to
+token produced by .drop_auth(). If NULL, the function attempts to
 retrieve a token from the rdrop2 cache.}
 
 \item{output.directory}{local path where downloaded files will be saved.}

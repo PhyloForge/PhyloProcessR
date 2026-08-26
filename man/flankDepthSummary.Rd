@@ -11,7 +11,8 @@ flankDepthSummary(
   sample.groups = NULL,
   threads = 1,
   memory = 1,
-  overwrite = FALSE
+  overwrite = FALSE,
+  sub.directory = NULL
 )
 }
 \arguments{
@@ -31,7 +32,11 @@ and second column is the sample name.}
 
 \item{memory}{not currently used. Default: \code{1}.}
 
-\item{overwrite}{logical; if \code{TRUE} the output directory is deleted and
+\item{overwrite}{logical; if \code{TRUE} the output directory is deleted and}
+
+\item{sub.directory}{path to a specific subdirectory of each sample where the
+data files are located. Default: \code{NULL}.
+
 recreated. Default: \code{FALSE}.}
 }
 \value{

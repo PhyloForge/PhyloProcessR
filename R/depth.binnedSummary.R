@@ -22,6 +22,10 @@
 #' @param memory not currently used. Default: \code{1}.
 #'
 #' @param overwrite logical; if \code{TRUE} the output directory is deleted and
+#' @param sub.directory path to a specific subdirectory of each sample where the 
+#'   data files are located. Default: \code{NULL}.
+#'
+
 #'   recreated. Default: \code{FALSE}.
 #'
 #' @return Invisibly returns nothing. Saves one PDF bar plot per group to
@@ -35,7 +39,8 @@ binnedDepthSummary = function(depth.directory = NULL,
                               sample.groups = NULL,
                               threads = 1,
                               memory = 1,
-                              overwrite = FALSE) {
+                              overwrite = FALSE,
+                             sub.directory = NULL) {
 
   #Debug
   setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")
