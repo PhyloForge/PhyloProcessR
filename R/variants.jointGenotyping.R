@@ -129,7 +129,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
   }
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
 

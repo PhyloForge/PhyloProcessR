@@ -83,7 +83,7 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
     stop("Haplotype caller directory not found.")
   }
 
-  if (is.null(temp.directory) == TRUE){ temp.directory = getwd() }
+  if (is.null(temp.directory) == TRUE){ temp.directory = tempdir() }
 
   if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 

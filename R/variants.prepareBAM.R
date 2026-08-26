@@ -116,7 +116,7 @@ prepareBAM = function(read.directory = NULL,
   }
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
   # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }

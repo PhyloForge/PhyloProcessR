@@ -55,6 +55,7 @@
 #'   only the final \code{.fa} file in \code{assembly.directory}. Overrides
 #'   \code{save.corrected.reads}. Default: \code{FALSE}.
 #'
+#' @param temp.directory path to a dedicated directory for temporary files; NULL defaults to R tempdir().
 #' @param quiet logical; if \code{TRUE} SPAdes screen output is suppressed.
 #'   Default: \code{TRUE}.
 #'
@@ -74,6 +75,7 @@ assembleSpades = function(input.reads = NULL,
                           memory = 4,
                           overwrite = FALSE,
                           save.corrected.reads = FALSE,
+                          temp.directory = NULL,
                           clean.up.spades = FALSE,
                           quiet = TRUE) {
 
@@ -99,6 +101,10 @@ assembleSpades = function(input.reads = NULL,
     } # end if
   } else {
     spades.path = ""
+  }
+
+  if (is.null(temp.directory) == TRUE) {
+    temp.directory = tempdir()
   }
 
   # Quick checks
@@ -235,9 +241,12 @@ assembleSpades = function(input.reads = NULL,
 #     mg.read3 = sample.reads[grep("_READ3", sample.reads)]
 #     if (length(mg.read3) != 0){ mg.read3.string = paste0("--pe", rep(1:length(mg.read3)), "-m ", mg.read3, collapse = " ") }
 
+    tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
+    dir.create(tmp.dir, showWarnings = FALSE)
+
     #Runs spades command
     system(paste0(spades.path, "spades.py ", final.read.string,
-                  "-o ", save.assem, " -k ", k.val, " ", mismatch.string,
+                  "--tmp-dir ", tmp.dir, " -o ", save.assem, " -k ", k.val, " ", mismatch.string,
                   "-t ", threads, " -m ", memory),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
@@ -253,7 +262,7 @@ assembleSpades = function(input.reads = NULL,
       if (save.corrected.reads == FALSE) {
         system(paste0("rm -rf ", save.assem, "/corrected"))
       }
-      system(paste0("rm -rf ", save.assem, "/tmp"))
+      system(paste0("rm -rf ", tmp.dir))
     }
     print(paste0(samples[i], " Completed Spades asssembly!"))
 

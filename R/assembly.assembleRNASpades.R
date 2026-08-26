@@ -41,6 +41,7 @@
 #'   \code{corrected/} subdirectory produced by rnaSPAdes is deleted after
 #'   assembly to save disk space. Default: \code{FALSE}.
 #'
+#' @param temp.directory path to a dedicated directory for temporary files; NULL defaults to R tempdir().
 #' @param quiet logical; if \code{TRUE} rnaSPAdes screen output is suppressed.
 #'   Default: \code{TRUE}.
 #'
@@ -152,9 +153,15 @@ assembleRNASpades = function(input.reads = NULL,
       final.read.string = paste0(final.read.string, read.string)
     }#end j loop
 
+    tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
+    dir.create(tmp.dir, showWarnings = FALSE)
+
+    tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
+    dir.create(tmp.dir, showWarnings = FALSE)
+
     #Runs spades command
     system(paste0(spades.path, "spades.py --rna ", final.read.string,
-                  "-o ", save.assem, " -k ", k.val, " ",
+                  "--tmp-dir ", tmp.dir, " -o ", save.assem, " -k ", k.val, " ",
                   "-t ", threads, " -m ", memory),
            ignore.stdout = quiet)
 
@@ -169,7 +176,7 @@ assembleRNASpades = function(input.reads = NULL,
       system(paste0("rm -r ", save.assem, "/corrected"))
     } # end if
 
-    system(paste0("rm -r ", save.assem, "/tmp"))
+    system(paste0("rm -rf ", tmp.dir))
     print(paste0(samples[i], " Completed rnaSPAdes asssembly!"))
 
   }#end sample loop

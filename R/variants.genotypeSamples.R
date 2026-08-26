@@ -140,7 +140,7 @@ genotypeSamples = function(mapping.directory = "sample-mapping",
   }
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
 

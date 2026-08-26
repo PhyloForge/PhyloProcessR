@@ -109,7 +109,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
   }
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
 
@@ -232,7 +232,7 @@ mapReferenceConsensus = function(mapping.directory = NULL,
       lane.dir <- paste0(sample.dir, "/", lane.name)
 
       # Piped version
-      tmp.dir <- paste0(lane.dir, "/tmp")
+      tmp.dir <- paste0(temp.directory, "/tmp_", sample.names[i], "_", lane.name)
       dir.create(tmp.dir, showWarnings = FALSE)
 
       system(paste0(

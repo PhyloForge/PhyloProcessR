@@ -99,7 +99,7 @@ haplotypeCaller = function(mapping.directory = NULL,
   } # end else
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
 

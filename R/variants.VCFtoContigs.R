@@ -74,7 +74,7 @@ VCFtoContigs = function(genotype.directory = "variant-calling",
   # ambiguity.codes = TRUE
   # vcf.file = "SNP"
 
-  if (is.null(temp.directory) == TRUE) { temp.directory = getwd() }
+  if (is.null(temp.directory) == TRUE) { temp.directory = tempdir() }
 
   # Same adds to bbmap path
   if (is.null(gatk4.path) == FALSE) {

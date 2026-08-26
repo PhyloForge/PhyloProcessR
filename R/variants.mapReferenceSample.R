@@ -114,7 +114,7 @@ mapReferenceSample = function(mapping.directory = NULL,
   }
 
   if (is.null(temp.directory) == TRUE){
-    temp.directory = getwd()
+    temp.directory = tempdir()
   }
 
 
@@ -227,7 +227,7 @@ mapReferenceSample = function(mapping.directory = NULL,
       lane.name <- paste0("Lane_", j)
       lane.dir <- paste0(sample.dir, "/", lane.name)
 
-      tmp.dir <- paste0(lane.dir, "/tmp")
+      tmp.dir <- paste0(temp.directory, "/tmp_", sample.names[i], "_", lane.name)
       dir.create(tmp.dir, showWarnings = FALSE)
       reference.location = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
       system(paste0(
