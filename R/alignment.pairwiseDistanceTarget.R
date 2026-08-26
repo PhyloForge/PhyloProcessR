@@ -21,13 +21,14 @@ pairwiseDistanceTarget = function(alignment = NULL,
   #target = con.seq
 
   #Sets up reference
-  if (class(target) == "DNAStringSet"){
+  if (inherits(target, "DNAStringSet")){
     new.align = append(alignment, target)
     target.name = names(target)
-  }
-  if (class(target) == "character"){
+  } else if (is.character(target)){
     new.align  = alignment
     target.name = target
+  } else {
+    stop("target must be a DNAStringSet or a character sequence name.")
   }
 
   #Convert alignment to easier to work with matrix

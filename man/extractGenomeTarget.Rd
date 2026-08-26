@@ -81,7 +81,7 @@ all that match the query.  Useful for large clades or testing.}
 
 \item{ncbi.api.key}{optional NCBI API key string.  Without a key NCBI
 allows 3 requests/second; with one it allows 10/second.  Obtain a free
-key at \url{https://www.ncbi.nlm.nih.gov/account/}.  Only needed when
+key at \url{https://account.ncbi.nlm.nih.gov/}.  Only needed when
 processing large numbers of accessions where rate-limiting would otherwise
 slow the FTP-URL lookup step.}
 

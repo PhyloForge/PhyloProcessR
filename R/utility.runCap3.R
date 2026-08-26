@@ -110,7 +110,7 @@ runCap3 = function(contigs = NULL,
     }#end if
   } else { cap3.path = "" }
 
-  if (class(contigs) != "character") {
+  if (!is.character(contigs)) {
     write.loci = as.list(as.character(contigs))
     writeFasta(sequences = write.loci, names = names(write.loci),
                          "input_contigs.fa", nbchar = 1000000, as.string = T)

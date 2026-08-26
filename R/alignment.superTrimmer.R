@@ -263,7 +263,7 @@ superTrimmer = function(alignment.dir = NULL,
                                 min.n.seq = ceiling(length(non.align) * (min.external.percent/100)),
                                 codon.trim = F)
 
-      if (class(edge.align) == "numeric") { edge.align = Biostrings::DNAStringSet() }
+      if (is.numeric(edge.align)) { edge.align = Biostrings::DNAStringSet() }
       non.align = edge.align
 
       #Saves stat data

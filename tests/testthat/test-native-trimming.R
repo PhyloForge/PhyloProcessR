@@ -35,3 +35,17 @@ test_that("native trimmers leave small alignments unchanged", {
   expect_identical(trimSampleHMM(alignment), alignment)
   expect_identical(trimExonORF(alignment), alignment)
 })
+
+test_that("trimExternal reports an uncovered alignment with a numeric sentinel", {
+  alignment <- Biostrings::DNAStringSet(c(
+    taxon1 = "----",
+    taxon2 = "----",
+    taxon3 = "----",
+    taxon4 = "----"
+  ))
+
+  observed <- trimExternal(alignment, min.n.seq = 4)
+
+  expect_true(is.numeric(observed))
+  expect_equal(observed, 0)
+})

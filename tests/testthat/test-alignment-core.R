@@ -52,3 +52,24 @@ test_that("alignmentAssess applies all three boundaries", {
   expect_false(alignmentAssess(alignment, 10, 4, 5))
   expect_false(alignmentAssess(alignment, 10, 3, 6))
 })
+
+test_that("pairwiseDistanceTarget supports documented and inherited target types", {
+  alignment <- Biostrings::DNAStringSet(c(
+    taxon1 = "ACGT",
+    taxon2 = "ACGA"
+  ))
+  target <- structure("taxon1", class = c("target_name", "character"))
+  reference <- Biostrings::DNAStringSet(c(reference = "ACGT"))
+
+  observed_name <- pairwiseDistanceTarget(alignment, target)
+  observed_sequence <- pairwiseDistanceTarget(alignment, reference)
+
+  expect_equal(unname(observed_name), c(0, 0.25))
+  expect_named(observed_name, names(alignment))
+  expect_equal(unname(observed_sequence), c(0, 0.25, 0))
+  expect_named(observed_sequence, c(names(alignment), "reference"))
+  expect_error(
+    pairwiseDistanceTarget(alignment, 1),
+    "target must be a DNAStringSet or a character sequence name"
+  )
+})
