@@ -7,3 +7,13 @@
 .vscode/terminals.json
 wiki/
 /wiki
+
+# R CMD build and check generated files
+*.Rcheck/
+*.tar.gz
+00_pkg_src/
+
+# R CMD build and check generated files
+*.Rcheck/
+*.tar.gz
+00_pkg_src/
