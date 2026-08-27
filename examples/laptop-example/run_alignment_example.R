@@ -13,8 +13,15 @@ if (nzchar(package_source)) {
 
 source(file.path(example_directory, "configuration.R"), local = TRUE)
 setwd(example_directory)
-if (!file.exists(file.path(tool_bin, "mafft"))) {
-  stop("MAFFT was not found in PHYLOPROCESSR_BIN.")
+required_tools <- c("cd-hit-est", "blastn", "makeblastdb", "mafft")
+missing_tools <- required_tools[
+  !file.exists(file.path(tool_bin, required_tools))
+]
+if (length(missing_tools) > 0) {
+  stop(
+    "Annotation and alignment require these programs in PHYLOPROCESSR_BIN: ",
+    paste(missing_tools, collapse = ", ")
+  )
 }
 dir.create(file.path(results_directory, "alignments"), recursive = TRUE,
            showWarnings = FALSE)

@@ -6,6 +6,12 @@
 ## reads before moving to the next sample.
 #################################################
 
+# Package version
+#########################
+# TRUE installs the latest development/beta version from GitHub before running.
+# Keep FALSE for reproducible analyses that use the already installed version.
+install.latest.github = FALSE
+
 # Working directory
 #########################
 # *** Full paths should be used whenever possible

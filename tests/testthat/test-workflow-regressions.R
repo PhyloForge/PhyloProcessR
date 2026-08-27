@@ -198,3 +198,43 @@ test_that("Workflow 5 forwards alignment assessment configuration", {
     )
   }
 })
+
+test_that("workflow GitHub installation is explicit and disabled by default", {
+  workflow_directory <- dirname(find_workflow_file("workflow-5_trimming.R"))
+  workflow_scripts <- list.files(
+    workflow_directory,
+    pattern = "^workflow-.*[.]R$",
+    full.names = TRUE
+  )
+  workflow_scripts <- workflow_scripts[
+    !grepl("configuration-file[.]R$", workflow_scripts)
+  ]
+  configuration_files <- list.files(
+    workflow_directory,
+    pattern = "configuration-file[.]R$",
+    full.names = TRUE
+  )
+
+  expect_length(workflow_scripts, 9)
+  expect_length(configuration_files, 9)
+
+  for (configuration_file in configuration_files) {
+    configuration <- paste(readLines(configuration_file, warn = FALSE),
+                           collapse = "\n")
+    expect_match(
+      configuration,
+      "install[.]latest[.]github[[:space:]]*=[[:space:]]*FALSE"
+    )
+  }
+
+  for (workflow_script in workflow_scripts) {
+    workflow <- readLines(workflow_script, warn = FALSE)
+    workflow_text <- paste(workflow, collapse = "\n")
+    source_line <- grep("^source\\(", workflow)[[1]]
+    option_line <- grep("get0\\(\"install[.]latest[.]github\"", workflow)[[1]]
+
+    expect_lt(source_line, option_line)
+    expect_match(workflow_text, "remotes::install_github")
+    expect_false(grepl("devtools::install_github", workflow_text, fixed = TRUE))
+  }
+})

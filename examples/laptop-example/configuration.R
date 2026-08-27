@@ -26,24 +26,6 @@ if (!nzchar(tool_bin) || !dir.exists(tool_bin)) {
   )
 }
 
-required_tools <- c(
-  fastp = "fastp",
-  spades = "spades.py",
-  cdhit = "cd-hit-est",
-  blastn = "blastn",
-  makeblastdb = "makeblastdb"
-)
-
-missing_tools <- names(required_tools)[
-  !file.exists(file.path(tool_bin, required_tools))
-]
-if (length(missing_tools) > 0) {
-  stop(
-    "Missing required programs in PHYLOPROCESSR_BIN: ",
-    paste(missing_tools, collapse = ", ")
-  )
-}
-
 raw_reads <- file.path(example_directory, "raw-reads")
 target_markers <- file.path(
   example_directory,

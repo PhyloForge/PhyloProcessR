@@ -1,10 +1,12 @@
-#Installs updated package version
-devtools::install_github("chutter/PhyloProcessR", upgrade = "never", dependencies = FALSE)
-library(PhyloProcessR)
-
-#source("/Users/chutter/Dropbox/Research/0_Github/R_Projects/PhyloProcessR/workflows/workflow-3_configuration-file.R")
 source("workflow-3_configuration-file.R")
-
+if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
+  if (!requireNamespace("remotes", quietly = TRUE)) {
+    stop("Install the remotes package to use install.latest.github = TRUE.")
+  }
+  remotes::install_github("chutter/PhyloProcessR", upgrade = "never",
+                          dependencies = FALSE)
+}
+library(PhyloProcessR)
 setwd(working.directory)
 
 ##################################################################################################

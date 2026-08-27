@@ -22,6 +22,17 @@ if (nzchar(package_source)) {
 source(file.path(example_directory, "configuration.R"), local = TRUE)
 setwd(example_directory)
 
+required_tools <- c("fastp", "spades.py", "cd-hit-est", "blastn", "makeblastdb")
+missing_tools <- required_tools[
+  !file.exists(file.path(tool_bin, required_tools))
+]
+if (length(missing_tools) > 0) {
+  stop(
+    "Preprocessing and assembly require these programs in PHYLOPROCESSR_BIN: ",
+    paste(missing_tools, collapse = ", ")
+  )
+}
+
 dir.create(results_directory, recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(results_directory, "processed-reads"), recursive = TRUE,
            showWarnings = FALSE)

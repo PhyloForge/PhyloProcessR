@@ -135,6 +135,10 @@ library(PhyloProcessR)
 
 For reproducible analyses, record the installed package version or Git commit
 rather than reinstalling the moving development branch in every script.
+Supplied workflow configuration files therefore set
+`install.latest.github = FALSE` by default. Developers who intentionally want
+the newest beta code for debugging can set it to `TRUE`; the workflow will then
+install the current GitHub version with `remotes` before loading PhyloProcessR.
 
 To check external programs in the active Conda environment:
 

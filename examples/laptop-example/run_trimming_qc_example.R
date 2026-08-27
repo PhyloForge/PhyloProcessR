@@ -13,9 +13,15 @@ if (nzchar(package_source)) {
 
 source(file.path(example_directory, "configuration.R"), local = TRUE)
 setwd(example_directory)
-if (!file.exists(file.path(tool_bin, "mafft")) ||
-    !file.exists(file.path(tool_bin, "trimal"))) {
-  stop("MAFFT and TrimAl must both be present in PHYLOPROCESSR_BIN.")
+required_tools <- c("mafft", "trimal")
+missing_tools <- required_tools[
+  !file.exists(file.path(tool_bin, required_tools))
+]
+if (length(missing_tools) > 0) {
+  stop(
+    "Trimming and QC require these programs in PHYLOPROCESSR_BIN: ",
+    paste(missing_tools, collapse = ", ")
+  )
 }
 
 input_dir <- file.path(results_directory, "alignments", "best-20")

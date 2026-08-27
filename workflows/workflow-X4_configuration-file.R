@@ -17,6 +17,12 @@
 ##   - A reference genome FASTA for the organism/group
 #################################################
 
+# Package version
+#########################
+# TRUE installs the latest development/beta version from GitHub before running.
+# Keep FALSE for reproducible analyses that use the already installed version.
+install.latest.github = FALSE
+
 # Directories and input files
 #########################
 # *** Full paths should be used whenever possible
