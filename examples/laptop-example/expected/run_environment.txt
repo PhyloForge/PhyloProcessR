@@ -1,0 +1,6 @@
+PhyloProcessR: 0.5.0
+R: R version 4.2.3 (2023-03-15)
+Platform: x86_64-apple-darwin13.4.0
+Threads: 2
+SPAdes memory limit (GB): 4
+Tool bin: <PHYLOPROCESSR_BIN>

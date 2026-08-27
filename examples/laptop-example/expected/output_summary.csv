@@ -1,0 +1,8 @@
+"sample","input_pairs","cleaned_pairs","draft_contigs","nonredundant_contigs","recovered_targets"
+"CRH01",10000,8866,107,104,39
+"CRH02",10000,8911,346,243,43
+"CRH03",10000,8870,217,205,42
+"CRH04",10000,8777,99,94,44
+"CRH05",10000,8836,78,75,39
+"Test_dataset_1",714,572,17,7,2
+"Test_dataset_2",1424,1140,17,9,2

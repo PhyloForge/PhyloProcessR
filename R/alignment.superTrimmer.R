@@ -136,10 +136,10 @@ superTrimmer = function(alignment.dir = NULL,
 
   if (dir.exists(output.dir) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.dir))
-      dir.create(output.dir)
+      unlink(output.dir, recursive = TRUE)
+      dir.create(output.dir, recursive = TRUE)
      }
-  } else { dir.create(output.dir) }
+  } else { dir.create(output.dir, recursive = TRUE) }
 
   #Gathers alignments
   align.files = list.files(alignment.dir)

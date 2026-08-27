@@ -142,6 +142,21 @@ To check external programs in the active Conda environment:
 setupCheck(anaconda.environment = Sys.getenv("CONDA_PREFIX"))
 ```
 
+## Laptop-scale reproducible example
+
+The [seven-sample laptop example](examples/laptop-example/README.md) provides a
+compact, redistribution-ready dataset for testing PhyloProcessR without a
+cluster. It retains both single- and multilane libraries and uses a reduced
+40-locus target panel to demonstrate how individual package functions can be
+composed into a project-specific workflow for preprocessing, assembly, target
+recovery, annotation, alignment, trimming, and quality control.
+
+The example runs in three documented stages and produces a ranked set of 20
+alignments together with expected summaries and final alignments for
+comparison. It defaults to two CPU threads and a 4 GB memory limit. See the
+[complete instructions and expected results](examples/laptop-example/README.md)
+and the [example-data license](examples/laptop-example/DATA_LICENSE.md).
+
 
 ## Workflows
 

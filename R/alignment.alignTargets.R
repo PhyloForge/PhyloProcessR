@@ -109,10 +109,10 @@ alignTargets = function(targets.to.align = NULL,
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
     }
-  } else { dir.create(output.directory) }
+  } else { dir.create(output.directory, recursive = TRUE) }
 
   #Load sample file from probe matching step
   all.data = Biostrings::readDNAStringSet(targets.to.align)   # loads up fasta file
@@ -329,4 +329,3 @@ alignTargets = function(targets.to.align = NULL,
 
 
 #END SCRIPT
-

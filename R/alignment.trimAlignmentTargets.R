@@ -66,10 +66,10 @@ trimAlignmentTargets = function(alignment.directory = NULL,
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
      }
-  } else { dir.create(output.directory) }
+  } else { dir.create(output.directory, recursive = TRUE) }
 
   #Gathers alignments
   align.files = list.files(alignment.directory)

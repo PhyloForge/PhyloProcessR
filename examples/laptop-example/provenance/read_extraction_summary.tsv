@@ -1,0 +1,12 @@
+sample	lane	read_pairs_retained
+CRH01	L001	10000
+CRH02	L001	10000
+CRH03	L001	10000
+CRH04	L001	10000
+CRH05	L001	10000
+Test_dataset_1	L001	357
+Test_dataset_1	L002	357
+Test_dataset_2	L001	356
+Test_dataset_2	L002	356
+Test_dataset_2	L003	356
+Test_dataset_2	L004	356
