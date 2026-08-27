@@ -1,6 +1,6 @@
 # PhyloProcessR
 
-[![R CMD check](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml)
+[![R CMD check](https://github.com/PhyloForge/PhyloProcessR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/PhyloForge/PhyloProcessR/actions/workflows/R-CMD-check.yaml)
 [![License: GPL v3+](https://img.shields.io/badge/License-GPL_v3%2B-blue.svg)](LICENSE)
 
 PhyloProcessR is a modular R toolkit for converting raw targeted
@@ -40,7 +40,7 @@ Clone the repository to obtain the container recipes, Conda environment, and
 workflow configuration files:
 
 ```bash
-git clone https://github.com/chutter/PhyloProcessR.git
+git clone https://github.com/PhyloForge/PhyloProcessR.git
 ```
 
 Then change to the setup directory:
@@ -118,7 +118,7 @@ Install the development version from GitHub:
 
 ```R
 install.packages("remotes")
-remotes::install_github("chutter/PhyloProcessR")
+remotes::install_github("PhyloForge/PhyloProcessR")
 ```
 
 When working inside the supplied Conda environment or container, its pinned R
@@ -183,18 +183,18 @@ Each workflow has a matching configuration file (e.g. `workflow-1_configuration-
 
 ## Tutorials
 
-[Installation: detailed installation instructions and trouble-shooting](https://github.com/chutter/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
+[Installation: detailed installation instructions and trouble-shooting](https://github.com/PhyloForge/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
 
-[Tutorial 1: PhyloProcessR configuration](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
+[Tutorial 1: PhyloProcessR configuration](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
 — Setting up working directories, renaming files, and configuring the decontamination database.
 
-[Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
+[Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
 — Step-by-step guide to running Workflows 1–5, X3, and X4, including expected outputs and directory structures.
 
-[Tutorial 3: Assess sequence capture results](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-3:-Assess-results)
+[Tutorial 3: Assess sequence capture results](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-3:-Assess-results)
 — Summarise capture success across samples and loci.
 
-[Tutorial 4: Legacy data integration (Workflow X3)](https://github.com/chutter/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
+[Tutorial 4: Legacy data integration (Workflow X3)](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
 — Full guide to integrating Sanger or GenBank alignments into a sequence-capture dataset, including NEXUS conversion, name-matching strategies, mitochondrial loci, and gene concatenation.
 
 ## Citation, contributing, and license

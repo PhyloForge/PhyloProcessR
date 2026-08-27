@@ -234,7 +234,11 @@ test_that("workflow GitHub installation is explicit and disabled by default", {
     option_line <- grep("get0\\(\"install[.]latest[.]github\"", workflow)[[1]]
 
     expect_lt(source_line, option_line)
-    expect_match(workflow_text, "remotes::install_github")
+    expect_match(
+      workflow_text,
+      'remotes::install_github\\("PhyloForge/PhyloProcessR"'
+    )
+    expect_false(grepl("chutter/PhyloProcessR", workflow_text, fixed = TRUE))
     expect_false(grepl("devtools::install_github", workflow_text, fixed = TRUE))
   }
 })

@@ -16,8 +16,8 @@ Description: Provides a modular R toolkit for processing targeted
     Domain-specific R functions are combined with established external
     bioinformatics tools where needed.
 License: GPL (>= 3)
-URL: https://github.com/chutter/PhyloProcessR
-BugReports: https://github.com/chutter/PhyloProcessR/issues
+URL: https://github.com/PhyloForge/PhyloProcessR
+BugReports: https://github.com/PhyloForge/PhyloProcessR/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

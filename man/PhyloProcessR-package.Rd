@@ -15,8 +15,8 @@ workflow configuration files for the external tools required by each stage.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/chutter/PhyloProcessR}
-  \item Report bugs at \url{https://github.com/chutter/PhyloProcessR/issues}
+  \item \url{https://github.com/PhyloForge/PhyloProcessR}
+  \item Report bugs at \url{https://github.com/PhyloForge/PhyloProcessR/issues}
 }
 
 }

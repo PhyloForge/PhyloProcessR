@@ -3,7 +3,7 @@ if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
   if (!requireNamespace("remotes", quietly = TRUE)) {
     stop("Install the remotes package to use install.latest.github = TRUE.")
   }
-  remotes::install_github("chutter/PhyloProcessR", upgrade = "never",
+  remotes::install_github("PhyloForge/PhyloProcessR", upgrade = "never",
                           dependencies = FALSE)
 }
 library(PhyloProcessR)

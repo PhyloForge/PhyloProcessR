@@ -8,8 +8,8 @@ authors:
     orcid: "https://orcid.org/0000-0001-6381-6339"
 version: 1.0.0
 license: GPL-3.0-or-later
-repository-code: "https://github.com/chutter/PhyloProcessR"
-url: "https://github.com/chutter/PhyloProcessR"
+repository-code: "https://github.com/PhyloForge/PhyloProcessR"
+url: "https://github.com/PhyloForge/PhyloProcessR"
 keywords:
   - phylogenomics
   - sequence capture
