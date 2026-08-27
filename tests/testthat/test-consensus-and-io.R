@@ -53,7 +53,8 @@ test_that("FASTA and strict PHYLIP writers produce valid headers", {
   writePhylip(alignment, phylip_file, strict = TRUE)
   phylip <- readLines(phylip_file)
 
-  expect_equal(phylip[1], "2 2")
-  expect_match(phylip[2], "^abcdefghij")
-  expect_match(phylip[3], "^mnopqrstuv")
+  expect_equal(
+    phylip,
+    c("2 2", "abcdefghij AC", "mnopqrstuv GT")
+  )
 })

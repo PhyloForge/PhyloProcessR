@@ -33,6 +33,9 @@ writePhylip = function(alignment = NULL,
                        strict = FALSE) {
 
   x = as.matrix(alignment)
+  if (inherits(x, "DNAbin")) {
+    x = as.character(x)
+  }
   #file = "test"
 
   #Parameter checks
@@ -93,9 +96,7 @@ writePhylip = function(alignment = NULL,
 
   phy <- paste(ntax, nchar)
   for (i in seq(along = pt[, 1])) {
-    sm <- as.character(x[, pt[i, 1]:pt[i, 2]])
-    if (is.null(dim(sm)))
-      sm <- as.matrix(sm, ncol = 1)
+    sm <- x[, pt[i, 1]:pt[i, 2], drop = FALSE]
     sm <- apply(sm, 1, paste, collapse = "")
     if (i == 1)
       sm <- paste(taxnames, sm)
