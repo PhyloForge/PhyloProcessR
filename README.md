@@ -166,36 +166,38 @@ and the [example-data license](examples/laptop-example/DATA_LICENSE.md).
 
 ## Workflows
 
-PhyloProcessR is organised into a series of workflows, each covering a distinct stage of the pipeline. Configuration files and R scripts for each workflow are provided in the `workflows/` directory.
+PhyloProcessR supplies reference workflows for distinct analysis stages.
+Configuration files and R scripts are in `workflows/`. You can run a complete
+workflow or compose the underlying functions in a custom R script.
 
 | Workflow | Script | Description |
 |---|---|---|
-| **Workflow 1** | `workflow-1_preprocess.R` | Organise raw reads, remove adaptors, decontaminate, normalise, and merge paired-end reads |
+| **Workflow 1** | `workflow-1_preprocess.R` | Organize, clean, assess, decontaminate, and merge raw reads |
 | **Workflow 2** | `workflow-2_assembly.R` | De novo assembly with SPAdes; match contigs to target markers |
-| **Workflow 3** | `workflow-3_variantCalling.R` | SNP calling and IUPAC/haplotype consensus generation |
-| **Workflow 4** | `workflow-4_alignment.R` | Align target markers across samples |
+| **Workflow 3** | `workflow-3_variant-calling.R` | Call variants and make IUPAC or haplotype consensus contigs |
+| **Workflow 4** | `workflow-4_alignment.R` | Annotate contigs and align target markers |
 | **Workflow 5** | `workflow-5_trimming.R` | Trim alignments, concatenate genes, build unlinked dataset; optionally include novel markers from Workflow X4 |
+| **Workflow X1** | `workflow-X1_joint-genotype_VCF.R` | Map samples to a common reference and make a joint VCF file |
+| **Workflow X2** | `workflow-X2_capture-assessment.R` | Assess raw reads, cleaned reads, and capture efficiency one sample at a time |
 | **Workflow X3** | `workflow-X3_legacy-integration.R` | Integrate Sanger/GenBank legacy alignments into the capture dataset; supports NEXUS conversion and mitochondrial loci |
-| **Workflow X4** | `workflow-X4_novel-loci.R` | Discover novel shared genomic regions from unmapped reads, assemble and align them as new loci |
+| **Workflow X4** | `workflow-X4_novel-loci.R` | Recover, assemble, and align novel shared genomic regions |
 
-Each workflow has a matching configuration file (e.g. `workflow-1_configuration-file.R`) where all parameters are set. See the tutorials below for detailed guidance.
+Each workflow has a matching configuration file. Set all project parameters in
+that file before you run the script.
 
 
 ## Tutorials
 
-[Installation: detailed installation instructions and trouble-shooting](https://github.com/PhyloForge/PhyloProcessR/wiki/Installation:-detailed-installation-instructions-and-trouble-shooting)
+The tutorials are versioned in the main repository:
 
-[Tutorial 1: PhyloProcessR configuration](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-1:-PhyloProcessR-configuration)
-— Setting up working directories, renaming files, and configuring the decontamination database.
+1. [Install PhyloProcessR](docs/tutorials/installation.md)
+2. [Configure a project](docs/tutorials/configuration.md)
+3. [Run the workflows](docs/tutorials/workflows.md)
+4. [Assess the results](docs/tutorials/assess-results.md)
+5. [Integrate legacy data](docs/tutorials/legacy-integration.md)
 
-[Tutorial 2: PhyloProcessR pipeline workflows](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-2:-PhyloProcessR-pipeline-workflows)
-— Step-by-step guide to running Workflows 1–5, X3, and X4, including expected outputs and directory structures.
-
-[Tutorial 3: Assess sequence capture results](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-3:-Assess-results)
-— Summarise capture success across samples and loci.
-
-[Tutorial 4: Legacy data integration (Workflow X3)](https://github.com/PhyloForge/PhyloProcessR/wiki/Tutorial-4:-Legacy-Integration)
-— Full guide to integrating Sanger or GenBank alignments into a sequence-capture dataset, including NEXUS conversion, name-matching strategies, mitochondrial loci, and gene concatenation.
+The [tutorial index](docs/tutorials/README.md) explains the documentation
+structure and simplified technical English conventions.
 
 ## Citation, contributing, and license
 

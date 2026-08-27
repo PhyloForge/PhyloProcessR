@@ -8,4 +8,5 @@
 ^\.vscode$
 ^logs$
 ^wiki$
+^docs$
 ^examples/laptop-example$
