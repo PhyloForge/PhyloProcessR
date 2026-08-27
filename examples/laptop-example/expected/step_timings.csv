@@ -1,6 +1,6 @@
 "step","elapsed_seconds"
-"summarize raw reads",1.053
-"clean paired reads with fastp",72.812
-"assemble cleaned reads with SPAdes",935.38
-"reduce redundant contigs",0.580000000000041
-"retain contigs matching the 40 candidate Ranoidea targets",2.04999999999995
+"summarize raw reads",0.245
+"clean paired reads with fastp",77.785
+"assemble cleaned reads with SPAdes",941.572
+"reduce redundant contigs",0.369000000000028
+"retain contigs matching the 40 candidate Ranoidea targets",1.44299999999998

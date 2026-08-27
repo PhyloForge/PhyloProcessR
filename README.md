@@ -3,10 +3,12 @@
 [![R CMD check](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chutter/PhyloProcessR/actions/workflows/R-CMD-check.yaml)
 [![License: GPL v3+](https://img.shields.io/badge/License-GPL_v3%2B-blue.svg)](LICENSE)
 
-PhyloProcessR is an R-based workflow framework for converting raw targeted
-sequence-capture reads into curated, analysis-ready phylogenomic datasets. It
-combines domain-specific R functions with established bioinformatics programs
-for stages that require external executables.
+PhyloProcessR is a modular R toolkit for converting raw targeted
+sequence-capture reads into curated, analysis-ready phylogenomic datasets.
+Its functions can be called independently, assembled into project-specific
+pipelines, or used through the supplied complete workflows. It combines
+domain-specific R functions with established bioinformatics programs for
+stages that require external executables.
 
 The package and supplied workflows support:
 

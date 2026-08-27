@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use PhyloProcessR in your research, please cite the software using these metadata."
 type: software
-title: "PhyloProcessR: Targeted Sequence-Capture Phylogenomics Workflows"
+title: "PhyloProcessR: A Modular Toolkit for Targeted Sequence-Capture Phylogenomics"
 authors:
   - family-names: Hutter
     given-names: Carl
     orcid: "https://orcid.org/0000-0001-6381-6339"
-version: 0.5.0
+version: 1.0.0
 license: GPL-3.0-or-later
 repository-code: "https://github.com/chutter/PhyloProcessR"
 url: "https://github.com/chutter/PhyloProcessR"
@@ -17,5 +17,7 @@ keywords:
   - bioinformatics
   - R
 abstract: >-
-  An R-based workflow framework for processing targeted sequence-capture data
-  from raw reads to curated, analysis-ready phylogenomic datasets.
+  A modular R toolkit for processing targeted sequence-capture data from raw
+  reads to curated, analysis-ready phylogenomic datasets. Functions can be
+  called independently or combined into supplied or project-specific
+  workflows.

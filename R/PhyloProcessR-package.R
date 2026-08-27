@@ -1,9 +1,10 @@
-#' PhyloProcessR: Targeted Sequence-Capture Phylogenomics Workflows
+#' PhyloProcessR: A Modular Toolkit for Targeted Sequence-Capture Phylogenomics
 #'
-#' PhyloProcessR provides workflow scripts and R functions for processing
-#' targeted sequence-capture data from raw reads to curated phylogenomic
-#' datasets. See the project README and workflow configuration files for the
-#' external tools required by each stage.
+#' PhyloProcessR provides independently callable R functions and complete
+#' workflow scripts for processing targeted sequence-capture data from raw
+#' reads to curated phylogenomic datasets. Functions can be composed into
+#' reproducible, project-specific pipelines. See the project README and
+#' workflow configuration files for the external tools required by each stage.
 #'
 #' @keywords internal
 #' @import data.table

@@ -1,18 +1,20 @@
 Package: PhyloProcessR
 Type: Package
-Title: Targeted Sequence-Capture Phylogenomics Workflows
-Version: 0.5.0
+Title: A Modular Toolkit for Targeted Sequence-Capture Phylogenomics
+Version: 1.0.0
 Authors@R:
     person("Carl", "Hutter", role = c("aut", "cre"),
            email = "carl.hutter@gmail.com",
            comment = c(ORCID = "0000-0001-6381-6339"))
-Description: Provides an R-based workflow framework for processing targeted
+Description: Provides a modular R toolkit for processing targeted
     sequence-capture data from raw reads to curated, analysis-ready
-    phylogenomic datasets. The package supports read preprocessing, de novo
-    assembly and target recovery, variant-aware consensus generation,
-    alignment and filtering, paralog assessment, legacy-data integration,
-    novel-locus discovery, and dataset assembly. Domain-specific R functions
-    are combined with established external bioinformatics tools where needed.
+    phylogenomic datasets. Functions can be called independently or combined
+    into supplied or project-specific workflows. The package supports read
+    preprocessing, de novo assembly and target recovery, variant-aware
+    consensus generation, alignment and filtering, paralog assessment,
+    legacy-data integration, novel-locus discovery, and dataset assembly.
+    Domain-specific R functions are combined with established external
+    bioinformatics tools where needed.
 License: GPL (>= 3)
 URL: https://github.com/chutter/PhyloProcessR
 BugReports: https://github.com/chutter/PhyloProcessR/issues
