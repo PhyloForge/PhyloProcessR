@@ -35,10 +35,10 @@
 #' Default 60.
 #'
 #' @param min.match.length minimum alignment length (in bp) required to retain a hit.
-#' Default 60.
+#' The N padding that joins two fragments of one target is not counted. Default 50.
 #'
 #' @param min.match.coverage minimum proportion of the target sequence length that must be
-#' covered by the hit (expressed as a percentage). Default 50.
+#' covered by the hit (expressed as a percentage). Default 30.
 #'
 #' @param retain.paralogs logical. If TRUE, potential paralogs (multiple contigs matching
 #' the same target) are retained by keeping the highest-bitscore hit. If FALSE, the
@@ -89,8 +89,8 @@ annotateTargets = function(assembly.directory = NULL,
                             alignment.contig.name = "annotated-contigs-all",
                             output.directory = "annotated-contigs",
                             min.match.percent = 60,
-                            min.match.length = 60,
-                            min.match.coverage = 50,
+                            min.match.length = 50,
+                            min.match.coverage = 30,
                             retain.paralogs = FALSE,
                             threads = 1,
                             memory = 1,
@@ -341,7 +341,7 @@ annotateTargets = function(assembly.directory = NULL,
       #Name and finalize
       names(base.loci) = paste0(sort.data$qName, "_|_", sample)
       fin.loci = append(base.loci, fix.seq)
-      fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
+      fin.loci = fin.loci[.baseWidth(fin.loci) >= min.match.length]
 
       #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
       temp = fin.loci[duplicated(names(fin.loci)) == T]
@@ -398,7 +398,7 @@ annotateTargets = function(assembly.directory = NULL,
     #Name and finalize
     names(base.loci) = paste0(sort.data$qName, "_|_", sample)
     fin.loci = append(base.loci, fix.seq.final)
-    fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
+    fin.loci = fin.loci[.baseWidth(fin.loci) >= min.match.length]
 
     #DUPES and numbers don't match up between contigs and table (dupes or not removed?)
     temp = fin.loci[duplicated(names(fin.loci)) == T]

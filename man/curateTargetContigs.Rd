@@ -9,7 +9,7 @@ curateTargetContigs(
   target.file = NULL,
   output.directory = "curated-contigs",
   min.match.percent = 60,
-  min.match.length = 60,
+  min.match.length = 50,
   min.match.coverage = 30,
   search.method = c("last", "blast"),
   threads = 1,
@@ -33,15 +33,17 @@ Default: \code{"curated-contigs"}.}
 \item{min.match.percent}{minimum percent identity of a match. Default:
 \code{60}.}
 
-\item{min.match.length}{minimum alignment length in base pairs. Default:
-\code{60}.}
+\item{min.match.length}{minimum alignment length in base pairs. The N padding
+that joins two fragments of one target is not counted. Default: \code{50}.}
 
 \item{min.match.coverage}{minimum percentage of the target length that the
 matches must cover. The hits of one target are summed, and the test runs
 after the fragments are joined. A target split across two contigs therefore
 passes when the two fragments together cover enough of it. The default is
 permissive, because a later step can still remove a short locus, but this
-step cannot recover one it dropped. Default: \code{30}.}
+step cannot recover one it dropped. The rescue seeds of
+\code{assembleBinnedTargets} are short by design, and later rounds build
+them out. Default: \code{30}.}
 
 \item{search.method}{which program matches the target markers to the contigs.
 \code{"last"} (default) uses LAST, which matches a contig that is up to

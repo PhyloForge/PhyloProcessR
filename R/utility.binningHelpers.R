@@ -20,9 +20,13 @@
   read1 = sort(set.reads[grep("_1\\.f|-1\\.f|_R1[_.-]|-R1[_.-]|READ1", basename(set.reads))])
   read2 = sort(set.reads[grep("_2\\.f|-2\\.f|_R2[_.-]|-R2[_.-]|READ2", basename(set.reads))])
 
+  # fastp writes the merged read of an overlapping pair to READ3. It carries the
+  # whole insert, so it holds the flank that the mate of an unmerged pair gives.
+  read3 = sort(set.reads[grep("_3\\.f|-3\\.f|_R3[_.-]|-R3[_.-]|READ3", basename(set.reads))])
+
   if (length(read1) == 0 || length(read1) != length(read2)) return(NULL)
 
-  return(list(read1 = read1, read2 = read2))
+  return(list(read1 = read1, read2 = read2, read3 = read3))
 }#end .pairSampleReads
 
 
@@ -79,8 +83,8 @@
                                  lastal.command = NULL,
                                  headers = NULL,
                                  min.match.percent = 60,
-                                 min.match.length = 60,
-                                 min.match.coverage = 20,
+                                 min.match.length = 50,
+                                 min.match.coverage = 30,
                                  threads = 1,
                                  quiet = TRUE) {
 
@@ -221,6 +225,7 @@
 
   read1        = paste0(bin.dir, "/", bait, "_R1.fastq")
   read2        = paste0(bin.dir, "/", bait, "_R2.fastq")
+  reads.single = paste0(bin.dir, "/", bait, "_S.fastq")
   assembly.dir = paste0(bin.dir, "/megahit_", bait)
   empty.result = Biostrings::DNAStringSet()
 
@@ -234,13 +239,26 @@
            shQuote(paste0(bin.dir, "/collate_", bait)),
            " | ", samtools.command, " fastq -N",
            " -1 ", shQuote(read1), " -2 ", shQuote(read2),
-           " -0 /dev/null -s /dev/null -"),
+           " -0 /dev/null -s ", shQuote(reads.single), " -"),
     ignore.stdout = TRUE, ignore.stderr = TRUE))
 
-  if (extract.status != 0 || file.exists(read1) == FALSE ||
-      file.exists(read2) == FALSE || file.size(read1) == 0) {
-    unlink(c(read1, read2))
+  # A merged read maps on its own, so it lands here as a singleton. Discarding it
+  # would drop every overlapping pair of the library.
+  has.size = function(f) file.exists(f) == TRUE && file.size(f) > 0
+  have.pairs  = has.size(read1) && has.size(read2)
+  have.single = has.size(reads.single)
+
+  if (extract.status != 0 || (have.pairs == FALSE && have.single == FALSE)) {
+    unlink(c(read1, read2, reads.single))
     return(empty.result)
+  }
+
+  read.args = ""
+  if (have.pairs == TRUE) {
+    read.args = paste0(" -1 ", shQuote(read1), " -2 ", shQuote(read2))
+  }
+  if (have.single == TRUE) {
+    read.args = paste0(read.args, " -r ", shQuote(reads.single))
   }
 
   # megahit assembles a bin that SPAdes drops. SPAdes fits a k-mer coverage model
@@ -255,7 +273,7 @@
            " --k-list ", paste(kmer.values, collapse = ","),
            " -t 1 -m ", format(memory * 1e9, scientific = FALSE),
            " --min-contig-len ", min.contig.length,
-           " -1 ", shQuote(read1), " -2 ", shQuote(read2),
+           read.args,
            " -o ", shQuote(assembly.dir)),
     ignore.stdout = TRUE, ignore.stderr = TRUE))
 
@@ -271,7 +289,7 @@
     }
   }
 
-  unlink(c(assembly.dir, read1, read2), recursive = TRUE)
+  unlink(c(assembly.dir, read1, read2, reads.single), recursive = TRUE)
 
   return(result)
 }#end .assembleOneBin
@@ -330,8 +348,8 @@
                                 lastal.command = NULL,
                                 headers = NULL,
                                 min.match.percent = 60,
-                                min.match.length = 60,
-                                min.match.coverage = 20,
+                                min.match.length = 50,
+                                min.match.coverage = 30,
                                 max.extension = 1000,
                                 max.target.hits = 5,
                                 threads = 1,
@@ -375,8 +393,10 @@
   filt.data  = filt.data[filt.data$qName %in% busy.names == FALSE, ]
   if (nrow(filt.data) == 0) return(empty.result)
 
-  # The bait name in the contig name gives the locus of the reads
-  contig.bait = sub("_NODE.*$", "", filt.data$qName)
+  # .assembleOneBin prefixes every contig with its bait name. What follows is the
+  # assembler's own name for the contig, which is not the same between
+  # assemblers, so only the prefix is matched.
+  contig.bait = sub("^(bait[0-9]+)_.*$", "\\1", filt.data$qName)
   filt.data$binLocus = bait.table$locus[match(contig.bait, bait.table$bait)]
   filt.data = filt.data[is.na(filt.data$binLocus) == FALSE, ]
   filt.data = filt.data[filt.data$binLocus == filt.data$tName, ]
@@ -505,12 +525,15 @@
 #
 # cap3 assembles the rescued reads of one target. The reads are unpaired and few,
 # so an overlap assembler fits where a de Bruijn one does not. cap3 writes its
-# output beside the input, so each target gets its own file name.
+# output beside the input, so each target gets its own file name. The read count
+# is capped before cap3 sees it, because cap3 compares every read with every
+# other one. Numbers in HANDOFF.md.
 .assembleOneRescue = function(target = NULL,
                               bam.file = NULL,
                               target.dir = NULL,
                               samtools.command = NULL,
-                              cap3.command = NULL) {
+                              cap3.command = NULL,
+                              subsample = NULL) {
 
   reads.file = paste0(target.dir, "/", target, ".fa")
   empty.result = Biostrings::DNAStringSet()
@@ -520,8 +543,11 @@
 
   # ignore.stdout must stay FALSE. R adds its own redirect for it, which would
   # win over the one that writes reads.file and leave the file empty.
+  view.options = ""
+  if (is.null(subsample) == FALSE) view.options = paste0(" -s ", subsample)
+
   extract.status = suppressWarnings(system(
-    paste0(samtools.command, " view -b ", shQuote(bam.file), " ", target,
+    paste0(samtools.command, " view -b", view.options, " ", shQuote(bam.file), " ", target,
            " | ", samtools.command, " fasta - > ", shQuote(reads.file)),
     ignore.stdout = FALSE, ignore.stderr = TRUE))
 
@@ -572,10 +598,10 @@
                                  samtools.command = NULL,
                                  cap3.command = NULL,
                                  headers = NULL,
-                                 min.contig.length = 100,
                                  min.match.percent = 60,
-                                 min.match.length = 60,
-                                 min.match.coverage = 20,
+                                 min.match.length = 50,
+                                 min.match.coverage = 30,
+                                 max.reads = 6000,
                                  threads = 1,
                                  quiet = TRUE) {
 
@@ -646,12 +672,23 @@
   target.dir = paste0(rescue.dir, "/targets")
   dir.create(target.dir, showWarnings = FALSE)
 
+  # A repeat attracts reads from the whole library. In one run a single target
+  # took 281,448 of the 1,183,875 recruited reads, and cap3 did not finish it.
+  # The cap follows max.pairs in the binned path, and samtools -s takes the seed
+  # in the integer part and the fraction to keep after the point.
+  target.reads = stats::setNames(idx.data$mapped, idx.data$target)
+
   contig.list = parallel::mclapply(run.targets, function(target) {
+    subsample = NULL
+    if (max.reads > 0 && target.reads[[target]] > max.reads) {
+      subsample = format(42 + (max.reads / target.reads[[target]]), nsmall = 4)
+    }
     .assembleOneRescue(target = target,
                        bam.file = rescue.bam,
                        target.dir = target.dir,
                        samtools.command = samtools.command,
-                       cap3.command = cap3.command)
+                       cap3.command = cap3.command,
+                       subsample = subsample)
   }, mc.cores = min(threads, length(run.targets)), mc.preschedule = FALSE)
 
   contig.list = contig.list[vapply(contig.list, function(x)
@@ -661,6 +698,10 @@
   contig.file = paste0(rescue.dir, "/rescue-contigs.fa")
   Biostrings::writeXStringSet(do.call(c, unname(contig.list)), contig.file)
 
+  # A seed is filtered on min.match.length, not min.contig.length. cap3 seeds are
+  # short, and a seed shorter than the smallest match worth accepting cannot bait
+  # anything. min.contig.length stays with the binned contigs, where the coverage
+  # rule in .filterBinnedContigs already sets the real floor. Numbers in HANDOFF.md.
   # The same LAST search that assigns a draft contig assigns a rescued contig
   seed.contigs = .identifyDraftContigs(draft.file = contig.file,
                                        last.db = paste0(rescue.dir, "/missing_db"),
@@ -674,7 +715,7 @@
                                        quiet = quiet)
 
   if (is.null(seed.contigs) == FALSE) {
-    seed.contigs = seed.contigs[Biostrings::width(seed.contigs) >= min.contig.length]
+    seed.contigs = seed.contigs[Biostrings::width(seed.contigs) >= min.match.length]
     if (length(seed.contigs) == 0) seed.contigs = NULL
   }
 

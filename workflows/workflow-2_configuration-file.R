@@ -33,7 +33,8 @@ quiet = FALSE
 
 # Missing locus recovery settings
 #########################
-# TRUE = run expandMissingAssembly after the main assembly pipeline
+# TRUE = run expandMissingAssembly after the main assembly pipeline.
+# Deprecated. Use the binned target assembly below instead.
 expand.missing = FALSE
 # Which read subdirectory within processed.reads to use for Phase 2 mapping.
 # Should be paired (non-merged) reads. Options (use whichever is the last step run in workflow 1):
@@ -81,6 +82,10 @@ binned.min.bait.coverage = 0.5
 # read that is 35 percent divergent from its bait, so without this step a
 # divergent target that the draft assembly also lost cannot be recovered.
 binned.rescue.missing = TRUE
+# TRUE = after round 1, use LAST to recruit reads for the targets that no bin
+# produced. bwa needs about 90 percent identity, so a divergent target recruits
+# nothing. Costs one more pass over the reads, about 8 minutes per sample.
+binned.rescue.failed.divergent = FALSE
 # Which targets to bin:
 #   "all"     = every target. Recovers missing loci and extends the ones present.
 #   "missing" = only the targets absent from that sample. Much faster, and the
@@ -111,9 +116,9 @@ binned.multi.copy = "keep"
 # BLAST filters for the binned contigs. The coverage filter is lower than the
 # target contig filter above, because a binned contig is already anchored to its
 # own target.
-binned.match.length = 60
+binned.match.length = 50
 binned.match.percent = 60
-binned.match.coverage = 20
+binned.match.coverage = 30
 # The k-mer values for the per-bin SPAdes runs. Every value must be below the
 # read length. Fewer values is faster.
 binned.kmer.values = c(21, 33, 55, 77, 99)
@@ -133,7 +138,7 @@ curate.search.method = "last"
 # a target and tested after the fragments are joined, so a target split across
 # two contigs is kept. The default is permissive on purpose: a later step can
 # remove a short locus, but this step cannot recover one it dropped.
-curate.match.length = 60
+curate.match.length = 50
 curate.match.percent = 60
 curate.match.coverage = 30
 
@@ -158,7 +163,7 @@ similarity = 0.95
 #########################
 # A contig is kept when its blast hit to a target marker passes all three tests.
 # Minimum blast alignment length in base pairs
-target.match.length = 60
+target.match.length = 50
 # Minimum blast percent identity, on a scale of 0 to 100
 target.match.percent = 60
 # Minimum percentage of the target marker length that the hit must cover

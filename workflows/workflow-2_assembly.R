@@ -175,6 +175,7 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
     bait.source        = binned.bait.source,
     min.bait.coverage  = binned.min.bait.coverage,
     rescue.missing     = binned.rescue.missing,
+    rescue.failed.divergent = binned.rescue.failed.divergent,
     iterations         = binned.iterations,
     min.pairs          = binned.min.pairs,
     max.pairs          = binned.max.pairs,

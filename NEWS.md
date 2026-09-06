@@ -1,5 +1,41 @@
 # PhyloProcessR (development version)
 
+## Workflow 2 assembly
+
+### Deprecations
+
+- `expandMissingAssembly()` is deprecated. It warns and still runs. Use
+  `assembleBinnedTargets()` instead. The new function recovers the same missing
+  targets, extends the targets a sample already has, assembles one target at a
+  time so a low-coverage locus keeps its own coverage distribution, and can run
+  more than one round.
+
+### Behaviour changes
+
+- Every function that matches contigs to targets now uses the same defaults:
+  `min.match.percent = 60`, `min.match.length = 50`, `min.match.coverage = 30`.
+  This covers `removeOffTargetContigs()`, `curateTargetContigs()`,
+  `assembleBinnedTargets()` and `annotateTargets()`. The workflow 2 and workflow
+  4 configuration files were changed to match.
+- `curateTargetContigs()` and `annotateTargets()` no longer count N padding as
+  sequence in the length test. Two fragments of one target are joined with Ns,
+  and the padding is not recovered sequence.
+- `assembleBinnedTargets()` gained `rescue.failed.divergent`, default `FALSE`.
+  After round 1 it uses LAST to recruit reads for the targets that no bin
+  produced, because bwa needs about 90 percent identity and a divergent target
+  recruits nothing. It costs one more pass over the reads, about 8 minutes for a
+  5 million read sample.
+- `assembleBinnedTargets()` assembles each bin with megahit instead of SPAdes.
+  SPAdes returns nothing for a bin below about 30 read pairs, which is a third
+  to a half of all bins. The function takes `megahit.path` for this.
+- The rescue step of `assembleBinnedTargets()` assembles one target at a time
+  with cap3, in place of one pooled SPAdes run. It takes `cap3.path`, and
+  `spades.path` is gone. A full run rescues tens of thousands of targets, which
+  no single assembly can hold.
+- The rescue seeds are filtered on `min.match.length` rather than
+  `min.contig.length`, because cap3 seeds are short. `min.contig.length` now
+  applies only to the binned contigs.
+
 ## Workflow 1 read preprocessing
 
 ### Behaviour changes

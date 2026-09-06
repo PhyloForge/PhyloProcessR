@@ -16,13 +16,14 @@ assembleBinnedTargets(
   bait.source = c("hybrid", "reference"),
   min.bait.coverage = 0.5,
   rescue.missing = TRUE,
+  rescue.failed.divergent = FALSE,
   iterations = 1,
   min.pairs = 6,
   max.pairs = 3000,
   min.contig.length = 100,
   min.match.percent = 60,
-  min.match.length = 60,
-  min.match.coverage = 20,
+  min.match.length = 50,
+  min.match.coverage = 30,
   max.extension = 1000,
   max.target.hits = 5,
   multi.copy = c("keep", "longest"),
@@ -32,7 +33,7 @@ assembleBinnedTargets(
   bwa.path = NULL,
   samtools.path = NULL,
   megahit.path = NULL,
-  spades.path = NULL,
+  cap3.path = NULL,
   last.path = NULL,
   overwrite = FALSE,
   quiet = TRUE
@@ -43,9 +44,10 @@ assembleBinnedTargets(
 example \code{"processed-reads"}).}
 
 \item{mapping.reads}{name of the subdirectory in \code{read.directory} that
-holds the per-sample read folders. The reads must be paired. Merged reads
-cannot be used, because the mate of an anchored read supplies the flanking
-sequence. Default: \code{"decontaminated-reads"}.}
+holds the per-sample read folders. The reads must be paired. A directory
+that also holds merged reads, which \code{mergePairedEndReads} writes as
+READ3, is used in full: the pairs and the merged reads are mapped in
+separate passes into one BAM. Default: \code{"decontaminated-reads"}.}
 
 \item{target.markers}{path to the FASTA file of target markers. Each sequence
 becomes one bin.}
@@ -93,6 +95,16 @@ result as the bait. bwa cannot recruit a read that is 35 percent divergent
 from its bait, so without this step a divergent target that the draft
 assembly also lost cannot be recovered. Default: \code{TRUE}.}
 
+\item{rescue.failed.divergent}{logical. \code{TRUE} recruits reads with
+LAST for the targets that no bin produced, after round 1. A bin fails when
+bwa recruited fewer than \code{min.pairs} pairs, or when it assembled and
+no contig passed the filters. bwa needs about 90 percent identity to
+recruit, so a divergent target recruits nothing however deep it is. The
+targets that \code{rescue.missing} already searched are not searched again.
+The step costs one more pass over the reads, about 8 minutes for a
+5 million read sample, whatever the number of targets. Numbers in
+HANDOFF.md. Default: \code{FALSE}.}
+
 \item{iterations}{number of bait-and-assemble rounds. One round recovers about
 one insert length of flank on each side. A later round baits with the
 contigs of the round before it and adds about one more insert length, at a
@@ -103,22 +115,23 @@ the targets that produced a contig. Default: \code{1}.}
 Default: \code{6}.}
 
 \item{max.pairs}{maximum read pairs kept per bin. A very deep locus costs
-assembly time and gives the assembler no more information. \code{0} removes the
-limit. Default: \code{3000}.}
+assembly time and gives the assembler no more information. It also caps the
+reads of one rescue target, at twice this value, because those reads are
+unpaired. A repeat can otherwise take most of the recruited reads and stall
+cap3. \code{0} removes both limits. Default: \code{3000}.}
 
-\item{min.contig.length}{minimum length in base pairs of an assembled contig.
-Default: \code{100}.}
+\item{min.contig.length}{minimum length in base pairs of a binned contig. The
+rescue seeds use \code{min.match.length} instead, because cap3 seeds are
+short. Default: \code{100}.}
 
 \item{min.match.percent}{minimum BLAST percent identity of a new contig
 against its target. Default: \code{60}.}
 
-\item{min.match.length}{minimum BLAST alignment length in base pairs.
-Default: \code{60}.}
+\item{min.match.length}{minimum alignment length in base pairs. It is also
+the length floor of the rescue seeds. Default: \code{50}.}
 
 \item{min.match.coverage}{minimum percentage of the target length that the
-BLAST match must cover. This is lower than the whole-library default,
-because a binned contig is anchored to its own target already. Default:
-\code{20}.}
+match must cover. Default: \code{30}.}
 
 \item{max.extension}{maximum base pairs a contig can add to each side of its
 bait in one round. This stops a round that extends into a transposable
@@ -156,8 +169,9 @@ Default: \code{NULL}.}
 \item{megahit.path}{path to the directory that holds \code{megahit}.
 Default: \code{NULL}.}
 
-\item{spades.path}{path to the directory that holds \code{spades.py}. Only
-\code{rescue.missing = TRUE} needs it. Default: \code{NULL}.}
+\item{cap3.path}{path to the directory that holds \code{cap3}. Only
+\code{rescue.missing = TRUE} and \code{rescue.failed.divergent = TRUE}
+need it. Default: \code{NULL}.}
 
 \item{last.path}{path to the directory that holds \code{lastdb},
 \code{lastal} and \code{maf-convert}. Default: \code{NULL}.}

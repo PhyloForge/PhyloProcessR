@@ -1,6 +1,14 @@
 #' @title expandMissingAssembly
 #'
-#' @description Attempts to recover target loci that are missing or poorly
+#' @description Deprecated. Use
+#'   \code{\link{assembleBinnedTargets}} instead. That function recovers the
+#'   same missing targets and also extends the targets a sample already has. It
+#'   assembles one target at a time, so a low-coverage locus keeps its own
+#'   coverage distribution. It can also run more than one round. This function
+#'   pools every missing target into one HISAT2 index and one SPAdes run, which
+#'   it cannot do.
+#'
+#'   Attempts to recover target loci that are missing or poorly
 #'   assembled by (1) BLASTing each sample's existing assembly against the
 #'   reference to find matched loci, (2) computing a cross-sample consensus of
 #'   the best contig per target locus, (3) mapping each sample's raw reads to
@@ -126,6 +134,8 @@ expandMissingAssembly = function(assembly.directory = NULL,
                                  blast.path = NULL,
                                  overwrite = FALSE,
                                  quiet = TRUE) {
+
+  .Deprecated("assembleBinnedTargets")
 
   # # Debug
   # library(PhyloProcessR)

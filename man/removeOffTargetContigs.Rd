@@ -11,7 +11,7 @@ removeOffTargetContigs(
   blast.path = NULL,
   last.path = NULL,
   search.method = c("last", "blast"),
-  min.match.length = 60,
+  min.match.length = 50,
   min.match.percent = 60,
   min.match.coverage = 30,
   memory = 1,
@@ -46,7 +46,7 @@ files will be written. Default: \code{"target-contigs"}.}
 percent divergence. Numbers in HANDOFF.md.}
 
 \item{min.match.length}{minimum alignment length (bp) a hit must exceed
-to be accepted. Default: \code{60}.}
+to be accepted. Default: \code{50}.}
 
 \item{min.match.percent}{minimum percent identity (0-100) required to
 accept a hit. Default: \code{60}.}

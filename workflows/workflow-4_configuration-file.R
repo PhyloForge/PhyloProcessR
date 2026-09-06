@@ -57,9 +57,9 @@ heterozygote.min.length = 100
 #The minimum match percentage for a contig match to a target
 min.match.percent = 60
 #The minimum match length in basepairs for a contig match to a target
-min.match.length = 40
+min.match.length = 50
 #The minimum match coverage, contig must overlap by X percent to target
-min.match.coverage = 50
+min.match.coverage = 30
 #retain rather than remove potential paralogs from the dataset. Only one is retained.
 retain.paralogs = FALSE
 

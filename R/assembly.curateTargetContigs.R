@@ -28,15 +28,17 @@
 #' @param min.match.percent minimum percent identity of a match. Default:
 #'   \code{60}.
 #'
-#' @param min.match.length minimum alignment length in base pairs. Default:
-#'   \code{60}.
+#' @param min.match.length minimum alignment length in base pairs. The N padding
+#'   that joins two fragments of one target is not counted. Default: \code{50}.
 #'
 #' @param min.match.coverage minimum percentage of the target length that the
 #'   matches must cover. The hits of one target are summed, and the test runs
 #'   after the fragments are joined. A target split across two contigs therefore
 #'   passes when the two fragments together cover enough of it. The default is
 #'   permissive, because a later step can still remove a short locus, but this
-#'   step cannot recover one it dropped. Default: \code{30}.
+#'   step cannot recover one it dropped. The rescue seeds of
+#'   \code{assembleBinnedTargets} are short by design, and later rounds build
+#'   them out. Default: \code{30}.
 #'
 #' @param search.method which program matches the target markers to the contigs.
 #'   \code{"last"} (default) uses LAST, which matches a contig that is up to
@@ -76,7 +78,7 @@ curateTargetContigs = function(assembly.directory = NULL,
                                target.file = NULL,
                                output.directory = "curated-contigs",
                                min.match.percent = 60,
-                               min.match.length = 60,
+                               min.match.length = 50,
                                min.match.coverage = 30,
                                search.method = c("last", "blast"),
                                threads = 1,
@@ -441,7 +443,7 @@ curateTargetContigs = function(assembly.directory = NULL,
     names(base.loci) = sort.data$qName
 
     fin.loci = append(base.loci, fix.seq.final)
-    fin.loci = fin.loci[Biostrings::width(fin.loci) >= min.match.length]
+    fin.loci = fin.loci[.baseWidth(fin.loci) >= min.match.length]
 
     # Coverage is summed over every hit of a target, and the test runs here, not
     # in Part B. A target that is split across two contigs has two hits that are

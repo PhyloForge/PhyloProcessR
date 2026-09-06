@@ -7,6 +7,15 @@
 # Builds the shell command for an external program. program.path can be the
 # directory that holds the executable, the full path to the executable, or NULL
 # to use the system PATH. The function stops when the program is not found.
+# Length of a sequence without its Ns. Two fragments of one target are joined with
+# N padding, so the padding would otherwise count as recovered sequence.
+.baseWidth = function(seqs = NULL) {
+  if (length(seqs) == 0) return(integer(0))
+  return(as.integer(Biostrings::width(seqs) -
+                    Biostrings::letterFrequency(seqs, "N")))
+}#end .baseWidth
+
+
 .toolCommand = function(program = NULL,
                         program.path = NULL) {
 

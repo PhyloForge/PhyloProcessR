@@ -40,9 +40,10 @@
 #'   example \code{"processed-reads"}).
 #'
 #' @param mapping.reads name of the subdirectory in \code{read.directory} that
-#'   holds the per-sample read folders. The reads must be paired. Merged reads
-#'   cannot be used, because the mate of an anchored read supplies the flanking
-#'   sequence. Default: \code{"decontaminated-reads"}.
+#'   holds the per-sample read folders. The reads must be paired. A directory
+#'   that also holds merged reads, which \code{mergePairedEndReads} writes as
+#'   READ3, is used in full: the pairs and the merged reads are mapped in
+#'   separate passes into one BAM. Default: \code{"decontaminated-reads"}.
 #'
 #' @param target.markers path to the FASTA file of target markers. Each sequence
 #'   becomes one bin.
@@ -90,6 +91,16 @@
 #'   from its bait, so without this step a divergent target that the draft
 #'   assembly also lost cannot be recovered. Default: \code{TRUE}.
 #'
+#' @param rescue.failed.divergent logical. \code{TRUE} recruits reads with
+#'   LAST for the targets that no bin produced, after round 1. A bin fails when
+#'   bwa recruited fewer than \code{min.pairs} pairs, or when it assembled and
+#'   no contig passed the filters. bwa needs about 90 percent identity to
+#'   recruit, so a divergent target recruits nothing however deep it is. The
+#'   targets that \code{rescue.missing} already searched are not searched again.
+#'   The step costs one more pass over the reads, about 8 minutes for a
+#'   5 million read sample, whatever the number of targets. Numbers in
+#'   HANDOFF.md. Default: \code{FALSE}.
+#'
 #' @param iterations number of bait-and-assemble rounds. One round recovers about
 #'   one insert length of flank on each side. A later round baits with the
 #'   contigs of the round before it and adds about one more insert length, at a
@@ -100,22 +111,23 @@
 #'   Default: \code{6}.
 #'
 #' @param max.pairs maximum read pairs kept per bin. A very deep locus costs
-#'   assembly time and gives the assembler no more information. \code{0} removes the
-#'   limit. Default: \code{3000}.
+#'   assembly time and gives the assembler no more information. It also caps the
+#'   reads of one rescue target, at twice this value, because those reads are
+#'   unpaired. A repeat can otherwise take most of the recruited reads and stall
+#'   cap3. \code{0} removes both limits. Default: \code{3000}.
 #'
-#' @param min.contig.length minimum length in base pairs of an assembled contig.
-#'   Default: \code{100}.
+#' @param min.contig.length minimum length in base pairs of a binned contig. The
+#'   rescue seeds use \code{min.match.length} instead, because cap3 seeds are
+#'   short. Default: \code{100}.
 #'
 #' @param min.match.percent minimum BLAST percent identity of a new contig
 #'   against its target. Default: \code{60}.
 #'
-#' @param min.match.length minimum BLAST alignment length in base pairs.
-#'   Default: \code{60}.
+#' @param min.match.length minimum alignment length in base pairs. It is also
+#'   the length floor of the rescue seeds. Default: \code{50}.
 #'
 #' @param min.match.coverage minimum percentage of the target length that the
-#'   BLAST match must cover. This is lower than the whole-library default,
-#'   because a binned contig is anchored to its own target already. Default:
-#'   \code{20}.
+#'   match must cover. Default: \code{30}.
 #'
 #' @param max.extension maximum base pairs a contig can add to each side of its
 #'   bait in one round. This stops a round that extends into a transposable
@@ -154,7 +166,8 @@
 #'   Default: \code{NULL}.
 #'
 #' @param cap3.path path to the directory that holds \code{cap3}. Only
-#'   \code{rescue.missing = TRUE} needs it. Default: \code{NULL}.
+#'   \code{rescue.missing = TRUE} and \code{rescue.failed.divergent = TRUE}
+#'   need it. Default: \code{NULL}.
 #'
 #' @param last.path path to the directory that holds \code{lastdb},
 #'   \code{lastal} and \code{maf-convert}. Default: \code{NULL}.
@@ -184,13 +197,14 @@ assembleBinnedTargets = function(read.directory = NULL,
                                  bait.source = c("hybrid", "reference"),
                                  min.bait.coverage = 0.5,
                                  rescue.missing = TRUE,
+                                 rescue.failed.divergent = FALSE,
                                  iterations = 1,
                                  min.pairs = 6,
                                  max.pairs = 3000,
                                  min.contig.length = 100,
                                  min.match.percent = 60,
-                                 min.match.length = 60,
-                                 min.match.coverage = 20,
+                                 min.match.length = 50,
+                                 min.match.coverage = 30,
                                  max.extension = 1000,
                                  max.target.hits = 5,
                                  multi.copy = c("keep", "longest"),
@@ -230,10 +244,12 @@ assembleBinnedTargets = function(read.directory = NULL,
   samtools.command = .toolCommand("samtools", samtools.path)
   megahit.command  = .toolCommand("megahit", megahit.path)
 
-  # Only the rescue step uses cap3, so it is the only thing that needs it
+  # Only the two LAST rescue steps use cap3, so they are what needs it
   use.rescue = rescue.missing == TRUE && bait.source != "reference"
   cap3.command = NULL
-  if (use.rescue == TRUE) cap3.command = .toolCommand("cap3", cap3.path)
+  if (use.rescue == TRUE || rescue.failed.divergent == TRUE) {
+    cap3.command = .toolCommand("cap3", cap3.path)
+  }
 
   # LAST does every divergent search in this function, so it is always needed
   use.draft = is.null(draft.assembly.directory) == FALSE
@@ -308,6 +324,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     # bwa mem takes one file per mate, so several lanes are joined first
     read1 = read.pair$read1
     read2 = read.pair$read2
+    read3 = read.pair$read3
     if (length(read1) > 1) {
       read1 = paste0(sample.dir, "/all_R1.fastq")
       read2 = paste0(sample.dir, "/all_R2.fastq")
@@ -317,6 +334,13 @@ assembleBinnedTargets = function(read.directory = NULL,
       .runCommand(paste0("gzip -cdf ", paste(shQuote(read.pair$read2), collapse = " "),
                          " > ", shQuote(read2)),
                   quiet = quiet, task = "read joining", keep.stdout = TRUE)
+    }
+    if (length(read3) > 1) {
+      joined.read3 = paste0(sample.dir, "/all_R3.fastq")
+      .runCommand(paste0("gzip -cdf ", paste(shQuote(read3), collapse = " "),
+                         " > ", shQuote(joined.read3)),
+                  quiet = quiet, task = "read joining", keep.stdout = TRUE)
+      read3 = joined.read3
     }
 
     old.contigs = NULL
@@ -369,6 +393,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     # Targets with no sequence in this sample at all. bwa cannot recruit for
     # these when the sample is divergent, so LAST recruits the reads instead.
     seed.contigs = NULL
+    rescue.names = character(0)
     if (use.rescue == TRUE) {
       have.names = c(names(own.contigs), names(draft.contigs))
       rescue.names = target.names[target.names %in% have.names == FALSE]
@@ -376,7 +401,7 @@ assembleBinnedTargets = function(read.directory = NULL,
       if (length(rescue.names) > 0) {
         seed.contigs = .rescueMissingTargets(
           missing.seqs = reference.seqs[rescue.names],
-          read.files = c(read1, read2),
+          read.files = c(read1, read2, read3),
           work.dir = sample.dir,
           lastdb.command = lastdb.command,
           lastal.command = lastal.command,
@@ -384,10 +409,10 @@ assembleBinnedTargets = function(read.directory = NULL,
           samtools.command = samtools.command,
           cap3.command = cap3.command,
           headers = headers,
-          min.contig.length = min.contig.length,
           min.match.percent = min.match.percent,
           min.match.length = min.match.length,
           min.match.coverage = min.match.coverage,
+          max.reads = max.pairs * 2,
           threads = threads,
           quiet = quiet)
 
@@ -428,13 +453,33 @@ assembleBinnedTargets = function(read.directory = NULL,
       # and writes the FASTQ, so no alignment record is parsed here. The -k 15
       # and -T 25 options relax bwa, which matters only for a reference bait.
       bam.file = paste0(round.dir, "/mapped.bam")
+      # One bwa call takes either two mate files or one single-end file, so the
+      # merged reads need a second pass. samtools cat joins the two unsorted BAMs,
+      # which share a header because both used this bait index.
+      map.bams = paste0(round.dir, "/map-pe.bam")
       .runCommand(paste0(bwa.command, " mem -t ", threads,
                          " -k 15 -B 3 -O 5 -T 25 ",
                          shQuote(bait.file), " ", shQuote(read1), " ", shQuote(read2),
+                         " | ", samtools.command, " view -b -o ", shQuote(map.bams), " -"),
+                  quiet = quiet, task = "read mapping")
+
+      if (length(read3) > 0) {
+        merged.bam = paste0(round.dir, "/map-se.bam")
+        .runCommand(paste0(bwa.command, " mem -t ", threads,
+                           " -k 15 -B 3 -O 5 -T 25 ",
+                           shQuote(bait.file), " ", shQuote(read3),
+                           " | ", samtools.command, " view -b -o ", shQuote(merged.bam), " -"),
+                    quiet = quiet, task = "merged read mapping")
+        map.bams = c(map.bams, merged.bam)
+      }
+
+      .runCommand(paste0(samtools.command, " cat ",
+                         paste(shQuote(map.bams), collapse = " "),
                          " | ", samtools.command, " sort -@ ", threads,
                          " -T ", shQuote(paste0(round.dir, "/sorting")),
                          " -o ", shQuote(bam.file)),
-                  quiet = quiet, task = "read mapping")
+                  quiet = quiet, task = "read sorting")
+      unlink(map.bams)
       .runCommand(paste0(samtools.command, " index ", shQuote(bam.file)),
                   quiet = quiet, task = "BAM indexing")
 
@@ -525,6 +570,40 @@ assembleBinnedTargets = function(read.directory = NULL,
       print(paste0(sample, " round ", round, ": ", length(round.best),
                    " targets assembled, ", length(best.contigs), " total."))
 
+      # Targets that no bin produced. bwa needs about 90 percent identity to
+      # recruit, so a divergent target recruits nothing however deep it is, and
+      # LAST recruits those reads instead. This runs after round 1, so a later
+      # round can extend what it finds. The targets rescue.missing already
+      # searched are skipped, because the same reads give the same answer.
+      if (rescue.failed.divergent == TRUE && round == 1) {
+        failed.names = target.names[target.names %in% names(best.contigs) == FALSE &
+                                    target.names %in% rescue.names == FALSE]
+        if (length(failed.names) > 0) {
+          failed.contigs = .rescueMissingTargets(
+            missing.seqs = reference.seqs[failed.names],
+            read.files = c(read1, read2, read3),
+            work.dir = sample.dir,
+            lastdb.command = lastdb.command,
+            lastal.command = lastal.command,
+            mafconvert.command = mafconvert.command,
+            samtools.command = samtools.command,
+            cap3.command = cap3.command,
+            headers = headers,
+            min.match.percent = min.match.percent,
+            min.match.length = min.match.length,
+            min.match.coverage = min.match.coverage,
+            max.reads = max.pairs * 2,
+            threads = threads,
+            quiet = quiet)
+
+          best.contigs = .keepLonger(best.contigs, failed.contigs)
+          print(paste0(sample, ": LAST recovered ",
+                       if (is.null(failed.contigs)) 0 else length(failed.contigs),
+                       " of ", length(failed.names),
+                       " targets that no bin produced."))
+        }
+      }
+
       # Later rounds only extend. A target that gives no contig in one round also
       # gives no contig in the next round from the same bait.
       bait.set = list(
@@ -537,7 +616,7 @@ assembleBinnedTargets = function(read.directory = NULL,
 
     } # end round loop
 
-    unlink(paste0(sample.dir, c("/all_R1.fastq", "/all_R2.fastq")))
+    unlink(paste0(sample.dir, c("/all_R1.fastq", "/all_R2.fastq", "/all_R3.fastq")))
 
     if (is.null(best.contigs) == TRUE || length(best.contigs) == 0) {
       print(paste0(sample, ": nothing was recovered. The previous assembly is saved unchanged."))

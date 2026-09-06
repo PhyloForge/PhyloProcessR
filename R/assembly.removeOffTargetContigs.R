@@ -37,7 +37,7 @@
 #'   \code{NULL}.
 #'
 #' @param min.match.length minimum alignment length (bp) a hit must exceed
-#'   to be accepted. Default: \code{60}.
+#'   to be accepted. Default: \code{50}.
 #'
 #' @param min.match.percent minimum percent identity (0-100) required to
 #'   accept a hit. Default: \code{60}.
@@ -69,7 +69,7 @@ removeOffTargetContigs = function(assembly.directory = NULL,
                                   blast.path = NULL,
                                   last.path = NULL,
                                   search.method = c("last", "blast"),
-                                  min.match.length = 60,
+                                  min.match.length = 50,
                                   min.match.percent = 60,
                                   min.match.coverage = 30,
                                   memory = 1,

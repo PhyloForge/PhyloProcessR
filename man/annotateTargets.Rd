@@ -10,8 +10,8 @@ annotateTargets(
   alignment.contig.name = "annotated-contigs-all",
   output.directory = "annotated-contigs",
   min.match.percent = 60,
-  min.match.length = 60,
-  min.match.coverage = 50,
+  min.match.length = 50,
+  min.match.coverage = 30,
   retain.paralogs = FALSE,
   threads = 1,
   memory = 1,
@@ -40,10 +40,10 @@ will be saved. Default "annotated-contigs".}
 Default 60.}
 
 \item{min.match.length}{minimum alignment length (in bp) required to retain a hit.
-Default 60.}
+The N padding that joins two fragments of one target is not counted. Default 50.}
 
 \item{min.match.coverage}{minimum proportion of the target sequence length that must be
-covered by the hit (expressed as a percentage). Default 50.}
+covered by the hit (expressed as a percentage). Default 30.}
 
 \item{retain.paralogs}{logical. If TRUE, potential paralogs (multiple contigs matching
 the same target) are retained by keeping the highest-bitscore hit. If FALSE, the

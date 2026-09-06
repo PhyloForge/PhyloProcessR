@@ -11,6 +11,7 @@ setupCheck(
   bwa.path = NULL,
   spades.path = NULL,
   megahit.path = NULL,
+  cap3.path = NULL,
   bbmap.path = NULL,
   bbnorm.path = NULL,
   blast.path = NULL,
@@ -40,6 +41,9 @@ skips this check.}
 \item{megahit.path}{system path to the directory containing megahit; NULL
 uses the anaconda environment path.}
 
+\item{cap3.path}{system path to the directory containing cap3; NULL
+uses the anaconda environment path.}
+
 \item{bbmap.path}{system path to the directory containing bbmap.sh; NULL
 skips this check.}
 
@@ -63,7 +67,7 @@ logical TRUE if all checked programs were found, FALSE otherwise.
 }
 \description{
 Verifies that the required external bioinformatics programs are
-accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit,
+accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit, cap3,
 bbmap.sh, bbnorm.sh, blastn, makeblastdb, mafft, iqtree2, and trimal. If
 an anaconda.environment path is provided all tool paths are automatically
 set to that environment's bin/ directory before checking. Prints a FOUND or
