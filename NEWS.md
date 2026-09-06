@@ -1,3 +1,65 @@
+# PhyloProcessR (development version)
+
+## Workflow 1 read preprocessing
+
+### Behaviour changes
+
+- `removeContamination()` now uses `map.match` to decide which read pairs are
+  removed. A read pair is a contaminant when either mate aligns at or above the
+  identity threshold. The pair is removed and counted. A pair that aligns below
+  the threshold is kept. Before this change, `map.match` only set the
+  contamination report, and every mapped pair was removed at any identity. Read
+  sets made with an earlier version are more strongly filtered than the
+  configured threshold states.
+- `assessCaptureEfficiency()` counts primary alignments only, so
+  `pctReadsOnTarget` can no longer go above 100.
+- `removeContamination()` rebuilds the BWA index on its own when the contaminant
+  reference files change. An old index can no longer be used with a new
+  contaminant list.
+- Workflow 1 now uses the `decontamination.path` and
+  `download.contaminant.genomes` settings. Both were ignored before.
+- The contaminant database is controlled by the new
+  `overwrite.contaminant.database` setting, so a new read run no longer
+  downloads every contaminant genome again.
+
+### Bug fixes
+
+- `mergePairedEndReads()` no longer fails with a missing argument error when the
+  first search for a lane returns no files.
+- `removeDuplicateReads()` passes `--dup_calc_accuracy` to fastp correctly. The
+  flag was malformed, so the setting had no effect.
+- Workflow 1 passes the Dropbox token to `dropboxDownload()` and no longer calls
+  the `rdrop2` package, which is not a dependency.
+- `dropboxDownload()` treats a lane as complete only when both read files are
+  present, so a download that stopped between the two mates is finished.
+- `assessCaptureEfficiency()` no longer fails when every sample is skipped.
+- Sample matching uses fixed strings and a name separator, so `Sample1` no
+  longer matches `Sample10`, and a sample name that holds a regular expression
+  character is safe.
+- All external commands are quoted, so a path that holds a space works.
+
+### Improvements
+
+- Every external command is checked before the first sample is processed, and a
+  failure now stops the run with the command and its exit status.
+- Read counts come from the fastp JSON report and from samtools instead of a
+  second pass over each fastq file with gzip.
+- `removeContamination()` maps, filters, counts, and writes the clean reads in
+  one streaming pass. It no longer sorts by coordinate or keeps a BAM file.
+- Resuming skips only the lanes that are complete. An interrupted lane is
+  processed again instead of being skipped for good.
+- fastp writes its HTML and JSON reports straight into `logs/sample_logs`. The
+  JSON report is kept for tools such as MultiQC.
+- `createContaminantDB()` downloads each genome once, checks that every download
+  is FASTA, and continues an interrupted database.
+- `sraDownload()` reads the ENA file report for the true file paths and their
+  MD5 sums, so runs with an unusual file layout work and every download is
+  verified.
+- `fastqStats()` counts the read files in parallel and accepts uncompressed
+  fastq files.
+- `organizeReads()` can link the reads instead of copying them.
+- `mergePairedEndReads()` records the number of merged reads.
+
 # PhyloProcessR 1.0.0
 
 ## Initial public release
@@ -15,5 +77,7 @@
 - Adds a redistributable seven-sample laptop example with single- and multilane
   libraries, a reduced 40-marker target panel, expected outputs, and provenance
   records.
+- Adds versioned installation, configuration, workflow, assessment, and
+  legacy-data tutorials in `docs/tutorials/`.
 - Adds automated `testthat` regression coverage and GitHub Actions package
   checks.

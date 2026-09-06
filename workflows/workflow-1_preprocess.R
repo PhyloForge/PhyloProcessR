@@ -15,14 +15,13 @@ setwd(working.directory)
 ##################################################################################################
 
 #Begins by creating processed read directory
-dir.create(processed.reads)
+dir.create(processed.reads, showWarnings = FALSE)
 
 if (dropbox.download == TRUE){
-  #Authorizes token
-  rdrop2::drop_auth(rdstoken = dropbox.token)
-  #Run download function
+  #Run download function. The token file is read by the function itself.
   dropboxDownload(sample.spreadsheet = sample.file,
                   dropbox.directory = dropbox.directory,
+                  dropbox.token = dropbox.token,
                   output.directory = paste0(processed.reads, "/raw-reads"),
                   overwrite = overwrite,
                   skip.not.found = skip.not.found)
@@ -55,16 +54,16 @@ if (sra.download == TRUE){
 if (dropbox.download == TRUE && sra.download == TRUE) {
   combined.rename = rbind(read.csv("file_rename_dropbox.csv"),
                           read.csv("file_rename_sra.csv"))
-  write.csv(combined.rename, "file_rename_combined.csv",
-            row.names = FALSE, quote = FALSE)
+  write.csv(combined.rename, "file_rename_combined.csv", row.names = FALSE)
   sample.file = "file_rename_combined.csv"
 }
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
   organizeReads(read.directory = read.directory,
-                output.dir = paste0(processed.reads, "/organized-reads"),
+                output.directory = paste0(processed.reads, "/organized-reads"),
                 rename.file = sample.file,
+                link.reads = link.reads,
                 overwrite = overwrite)
   input.reads = paste0(processed.reads, "/organized-reads")
 } else {input.reads = read.directory }
@@ -72,7 +71,7 @@ if (organize.reads == TRUE) {
 if (summary.fastq == TRUE){
   fastqStats(read.directory = input.reads,
              output.name = "fastq-stats",
-             read.length = 150,
+             read.length = read.length,
              threads = threads,
              mem = memory,
              overwrite = overwrite)
@@ -81,7 +80,7 @@ if (summary.fastq == TRUE){
 # Quick scan of raw reads against the target probe set to flag poor samples early
 if (assess.capture == TRUE){
   assessCaptureEfficiency(input.reads = input.reads,
-                          output.directory = "sample-capture-assessment",
+                          output.directory = capture.directory,
                           target.fasta = target.fasta,
                           bwa.path = bwa.path,
                           samtools.path = samtools.path,
@@ -103,7 +102,7 @@ if (fastp.complete == TRUE) {
   input.reads = paste0(processed.reads, "/cleaned-reads")
 }
 
-if (remove.adaptors == TRUE & fastp.complete == FALSE) {
+if (remove.adaptors == TRUE && fastp.complete == FALSE) {
   removeAdaptors(input.reads = input.reads,
                  output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
                  fastp.path = fastp.path,
@@ -114,8 +113,8 @@ if (remove.adaptors == TRUE & fastp.complete == FALSE) {
   input.reads = paste0(processed.reads, "/adaptor-removed-reads")
 }
 
-# Runs read error correction
-if (remove.duplicate.reads == TRUE & fastp.complete == FALSE) {
+# Removes exact PCR duplicates
+if (remove.duplicate.reads == TRUE && fastp.complete == FALSE) {
   removeDuplicateReads(input.reads = input.reads,
                       output.directory = paste0(processed.reads, "/deduped-reads"),
                       fastp.path = fastp.path,
@@ -127,7 +126,7 @@ if (remove.duplicate.reads == TRUE & fastp.complete == FALSE) {
 }
 
 # Runs read error correction
-if (error.correction == TRUE & fastp.complete == FALSE) {
+if (error.correction == TRUE && fastp.complete == FALSE) {
   readErrorCorrection(input.reads = input.reads,
                       output.directory = paste0(processed.reads, "/error-corrected-reads"),
                       fastp.path = fastp.path,
@@ -138,8 +137,8 @@ if (error.correction == TRUE & fastp.complete == FALSE) {
   input.reads = paste0(processed.reads, "/error-corrected-reads")
 }
 
-# Normalizes reads
-if (quality.trim.reads == TRUE & fastp.complete == FALSE) {
+# Trims low quality read ends
+if (quality.trim.reads == TRUE && fastp.complete == FALSE) {
   qualityTrimReads(input.reads = input.reads,
                    output.directory = paste0(processed.reads, "/quality-trimmed-reads"),
                    fastp.path = fastp.path,
@@ -152,23 +151,31 @@ if (quality.trim.reads == TRUE & fastp.complete == FALSE) {
 
 #Runs decontamination of reads
 if (decontamination == TRUE){
-  #Creates the database by downloading
-  createContaminantDB(decontamination.list = contaminant.genome.list,
-                      output.directory = "contaminant-references",
-                      include.univec = include.univec,
-                      overwrite = overwrite)
+  #Downloads the contaminant genomes, or uses a local set of genomes
+  if (download.contaminant.genomes == TRUE){
+    createContaminantDB(decontamination.list = contaminant.genome.list,
+                        output.directory = "contaminant-references",
+                        include.univec = include.univec,
+                        overwrite = overwrite.contaminant.database)
+    contaminant.references = "contaminant-references"
+  } else {
+    if (is.null(decontamination.path) == TRUE){
+      stop("Set decontamination.path to a local set of contaminant genomes, or set download.contaminant.genomes = TRUE.")
+    }
+    contaminant.references = decontamination.path
+  }
 
   ## remove external contamination
   removeContamination(input.reads = input.reads,
                       output.directory = paste0(processed.reads, "/decontaminated-reads"),
-                      decontamination.path = "contaminant-references",
+                      decontamination.path = contaminant.references,
                       map.match = decontamination.match,
                       samtools.path = samtools.path,
                       bwa.path = bwa.path,
                       threads = threads,
                       mem = memory,
                       overwrite = overwrite,
-                      overwrite.reference = overwrite,
+                      overwrite.reference = overwrite.contaminant.database,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/decontaminated-reads")
 }
@@ -184,4 +191,4 @@ if (merge.pe.reads == TRUE){
                       overwrite = overwrite,
                       quiet = quiet)
   input.reads = paste0(processed.reads, "/pe-merged-reads")
-} #end decontamination
+} #end merge.pe.reads if

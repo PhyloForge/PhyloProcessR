@@ -9,4 +9,5 @@
 ^logs$
 ^wiki$
 ^docs$
+^paper$
 ^examples/laptop-example$

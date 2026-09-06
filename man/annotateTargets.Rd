@@ -16,6 +16,8 @@ annotateTargets(
   threads = 1,
   memory = 1,
   blast.path = NULL,
+  last.path = NULL,
+  search.method = c("last", "blast"),
   cdhit.path = NULL,
   overwrite = FALSE,
   quiet = TRUE
@@ -54,6 +56,16 @@ best-scoring contig is selected. Default FALSE.}
 \item{blast.path}{path to the directory containing BLAST executables. If NULL, BLAST
 tools are expected to be on the system PATH.}
 
+\item{last.path}{path to the directory containing \code{lastdb} and
+\code{lastal}. Only needed when \code{search.method = "last"}. If NULL the
+programs must be on the system PATH.}
+
+\item{search.method}{which program matches the target markers to the contigs.
+\code{"last"} (default) uses LAST, which matches a contig that is up to
+about 35 percent divergent from its target. \code{"blast"} uses the
+previous \code{blastn dc-megablast} search, which loses a contig past about
+25 percent divergence. Numbers in HANDOFF.md.}
+
 \item{cdhit.path}{path to the directory containing the CD-HIT-EST executable. If NULL,
 CD-HIT-EST is expected to be on the system PATH.}
 
@@ -85,4 +97,12 @@ contigs for each sample are saved as a per-sample FASTA file in \code{output.dir
 A combined FASTA file suitable for downstream alignment (named
 \code{alignment.contig.name_to-align.fa}) and a summary CSV are written to the working
 directory.
+}
+\details{
+The structural curation moved to \code{curateTargetContigs}, which
+runs at the end of workflow 2. That function joins the fragments of one
+target and cuts apart a contig that spans more than one target, before the
+variant caller maps reads to the contigs. This function keeps the paralog
+policy, the sample naming, and the alignment output. Give it contigs that
+\code{curateTargetContigs} has already curated.
 }

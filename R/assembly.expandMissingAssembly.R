@@ -21,18 +21,21 @@
 #'
 #' @param mapping.reads name of the subdirectory within \code{read.directory}
 #'   that contains the per-sample read folders to use for Phase 2 read mapping.
-#'   Should be paired (non-merged) reads. Common choices: \code{"decontaminated-reads"}
-#'   (default), \code{"cleaned-reads"}, \code{"pe-merged-reads"}. Using
-#'   pre-merged reads is not recommended for mapping as HISAT2 expects paired
-#'   input.
+#'   Must be paired (non-merged) reads. Common choices:
+#'   \code{"decontaminated-reads"} (default), \code{"cleaned-reads"}. All read
+#'   pairs in the sample folder are mapped, so multi-lane samples are handled.
+#'   Merged reads cannot be used because HISAT2 expects paired input.
 #'
 #' @param reference path to the FASTA file of reference/target sequences used
 #'   for BLAST matching and HISAT2 mapping.
 #'
-#' @param output.directory path to the directory where per-sample working files
-#'   and the final expanded assemblies will be written. Final assemblies are
-#'   saved to \code{output.directory/expanded-assemblies/}. Default:
-#'   \code{"expand-missing-assembly"}.
+#' @param output.directory path to the directory where the per-sample working
+#'   files are written. Default: \code{"expand-missing-assembly"}.
+#'
+#' @param expanded.directory path to the directory where the final expanded
+#'   assemblies are written, one \code{<sample>.fa} file per sample. If
+#'   \code{NULL} they are written to
+#'   \code{output.directory/expanded-assemblies/}. Default: \code{NULL}.
 #'
 #' @param min.match.percent minimum BLAST percent identity required to accept a
 #'   contig-to-target match. Default: \code{60}.
@@ -57,6 +60,12 @@
 #'   against the original reference sequences since no cross-sample contig
 #'   exists. This pass can be time-consuming for large datasets. Default:
 #'   \code{FALSE}.
+#'
+#' @param mismatch.corrector logical; if \code{TRUE} passes \code{--careful} to
+#'   SPAdes when the recovered reads are assembled. Default: \code{TRUE}.
+#'
+#' @param kmer.values integer vector of k-mer sizes passed to SPAdes when the
+#'   recovered reads are assembled. Default: \code{c(33, 55, 77, 99, 127)}.
 #'
 #' @param memory RAM in GB to pass to SPAdes and fastp. Default: \code{8}.
 #'
@@ -89,7 +98,9 @@
 #'   Default: \code{TRUE}.
 #'
 #' @return Invisibly returns nothing. Expanded assemblies are saved as
-#'   \code{output.directory/expanded-assemblies/<sample>.fa}.
+#'   \code{expanded.directory/<sample>.fa}. Newly assembled
+#'   contigs are renamed to their matched target, so the expanded assembly uses
+#'   the same contig names as the input assembly.
 #'
 #' @export
 
@@ -98,11 +109,14 @@ expandMissingAssembly = function(assembly.directory = NULL,
                                  mapping.reads = "decontaminated-reads",
                                  reference = NULL,
                                  output.directory = "expand-missing-assembly",
+                                 expanded.directory = NULL,
                                  min.match.percent = 60,
                                  min.match.length = 100,
                                  min.match.coverage = 35,
                                  phase2.reference = c("contig", "reference"),
                                  recover.all.missing = FALSE,
+                                 mismatch.corrector = TRUE,
+                                 kmer.values = c(33, 55, 77, 99, 127),
                                  memory = 8,
                                  threads = 1,
                                  spades.path = NULL,
@@ -165,15 +179,30 @@ expandMissingAssembly = function(assembly.directory = NULL,
          "\n  Check that mapping.reads matches a subdirectory of read.directory.")
   }
 
-  # Output directories
-  expanded.dir = paste0(output.directory, "/expanded-assemblies")
+  # Output directories. The finished assemblies can be placed outside the working
+  # directory, so they can join the numbered contig directories.
+  expanded.dir = if (is.null(expanded.directory)) {
+    paste0(output.directory, "/expanded-assemblies")
+  } else {
+    expanded.directory
+  }
   if (!dir.exists(output.directory)) dir.create(output.directory, recursive = TRUE)
-  if (!dir.exists(expanded.dir))     dir.create(expanded.dir)
+  if (!dir.exists(expanded.dir))     dir.create(expanded.dir, recursive = TRUE)
 
-  file.names = list.files(assembly.directory)
+  # Only FASTA files are samples. Hidden files and other output are ignored.
+  fasta.pattern = "\\.fa$|\\.fas$|\\.fasta$|\\.fna$"
+  file.names = list.files(assembly.directory, pattern = fasta.pattern)
   read.sets  = list.files(actual.read.dir)
 
   if (length(file.names) == 0) stop("No assembly files found in assembly.directory.")
+
+  # Writes the contigs that already matched a target. Used whenever no new contig
+  # is added for a sample.
+  saveOriginals = function(sample.name, sample.dir, save.file) {
+    found.contigs = Biostrings::readDNAStringSet(
+      paste0(sample.dir, "/", sample.name, "_matching-contigs.fa"))
+    Biostrings::writeXStringSet(found.contigs, save.file)
+  }
 
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
               "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
@@ -183,8 +212,8 @@ expandMissingAssembly = function(assembly.directory = NULL,
   ###############################################################################
   db.dir = paste0(output.directory, "/blast_ref_db")
   if (!dir.exists(db.dir)) dir.create(db.dir)
-  system(paste0(blast.path, "makeblastdb -in ", reference,
-                " -parse_seqids -dbtype nucl -out ", db.dir, "/nucl-blast_db"),
+  system(paste0(blast.path, "makeblastdb -in ", shQuote(reference),
+                " -parse_seqids -dbtype nucl -out ", shQuote(paste0(db.dir, "/nucl-blast_db"))),
          ignore.stdout = quiet, ignore.stderr = quiet)
 
   ###############################################################################
@@ -193,9 +222,9 @@ expandMissingAssembly = function(assembly.directory = NULL,
   parallel::mclapply(seq_along(file.names), function(i) {
   tryCatch({
 
-    sample      = gsub("\\..*$", "", file.names[i])
+    sample      = gsub(fasta.pattern, "", file.names[i])
     species.dir = paste0(output.directory, "/", sample)
-    if (!dir.exists(species.dir)) dir.create(species.dir)
+    if (!dir.exists(species.dir)) dir.create(species.dir, recursive = TRUE)
 
     # Skip if already done
     if (overwrite == FALSE &&
@@ -207,9 +236,10 @@ expandMissingAssembly = function(assembly.directory = NULL,
     # BLAST assembly against shared reference DB
     blast.out = paste0(species.dir, "/target-blast-match.txt")
     system(paste0(
-      blast.path, "blastn -task dc-megablast -db ", db.dir, "/nucl-blast_db -evalue 0.001",
-      " -query ", assembly.directory, "/", file.names[i],
-      " -out ", blast.out,
+      blast.path, "blastn -task dc-megablast -db ", shQuote(paste0(db.dir, "/nucl-blast_db")),
+      " -evalue 0.001",
+      " -query ", shQuote(paste0(assembly.directory, "/", file.names[i])),
+      " -out ", shQuote(blast.out),
       " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend",
       " sstart send evalue bitscore qlen slen gaps\"",
       " -num_threads 1"
@@ -223,7 +253,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     match.data = data.table::fread(blast.out, sep = "\t", header = FALSE,
                                    stringsAsFactors = FALSE)
     data.table::setnames(match.data, headers)
-    system(paste0("rm -f ", blast.out))
+    unlink(blast.out)
 
     # Filter by identity, length, and coverage
     filt.data = match.data[match.data$matches > min.match.length, ]
@@ -235,9 +265,12 @@ expandMissingAssembly = function(assembly.directory = NULL,
       return(NULL)
     }
 
-    data.table::setorder(filt.data, qName, tName, -pident, -bitscore, evalue)
+    # Bitscore comes before identity so a long strong hit beats a short exact one
+    data.table::setorder(filt.data, qName, tName, -bitscore, -pident, evalue)
 
     sample.contigs = Biostrings::readDNAStringSet(paste0(assembly.directory, "/", file.names[i]))
+    # BLAST reports the first word of the header, so the names are cut to match
+    names(sample.contigs) = gsub(" .*", "", names(sample.contigs))
     match.contigs  = sample.contigs[names(sample.contigs) %in% filt.data$qName]
 
     Biostrings::writeXStringSet(match.contigs,
@@ -257,10 +290,12 @@ expandMissingAssembly = function(assembly.directory = NULL,
   ###############################################################################
   ## Cross-sample deduplication: best contig per target across all samples
   ###############################################################################
-  all.matches = Biostrings::DNAStringSet()
+  # Each sample is collected once and joined at the end. Growing the set one
+  # contig at a time is quadratic on large datasets.
+  match.list = vector("list", length(file.names))
 
   for (i in seq_along(file.names)) {
-    sample      = gsub("\\..*$", "", file.names[i])
+    sample      = gsub(fasta.pattern, "", file.names[i])
     species.dir = paste0(output.directory, "/", sample)
     match.file  = paste0(species.dir, "/", sample, "_matching-contigs.fa")
     blast.file  = paste0(species.dir, "/filtered-blast-match.txt")
@@ -271,22 +306,25 @@ expandMissingAssembly = function(assembly.directory = NULL,
     filt.data     = read.table(blast.file, sep = "\t", header = TRUE,
                                stringsAsFactors = FALSE)
 
-    for (j in seq_len(nrow(filt.data))) {
-      temp.match = match.contigs[names(match.contigs) %in% filt.data$qName[j]]
-      if (length(temp.match) == 0) next
-      names(temp.match) = filt.data$tName[j]
-      all.matches = append(all.matches, temp.match)
-    }
+    keep.index = match(filt.data$qName, names(match.contigs))
+    filt.data  = filt.data[!is.na(keep.index), ]
+    keep.index = keep.index[!is.na(keep.index)]
+    if (length(keep.index) == 0) next
+
+    temp.match = match.contigs[keep.index]
+    names(temp.match) = filt.data$tName
+    match.list[[i]] = temp.match
   }
 
-  # Keep longest contig per target name
-  dup.names  = unique(names(all.matches)[duplicated(names(all.matches))])
-  final.save = all.matches[!names(all.matches) %in% dup.names]
+  match.list  = match.list[!vapply(match.list, is.null, logical(1))]
+  all.matches = if (length(match.list) == 0) Biostrings::DNAStringSet() else do.call(c, match.list)
 
-  for (j in seq_along(dup.names)) {
-    dup.contigs = all.matches[names(all.matches) %in% dup.names[j]]
-    best        = dup.contigs[Biostrings::width(dup.contigs) == max(Biostrings::width(dup.contigs))][1]
-    final.save  = append(final.save, best)
+  # Keep longest contig per target name
+  if (length(all.matches) > 0) {
+    all.matches = all.matches[order(names(all.matches), -Biostrings::width(all.matches))]
+    final.save  = all.matches[!duplicated(names(all.matches))]
+  } else {
+    final.save = all.matches
   }
 
   Biostrings::writeXStringSet(final.save,
@@ -294,7 +332,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
   if (length(final.save) == 0 && recover.all.missing == FALSE) {
     message("No cross-sample matches found. Cannot proceed to Phase 2.")
-    system(paste0("rm -rf ", db.dir))
+    unlink(db.dir, recursive = TRUE)
     return(invisible(NULL))
   }
 
@@ -311,7 +349,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
   for (i in seq_along(file.names)) {
   tryCatch({
 
-    sample      = gsub("\\..*$", "", file.names[i])
+    sample      = gsub(fasta.pattern, "", file.names[i])
     species.dir = paste0(output.directory, "/", sample)
     out.file    = paste0(expanded.dir, "/", sample, ".fa")
 
@@ -356,9 +394,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     # If all targets were already found, just save originals
     if (length(mapping.ref) == 0) {
       print(paste0(sample, ": all targets already assembled -- saving originals."))
-      found.contigs = Biostrings::readDNAStringSet(
-        paste0(species.dir, "/", sample, "_matching-contigs.fa"))
-      Biostrings::writeXStringSet(found.contigs, out.file)
+      saveOriginals(sample, species.dir, out.file)
       next
     }
 
@@ -373,64 +409,87 @@ expandMissingAssembly = function(assembly.directory = NULL,
     }
     set.reads = list.files(paste0(actual.read.dir, "/", input.reads),
                            full.names = TRUE)
+    set.reads = set.reads[grep("fastq|fq", basename(set.reads))]
+
+    # Reads are selected by name, not by position, so every lane is mapped and an
+    # extra file in the folder cannot shift the pair.
+    read1 = sort(set.reads[grep("_1\\.f|-1\\.f|_R1[_.-]|-R1[_.-]|READ1", basename(set.reads))])
+    read2 = sort(set.reads[grep("_2\\.f|-2\\.f|_R2[_.-]|-R2[_.-]|READ2", basename(set.reads))])
+
+    if (length(read1) == 0 || length(read1) != length(read2)) {
+      warning(sample, ": found ", length(read1), " read1 and ", length(read2),
+              " read2 files in ", mapping.reads, ". Paired reads are required. Skipping.")
+      next
+    }
 
     ##########
     # Build HISAT2 index from missing targets (per-sample, unavoidable)
     index.dir = paste0(species.dir, "/index")
-    if (!dir.exists(index.dir)) dir.create(index.dir)
-    system(paste0(hisat2.path, "hisat2-build -f ", missing.ref, " ",
-                  index.dir, "/reference"),
+    if (!dir.exists(index.dir)) dir.create(index.dir, recursive = TRUE)
+    system(paste0(hisat2.path, "hisat2-build -f ", shQuote(missing.ref), " ",
+                  shQuote(paste0(index.dir, "/reference"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
-    # Map reads with permissive settings for divergent sequences
-    system(paste0(hisat2.path, "hisat2 -q -x ", index.dir, "/reference",
-                  " -1 ", set.reads[1], " -2 ", set.reads[2],
-                  " -S ", species.dir, "/mapped_reads.sam",
+    # Map reads with permissive settings for divergent sequences. HISAT2 takes a
+    # comma separated list, so all lanes are mapped in one run.
+    system(paste0(hisat2.path, "hisat2 -q -x ", shQuote(paste0(index.dir, "/reference")),
+                  " -1 ", paste(shQuote(read1), collapse = ","),
+                  " -2 ", paste(shQuote(read2), collapse = ","),
+                  " -S ", shQuote(paste0(species.dir, "/mapped_reads.sam")),
                   " --mp 1,0 --sp 1,0 --score-min L,0.0,-0.3",
                   " --threads ", threads),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
     # Extract: both mapped, R1-mapped/R2-unmapped, R2-mapped/R1-unmapped
+    sam.file = paste0(species.dir, "/mapped_reads.sam")
     system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -F 4 ", species.dir, "/mapped_reads.sam",
-                  " > ", species.dir, "/mapped_all.bam"),
+                  " -b -F 4 ", shQuote(sam.file),
+                  " > ", shQuote(paste0(species.dir, "/mapped_all.bam"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
     system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -f 4 -F 264 ", species.dir, "/mapped_reads.sam",
-                  " > ", species.dir, "/mapped1.bam"),
+                  " -b -f 4 -F 264 ", shQuote(sam.file),
+                  " > ", shQuote(paste0(species.dir, "/mapped1.bam"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
     system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -f 8 -F 260 ", species.dir, "/mapped_reads.sam",
-                  " > ", species.dir, "/mapped2.bam"),
+                  " -b -f 8 -F 260 ", shQuote(sam.file),
+                  " > ", shQuote(paste0(species.dir, "/mapped2.bam"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
     system(paste0(samtools.path, "samtools merge -f -@ ", threads, " ",
-                  species.dir, "/mapped_combined.bam ",
-                  species.dir, "/mapped_all.bam ",
-                  species.dir, "/mapped1.bam ",
-                  species.dir, "/mapped2.bam"),
+                  shQuote(paste0(species.dir, "/mapped_combined.bam")), " ",
+                  shQuote(paste0(species.dir, "/mapped_all.bam")), " ",
+                  shQuote(paste0(species.dir, "/mapped1.bam")), " ",
+                  shQuote(paste0(species.dir, "/mapped2.bam"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
     system(paste0(samtools.path, "samtools sort -n -@ ", threads, " ",
-                  species.dir, "/mapped_combined.bam",
-                  " -o ", species.dir, "/mapped_sort.bam"),
+                  shQuote(paste0(species.dir, "/mapped_combined.bam")),
+                  " -o ", shQuote(paste0(species.dir, "/mapped_sort.bam"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
-    system(paste0("rm -f ",
-                  species.dir, "/mapped_reads.sam ",
-                  species.dir, "/mapped_all.bam ",
-                  species.dir, "/mapped1.bam ",
-                  species.dir, "/mapped2.bam ",
-                  species.dir, "/mapped_combined.bam"))
+    unlink(paste0(species.dir, c("/mapped_reads.sam", "/mapped_all.bam",
+                                 "/mapped1.bam", "/mapped2.bam",
+                                 "/mapped_combined.bam")))
 
     # Extract FASTQ from sorted BAM
     reads.dir = paste0(species.dir, "/temp_reads/sample")
     dir.create(reads.dir, recursive = TRUE, showWarnings = FALSE)
     system(paste0(samtools.path, "samtools fastq -@ ", threads, " ",
-                  species.dir, "/mapped_sort.bam",
-                  " -1 ", reads.dir, "/sample_READ1.fastq.gz",
-                  " -2 ", reads.dir, "/sample_READ2.fastq.gz"),
+                  shQuote(paste0(species.dir, "/mapped_sort.bam")),
+                  " -1 ", shQuote(paste0(reads.dir, "/sample_READ1.fastq.gz")),
+                  " -2 ", shQuote(paste0(reads.dir, "/sample_READ2.fastq.gz"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
-    system(paste0("rm -f ", species.dir, "/mapped_sort.bam"))
+    unlink(paste0(species.dir, "/mapped_sort.bam"))
+
+    # An empty gzip file is about 20 bytes. Stop here when no read mapped, rather
+    # than passing empty files to fastp and SPAdes.
+    mapped.reads = paste0(reads.dir, c("/sample_READ1.fastq.gz", "/sample_READ2.fastq.gz"))
+    if (any(file.exists(mapped.reads) == FALSE) || min(file.size(mapped.reads)) < 100) {
+      print(paste0(sample, ": no reads mapped to the missing targets -- saving originals."))
+      saveOriginals(sample, species.dir, out.file)
+      unlink(paste0(species.dir, "/temp_reads"), recursive = TRUE)
+      unlink(index.dir, recursive = TRUE)
+      next
+    }
 
     # Merge paired-end reads with fastp before assembly
     PhyloProcessR::mergePairedEndReads(
@@ -446,9 +505,9 @@ expandMissingAssembly = function(assembly.directory = NULL,
     merged.file = paste0(species.dir,
                          "/temp-merged-reads/sample/sample_READ3.fastq.gz")
     if (file.exists(merged.file) && file.size(merged.file) == 0) {
-      system(paste0("rm -f ", merged.file))
+      unlink(merged.file)
     }
-    system(paste0("rm -rf ", species.dir, "/temp_reads"))
+    unlink(paste0(species.dir, "/temp_reads"), recursive = TRUE)
 
     temp.read.path = list.files(paste0(species.dir, "/temp-merged-reads/sample"),
                                 full.names = TRUE)
@@ -457,25 +516,23 @@ expandMissingAssembly = function(assembly.directory = NULL,
     spades.contigs = PhyloProcessR::runSpades(
       read.paths          = temp.read.path,
       full.path.spades    = spades.path,
-      mismatch.corrector  = TRUE,
+      mismatch.corrector  = mismatch.corrector,
       isolate             = FALSE,
+      kmer.values         = kmer.values,
       quiet               = quiet,
       read.contigs        = TRUE,
+      clean               = TRUE,
       threads             = threads,
       memory              = memory
     )
 
-    system(paste0("rm -rf ",
-                  species.dir, "/temp-merged-reads ",
-                  index.dir))
+    unlink(c(paste0(species.dir, "/temp-merged-reads"), index.dir), recursive = TRUE)
 
     spades.contigs = spades.contigs[Biostrings::width(spades.contigs) >= 100]
 
     if (length(spades.contigs) == 0) {
       print(paste0(sample, ": SPAdes produced no contigs -- saving original matches only."))
-      found.contigs = Biostrings::readDNAStringSet(
-        paste0(species.dir, "/", sample, "_matching-contigs.fa"))
-      Biostrings::writeXStringSet(found.contigs, out.file)
+      saveOriginals(sample, species.dir, out.file)
       next
     }
 
@@ -483,35 +540,31 @@ expandMissingAssembly = function(assembly.directory = NULL,
     contigs.file = paste0(species.dir, "/blast_contigs.fa")
     Biostrings::writeXStringSet(spades.contigs, contigs.file)
 
-    system(paste0(blast.path, "makeblastdb -in ", missing.ref,
-                  " -parse_seqids -dbtype nucl -out ", species.dir, "/blast_db"),
+    system(paste0(blast.path, "makeblastdb -in ", shQuote(missing.ref),
+                  " -parse_seqids -dbtype nucl -out ", shQuote(paste0(species.dir, "/blast_db"))),
            ignore.stdout = quiet, ignore.stderr = quiet)
     system(paste0(blast.path, "blastn -task dc-megablast",
-                  " -db ", species.dir, "/blast_db",
-                  " -query ", contigs.file,
-                  " -out ", species.dir, "/blast_match.txt",
+                  " -db ", shQuote(paste0(species.dir, "/blast_db")),
+                  " -query ", shQuote(contigs.file),
+                  " -out ", shQuote(paste0(species.dir, "/blast_match.txt")),
                   " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend",
                   " sstart send evalue bitscore qlen slen gaps\"",
                   " -num_threads ", threads),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
-    system(paste0("rm -f ",
-                  species.dir, "/blast_db* ",
-                  contigs.file))
+    unlink(c(list.files(species.dir, pattern = "^blast_db", full.names = TRUE), contigs.file))
 
     blast.out2 = paste0(species.dir, "/blast_match.txt")
     if (!file.exists(blast.out2) || file.size(blast.out2) == 0) {
       print(paste0(sample, ": no new contigs matched missing targets -- saving originals."))
-      found.contigs = Biostrings::readDNAStringSet(
-        paste0(species.dir, "/", sample, "_matching-contigs.fa"))
-      Biostrings::writeXStringSet(found.contigs, out.file)
-      system(paste0("rm -f ", blast.out2))
+      saveOriginals(sample, species.dir, out.file)
+      unlink(blast.out2)
       next
     }
 
     match.data2 = data.table::fread(blast.out2, sep = "\t", header = FALSE,
                                     stringsAsFactors = FALSE)
-    system(paste0("rm -f ", blast.out2))
+    unlink(blast.out2)
     data.table::setnames(match.data2, headers)
 
     filt.data2 = match.data2[match.data2$matches > min.match.length, ]
@@ -520,23 +573,39 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     if (nrow(filt.data2) == 0) {
       print(paste0(sample, ": no new contigs passed filters -- saving originals."))
-      found.contigs = Biostrings::readDNAStringSet(
-        paste0(species.dir, "/", sample, "_matching-contigs.fa"))
-      Biostrings::writeXStringSet(found.contigs, out.file)
+      saveOriginals(sample, species.dir, out.file)
       next
     }
 
-    data.table::setorder(filt.data2, qName, tName, -pident, -bitscore, evalue)
-    new.contigs = spades.contigs[names(spades.contigs) %in% filt.data2$qName]
+    # Bitscore comes before identity so a long strong hit beats a short exact one
+    data.table::setorder(filt.data2, qName, tName, -bitscore, -pident, evalue)
+
+    # Keeps the best hit for each new contig and renames the contig to its target.
+    # The expanded assembly then uses the same contig names as the input assembly.
+    best.data2 = filt.data2[duplicated(filt.data2$qName) == FALSE, ]
+    keep.index = match(best.data2$qName, names(spades.contigs))
+    best.data2 = best.data2[!is.na(keep.index), ]
+    keep.index = keep.index[!is.na(keep.index)]
+
+    if (length(keep.index) == 0) {
+      print(paste0(sample, ": no new contigs passed filters -- saving originals."))
+      saveOriginals(sample, species.dir, out.file)
+      next
+    }
+
+    new.contigs = spades.contigs[keep.index]
+    names(new.contigs) = best.data2$tName
 
     write.table(filt.data2,
                 file = paste0(species.dir, "/found-missing-blast-match.txt"),
                 row.names = FALSE, quote = FALSE, sep = "\t")
 
-    # Combine newly assembled + original matching contigs
+    # Combine original matching contigs + newly assembled. The original contigs
+    # come first so they keep their name if a target is recovered twice.
     found.contigs  = Biostrings::readDNAStringSet(
       paste0(species.dir, "/", sample, "_matching-contigs.fa"))
-    output.contigs = append(new.contigs, found.contigs)
+    output.contigs = append(found.contigs, new.contigs)
+    names(output.contigs) = make.unique(names(output.contigs), sep = "_")
 
     Biostrings::writeXStringSet(output.contigs, out.file)
 
@@ -544,7 +613,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
                  length(unique(found.data$tName)), " original targets + ",
                  length(new.contigs), " newly assembled."))
 
-    rm(spades.contigs, match.data2, filt.data2, new.contigs,
+    rm(spades.contigs, match.data2, filt.data2, best.data2, new.contigs,
        found.contigs, output.contigs)
     gc()
 
@@ -554,6 +623,6 @@ expandMissingAssembly = function(assembly.directory = NULL,
   } # end Phase 2 loop
 
   # Clean up shared reference BLAST DB
-  system(paste0("rm -rf ", db.dir))
+  unlink(db.dir, recursive = TRUE)
 
 } # end function

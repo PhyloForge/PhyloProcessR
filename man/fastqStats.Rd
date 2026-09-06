@@ -27,8 +27,7 @@ the top-level directory structure.}
 \item{read.length}{expected read length in base pairs, used to calculate
 megabase pairs (MegaBasePairs = read.length * read.pairs * 2 / 1e6).}
 
-\item{threads}{number of CPU threads (currently reserved; not parallelised
-internally).}
+\item{threads}{number of read files to count at the same time.}
 
 \item{mem}{amount of RAM in GB (currently reserved).}
 
@@ -36,13 +35,17 @@ internally).}
 writing.}
 }
 \value{
-a data frame with columns Sample, Read1_Count, Read2_Count,
+a data frame with columns Sample, Lane, Read1_Count, Read2_Count,
 Read3_Count, Total_Reads, Read_Pairs, Read_Length, MegaBasePairs, and
-Reads_Per_Million. Also written to output.name.csv.
+Reads_Per_Million. Total_Reads counts the two paired mates and excludes
+Read3_Count, which holds merged reads or singletons. Reads_Per_Million is
+the total read count in millions, including Read3_Count, and is used as a
+scaling factor. Results are also written to output.name.csv.
 }
 \description{
-Counts reads in fastq.gz files and computes summary statistics
-for each sample, including per-read-file counts, total reads, read pairs,
-megabase pairs sequenced, and reads per million. Results are written to a
-CSV file and returned as a data frame.
+Counts reads in fastq files and computes summary statistics for
+each sample lane, including per-read-file counts, total reads, read pairs,
+megabase pairs sequenced, and millions of reads. Compressed and
+uncompressed fastq files are both accepted. Results are written to a CSV
+file and returned as a data frame.
 }

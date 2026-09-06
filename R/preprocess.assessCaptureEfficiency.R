@@ -19,25 +19,29 @@
 #' @param target.fasta path to the FASTA file of target probe/marker sequences
 #'   used for sequence capture.
 #'
-#' @param bwa.path system path to the directory containing the \code{bwa}
-#'   executable; NULL searches the system PATH.
+#' @param bwa.path system path to the directory that contains the \code{bwa}
+#'   executable, or the full path to the executable; NULL searches the system
+#'   PATH.
 #'
-#' @param samtools.path system path to the directory containing the
-#'   \code{samtools} executable; NULL searches the system PATH.
+#' @param samtools.path system path to the directory that contains the
+#'   \code{samtools} executable, or the full path to the executable; NULL
+#'   searches the system PATH.
 #'
 #' @param threads number of CPU threads to pass to BWA and samtools.
 #'
-#' @param mem amount of RAM in GB (currently reserved for future use).
+#' @param mem amount of RAM in GB, passed to the samtools sort buffer.
 #'
 #' @param overwrite logical; if TRUE the output directory is deleted and
-#'   recreated before processing. Default: \code{FALSE}.
+#'   recreated before processing. FALSE resumes and skips only the lanes that
+#'   already have a saved result. Default: \code{FALSE}.
 #'
 #' @param quiet logical; if TRUE BWA and samtools screen output is suppressed.
 #'   Default: \code{TRUE}.
 #'
-#' @return invisibly; writes per-sample per-target count CSVs to
-#'   output.directory and a cross-sample summary to
-#'   logs/assessCaptureEfficiency_summary.csv.
+#' @return invisibly returns the summary data frame; writes per-sample
+#'   per-target count CSVs to output.directory and a cross-sample summary to
+#'   logs/assessCaptureEfficiency_summary.csv. Only primary alignments are
+#'   counted, so pctReadsOnTarget cannot go above 100.
 #'
 #' @export
 
@@ -51,81 +55,57 @@ assessCaptureEfficiency = function(input.reads = NULL,
                                    overwrite = FALSE,
                                    quiet = TRUE) {
 
-  # #Debug
-  # setwd("/Users/chutter/Dropbox/Research/0_Github/Test-dataset")
-  # input.reads = "processed-reads/cleaned-reads"
-  # output.directory = "sample-capture-assessment"
-  # target.fasta = "/Users/chutter/Dropbox/Research/0_Github/FrogCap_Files/Probe_Sets/FINAL_marker-seqs_May20-2023.fa"
-  # bwa.path = "/Users/chutter/miniconda3/bin"
-  # samtools.path = "/Users/chutter/miniconda3/bin"
-  # threads = 4
-  # mem = 8
-  # overwrite = TRUE
-  # quiet = TRUE
-
-  # Adds trailing slash to tool paths
-  if (is.null(bwa.path) == FALSE) {
-    b.string = unlist(strsplit(bwa.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bwa.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { bwa.path = "" }
-
-  if (is.null(samtools.path) == FALSE) {
-    b.string = unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { samtools.path = "" }
-
   # Quick checks
   if (is.null(input.reads) == TRUE) { stop("Please provide input reads.") }
+  if (file.exists(input.reads) == FALSE) { stop("Input reads not found.") }
   if (is.null(target.fasta) == TRUE) { stop("Please provide a target FASTA file.") }
   if (file.exists(target.fasta) == FALSE) { stop("Target FASTA file not found.") }
 
+  # Checks that both programs are installed before any sample is processed
+  bwa.command = .toolCommand("bwa", bwa.path)
+  samtools.command = .toolCommand("samtools", samtools.path)
+
   # Sets up output directory
   if (dir.exists(output.directory) == FALSE) {
-    dir.create(output.directory)
+    dir.create(output.directory, recursive = TRUE)
   } else {
-    if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
-    }
+    if (overwrite == TRUE) { .resetDirectory(output.directory) }
   }#end else
 
   # Creates log directories
   if (dir.exists("logs/sample_logs") == FALSE) { dir.create("logs/sample_logs", recursive = TRUE) }
 
-  # Builds BWA index of target FASTA once, shared across all samples
+  #################################################
+  ### Part A: build the target index once
+  #################################################
+  # The index is kept between runs. An earlier version copied and indexed the
+  # probe set again on every call.
   index.path = paste0(output.directory, "/target-index")
-  if (dir.exists(index.path) == FALSE) { dir.create(index.path) }
-  system(paste0("cp ", target.fasta, " ", index.path, "/targets.fa"))
-  system(paste0(bwa.path, "bwa index ", index.path, "/targets.fa"),
-         ignore.stdout = quiet, ignore.stderr = quiet)
+  if (dir.exists(index.path) == FALSE) { dir.create(index.path, recursive = TRUE) }
+  target.copy = paste0(index.path, "/targets.fa")
+
+  if (file.exists(target.copy) == FALSE ||
+      file.exists(paste0(target.copy, ".bwt")) == FALSE ||
+      file.mtime(target.fasta) > file.mtime(target.copy)) {
+    file.copy(target.fasta, target.copy, overwrite = TRUE)
+    .runCommand(paste0(bwa.command, " index ", shQuote(target.copy)),
+                quiet = quiet, task = "bwa index")
+  }
 
   # Count total number of target loci in the reference
   n.targets = as.integer(trimws(
-    system(paste0("grep -c '^>' ", index.path, "/targets.fa"), intern = TRUE)
+    .runCommandOutput(paste0("grep -c '^>' ", shQuote(target.copy)), task = "target counting")
   ))
 
   # Read in sample data
+  input.reads = sub("/+$", "", input.reads)
   reads = list.files(input.reads, recursive = TRUE, full.names = TRUE)
-  sample.names = list.dirs(input.reads, recursive = FALSE, full.names = FALSE)
-
-  if (length(sample.names) == 0) {
-    sample.names = list.files(input.reads, recursive = FALSE, full.names = FALSE)
-    sample.names = unique(gsub("_L00.*", "", sample.names))
-  }
-
-  # Resumes: skip samples already done
-  if (overwrite == FALSE) {
-    done.files = list.files(output.directory)
-    sample.names = sample.names[!sample.names %in% done.files]
-  }
+  read.names = .relativePaths(reads, input.reads)
+  sample.names = .listSampleNames(input.reads)
 
   if (length(sample.names) == 0) { return("No samples remain to analyze.") }
 
-  # Creates the per-lane accumulator (used internally; collapsed to per-sample before saving)
+  # Creates the per-lane accumulator (collapsed to per-sample before saving)
   lane.data = data.frame(Sample = as.character(),
                          readPairs = as.numeric(),
                          mappedReads = as.numeric(),
@@ -133,16 +113,11 @@ assessCaptureEfficiency = function(input.reads = NULL,
                          totalTargets = as.numeric(),
                          stringsAsFactors = FALSE)
 
-  for (i in 1:length(sample.names)) {
+  for (i in seq_along(sample.names)) {
     #################################################
-    ### Part A: prepare for loading and checks
+    ### Part B: prepare for loading and checks
     #################################################
-    sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
-
-    # Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0) { sample.reads = reads[grep(pattern = sample.names[i], x = reads)] }
-
-    sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+    sample.reads = .matchPrefix(reads, read.names, sample.names[i])
 
     # Returns a warning if reads are not found
     if (length(sample.reads) == 0) {
@@ -151,11 +126,12 @@ assessCaptureEfficiency = function(input.reads = NULL,
     }#end if
 
     # Check for empty or near-empty input files (sequencing failures)
-    raw.reads = reads[grep(pattern = sample.names[i], x = reads)]
-    file.sizes = file.info(raw.reads)$size
-    if (any(is.na(file.sizes)) || max(file.sizes, na.rm = TRUE) < 1000) {
+    file.sizes = file.info(sample.reads)$size
+    file.sizes = file.sizes[is.na(file.sizes) == FALSE]
+    if (length(file.sizes) == 0 || max(file.sizes) < 1000) {
+      largest.size = if (length(file.sizes) == 0) 0 else max(file.sizes)
       failure.msg = paste0("Sample failed: input read files are empty or near-empty",
-                           " (max file size: ", max(file.sizes, na.rm = TRUE), " bytes).",
+                           " (max file size: ", largest.size, " bytes).",
                            " This indicates a sequencing or library preparation failure.")
       writeLines(failure.msg, paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt"))
       warning(sample.names[i], " has empty input read files. Skipping.")
@@ -164,51 +140,57 @@ assessCaptureEfficiency = function(input.reads = NULL,
 
     # Creates per-sample output directory
     out.path = paste0(output.directory, "/", sample.names[i])
-    if (file.exists(out.path) == FALSE) { dir.create(out.path) }
+    if (file.exists(out.path) == FALSE) { dir.create(out.path, recursive = TRUE) }
 
-    for (j in 1:length(sample.reads)) {
+    lane.prefixes = .stripReadSuffix(sample.reads)
+
+    for (j in seq_along(lane.prefixes)) {
       #################################################
-      ### Part B: map reads to targets with BWA
+      ### Part C: map reads to targets with BWA
       #################################################
-      lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
+      lane.reads = .matchPrefix(reads, reads, lane.prefixes[j])
+      lane.name = basename(lane.prefixes[j])
 
-      # Checks in case already renamed
-      if (length(lane.reads) == 0) { lane.reads = reads[grep(pattern = sample.reads[j], x = reads)] }
-
-      # Returns a warning if reads are not found
-      if (length(lane.reads) == 0) {
-        warning(sample.reads[j], " does not have any reads present. Skipping.")
-        next
-      }#end if
-
-      lane.name = gsub(".*/", "", sample.reads[j])
-
-      read1 = lane.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", lane.reads)]
-      read2 = lane.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", lane.reads)]
+      read1 = lane.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", basename(lane.reads))]
+      read2 = lane.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", basename(lane.reads))]
 
       if (length(read1) == 0 || length(read2) == 0) {
         warning(lane.name, " read pairs could not be identified. Skipping.")
         next
       }
 
-      # Maps reads to target sequences
-      bam.file = paste0(out.path, "/", lane.name, "_capture.bam")
-      system(paste0(bwa.path, "bwa mem -M -t ", threads, " ",
-                    index.path, "/targets.fa ",
-                    read1[1], " ", read2[1],
-                    " | ", samtools.path, "samtools sort -@", threads, " -O BAM",
-                    " -o ", bam.file, " -"),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      lane.csv = paste0(out.path, "/", lane.name, "_capture-summary.csv")
 
-      system(paste0(samtools.path, "samtools index ", bam.file),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      # Reuses a finished lane so an interrupted run continues where it stopped
+      if (overwrite == FALSE && file.exists(lane.csv) == TRUE) {
+        lane.data = rbind(lane.data, read.csv(lane.csv, stringsAsFactors = FALSE))
+        print(paste0(lane.name, " is already complete. Skipping."))
+        next
+      }
+
+      # Maps reads to target sequences. Secondary and supplementary records are
+      # dropped here, so a read is counted once. Unmapped records are kept, and
+      # they give the read pair total without a second pass over the fastq file.
+      bam.file = paste0(out.path, "/", lane.name, "_capture.bam")
+      .runPipeline(paste0(bwa.command, " mem -M -t ", threads, " ",
+                          shQuote(target.copy), " ",
+                          shQuote(read1[1]), " ", shQuote(read2[1]),
+                          " | ", samtools.command, " view -b -F 0x900 - ",
+                          " | ", samtools.command, " sort -@ ", threads,
+                          " -m ", max(1, floor(mem / max(1, threads))), "G -O BAM",
+                          " -o ", shQuote(bam.file), " -"),
+                   quiet = quiet, task = "bwa capture mapping")
+
+      .runCommand(paste0(samtools.command, " index ", shQuote(bam.file)),
+                  quiet = quiet, task = "samtools index")
 
       #################################################
-      ### Part C: summarize mapping results
+      ### Part D: summarize mapping results
       #################################################
       idx.file = paste0(out.path, "/", lane.name, "_idxstats.txt")
-      system(paste0(samtools.path, "samtools idxstats ", bam.file, " > ", idx.file),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      .runCommand(paste0(samtools.command, " idxstats ", shQuote(bam.file),
+                         " > ", shQuote(idx.file)),
+                  quiet = quiet, task = "samtools idxstats", keep.stdout = TRUE)
 
       idx.data = read.table(idx.file, sep = "\t", header = FALSE,
                             col.names = c("target", "length", "mapped", "unmapped"))
@@ -218,30 +200,34 @@ assessCaptureEfficiency = function(input.reads = NULL,
       write.csv(idx.data, file = paste0(out.path, "/", lane.name, "_per-target-counts.csv"),
                 row.names = FALSE)
 
-      # Calculates summary statistics
-      total.pairs = as.numeric(system(paste0("zcat < ", read1[1], " | echo $((`wc -l`/4))"), intern = TRUE))
-      mapped.reads = sum(idx.data$mapped)
-      targets.hit = sum(idx.data$mapped > 0)
-      pct.targets = round(targets.hit / n.targets * 100, 2)
-      pct.on.target = round(mapped.reads / (total.pairs * 2) * 100, 2)
+      # Calculates summary statistics. The first mate of every primary record
+      # gives the read pair count.
+      total.pairs = as.numeric(.runCommandOutput(
+        paste0(samtools.command, " view -c -f 64 ", shQuote(bam.file)),
+        task = "samtools read counting"))
 
       temp.remove = data.frame(Sample = sample.names[i],
                                readPairs = total.pairs,
-                               mappedReads = mapped.reads,
-                               targetsHit = targets.hit,
+                               mappedReads = sum(idx.data$mapped),
+                               targetsHit = sum(idx.data$mapped > 0),
                                totalTargets = n.targets,
                                stringsAsFactors = FALSE)
 
+      write.csv(temp.remove, file = lane.csv, row.names = FALSE)
       lane.data = rbind(lane.data, temp.remove)
 
       # Removes BAM to save disk space
-      system(paste0("rm ", bam.file, " ", bam.file, ".bai"))
+      unlink(c(bam.file, paste0(bam.file, ".bai")))
 
       print(paste0(lane.name, " capture assessment complete!"))
     }#end j loop
 
     print(paste0(sample.names[i], " Completed capture efficiency assessment!"))
   }#end i loop
+
+  # Stops here when every sample was skipped. aggregate() cannot work on an
+  # empty table.
+  if (nrow(lane.data) == 0) { return("No samples remain to analyze.") }
 
   # Aggregate lane.data to one row per sample:
   #   readPairs and mappedReads are summed across lanes.
@@ -254,15 +240,7 @@ assessCaptureEfficiency = function(input.reads = NULL,
   summary.data$pctTargetsHit    = round(summary.data$targetsHit / summary.data$totalTargets * 100, 2)
   summary.data$pctReadsOnTarget = round(summary.data$mappedReads / (summary.data$readPairs * 2) * 100, 2)
 
-  # Append to the existing summary CSV rather than overwriting it, so the file
-  # accumulates across successive single-sample runs (as in workflow X2).
-  # Any rows for samples in this run are replaced to avoid duplicates on rerun.
-  out.csv = "logs/assessCaptureEfficiency_summary.csv"
-  if (file.exists(out.csv)) {
-    existing = read.csv(out.csv, stringsAsFactors = FALSE)
-    existing = existing[!existing$Sample %in% summary.data$Sample, ]
-    summary.data = rbind(existing, summary.data)
-  }
-  write.csv(summary.data, file = out.csv, row.names = FALSE)
+  .appendSummary(summary.data, "logs/assessCaptureEfficiency_summary.csv")
 
+  return(invisible(summary.data))
 }#end function

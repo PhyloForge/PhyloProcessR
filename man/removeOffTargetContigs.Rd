@@ -9,6 +9,11 @@ removeOffTargetContigs(
   target.markers = NULL,
   output.directory = "target-contigs",
   blast.path = NULL,
+  last.path = NULL,
+  search.method = c("last", "blast"),
+  min.match.length = 60,
+  min.match.percent = 60,
+  min.match.coverage = 30,
   memory = 1,
   threads = 1,
   overwrite = FALSE,
@@ -29,13 +34,32 @@ files will be written. Default: \code{"target-contigs"}.}
 \code{blastn}. If \code{NULL} expected on the system PATH. Default:
 \code{NULL}.}
 
+\item{last.path}{path to the directory containing \code{lastdb} and
+\code{lastal}. Only needed when \code{search.method = "last"}. If
+\code{NULL} the programs must be on the system PATH. Default: \code{NULL}.}
+
+\item{search.method}{which program matches the contigs to the target markers.
+\code{"last"} (default) uses LAST, which finds a contig that is up to about
+35 percent divergent from its target. \code{"blast"} uses the previous
+\code{blastn dc-megablast} search, which loses a contig past about 25
+percent divergence. Numbers in HANDOFF.md.}
+
+\item{min.match.length}{minimum BLAST alignment length (bp) a hit must exceed
+to be accepted. Default: \code{60}.}
+
+\item{min.match.percent}{minimum BLAST percent identity (0-100) required to
+accept a hit. Default: \code{60}.}
+
+\item{min.match.coverage}{minimum percentage of the target length that a
+BLAST hit must cover to be accepted. Default: \code{30}.}
+
 \item{memory}{not currently used; reserved for future use. Default: \code{1}.}
 
 \item{threads}{number of CPU threads passed to \code{blastn}. Default:
 \code{1}.}
 
 \item{overwrite}{logical; if \code{TRUE} the output directory is deleted and
-recreated. Default: \code{FALSE}.}
+recreated and all samples are rerun. Default: \code{FALSE}.}
 
 \item{quiet}{logical; if \code{TRUE} \code{makeblastdb} screen output is
 suppressed. Default: \code{TRUE}.}
@@ -47,12 +71,13 @@ marker names.
 }
 \description{
 Filters each sample's assembly to retain only contigs that have
-a BLAST match to the provided target markers. For each sample a BLAST
-database is built from the target markers and the assembly is queried
-against it (dc-megablast). Hits are filtered by alignment length (>60 bp),
-percent identity (>=0.6), and coverage (>=30\% of the target length).
-Surviving contigs are renamed to match their best target and saved as a
-single FASTA per sample in the output directory. Contigs matching the same
-target in multiple samples are deduplicated by keeping the best-scoring
-contig per target per sample.
+a BLAST match to the provided target markers. One BLAST database is built
+from the target markers and each assembly is queried against it
+(dc-megablast). Hits are filtered by alignment length, percent identity, and
+coverage of the target. Surviving contigs are renamed to match their target
+and saved as a single FASTA per sample in the output directory. When several
+contigs match the same target, each contig is kept once, with its best hit,
+and the duplicate names are made unique with a numeric suffix. Samples that
+already have a FASTA file in the output directory are skipped unless
+\code{overwrite = TRUE}.
 }

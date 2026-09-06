@@ -8,6 +8,7 @@ organizeReads(
   read.directory = NULL,
   output.directory = "organized-reads",
   rename.file = NULL,
+  link.reads = FALSE,
   overwrite = FALSE
 )
 }
@@ -22,8 +23,13 @@ will be saved. A sub-directory is created for each unique sample name.}
 (partial or full file name used to locate the reads) and Sample (the
 desired output sample name).}
 
+\item{link.reads}{logical; if TRUE the reads are hard-linked instead of
+copied, and a symbolic link is used when a hard link is not possible. This
+avoids a second copy of a read set that is often hundreds of gigabytes.
+FALSE copies the files.}
+
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated. Completed samples are skipped when overwrite is FALSE.}
+recreated. Completed lanes are skipped when overwrite is FALSE.}
 }
 \value{
 invisibly; side effect is a populated output.directory with one

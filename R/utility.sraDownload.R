@@ -6,10 +6,11 @@
 #'   requiring any external SRA toolkit installation. Accepts an SraRunInfo
 #'   CSV file exported from the NCBI SRA Run Selector, or any CSV that
 #'   contains at minimum a 'Run' column with SRR/ERR/DRR accession numbers.
-#'   Downloaded files are named to the standard PhyloProcessR convention
-#'   (SampleName_L001_READ1.fastq.gz / READ2.fastq.gz) and a
-#'   file_rename_sra.csv is written in the working directory for direct use
-#'   with organizeReads.
+#'   The ENA file report gives the exact file paths and their MD5 checksums,
+#'   so runs with an unusual file layout are handled and every download is
+#'   verified. Downloaded files are named to the standard PhyloProcessR
+#'   convention (SampleName_L001_READ1/2.fastq.gz) and a file_rename_sra.csv is
+#'   written in the working directory for direct use with organizeReads.
 #'
 #' @param sra.info.file character; path to the SraRunInfo CSV. Must contain
 #'   at minimum a 'Run' column. The full NCBI SRA Run Selector export (all
@@ -22,7 +23,8 @@
 #'   (e.g. Hylarana_macrodactyla_CAS12345), falling back to
 #'   Genus_species_SRRaccession for any row where SampleName is blank; (2) if
 #'   only 'ScientificName' is present, Genus_species_SRRaccession; (3)
-#'   otherwise the bare SRR accession alone.
+#'   otherwise the bare SRR accession alone. Every name is cleaned so that only
+#'   letters, digits, and the characters . _ - remain.
 #'
 #' @param output.directory character; local directory where the FASTQ.gz files
 #'   will be saved. Created if it does not exist.
@@ -33,7 +35,8 @@
 #'
 #' @param filter.library.layout character or NULL; restrict downloads to
 #'   "PAIRED" or "SINGLE". NULL (default) reads the LibraryLayout column per
-#'   row; falls back to PAIRED if the column is absent.
+#'   row; falls back to PAIRED if the column is absent. The ENA file report
+#'   overrides this when it is available.
 #'
 #' @param max.retries integer; number of download attempts per file before
 #'   giving up. Default 3.
@@ -75,10 +78,7 @@ sraDownload = function(sra.info.file           = NULL,
 
   # -- Output directory ---------------------------------------------------------
   if (dir.exists(output.directory)) {
-    if (overwrite) {
-      system(paste0("rm -r ", shQuote(output.directory)))
-      dir.create(output.directory, recursive = TRUE)
-    }
+    if (overwrite) { .resetDirectory(output.directory) }
   } else {
     dir.create(output.directory, recursive = TRUE)
   }
@@ -111,7 +111,7 @@ sraDownload = function(sra.info.file           = NULL,
       stop("sample.name.column '", sample.name.column, "' not found in sra.info.file.")
     sra.data$sample.name = as.character(sra.data[[sample.name.column]])
   } else if ("ScientificName" %in% names(sra.data)) {
-    sci = gsub("[[:space:]]+", "_", trimws(sra.data$ScientificName))
+    sci = trimws(sra.data$ScientificName)
     if ("SampleName" %in% names(sra.data)) {
       sn = trimws(as.character(sra.data$SampleName))
       # Use SampleName where non-empty; fall back to Run accession for blank rows
@@ -124,66 +124,26 @@ sraDownload = function(sra.info.file           = NULL,
     sra.data$sample.name = sra.data$Run
   }
 
-  # -- Internal: ENA HTTPS URL(s) for an accession -----------------------------
-  # ENA mirrors all public SRA data as pre-formatted FASTQ.gz.
-  # URL structure:
-  #   ftp.sra.ebi.ac.uk/vol1/fastq/{first6}/[subdir]/{acc}/{acc}_[1|2].fastq.gz
-  # subdir is derived from the accession length:
-  #   <= 9 chars : no subdir
-  #   10 chars   : 00{last1}
-  #   11 chars   : 0{last2}
-  #   12 chars   : {last3}
-  .ena.urls = function(acc, layout = "PAIRED") {
-    n    = nchar(acc)
-    f6   = substr(acc, 1, 6)
-    sub  = if      (n <= 9)  ""
-            else if (n == 10) paste0("/00", substr(acc, n,     n  ))
-            else if (n == 11) paste0("/0",  substr(acc, n - 1, n  ))
-            else               paste0("/",  substr(acc, n - 2, n  ))
-    base = paste0("https://ftp.sra.ebi.ac.uk/vol1/fastq/", f6, sub, "/", acc, "/")
-    if (toupper(layout) == "PAIRED") {
-      c(r1 = paste0(base, acc, "_1.fastq.gz"),
-        r2 = paste0(base, acc, "_2.fastq.gz"))
-    } else {
-      c(r1 = paste0(base, acc, ".fastq.gz"))
-    }
-  }
+  # A sample name reaches a file path and a CSV field, so a space, a comma, or a
+  # regular expression character is replaced here.
+  sra.data$sample.name = .sanitizeName(sra.data$sample.name)
+  blank.names = nchar(sra.data$sample.name) == 0
+  if (any(blank.names)) { sra.data$sample.name[blank.names] = sra.data$Run[blank.names] }
 
-  # -- Internal: download one file with retries ---------------------------------
-  # utils::download.file only *warns* on timeout or length mismatch -- it never
-  # throws an error -- so a plain tryCatch misses truncated files. We use
-  # withCallingHandlers to intercept those warnings and treat them as failures.
-  # The global timeout option is raised to 3600 s for the duration of the call
-  # (large FASTQ files easily exceed the 60-second default).
-  .dl = function(src.url, dest.path, max.retries, retry.delay, quiet) {
-    old.timeout = getOption("timeout")
-    options(timeout = 3600)
-    on.exit(options(timeout = old.timeout), add = TRUE)
+  # -- Internal: file locations for an accession -------------------------------
+  # The ENA file report gives the true file paths and their MD5 checksums. It
+  # handles runs that hold only one file and runs that hold an extra unpaired
+  # file. The URL pattern below is the fallback when the report is unavailable.
+  .runFiles = function(acc, layout = "PAIRED") {
 
-    for (attempt in seq_len(max.retries)) {
-      bad.warn = FALSE
-      ok = tryCatch({
-        withCallingHandlers(
-          utils::download.file(src.url, dest.path, mode = "wb", quiet = TRUE),
-          warning = function(w) {
-            msg = conditionMessage(w)
-            if (grepl("downloaded length|Timeout|timed out", msg, ignore.case = TRUE))
-              bad.warn <<- TRUE
-            invokeRestart("muffleWarning")
-          }
-        )
-        !bad.warn && file.exists(dest.path) && file.size(dest.path) > 0
-      }, error = function(e) FALSE)
+    report = .enaFileReport(acc)
+    if (is.null(report) == FALSE) { return(report) }
 
-      if (ok) return(TRUE)
-
-      if (file.exists(dest.path)) file.remove(dest.path)
-      if (attempt < max.retries) {
-        if (!quiet) message("    attempt ", attempt, " failed -- retrying in ", retry.delay, "s")
-        Sys.sleep(retry.delay)
-      }
-    }
-    FALSE
+    urls = .enaUrls(acc, layout)
+    return(list(r1 = unname(urls["r1"]),
+                r2 = if (length(urls) > 1) unname(urls["r2"]) else NA_character_,
+                md5.r1 = NA_character_,
+                md5.r2 = NA_character_))
   }
 
   # -- Main download loop -------------------------------------------------------
@@ -197,8 +157,8 @@ sraDownload = function(sra.info.file           = NULL,
   # only after ALL lanes for that sample complete. The .fastq.* component
   # matches the gsub strip used by fastqStats / readStats so the sentinel
   # collapses to SampleName and is never treated as a separate sample.
-  # The dot separator (not underscore) means grep(paste0(name,"_"),...) in
-  # those same functions never picks it up as a read file.
+  # The dot separator (not underscore) means the prefix match in those same
+  # functions never picks it up as a read file.
   unique.samples  = unique(sra.data$sample.name)
   n.total         = length(unique.samples)
   rename.out      = data.frame(File = character(), Sample = character(),
@@ -217,10 +177,10 @@ sraDownload = function(sra.info.file           = NULL,
     if (file.exists(sentinel)) {
       if (!quiet) message("  all lanes already completed -- skipping")
       # Recover rename entries from the files that actually exist on disk
-      existing.lanes = list.files(output.directory,
-                                  pattern = paste0("^", samp, "_L[0-9]+_READ1\\.fastq\\.gz$"),
-                                  full.names = FALSE)
-      lane.tags = gsub(paste0("^", samp, "_|_READ1\\.fastq\\.gz$"), "", existing.lanes)
+      existing.lanes = list.files(output.directory)
+      existing.lanes = existing.lanes[startsWith(existing.lanes, paste0(samp, "_")) &
+                                        endsWith(existing.lanes, "_READ1.fastq.gz")]
+      lane.tags = sub("_READ1\\.fastq\\.gz$", "", substring(existing.lanes, nchar(samp) + 2))
       for (lt in sort(lane.tags)) {
         rename.out = rbind(rename.out,
                            data.frame(File   = paste0(samp, "_", lt),
@@ -236,11 +196,13 @@ sraDownload = function(sra.info.file           = NULL,
 
       acc       = samp.rows$Run[j]
       layout    = if ("LibraryLayout" %in% names(samp.rows)) samp.rows$LibraryLayout[j] else "PAIRED"
-      is.paired = toupper(layout) == "PAIRED"
       lane.tag  = sprintf("L%03d", j)
 
       if (!quiet && n.lanes > 1)
         message(sprintf("  lane %d/%d (%s)", j, n.lanes, acc))
+
+      run.files = .runFiles(acc, layout)
+      is.paired = is.na(run.files$r2) == FALSE
 
       # Destination paths for this lane
       r1.dest = file.path(output.directory, paste0(samp, "_", lane.tag, "_READ1.fastq.gz"))
@@ -249,7 +211,7 @@ sraDownload = function(sra.info.file           = NULL,
                 else NULL
 
       # Skip this lane if its files already exist (prior partial run)
-      if (file.exists(r1.dest) && (!is.paired || file.exists(r2.dest))) {
+      if (.laneComplete(c(r1.dest, r2.dest)) == TRUE) {
         if (!quiet) message("    ", lane.tag, " files exist -- skipping")
         rename.out = rbind(rename.out,
                            data.frame(File   = paste0(samp, "_", lane.tag),
@@ -258,8 +220,7 @@ sraDownload = function(sra.info.file           = NULL,
       }
 
       # Download READ1
-      urls  = .ena.urls(acc, layout)
-      r1.ok = .dl(urls["r1"], r1.dest, max.retries, retry.delay, quiet)
+      r1.ok = .dl(run.files$r1, r1.dest, max.retries, retry.delay, quiet, run.files$md5.r1)
       if (!r1.ok) {
         if (file.exists(r1.dest)) file.remove(r1.dest)
         msg = sprintf("  READ1 download failed for %s (%s) after %d attempts",
@@ -269,7 +230,7 @@ sraDownload = function(sra.info.file           = NULL,
 
       # Download READ2 (PAIRED only)
       if (is.paired) {
-        r2.ok = .dl(urls["r2"], r2.dest, max.retries, retry.delay, quiet)
+        r2.ok = .dl(run.files$r2, r2.dest, max.retries, retry.delay, quiet, run.files$md5.r2)
         if (!r2.ok) {
           if (file.exists(r1.dest)) file.remove(r1.dest)
           if (file.exists(r2.dest)) file.remove(r2.dest)
@@ -298,10 +259,10 @@ sraDownload = function(sra.info.file           = NULL,
   } # end sample loop
 
   # -- Write rename CSV ---------------------------------------------------------
+  # The CSV is quoted so that a sample name with a comma cannot break the table
   write.csv(rename.out,
             file      = "file_rename_sra.csv",
-            row.names = FALSE,
-            quote     = FALSE)
+            row.names = FALSE)
 
   if (!quiet)
     message("\nDone. ", nrow(rename.out), " sample(s) recorded in file_rename_sra.csv.")
@@ -309,3 +270,125 @@ sraDownload = function(sra.info.file           = NULL,
   invisible(rename.out)
 
 } # end sraDownload
+
+
+# Internal helper: asks the ENA file report for the FASTQ paths and MD5 sums of
+# one run accession. Returns NULL when the report is unavailable, so the caller
+# can fall back to the URL pattern.
+.enaFileReport = function(acc = NULL) {
+
+  report.url = paste0("https://www.ebi.ac.uk/ena/portal/api/filereport?accession=", acc,
+                      "&result=read_run&fields=fastq_ftp,fastq_md5&format=tsv")
+
+  report = tryCatch(utils::read.delim(report.url, stringsAsFactors = FALSE),
+                    error = function(e) NULL, warning = function(w) NULL)
+
+  if (is.null(report) == TRUE) { return(NULL) }
+  if (nrow(report) == 0) { return(NULL) }
+  if ("fastq_ftp" %in% names(report) == FALSE) { return(NULL) }
+  if (is.na(report$fastq_ftp[1]) || nchar(report$fastq_ftp[1]) == 0) { return(NULL) }
+
+  file.paths = unlist(strsplit(report$fastq_ftp[1], ";", fixed = TRUE))
+  file.md5 = rep(NA_character_, length(file.paths))
+  if ("fastq_md5" %in% names(report) == TRUE) {
+    md5.values = unlist(strsplit(report$fastq_md5[1], ";", fixed = TRUE))
+    if (length(md5.values) == length(file.paths)) { file.md5 = md5.values }
+  }
+
+  file.names = basename(file.paths)
+  file.urls = paste0("https://", sub("^https?://", "", file.paths))
+
+  # A paired run holds _1 and _2 files. A single run holds one file, which ENA
+  # may also add to a paired run to hold the orphan reads.
+  first.mate = endsWith(file.names, "_1.fastq.gz")
+  second.mate = endsWith(file.names, "_2.fastq.gz")
+
+  if (any(first.mate) && any(second.mate)) {
+    return(list(r1 = file.urls[first.mate][1],
+                r2 = file.urls[second.mate][1],
+                md5.r1 = file.md5[first.mate][1],
+                md5.r2 = file.md5[second.mate][1]))
+  }
+
+  return(list(r1 = file.urls[1],
+              r2 = NA_character_,
+              md5.r1 = file.md5[1],
+              md5.r2 = NA_character_))
+}#end .enaFileReport
+
+
+# Internal helper: builds the ENA HTTPS URLs for an accession from the standard
+# path pattern. This is the fallback when the ENA file report is unavailable.
+# URL structure:
+#   ftp.sra.ebi.ac.uk/vol1/fastq/{first6}/[subdir]/{acc}/{acc}_[1|2].fastq.gz
+# subdir is derived from the accession length:
+#   <= 9 chars : no subdir
+#   10 chars   : 00{last1}
+#   11 chars   : 0{last2}
+#   12 chars   : {last3}
+.enaUrls = function(acc = NULL,
+                    layout = "PAIRED") {
+
+  n    = nchar(acc)
+  f6   = substr(acc, 1, 6)
+  sub.dir = if      (n <= 9)  ""
+            else if (n == 10) paste0("/00", substr(acc, n,     n  ))
+            else if (n == 11) paste0("/0",  substr(acc, n - 1, n  ))
+            else               paste0("/",  substr(acc, n - 2, n  ))
+  base = paste0("https://ftp.sra.ebi.ac.uk/vol1/fastq/", f6, sub.dir, "/", acc, "/")
+
+  if (toupper(layout) == "PAIRED") {
+    return(c(r1 = paste0(base, acc, "_1.fastq.gz"),
+             r2 = paste0(base, acc, "_2.fastq.gz")))
+  }
+
+  return(c(r1 = paste0(base, acc, ".fastq.gz")))
+}#end .enaUrls
+
+
+# Internal helper: downloads one file with retries and verifies it.
+# utils::download.file only *warns* on timeout or length mismatch -- it never
+# throws an error -- so a plain tryCatch misses truncated files. We use
+# withCallingHandlers to intercept those warnings and treat them as failures.
+# The MD5 sum from the ENA file report gives a second check that catches a
+# download that finished but holds the wrong bytes.
+# The global timeout option is raised to 3600 s for the duration of the call
+# (large FASTQ files easily exceed the 60-second default).
+.dl = function(src.url, dest.path, max.retries, retry.delay, quiet, expected.md5 = NA_character_) {
+  old.timeout = getOption("timeout")
+  options(timeout = 3600)
+  on.exit(options(timeout = old.timeout), add = TRUE)
+
+  for (attempt in seq_len(max.retries)) {
+    bad.warn = FALSE
+    ok = tryCatch({
+      withCallingHandlers(
+        utils::download.file(src.url, dest.path, mode = "wb", quiet = TRUE),
+        warning = function(w) {
+          msg = conditionMessage(w)
+          if (grepl("downloaded length|Timeout|timed out", msg, ignore.case = TRUE))
+            bad.warn <<- TRUE
+          invokeRestart("muffleWarning")
+        }
+      )
+      !bad.warn && file.exists(dest.path) && file.size(dest.path) > 0
+    }, error = function(e) FALSE)
+
+    if (ok && is.na(expected.md5) == FALSE && nchar(expected.md5) > 0) {
+      file.md5 = unname(tools::md5sum(dest.path))
+      if (identical(file.md5, expected.md5) == FALSE) {
+        if (!quiet) message("    checksum did not match -- the file is incomplete")
+        ok = FALSE
+      }
+    }
+
+    if (ok) return(TRUE)
+
+    if (file.exists(dest.path)) file.remove(dest.path)
+    if (attempt < max.retries) {
+      if (!quiet) message("    attempt ", attempt, " failed -- retrying in ", retry.delay, "s")
+      Sys.sleep(retry.delay)
+    }
+  }
+  FALSE
+}#end .dl

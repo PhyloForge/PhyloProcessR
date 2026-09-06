@@ -1,6 +1,6 @@
 #' @title trimSampleHMM
 #'
-#' @description Masks aberrant, misaligned, or chimeric sequence segments within individual samples in an alignment using Leave-One-Out Profile HMM posterior match decoding (similar to TAPIR / HMMCleaner). For each column in the alignment, a position-specific emission profile is computed from all other samples (with Dirichlet smoothing), and the posterior match confidence is evaluated for every residue. A rolling average of the posterior is computed over a window to prevent random sequence matches from disrupting the detection of contiguous bad segments. Windows whose average confidence falls below `min.posterior` are replaced with gaps. Alignments with two or fewer sequences are returned unmodified.
+#' @description Masks aberrant, misaligned, or chimeric sequence segments within individual samples in an alignment using native Leave-One-Out Profile HMM posterior match decoding. For each column in the alignment, a position-specific emission profile is computed from all other samples (with Dirichlet smoothing), and the posterior match confidence is evaluated for every residue. A rolling average of the posterior is computed over a window to prevent random sequence matches from disrupting the detection of contiguous bad segments. Windows whose average confidence falls below `min.posterior` are replaced with gaps. Alignments with two or fewer sequences are returned unmodified.
 #'
 #' @param alignment a DNAStringSet containing the aligned sequences to clean
 #'

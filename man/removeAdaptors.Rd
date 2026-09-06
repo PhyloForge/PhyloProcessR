@@ -22,21 +22,24 @@ shared filename prefix.}
 \item{output.directory}{path to the directory where adapter-trimmed reads
 will be saved (one sub-directory per sample).}
 
-\item{fastp.path}{system path to the directory containing the fastp
-executable; NULL searches the system PATH.}
+\item{fastp.path}{system path to the directory that contains the fastp
+executable, or the full path to the executable; NULL searches the system
+PATH.}
 
 \item{threads}{number of CPU threads to pass to fastp.}
 
 \item{mem}{amount of RAM in GB (currently reserved).}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
+recreated before processing. FALSE resumes and skips only the lanes that
+already have complete output.}
 
 \item{quiet}{logical; if TRUE fastp stdout and stderr are suppressed.}
 }
 \value{
-invisibly; writes adapter-trimmed fastq.gz files to output.directory
-and a CSV summary to logs/removeAdaptors_summary.csv.
+invisibly returns the summary data frame; writes adapter-trimmed
+fastq.gz files to output.directory, the fastp HTML and JSON reports to
+logs/sample_logs, and a CSV summary to logs/removeAdaptors_summary.csv.
 }
 \description{
 Removes Illumina adapter sequences from raw paired-end reads

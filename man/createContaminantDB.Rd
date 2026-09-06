@@ -15,8 +15,8 @@ createContaminantDB(
 }
 \arguments{
 \item{decontamination.list}{path to a CSV file with at least two columns:
-Genome (a short display name) and GenBank_Accession (the GenBank accession
-to download).}
+Genome (a short display name) and GenBank_Accession (the accession to
+download). A column named Accession is also accepted.}
 
 \item{output.directory}{path to the directory where contaminant genome files
 will be saved.}
@@ -24,24 +24,27 @@ will be saved.}
 \item{include.univec}{logical; if TRUE, the NCBI UniVec vector/adaptor
 sequence database is downloaded and added to the contaminant directory.}
 
-\item{include.genbank}{character vector of additional GenBank organism names
-to download and include; NULL skips this step.}
+\item{include.genbank}{character vector of additional GenBank accessions to
+download and include; NULL skips this step.}
 
 \item{include.fasta}{path to an existing FASTA file to copy directly into
 the contaminant directory; NULL skips this step.}
 
 \item{overwrite}{logical; if TRUE an existing output.directory is deleted
-and recreated. If FALSE and the directory already exists the function
-returns early with a message.}
+and every genome is downloaded again. If FALSE the function keeps the
+genomes that are already present and downloads only the missing ones.}
 }
 \value{
-invisibly; side effect is a populated output.directory containing
-compressed genome FASTA files ready for use as a decontamination reference.
+invisibly returns the paths of the contaminant files; side effect is
+a populated output.directory containing compressed genome FASTA files
+ready for use as a decontamination reference.
 }
 \description{
 Builds a local directory of contaminant reference genomes to be
-used by removeContamination(). Downloads genomes from GenBank via the
-biomartr package based on a user-supplied CSV, optionally adds the human
-genome, NCBI UniVec vector sequences, additional GenBank accessions, or a
-custom FASTA file.
+used by removeContamination(). Genomes are downloaded from NCBI with the
+NCBI Datasets API for assembly accessions (GCA_ or GCF_) and with Entrez
+efetch for nucleotide accessions. The function can also add the NCBI UniVec
+vector sequences, extra GenBank accessions, or a custom FASTA file. Each
+genome is downloaded only once, so an interrupted run continues where it
+stopped.
 }

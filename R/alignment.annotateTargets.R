@@ -10,6 +10,13 @@
 #' \code{alignment.contig.name_to-align.fa}) and a summary CSV are written to the working
 #' directory.
 #'
+#' @details The structural curation moved to \code{curateTargetContigs}, which
+#'   runs at the end of workflow 2. That function joins the fragments of one
+#'   target and cuts apart a contig that spans more than one target, before the
+#'   variant caller maps reads to the contigs. This function keeps the paralog
+#'   policy, the sample naming, and the alignment output. Give it contigs that
+#'   \code{curateTargetContigs} has already curated.
+#'
 #' @param assembly.directory path to the directory containing per-sample contig FASTA files
 #' (one file per sample, named \code{sampleName.fa}).
 #'
@@ -38,6 +45,16 @@
 #' @param threads number of parallel threads to use. Default 1.
 #'
 #' @param memory total memory (in GB) to allocate across all threads. Default 1.
+#'
+#' @param search.method which program matches the target markers to the contigs.
+#'   \code{"last"} (default) uses LAST, which matches a contig that is up to
+#'   about 35 percent divergent from its target. \code{"blast"} uses the
+#'   previous \code{blastn dc-megablast} search, which loses a contig past about
+#'   25 percent divergence. Numbers in HANDOFF.md.
+#'
+#' @param last.path path to the directory containing \code{lastdb} and
+#'   \code{lastal}. Only needed when \code{search.method = "last"}. If NULL the
+#'   programs must be on the system PATH.
 #'
 #' @param blast.path path to the directory containing BLAST executables. If NULL, BLAST
 #' tools are expected to be on the system PATH.
@@ -75,6 +92,8 @@ annotateTargets = function(assembly.directory = NULL,
                             threads = 1,
                             memory = 1,
                             blast.path = NULL,
+                            last.path = NULL,
+                            search.method = c("last", "blast"),
                             cdhit.path = NULL,
                             overwrite = FALSE,
                             quiet = TRUE
@@ -120,6 +139,9 @@ annotateTargets = function(assembly.directory = NULL,
       blast.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
   } else { blast.path = "" }
+
+  search.method = match.arg(search.method)
+  last.path = .programPrefix(last.path)
 
   # Same adds to bbmap path
   if (is.null(cdhit.path) == FALSE) {
@@ -202,22 +224,38 @@ annotateTargets = function(assembly.directory = NULL,
     #Part B: Blasting
     #########################################################################
 
-    # Make blast database for the probe loci
-    system(paste0(
-      blast.path, "makeblastdb -in ", species.dir, "/", sample, "_rename.fa",
-      " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"
-    ), ignore.stdout = quiet)
+    # The database holds the contigs of this sample and the query is the target
+    # file, so a hit names the target first and the contig second.
+    # One thread per search, because the samples already run in parallel.
+    if (search.method == "last") {
+      .lastBuildDB(reference.file = paste0(species.dir, "/", sample, "_rename.fa"),
+                   db.prefix = paste0(species.dir, "/", sample, "_last_db"),
+                   lastdb.command = paste0(last.path, "lastdb"),
+                   threads = 1,
+                   quiet = quiet)
 
-    # Matches samples to loci
-    system(paste0(
-      blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
-      " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
-      " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-      " -num_threads 1"
-    ))
+      .lastSearch(query.file = target.file,
+                  db.prefix = paste0(species.dir, "/", sample, "_last_db"),
+                  out.file = paste0(species.dir, "/", sample, "_target-blast-match.txt"),
+                  lastal.command = paste0(last.path, "lastal"),
+                  threads = 1,
+                  quiet = quiet)
+    } else {
+      system(paste0(
+        blast.path, "makeblastdb -in ", species.dir, "/", sample, "_rename.fa",
+        " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"
+      ), ignore.stdout = quiet)
 
-    # Remove BLAST database index files and large intermediate contig files
-    system(paste0("rm -f ", species.dir, "/*nucl-blast_db*"))
+      system(paste0(
+        blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
+        " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
+        " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
+        " -num_threads 1"
+      ))
+    }
+
+    # Remove the search database and the large intermediate contig files
+    system(paste0("rm -f ", species.dir, "/*nucl-blast_db* ", species.dir, "/*_last_db*"))
     system(paste0("rm -f ",
       species.dir, "/", sample, "_red.fa ",
       species.dir, "/", sample, "_red.fa.clstr ",
@@ -248,199 +286,21 @@ annotateTargets = function(assembly.directory = NULL,
     contigs = all.data
 
     #########################################################################
-    #Part C: Multiple sample contigs (tName) matching to one target (qName)
+    #Part C: One contig per target
     #########################################################################
-    #Pulls out
-    target.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
+    # curateTargetContigs does the structural work at the end of workflow 2. It
+    # joins the fragments of one target and cuts apart a contig that spans more
+    # than one target, before the variant caller maps reads to the contigs. Only
+    # the best match per target is needed here.
+    # Bitscore first, then the longer match on a tie.
+    data.table::setorderv(filt.data, c("qName", "bitscore", "matches"),
+                          order = c(1L, -1L, -1L))
+    save.data = filt.data[duplicated(filt.data$qName) == FALSE, ]
 
-    #Saves non duplicated data
-    good.data = filt.data[!filt.data$qName %in% target.names,]
-
-    #Only runs if there are duplicates
+    # Part C and Part D of the old function produced these two sets. They stay,
+    # empty, so the code below reads the same as it did.
     fix.seq = Biostrings::DNAStringSet()
-    if (length(target.names) != 0){
-      new.data = c()
-      for (j in 1:length(target.names)) {
-        #Subsets data
-        sub.match = filt.data[filt.data$qName %in% target.names[j],]
-
-        ########
-        #Saves if they are on the same contig and same locus and fragmented for some reason
-        ####################
-        if (length(unique(sub.match$qName)) == 1 && length(unique(sub.match$tName)) == 1){
-          new.qstart = min(sub.match$qStart, sub.match$qEnd)[1]
-          new.qend = max(sub.match$qStart, sub.match$qEnd)[1]
-          new.tstart = min(sub.match$tStart, sub.match$tEnd)[1]
-          new.tend = max(sub.match$tStart, sub.match$tEnd)[1]
-          sub.match$qStart = new.qstart
-          sub.match$qEnd = new.qend
-          sub.match$tStart = new.tstart
-          sub.match$tEnd = new.tend
-          sub.match$bitscore = sum(sub.match$bitscore)
-          sub.match$matches = sum(sub.match$matches)
-          new.data = rbind(new.data, sub.match[1,])
-          next
-        } #end if
-
-        ########
-        #Saves if they are two separate contigs but non-overlapping on the same locus; N repair
-        ####################
-        #Keep if they match to same contig, then not a paralog
-        if (length(unique(sub.match$qName)) == 1){
-
-          #Finds out if they are overlapping
-          for (k in 1:nrow(sub.match)){
-            new.start = min(sub.match$tStart[k], sub.match$tEnd[k])
-            new.end = max(sub.match$tStart[k], sub.match$tEnd[k])
-            sub.match$tStart[k] = new.start
-            sub.match$tEnd[k] = new.end
-          }#end k loop
-
-          #If the number is negative then problem!
-          hit.para = 0
-          for (k in 1:(nrow(sub.match)-1)){
-            if (sub.match$qStart[k+1]-sub.match$qEnd[k] < -30){ hit.para = 1 }
-          }
-
-          #If there are overlaps
-          if (hit.para == 1){
-            save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
-            new.data = rbind(new.data, save.match)
-            next
-          }#end if
-
-          #Adjacent and barely overlapping
-          if (hit.para == 0){
-            #Cuts the node apart and saves separately
-            sub.match$qStart[1] = as.numeric(1)
-            sub.match$tStart[1] = as.numeric(1)
-            sub.match$qEnd[nrow(sub.match)] = sub.match$qLen[nrow(sub.match)]
-            sub.match$tEnd[nrow(sub.match)] = sub.match$tLen[nrow(sub.match)]
-
-            #Collects new sequence fragments
-            spp.seq = contigs[names(contigs) %in% sub.match$tName]
-            spp.seq = spp.seq[pmatch(sub.match$tName, names(spp.seq))]
-
-            new.seq = Biostrings::DNAStringSet()
-            for (k in 1:length(spp.seq)){
-              n.pad = sub.match$qStart[k+1]-sub.match$qEnd[k]
-              new.seq = append(new.seq, Biostrings::subseq(x = spp.seq[k], start = sub.match$tStart[k], end = sub.match$tEnd[k]) )
-              if (is.na(n.pad) != T){ if (n.pad > 1){ new.seq = append(new.seq, Biostrings::DNAStringSet(paste0(rep("N", n.pad), collapse = "")) ) } }
-            }#end kloop
-
-            #Combine new sequence
-            save.contig = Biostrings::DNAStringSet(paste0(as.character(new.seq), collapse = "") )
-            names(save.contig) = paste0(sub.match$qName[1], "_:_", sub.match$tName[1], "_|_", sample)
-            fix.seq = append(fix.seq, save.contig)
-            next
-          }#end if
-
-        }#end this if
-
-        #Saves highest bitscore
-        save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
-        #Saves longest if equal bitscores
-        save.match = save.match[abs(save.match$qStart-save.match$qEnd) == max(abs(save.match$qStart-save.match$qEnd)),]
-        #saves top match here
-        if (nrow(save.match) >= 2){  save.match = save.match[1,] }
-        #Saves data
-        new.data = rbind(new.data, save.match)
-      } #end j
-
-      #Saves final dataset
-      save.data = rbind(good.data, new.data)
-    } else { save.data = good.data }
-
-    fix.seq.para = fix.seq
-
-    #########################################################################
-    #Part D: Multiple targets (qName) matching to one sample contig (tName)
-    #########################################################################
-
-    #red.contigs = contigs[names(contigs) %in% filt.data$tName]
-    dup.contigs = filt.data$tName[duplicated(filt.data$tName)]
-    dup.match = filt.data[filt.data$tName %in% dup.contigs, ]
-    dup.data = dup.match[order(dup.match$tName)]
-
-    #Loops through each potential duplicate
-    dup.loci = unique(dup.data$tName)
-
-    fix.seq = Biostrings::DNAStringSet()
-    if (length(dup.loci) != 0){
-      for (j in 1:length(dup.loci)){
-        #pulls out data that matches to multiple contigs
-        sub.data = dup.data[dup.data$tName %in% dup.loci[j],]
-        sub.data = sub.data[order(sub.data$tStart)]
-
-        #Fixes direction and adds into data
-        #Finds out if they are overlapping
-        for (k in 1:nrow(sub.data)){
-          new.start = min(sub.data$tStart[k], sub.data$tEnd[k])
-          new.end = max(sub.data$tStart[k], sub.data$tEnd[k])
-          sub.data$tStart[k] = new.start
-          sub.data$tEnd[k] = new.end
-        }#end k loop
-
-        #Saves them if it is split up across the same locus
-        if (length(unique(sub.data$tName)) == 1 && length(unique(sub.data$qName)) == 1){
-          spp.seq = contigs[names(contigs) %in% sub.data$tName]
-          names(spp.seq) = paste0(sub.data$qName[1], "_|_", sample)
-          fix.seq = append(fix.seq, spp.seq)
-          next
-        }
-
-        #Cuts the node apart and saves separately
-        sub.data$tStart = sub.data$tStart-(sub.data$qStart-1)
-        #If it ends up with a negative start
-        sub.data$tStart[sub.data$tStart <= 0] = 1
-        #Fixes ends
-        sub.data$tEnd = sub.data$tEnd+(sub.data$qLen-sub.data$qEnd)
-
-        #Fixes if the contig is smaller than the full target locus
-        sub.data$tEnd[sub.data$tEnd >= sub.data$tLen] = sub.data$tLen[1]
-
-        starts = c()
-        ends = c()
-        starts[1] = 1
-        for (k in 1:(nrow(sub.data)-1)){
-          ends[k] = sub.data$tEnd[k]+floor((sub.data$tStart[k+1]-sub.data$tEnd[k])/2)
-          starts[k+1] = ends[k]+1
-        } #end k loop
-        ends = append(ends, sub.data$tLen[1])
-
-        #Looks for overlapping contigs
-        tmp = ends-starts
-        if(length(tmp[tmp < 0 ]) != 0){
-          sub.data = sub.data[sub.data$bitscore == max(sub.data$bitscore),]
-          ends = sub.data$tEnd
-          starts = sub.data$tStart
-          # if (nrow(sub.data) != 1) { stop("ernor")}
-        }
-
-        #Collects new sequence fragments
-        spp.seq = contigs[names(contigs) %in% sub.data$tName]
-        new.seq = Biostrings::DNAStringSet()
-        for (k in 1:length(starts)){ new.seq = append(new.seq, Biostrings::subseq(x = spp.seq, start = starts[k], end = ends[k]) ) }
-
-        # #Sets up the new contig location
-        # #Cuts the node apart and saves separately
-        # sub.match$tEnd<-sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
-        # sub.contigs<-contigs[names(contigs) %in% sub.match$qName]
-        #
-        # join.contigs<-DNAStringSet()
-        # for (k in 1:(nrow(sub.match)-1)){
-        #   join.contigs<-append(join.contigs, sub.contigs[k])
-        #   n.pad<-sub.match$tStart[k+1]-sub.match$tEnd[k]
-        #   join.contigs<-append(join.contigs, DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
-        # }
-        # join.contigs<-append(join.contigs, sub.contigs[length(sub.contigs)])
-        # save.contig<-DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
-
-        #renames and saves
-        names(new.seq) = paste0(sub.data$qName,"_|_", sample)
-        fix.seq = append(fix.seq, new.seq)
-      } #end j loop
-    }#end if
+    fix.seq.para = Biostrings::DNAStringSet()
 
     #########################################################################
     #Part E: Keep paralogs or no
@@ -580,15 +440,24 @@ annotateTargets = function(assembly.directory = NULL,
     ))
 
   }, error = function(e) {
-    warning(file.names[i], " failed: ", conditionMessage(e))
+    print(paste0(file.names[i], " failed: ", conditionMessage(e)))
+    return("failed")
   })
   }, mc.cores = threads) # end i loop
+
+  # A warning raised in a forked child never reaches the parent, so a failed
+  # sample must be counted here.
+  fail.count = sum(vapply(results, function(x) identical(x, "failed"), logical(1)))
+  if (fail.count != 0) {
+    print(paste0(fail.count, " of ", length(file.names),
+                 " samples failed. See the messages above."))
+  }
 
   ########################################################################
   # Write cross-sample summary log
   ########################################################################
 
-  summary.df = do.call(rbind, results[!sapply(results, is.null)])
+  summary.df = do.call(rbind, results[vapply(results, is.data.frame, logical(1))])
   if (!is.null(summary.df) && nrow(summary.df) > 0) {
     out.csv = "logs/annotateTargets_summary.csv"
     if (file.exists(out.csv)) {

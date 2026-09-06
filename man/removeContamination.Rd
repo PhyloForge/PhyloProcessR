@@ -28,38 +28,46 @@ will be saved (one sub-directory per sample).}
 \item{decontamination.path}{path to a directory of contaminant reference
 genome FASTA files (e.g. produced by createContaminantDB()).}
 
-\item{map.match}{numeric; minimum mapping identity threshold (currently
-passed for reference but filtering is handled by samtools flags rather than
-this value directly).}
+\item{map.match}{numeric between 0 and 1; the minimum alignment identity that
+makes a read a contaminant. 0.90 means 90 percent identity. The value sets
+both which pairs are removed and which pairs are counted, so the read set
+and the contamination report always agree.}
 
-\item{samtools.path}{system path to the directory containing the samtools
-executable; NULL searches the system PATH.}
+\item{samtools.path}{system path to the directory that contains the samtools
+executable, or the full path to the executable; NULL searches the system
+PATH.}
 
-\item{bwa.path}{system path to the directory containing the bwa executable;
-NULL searches the system PATH.}
+\item{bwa.path}{system path to the directory that contains the bwa
+executable, or the full path to the executable; NULL searches the system
+PATH.}
 
 \item{threads}{number of CPU threads for BWA and samtools.}
 
-\item{mem}{amount of RAM in GB (currently reserved).}
+\item{mem}{amount of RAM in GB (currently reserved; the streaming filter
+does not sort, so it needs no sort buffer).}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
+recreated before processing. FALSE resumes and skips only the lanes that
+already have complete output.}
 
 \item{overwrite.reference}{logical; if TRUE an existing BWA index in
-ref-index/ is deleted and rebuilt.}
+ref-index/ is deleted and rebuilt. The index is also rebuilt on its own
+when the contaminant reference files have changed.}
 
 \item{quiet}{logical; if TRUE BWA and samtools stdout/stderr are suppressed.}
 }
 \value{
-invisibly; writes decontaminated fastq.gz files to output.directory,
-per-sample contamination counts to logs/, and a CSV summary to
-logs/removeContamination_summary.csv.
+invisibly returns the summary data frame; writes decontaminated
+fastq.gz files to output.directory, per-lane contaminant counts to
+logs/sample_logs, and CSV summaries to logs/removeContamination_summary.csv
+and logs/removeContamination_contaminants.csv.
 }
 \description{
 Removes reads that map to a set of contaminant genomes (e.g.
 human, mouse, or vector sequences) using BWA-MEM and samtools. A combined
-BWA index is built from all FASTA files in decontamination.path, reads are
-mapped against it, and only the unmapped (non-contaminant) read pairs are
-retained and saved. Per-contaminant read counts are written to the logs
-directory.
+BWA index is built from all FASTA files in decontamination.path and the
+reads are mapped against it. A read pair is a contaminant when either mate
+aligns at or above the map.match identity threshold. Contaminant pairs are
+removed from the read set and counted per contaminant genome. Every other
+pair is kept, including a pair that aligns below the threshold.
 }

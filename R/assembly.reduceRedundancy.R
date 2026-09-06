@@ -14,7 +14,8 @@
 #'   will be written. Default: \code{"reduced-redundancy"}.
 #'
 #' @param similarity sequence identity threshold for cd-hit-est clustering
-#'   (0.6-1.0). Must be >= 0.6. Default: \code{0.95}.
+#'   (0.8-1.0). Must be >= 0.8, which is the lowest threshold cd-hit-est
+#'   accepts. Default: \code{0.95}.
 #'
 #' @param cdhit.path path to the directory containing \code{cd-hit-est}. If
 #'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
@@ -27,7 +28,8 @@
 #' @param overwrite logical; if \code{TRUE} the output directory is deleted and
 #'   recreated. Default: \code{FALSE}.
 #'
-#' @param quiet logical; reserved for future use. Default: \code{TRUE}.
+#' @param quiet logical; if \code{TRUE} cd-hit-est screen output is written to
+#'   the per-sample log instead of the console. Default: \code{TRUE}.
 #'
 #' @return Invisibly returns nothing. Writes one dereplicated FASTA file per
 #'   sample to \code{output.directory}, with contigs renamed
@@ -73,24 +75,31 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
     }
   } else {
-    dir.create(output.directory)
+    dir.create(output.directory, recursive = TRUE)
   }
 
-  file.names = list.files(assembly.directory)
+  # Only FASTA files are samples. Hidden files and leftover .clstr reports are
+  # ignored.
+  fasta.pattern = "\\.fa$|\\.fas$|\\.fasta$|\\.fna$"
+  file.names = list.files(assembly.directory, pattern = fasta.pattern)
 
   # Resume: skip samples already written to the output directory
   if (overwrite == FALSE) {
-    done = list.files(output.directory)
+    done = list.files(output.directory, pattern = fasta.pattern)
     file.names = file.names[!file.names %in% done]
   }
 
   if (length(file.names) == 0) { return(invisible(NULL)) }
 
-  if (similarity >= 0.9) {
+  # Word length table from the cd-hit-est manual. cd-hit-est stops with a fatal
+  # error below a threshold of 0.8.
+  if (similarity >= 0.95) {
+    n.val = 10
+  } else if (similarity >= 0.90) {
     n.val = 8
   } else if (similarity >= 0.88) {
     n.val = 7
@@ -98,15 +107,13 @@ reduceRedundancy = function(assembly.directory = NULL,
     n.val = 6
   } else if (similarity >= 0.80) {
     n.val = 5
-  } else if (similarity >= 0.75) {
-    n.val = 4
-  } else if (similarity >= 0.6) {
-    n.val = 3
   } else {
-    stop("similarity too small for cd-hit-est. Must be >= 0.6.")
+    stop("similarity too small for cd-hit-est. Must be >= 0.8.")
   }
 
-  mem.cl <- floor(memory / threads)
+  # Memory is split across the workers. A value of 0 means unlimited in cd-hit,
+  # so the split is never allowed to reach 0.
+  mem.cl <- max(1, floor(memory / threads))
 
   if (dir.exists("logs/sample_logs") == FALSE) { dir.create("logs/sample_logs", recursive = TRUE) }
 
@@ -117,8 +124,11 @@ reduceRedundancy = function(assembly.directory = NULL,
 
     sample.id  = file.names[i]
     out.file   = paste0(output.directory, "/", sample.id)
+    # cd-hit-est writes to a temporary name. The final file only appears after the
+    # contigs are renamed, so an interrupted run is not skipped on the next resume.
+    tmp.file   = paste0(out.file, ".tmp")
     log.file   = paste0("logs/sample_logs/FAILURE_", sample.id, "_reduceRedundancy.txt")
-    cdhit.log  = paste0("logs/sample_logs/", sample.id, "_cdhit-stderr.txt")
+    cdhit.log  = paste0("logs/sample_logs/", sample.id, "_cdhit-output.txt")
 
     tryCatch({
 
@@ -131,36 +141,40 @@ reduceRedundancy = function(assembly.directory = NULL,
         return(invisible(NULL))
       }
 
-      # Redirect cd-hit-est stderr to a per-sample log so we can inspect failures
+      # Redirect cd-hit-est output to a per-sample log so we can inspect failures.
+      # Parallel workers would otherwise interleave their screen output.
       exit.code = system(paste0(
-        cdhit.path, "cd-hit-est -i ", in.file,
-        " -o ", out.file, " -p 0 -T 1",
+        cdhit.path, "cd-hit-est -i ", shQuote(in.file),
+        " -o ", shQuote(tmp.file), " -p 0 -T 1",
         " -n ", n.val, " -c ", similarity, " -M ", mem.cl * 1000,
-        " 2> ", cdhit.log
+        " > ", shQuote(cdhit.log), " 2>&1"
       ))
 
       if (exit.code != 0) {
-        cdhit.msg = if (file.exists(cdhit.log)) paste(readLines(cdhit.log), collapse = "\n") else "(no stderr captured)"
-        msg = paste0("cd-hit-est exited with code ", exit.code, ".\n\ncd-hit-est stderr:\n", cdhit.msg)
+        cdhit.msg = if (file.exists(cdhit.log)) paste(readLines(cdhit.log, warn = FALSE), collapse = "\n") else "(no output captured)"
+        msg = paste0("cd-hit-est exited with code ", exit.code, ".\n\ncd-hit-est output:\n", cdhit.msg)
         writeLines(msg, log.file)
         warning(sample.id, ": cd-hit-est failed (exit code ", exit.code,
                 ") -- see ", log.file)
+        unlink(c(tmp.file, paste0(tmp.file, ".clstr")))
         return(invisible(NULL))
       }
 
-      if (!file.exists(out.file) || file.info(out.file)$size == 0) {
+      if (!file.exists(tmp.file) || file.info(tmp.file)$size == 0) {
         msg = "cd-hit-est exited 0 but produced no output file."
         writeLines(msg, log.file)
         warning(sample.id, ": ", msg)
+        unlink(c(tmp.file, paste0(tmp.file, ".clstr")))
         return(invisible(NULL))
       }
 
-      all.data = Biostrings::readDNAStringSet(file = out.file, format = "fasta")
+      all.data = Biostrings::readDNAStringSet(file = tmp.file, format = "fasta")
 
       if (length(all.data) == 0) {
         msg = "cd-hit-est output FASTA contains no sequences."
         writeLines(msg, log.file)
         warning(sample.id, ": ", msg)
+        unlink(c(tmp.file, paste0(tmp.file, ".clstr")))
         return(invisible(NULL))
       }
 
@@ -173,11 +187,13 @@ reduceRedundancy = function(assembly.directory = NULL,
         nbchar = 1000000, as.string = TRUE, open = "w"
       )
 
-      clstr = paste0(out.file, ".clstr")
-      if (file.exists(clstr)) { system(paste0("rm ", clstr)) }
+      unlink(c(tmp.file, paste0(tmp.file, ".clstr")))
 
-      # Clean up the stderr log on success -- only keep it for failures
-      if (file.exists(cdhit.log)) { file.remove(cdhit.log) }
+      # Clean up the output log on success -- only keep it for failures
+      if (file.exists(cdhit.log)) {
+        if (quiet == FALSE) { cat(readLines(cdhit.log, warn = FALSE), sep = "\n") }
+        file.remove(cdhit.log)
+      }
 
     }, error = function(e) {
       msg = paste0("Unexpected R error: ", conditionMessage(e), "\n\n",

@@ -22,8 +22,9 @@ prefix containing "_L00".}
 \item{output.directory}{path to the directory where cleaned reads will be
 saved (one sub-directory per sample).}
 
-\item{fastp.path}{system path to the directory containing the fastp
-executable; NULL searches the system PATH.}
+\item{fastp.path}{system path to the directory that contains the fastp
+executable, or the full path to the executable; NULL searches the system
+PATH.}
 
 \item{threads}{number of CPU threads to pass to fastp.}
 
@@ -31,13 +32,15 @@ executable; NULL searches the system PATH.}
 for future use).}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
+recreated before processing. FALSE resumes and skips only the lanes that
+already have complete output.}
 
 \item{quiet}{logical; if TRUE fastp stdout and stderr are suppressed.}
 }
 \value{
-invisibly; writes cleaned fastq.gz files to output.directory and a
-CSV summary to logs/fastpComplete_summary.csv.
+invisibly returns the summary data frame; writes cleaned fastq.gz
+files to output.directory, the fastp HTML and JSON reports to
+logs/sample_logs, and a CSV summary to logs/fastpComplete_summary.csv.
 }
 \description{
 Runs a comprehensive fastp cleaning step on raw paired-end

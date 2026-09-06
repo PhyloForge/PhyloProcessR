@@ -1,7 +1,7 @@
 #' @title setupCheck
 #'
 #' @description Verifies that the required external bioinformatics programs are
-#'   accessible on the system. Checks for fastp, samtools, bwa, spades.py,
+#'   accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit,
 #'   bbmap.sh, bbnorm.sh, blastn, makeblastdb, mafft, iqtree2, and trimal. If
 #'   an anaconda.environment path is provided all tool paths are automatically
 #'   set to that environment's bin/ directory before checking. Prints a FOUND or
@@ -21,6 +21,9 @@
 #'
 #' @param bwa.path system path to the directory containing bwa; NULL skips this
 #'   check.
+#'
+#' @param megahit.path system path to the directory containing megahit; NULL
+#'   uses the anaconda environment path.
 #'
 #' @param spades.path system path to the directory containing spades.py; NULL
 #'   skips this check.
@@ -43,12 +46,6 @@
 #' @param trimAl.path system path to the directory containing trimal; NULL skips
 #'   this check.
 #'
-#' @param julia.path system path to the directory containing julia; NULL skips
-#'   this check (currently not checked by the function body).
-#'
-#' @param taper.path system path to the directory containing taper; NULL skips
-#'   this check (currently not checked by the function body).
-#'
 #' @return logical TRUE if all checked programs were found, FALSE otherwise.
 #'
 #' @export
@@ -58,14 +55,13 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
                       samtools.path = NULL,
                       bwa.path = NULL,
                       spades.path = NULL,
+                      megahit.path = NULL,
                       bbmap.path = NULL,
                       bbnorm.path = NULL,
                       blast.path = NULL,
                       mafft.path = NULL,
                       iqtree.path = NULL,
-                      trimAl.path = NULL,
-                      julia.path = NULL,
-                      taper.path = NULL) {
+                      trimAl.path = NULL) {
 
   #anaconda.environment = "/Users/chutter/conda/PhyloCap"
 
@@ -74,14 +70,13 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     samtools.path = paste0(anaconda.environment, "/bin")
     bwa.path = paste0(anaconda.environment, "/bin")
     spades.path = paste0(anaconda.environment, "/bin")
+    megahit.path = paste0(anaconda.environment, "/bin")
     bbmap.path = paste0(anaconda.environment, "/bin")
     bbnorm.path = paste0(anaconda.environment, "/bin")
     blast.path = paste0(anaconda.environment, "/bin")
     mafft.path = paste0(anaconda.environment, "/bin")
     iqtree.path = paste0(anaconda.environment, "/bin")
     trimAl.path = paste0(anaconda.environment, "/bin")
-    taper.path = paste0(anaconda.environment, "/bin")
-    julia.path = paste0(anaconda.environment, "/bin")
   }
 
   #Check paths from above
@@ -121,6 +116,15 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
   } #end else
   #CHecks if it was even inputted
   if (is.null(spades.path) == TRUE) { pass = TRUE }
+
+  if (file.exists(paste0(megahit.path, "/megahit")) == TRUE){
+    print("Megahit was found.")
+  } else {
+    pass = FALSE
+    print("Megahit could not be found.")
+  } #end else
+  #CHecks if it was even inputted
+  if (is.null(megahit.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(bbmap.path, "/bbmap.sh")) == TRUE){
     print("BBMap was found.")
@@ -185,22 +189,6 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
   #CHecks if it was even inputted
   if (is.null(trimAl.path) == TRUE) { pass = TRUE }
 
-#
-#   if (file.exists(paste0(taper.path, "/taper")) == TRUE){
-#     print("TAPER was found.")
-#   } else {
-#     pass = FALSE
-#     print("TAPER could not be found.")
-#   } #end else
-#
-#   if (file.exists(paste0(julia.path, "/julia")) == TRUE){
-#     print("Julia was found.")
-#   } else {
-#     pass = FALSE
-#     print("Julia could not be found.")
-#   } #end else
-
   return(pass)
 
 }#end function
-

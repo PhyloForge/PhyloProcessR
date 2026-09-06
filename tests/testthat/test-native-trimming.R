@@ -36,6 +36,15 @@ test_that("native trimmers leave small alignments unchanged", {
   expect_identical(trimExonORF(alignment), alignment)
 })
 
+test_that("native HMM trimming does not expose retired external cleaners", {
+  exports <- getNamespaceExports("PhyloProcessR")
+
+  expect_true("trimSampleHMM" %in% exports)
+  expect_false("trimTAPER" %in% exports)
+  expect_false("trimPreQual" %in% exports)
+  expect_false(any(c("julia.path", "taper.path") %in% names(formals(setupCheck))))
+})
+
 test_that("trimExternal reports an uncovered alignment with a numeric sentinel", {
   alignment <- Biostrings::DNAStringSet(c(
     taxon1 = "----",

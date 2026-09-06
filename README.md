@@ -2,6 +2,7 @@
 
 [![R CMD check](https://github.com/PhyloForge/PhyloProcessR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/PhyloForge/PhyloProcessR/actions/workflows/R-CMD-check.yaml)
 [![License: GPL v3+](https://img.shields.io/badge/License-GPL_v3%2B-blue.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22134804.svg)](https://doi.org/10.5281/zenodo.22134804)
 
 PhyloProcessR is a modular R toolkit for converting raw targeted
 sequence-capture reads into curated, analysis-ready phylogenomic datasets.
@@ -114,10 +115,17 @@ conda activate PhyloProcessR
 
 ## Install the R package
 
-Install the development version from GitHub:
+Install the stable version 1.0.0 from GitHub:
 
 ```R
 install.packages("remotes")
+remotes::install_github("PhyloForge/PhyloProcessR@v1.0.0")
+```
+
+Install the current development version when you need changes made after the
+release:
+
+```R
 remotes::install_github("PhyloForge/PhyloProcessR")
 ```
 
@@ -201,7 +209,12 @@ structure and simplified technical English conventions.
 
 ## Citation, contributing, and license
 
-Citation metadata are provided in [`CITATION.cff`](CITATION.cff). Contributions
-are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and
+The archived version 1.0.0 release is available at
+[doi:10.5281/zenodo.22134845](https://doi.org/10.5281/zenodo.22134845). Use the
+[concept DOI](https://doi.org/10.5281/zenodo.22134804) to refer to the software
+across releases. Machine-readable citation metadata are provided in
+[`CITATION.cff`](CITATION.cff).
+
+Contributions are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and
 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). PhyloProcessR is distributed under
 the [GNU General Public License, version 3 or later](LICENSE).

@@ -10,14 +10,13 @@ setupCheck(
   samtools.path = NULL,
   bwa.path = NULL,
   spades.path = NULL,
+  megahit.path = NULL,
   bbmap.path = NULL,
   bbnorm.path = NULL,
   blast.path = NULL,
   mafft.path = NULL,
   iqtree.path = NULL,
-  trimAl.path = NULL,
-  julia.path = NULL,
-  taper.path = NULL
+  trimAl.path = NULL
 )
 }
 \arguments{
@@ -38,6 +37,9 @@ check.}
 \item{spades.path}{system path to the directory containing spades.py; NULL
 skips this check.}
 
+\item{megahit.path}{system path to the directory containing megahit; NULL
+uses the anaconda environment path.}
+
 \item{bbmap.path}{system path to the directory containing bbmap.sh; NULL
 skips this check.}
 
@@ -55,19 +57,13 @@ skips this check.}
 
 \item{trimAl.path}{system path to the directory containing trimal; NULL skips
 this check.}
-
-\item{julia.path}{system path to the directory containing julia; NULL skips
-this check (currently not checked by the function body).}
-
-\item{taper.path}{system path to the directory containing taper; NULL skips
-this check (currently not checked by the function body).}
 }
 \value{
 logical TRUE if all checked programs were found, FALSE otherwise.
 }
 \description{
 Verifies that the required external bioinformatics programs are
-accessible on the system. Checks for fastp, samtools, bwa, spades.py,
+accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit,
 bbmap.sh, bbnorm.sh, blastn, makeblastdb, mafft, iqtree2, and trimal. If
 an anaconda.environment path is provided all tool paths are automatically
 set to that environment's bin/ directory before checking. Prints a FOUND or

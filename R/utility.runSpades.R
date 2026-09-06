@@ -8,7 +8,8 @@
 #'   are optionally read back into R and/or saved to a file.
 #'
 #' @param read.paths character vector of 1, 2, or 3 paths to the input fastq.gz
-#'   read files (READ1, READ2, and optionally merged READ3).
+#'   read files (READ1, READ2, and optionally merged READ3). More than 3 paths
+#'   raise an error.
 #'
 #' @param full.path.spades system path to the directory containing spades.py;
 #'   NULL searches the system PATH.
@@ -85,9 +86,11 @@ runSpades = function(read.paths = NULL,
     }#end if
   } else { full.path.spades = "" }
 
+  if (length(read.paths) == 0){ stop("No read files were supplied.") }
+  if (length(read.paths) > 3){ stop("runSpades accepts 1, 2, or 3 read files.") }
   if (file.exists(read.paths[1]) == FALSE){ stop("Read files not found.") }
   if (overwrite == T){
-    if (dir.exists("spades") == TRUE){ system(paste0("rm -r spades")) }
+    if (dir.exists("spades") == TRUE){ unlink("spades", recursive = TRUE) }
   }#end
 
 
@@ -98,42 +101,46 @@ runSpades = function(read.paths = NULL,
 
   #Run SPADES on sample
   k = kmer.values
-  k.val = paste(k, collapse = ",")
 
-  #Checks to see if one kmer failed or not
-  while (file.exists("spades/contigs.fasta") == F){
-    #stop("the while loop messed up K")
-    #if (counter == 1){
+  #Removes the largest k-mer after each failure. The k-mer vector is only reduced
+  #when the previous attempt produced no contigs, so a run that succeeds on the
+  #last k-mer value is kept.
+  if (file.exists("spades/contigs.fasta") == F){
+    repeat {
+      k.val = paste(k, collapse = ",")
 
-    #Single end reads
-    if (length(read.paths) == 1){
-      system(paste0(full.path.spades, "spades.py --s1 ", read.paths[1],
-                    " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
-             ignore.stdout = quiet)
-    }#end 2 reads
+      #Single end reads
+      if (length(read.paths) == 1){
+        system(paste0(full.path.spades, "spades.py --s1 ", shQuote(read.paths[1]),
+                      " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
+               ignore.stdout = quiet)
+      }#end 1 read
 
-    if (length(read.paths)  == 2){
-      system(paste0(full.path.spades, "spades.py --pe1-1 ", read.paths[1], " --pe1-2 ", read.paths[2],
-                    " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
-             ignore.stdout = quiet)
-    }#end 2 reads
+      if (length(read.paths)  == 2){
+        system(paste0(full.path.spades, "spades.py --pe1-1 ", shQuote(read.paths[1]),
+                      " --pe1-2 ", shQuote(read.paths[2]),
+                      " -o spades -k ",k.val," ", mismatch.string, "-t ", threads, " -m ", memory),
+               ignore.stdout = quiet)
+      }#end 2 reads
 
-    if (length(read.paths)  == 3){
-      system(paste0(full.path.spades, "spades.py --pe1-1 ", read.paths[1],
-                    " --pe1-2 ", read.paths[2], " --pe1-m ", read.paths[3],
-                    " -o spades -k ",k.val, " ", mismatch.string, "-t ", threads, " -m ", memory),
-             ignore.stdout = quiet)
-    }#end 3 reads
-    #subtract Ks until it works
-    k = k[-length(k)]
-    if (length(k) == 0) { break }
-    k.val = paste(k, collapse = ",")
-  }#end while
+      if (length(read.paths)  == 3){
+        system(paste0(full.path.spades, "spades.py --pe1-1 ", shQuote(read.paths[1]),
+                      " --pe1-2 ", shQuote(read.paths[2]), " --pe1-m ", shQuote(read.paths[3]),
+                      " -o spades -k ",k.val, " ", mismatch.string, "-t ", threads, " -m ", memory),
+               ignore.stdout = quiet)
+      }#end 3 reads
+
+      if (file.exists("spades/contigs.fasta") == TRUE) { break }
+      #subtract Ks until it works
+      k = k[-length(k)]
+      if (length(k) == 0) { break }
+    }#end repeat
+  }#end assembly
 
   #If the k-mers are all run out, therefore nothing can be assembled
-  if (length(k) == 0) {
+  if (file.exists("spades/contigs.fasta") == F) {
     print("k-mer values all used up, cannot assemble!")
-    system("rm -r spades")
+    unlink("spades", recursive = TRUE)
     contigs = Biostrings::DNAStringSet()
     return(contigs)
   }#end k
@@ -153,13 +160,13 @@ runSpades = function(read.paths = NULL,
 
   if (is.null(save.name) == FALSE){
     if (file.exists("spades/scaffolds.fasta") == TRUE){
-      system(paste0("cp spades/scaffolds.fasta ", save.name, ".fa"))
+      file.copy("spades/scaffolds.fasta", paste0(save.name, ".fa"), overwrite = TRUE)
     } else {
-      system(paste0("cp spades/contigs.fasta ", save.name, ".fa"))
+      file.copy("spades/contigs.fasta", paste0(save.name, ".fa"), overwrite = TRUE)
     }#end else
   }#end save file
 
-  if (clean == TRUE){ system("rm -r spades") }
+  if (clean == TRUE){ unlink("spades", recursive = TRUE) }
 
   if (read.contigs == T) {return(contigs) }
   if (is.null(save.name) == F) {return("Contigs were saved to file.") }

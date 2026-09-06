@@ -35,6 +35,12 @@ quiet = TRUE
 #########################
 # TRUE to run target annotation, FALSE if its already been done to skip
 annotate.targets = TRUE
+# Which program matches the target markers to the contigs:
+#   "last"  = LAST. It matches a contig up to about 35 percent divergent from
+#             its target. Recommended.
+#   "blast" = the previous blastn dc-megablast search. It loses a contig past
+#             about 25 percent divergence.
+annotate.search.method = "last"
 # TRUE to run the per-contig heterozygosity filter before annotation.
 # This removes contigs whose IUPAC ambiguity proportion meets or exceeds the
 # threshold — a useful proxy for chimeric assembly or mis-assembled paralogs.
@@ -77,6 +83,7 @@ subset.end = 1
 ### *** Modify any of these from NULL to the path that the program is found if R is not detecting system paths
 conda.env = "PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 blast.path = conda.env
+last.path = conda.env
 cdhit.path = conda.env
 mafft.path = conda.env
 

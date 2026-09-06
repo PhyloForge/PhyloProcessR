@@ -29,7 +29,8 @@ and 'SampleName' columns are present the name is Genus_species_SampleName
 (e.g. Hylarana_macrodactyla_CAS12345), falling back to
 Genus_species_SRRaccession for any row where SampleName is blank; (2) if
 only 'ScientificName' is present, Genus_species_SRRaccession; (3)
-otherwise the bare SRR accession alone.}
+otherwise the bare SRR accession alone. Every name is cleaned so that only
+letters, digits, and the characters . _ - remain.}
 
 \item{output.directory}{character; local directory where the FASTQ.gz files
 will be saved. Created if it does not exist.}
@@ -40,7 +41,8 @@ whose 'LibraryStrategy' column matches this string are downloaded (e.g.
 
 \item{filter.library.layout}{character or NULL; restrict downloads to
 "PAIRED" or "SINGLE". NULL (default) reads the LibraryLayout column per
-row; falls back to PAIRED if the column is absent.}
+row; falls back to PAIRED if the column is absent. The ENA file report
+overrides this when it is available.}
 
 \item{max.retries}{integer; number of download attempts per file before
 giving up. Default 3.}
@@ -70,8 +72,9 @@ HTTPS mirrors, which provide pre-formatted FASTQ.gz files without
 requiring any external SRA toolkit installation. Accepts an SraRunInfo
 CSV file exported from the NCBI SRA Run Selector, or any CSV that
 contains at minimum a 'Run' column with SRR/ERR/DRR accession numbers.
-Downloaded files are named to the standard PhyloProcessR convention
-(SampleName_L001_READ1.fastq.gz / READ2.fastq.gz) and a
-file_rename_sra.csv is written in the working directory for direct use
-with organizeReads.
+The ENA file report gives the exact file paths and their MD5 checksums,
+so runs with an unusual file layout are handled and every download is
+verified. Downloaded files are named to the standard PhyloProcessR
+convention (SampleName_L001_READ1/2.fastq.gz) and a file_rename_sra.csv is
+written in the working directory for direct use with organizeReads.
 }

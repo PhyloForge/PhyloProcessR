@@ -7,7 +7,8 @@ dependencies:
   - macse=2.07
   - openjdk=17
   - spades>=3.15.2
-  - samtools=1.17
+  - megahit>=1.2.9
+  - samtools=1.24
   - r-doparallel=1.0.17
   - r-ape=5.7_1
   - r-data.table=1.14.8
@@ -20,14 +21,16 @@ dependencies:
   - cd-hit=4.8.1
   - bioconductor-rsamtools=2.14.0
   - blast>=2.12.0
+  - curl
   - mafft=7.520
   - trimal=1.4.1
   - bioconductor-genomicranges=1.50.0
   - bioconductor-biostrings=2.66.0
   - bioconductor-shortread=1.56.0
   - bioconductor-bsgenome>=1.66.3
-  - bwa=0.7.17
+  - bwa=0.7.19
   - hisat2=2.2.1
+  - last=1654
   - gatk4=4.4.0.0
   - fastp=0.23.2
   - r-stringi=1.7.12

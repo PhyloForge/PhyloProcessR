@@ -1,9 +1,10 @@
 #' @title fastqStats
 #'
-#' @description Counts reads in fastq.gz files and computes summary statistics
-#'   for each sample, including per-read-file counts, total reads, read pairs,
-#'   megabase pairs sequenced, and reads per million. Results are written to a
-#'   CSV file and returned as a data frame.
+#' @description Counts reads in fastq files and computes summary statistics for
+#'   each sample lane, including per-read-file counts, total reads, read pairs,
+#'   megabase pairs sequenced, and millions of reads. Compressed and
+#'   uncompressed fastq files are both accepted. Results are written to a CSV
+#'   file and returned as a data frame.
 #'
 #' @param read.directory path to the top-level directory containing sample
 #'   read files or sample sub-directories.
@@ -17,17 +18,19 @@
 #' @param read.length expected read length in base pairs, used to calculate
 #'   megabase pairs (MegaBasePairs = read.length * read.pairs * 2 / 1e6).
 #'
-#' @param threads number of CPU threads (currently reserved; not parallelised
-#'   internally).
+#' @param threads number of read files to count at the same time.
 #'
 #' @param mem amount of RAM in GB (currently reserved).
 #'
 #' @param overwrite logical; if TRUE an existing output CSV is deleted before
 #'   writing.
 #'
-#' @return a data frame with columns Sample, Read1_Count, Read2_Count,
+#' @return a data frame with columns Sample, Lane, Read1_Count, Read2_Count,
 #'   Read3_Count, Total_Reads, Read_Pairs, Read_Length, MegaBasePairs, and
-#'   Reads_Per_Million. Also written to output.name.csv.
+#'   Reads_Per_Million. Total_Reads counts the two paired mates and excludes
+#'   Read3_Count, which holds merged reads or singletons. Reads_Per_Million is
+#'   the total read count in millions, including Read3_Count, and is used as a
+#'   scaling factor. Results are also written to output.name.csv.
 #'
 #' @export
 
@@ -39,112 +42,106 @@ fastqStats = function(read.directory = NULL,
                       mem = 1,
                       overwrite = FALSE) {
 
-  #Debug
-  # setwd("/Volumes/Armored/FrogCap_Anura_Seqcap")
-  # read.directory = "/Volumes/Armored/FrogCap_Anura_Seqcap/Processed_Samples"
-  # sub.directory = "cleaned-reads-snp"
-  # output.name = "fastq-stats"
-  # read.length = 150
-  # overwrite = FALSE
-
   #Quick checks
   if (is.null(read.directory) == TRUE){ stop("Please provide input reads.") }
+  if (file.exists(read.directory) == F){ stop("Input reads not found.") }
 
-  #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
+  #Removes a previous run of the same output file
   if (file.exists(paste0(output.name, ".csv")) == T){
-    if (overwrite == TRUE){
-      system(paste0("rm ", output.name, ".csv"))
-    }
-  }#end else
+    if (overwrite == TRUE){ unlink(paste0(output.name, ".csv")) }
+  }#end if
 
+  read.directory = sub("/+$", "", read.directory)
   reads = list.files(read.directory, recursive = T, full.names = T)
   reads = reads[grep("\\.fastq\\.gz$|\\.fq\\.gz$|\\.fastq$|\\.fq$", reads)]
+  read.names = .relativePaths(reads, read.directory)
+
   if (is.null(sub.directory) != TRUE) {
-    reads = reads[grep(paste0(sub.directory, "/"), reads)]
-    sample.names = gsub(paste0("/", sub.directory, "/.*"), "", reads)
-    sample.names = unique(gsub(paste0(read.directory, "/"), "", sample.names))
+    keep = grepl(paste0("/", sub.directory, "/"), reads, fixed = TRUE)
+    reads = reads[keep]
+    read.names = read.names[keep]
+    sample.names = unique(gsub(paste0("/", sub.directory, "/.*"), "", read.names))
   } else {
-    sample.names = list.dirs(read.directory, recursive = F, full.names = F)
-    if (length(sample.names) == 0) {
-      # Flat directory -- strip lane/read suffixes to recover sample names
-      sample.names = list.files(read.directory, recursive = F, full.names = F)
-      sample.names = unique(gsub("_L00.*|_R[12][._].*|_READ[123][._].*|\\.fastq.*|\\.fq.*", "", sample.names))
-      sample.names = sample.names[nchar(sample.names) > 0]
-    }
+    sample.names = .listSampleNames(read.directory)
   }
 
   if (length(sample.names) == 0){ return("no samples remain to analyze.") }
 
+  #################################################
+  ### Part A: build the list of lanes to count
+  #################################################
+  lane.list = list()
 
-  #Creates the summary log
-  summary.data =  data.frame(Sample = as.character(),
-                             Read1_Count = as.numeric(),
-                             Read2_Count = as.numeric(),
-                             Read3_Count = as.numeric(),
-                             Total_Reads = as.numeric(),
-                             Read_Pairs = as.numeric(),
-                             Read_Length = as.numeric(),
-                             MegaBasePairs = as.numeric(),
-                             Reads_Per_Million = as.numeric())
+  for (i in seq_along(sample.names)) {
 
-  #Runs through each sample
-  for (i in 1:length(sample.names)) {
-    #################################################
-    ### Part A: prepare for loading and checks
-    #################################################
-    sample.reads = reads[grep(pattern = paste0(sample.names[i], "_"), x = reads)]
-
-    #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = sample.names[i], x = reads)] }
-
-    sample.reads = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+    sample.reads = .matchPrefix(reads, read.names, sample.names[i])
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      stop(sample.names[i], " does not have any reads present for files ")
+      warning(sample.names[i], " does not have any reads present. Skipping.")
+      next
     } #end if statement
 
-    for (j in 1:length(sample.reads)){
+    lane.prefixes = .stripReadSuffix(sample.reads)
 
-      lane.reads = reads[grep(pattern = paste0(sample.reads[j], "_"), x = reads)]
+    for (j in seq_along(lane.prefixes)){
 
-      #Checks the Sample column in case already renamed
-      if (length(lane.reads) == 0){ lane.reads = reads[grep(pattern = sample.reads[j], x = reads)] }
+      lane.reads = sort(.matchPrefix(reads, reads, lane.prefixes[j]))
+
       #Returns an error if reads are not found
       if (length(lane.reads) == 0 ){
-        stop(sample.reads[j], " does not have any reads present for files ")
+        warning(lane.prefixes[j], " does not have any reads present. Skipping.")
+        next
       } #end if statement
 
-      #Gathers stats on initial data
-      read1.count = as.numeric(system(paste0("zcat < ", lane.reads[1], " | echo $((`wc -l`/4))"), intern = T))
-      read2.count = as.numeric(system(paste0("zcat < ", lane.reads[2], " | echo $((`wc -l`/4))"), intern = T))
-      if (length(lane.reads) == 3){
-        read3.count = as.numeric(system(paste0("zcat < ", lane.reads[3], " | echo $((`wc -l`/4))"), intern = T))
-      } else { read3.count = 0 }
-
-      scale.factor = (read1.count + read2.count + read3.count) / 1000000
-      if (read1.count == read2.count){ read.pairs = read1.count } else { read.pairs = NA_real_ }
-
-      temp.remove = data.frame(Sample = sample.names[i],
-                               Read1_Count = read1.count,
-                               Read2_Count = read2.count,
-                               Read3_Count = read3.count,
-                               Total_Reads = read1.count + read2.count,
-                               Read_Pairs = read.pairs,
-                               Read_Length = read.length,
-                               MegaBasePairs = (read.length * read.pairs * 2) / 1000000,
-                               Reads_Per_Million = scale.factor)
-
-      summary.data = rbind(summary.data, temp.remove)
-
-
-    }#end sample j loop
-
-    print(paste0(sample.names[i], " Completed fastq counting!"))
+      lane.list[[length(lane.list) + 1]] = list(sample = sample.names[i],
+                                                lane = gsub(".*_", "", basename(lane.prefixes[j])),
+                                                files = lane.reads)
+    }#end lane j loop
 
   }#end sample i loop
 
+  if (length(lane.list) == 0){ return("no samples remain to analyze.") }
+
+  #################################################
+  ### Part B: count the reads in parallel
+  #################################################
+  # Counting decompresses each file once, so the lanes are counted at the same
+  # time on the requested number of threads.
+  count.list = parallel::mclapply(lane.list, mc.cores = max(1, threads), FUN = function(lane.job) {
+
+    read1.count = .countFastqReads(lane.job$files[1])
+    read2.count = if (length(lane.job$files) >= 2) .countFastqReads(lane.job$files[2]) else 0
+    read3.count = if (length(lane.job$files) >= 3) .countFastqReads(lane.job$files[3]) else 0
+
+    scale.factor = (read1.count + read2.count + read3.count) / 1000000
+    if (isTRUE(read1.count == read2.count)){ read.pairs = read1.count } else { read.pairs = NA_real_ }
+
+    data.frame(Sample = lane.job$sample,
+               Lane = lane.job$lane,
+               Read1_Count = read1.count,
+               Read2_Count = read2.count,
+               Read3_Count = read3.count,
+               Total_Reads = read1.count + read2.count,
+               Read_Pairs = read.pairs,
+               Read_Length = read.length,
+               MegaBasePairs = (read.length * read.pairs * 2) / 1000000,
+               Reads_Per_Million = scale.factor,
+               stringsAsFactors = FALSE)
+  })
+
+  failed = vapply(count.list, function(x) inherits(x, "try-error"), logical(1))
+  if (any(failed) == TRUE){
+    stop("Read counting failed for ", sum(failed), " lane(s). First error: ",
+         as.character(count.list[failed][[1]]))
+  }
+
+  summary.data = do.call(rbind, count.list)
+
+  for (sample.name in unique(summary.data$Sample)) {
+    print(paste0(sample.name, " Completed fastq counting!"))
+  }
+
   write.csv(summary.data, file = paste0(output.name, ".csv"), row.names = FALSE)
   return(summary.data)
-}
-
+}#end function

@@ -23,8 +23,8 @@ sequencing lanes.}
 to search for read files.}
 
 \item{dropbox.token}{path to an RDS file containing a saved Dropbox OAuth2
-token produced by .drop_auth(). If NULL, the function attempts to
-retrieve a token from the rdrop2 cache.}
+token. If NULL, the function starts interactive authentication, which
+needs the DROPBOX_APP_KEY and DROPBOX_APP_SECRET environment variables.}
 
 \item{output.directory}{local path where downloaded files will be saved.}
 
@@ -32,17 +32,19 @@ retrieve a token from the rdrop2 cache.}
 in Dropbox are silently skipped. If FALSE an error is raised.}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before downloading.}
+recreated before downloading. FALSE resumes and downloads only the lanes
+that are not yet complete.}
 }
 \value{
-invisibly; writes downloaded fastq.gz files to output.directory and
-a file_rename_dropbox.csv in the working directory.
+invisibly returns the rename table; writes downloaded fastq.gz files
+to output.directory and a file_rename_dropbox.csv in the working
+directory.
 }
 \description{
 Downloads paired-end fastq.gz read files from a Dropbox account
-using the rdrop2 package and the Dropbox API v2. A sample spreadsheet maps
-source file names to desired sample names and the function renames files to
-the standard convention (SampleName_L00N_READ1/2.fastq.gz) on download.
-A file_rename_dropbox.csv is written on completion for use in downstream
+using the Dropbox API v2. A sample spreadsheet maps source file names to
+desired sample names and the function renames files to the standard
+convention (SampleName_L00N_READ1/2.fastq.gz) on download. A
+file_rename_dropbox.csv is written on completion for use in downstream
 functions.
 }

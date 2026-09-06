@@ -18,8 +18,13 @@
 #'   (partial or full file name used to locate the reads) and Sample (the
 #'   desired output sample name).
 #'
+#' @param link.reads logical; if TRUE the reads are hard-linked instead of
+#'   copied, and a symbolic link is used when a hard link is not possible. This
+#'   avoids a second copy of a read set that is often hundreds of gigabytes.
+#'   FALSE copies the files.
+#'
 #' @param overwrite logical; if TRUE the output directory is deleted and
-#'   recreated. Completed samples are skipped when overwrite is FALSE.
+#'   recreated. Completed lanes are skipped when overwrite is FALSE.
 #'
 #' @return invisibly; side effect is a populated output.directory with one
 #'   sub-directory per sample containing renamed fastq.gz read pairs.
@@ -29,47 +34,30 @@
 organizeReads = function(read.directory = NULL,
                         output.directory = "organized-reads",
                         rename.file = NULL,
+                        link.reads = FALSE,
                         overwrite = FALSE) {
-
-  #Debegging
-  # read.directory = "/Volumes/Backup_Hub/Raw_Data/HF14_Ultimate_FrogCap/Modern"
-  # output.directory = "/Volumes/LaCie/Microhylidae/organized-reads"
-  # rename.file = "/Users/chutter/Dropbox/Research/9_Paperwork/Arbor_Biosciences/HF-13/file_rename.csv"
-  # overwrite = FALSE
-
-  # #Debegging
-  # read.directory = "/Volumes/Extreme_SSD/Unusual_Hosts/raw_reads"
-  # output.directory = "/Volumes/Extreme_SSD/Unusual_Hosts/organized-reads"
-  # rename.file = "/Volumes/Extreme_SSD/Unusual_Hosts/sample_names.csv"
-  # overwrite = FALSE
 
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(read.directory) == TRUE){ stop("Please provide a directory of raw reads.") }
   if (file.exists(read.directory) == F){ stop("Input reads not found.") }
   if (is.null(rename.file) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
+  if (file.exists(rename.file) == F){ stop("Rename file not found.") }
 
-  #Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.directory) == F){ dir.create(output.directory) } else {
-    if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
-    }
+  #Sets directory and reads in
+  if (dir.exists(output.directory) == F){
+    dir.create(output.directory, recursive = TRUE)
+  } else {
+    if (overwrite == TRUE){ .resetDirectory(output.directory) }
   }#end else
 
   #Read in sample data and finds reads
+  read.directory = sub("/+$", "", read.directory)
   reads = list.files(read.directory, recursive = T, full.names = T)
   reads = reads[grep("fastq.gz$|fastq$|fq.gz$|fq$", reads)]
+  read.names = .relativePaths(reads, read.directory)
 
   sample.data = read.csv(rename.file)
-  if (nrow(sample.data) == 0){ return("no samples available to organize.") }
-
-  #Skips samples already finished
-  if (overwrite == FALSE){
-    done.names = list.files(output.directory)
-    sample.data = sample.data[!sample.data$Sample %in% done.names,]
-  } else { sample.data = sample.data }
-
   if (nrow(sample.data) == 0){ return("no samples available to organize.") }
 
   sample.names = unique(sample.data$Sample)
@@ -82,17 +70,21 @@ organizeReads = function(read.directory = NULL,
       #################################################
       ### Part A: prepare for loading and checks
       #################################################
-      # Finds all files for this given sample and turns into a cat string
-      sample.reads = reads[grep(pattern = paste0(temp.data$File[j], "_"), x = reads)]
+      # Sets up the output paths first so a finished lane can be skipped
+      out.path = paste0(output.directory, "/", temp.data$Sample[j])
+      lane.tag = sprintf("L%03d", j)
+      outread.1 = paste0(out.path, "/", temp.data$Sample[j], "_", lane.tag, "_READ1.fastq.gz")
+      outread.2 = paste0(out.path, "/", temp.data$Sample[j], "_", lane.tag, "_READ2.fastq.gz")
+
+      # Skips a lane only when both read files are present and hold data. A lane
+      # that stopped part way through is organized again.
+      if (overwrite == FALSE && .laneComplete(c(outread.1, outread.2)) == TRUE) { next }
+
+      # Finds all files for this given sample
+      sample.reads = .matchPrefix(reads, read.names, temp.data$File[j])
       # Checks the Sample column in case already renamed
       if (length(sample.reads) == 0) {
-        sample.reads = reads[grep(pattern = paste0(temp.data$Sample[j], "_"), x = reads)]
-      }
-      if (length(sample.reads) == 0) {
-        sample.reads = reads[grep(pattern = temp.data$File[j], x = reads)]
-      }
-      if (length(sample.reads) == 0) {
-        sample.reads = reads[grep(pattern = temp.data$Sample[j], x = reads)]
+        sample.reads = .matchPrefix(reads, read.names, temp.data$Sample[j])
       }
 
       # Returns an error if reads are not found
@@ -115,19 +107,39 @@ organizeReads = function(read.directory = NULL,
       ### Part B: Create directories and move files
       #################################################
       # Create sample directory
-      out.path = paste0(output.directory, "/", temp.data$Sample[j])
       if (file.exists(out.path) == FALSE) {
-        dir.create(out.path)
+        dir.create(out.path, recursive = TRUE)
       }
 
-      # sets up output reads
-      outread.1 = paste0(out.path, "/", temp.data$Sample[j], "_L00", j, "_READ1.fastq.gz")
-      outread.2 = paste0(out.path, "/", temp.data$Sample[j], "_L00", j, "_READ2.fastq.gz")
+      # Sorts the pair so READ1 is always the first mate
+      sample.reads = sort(sample.reads)
 
-      system(paste0("cp ", sample.reads[1], " ", outread.1))
-      system(paste0("cp ", sample.reads[2], " ", outread.2))
+      .linkOrCopyRead(sample.reads[1], outread.1, link.reads)
+      .linkOrCopyRead(sample.reads[2], outread.2, link.reads)
     } # end j loop
 
   }#end i loop
 
 }#end function
+
+
+# Internal helper: places one read file at the output path. A hard link costs no
+# disk space. The function falls back to a symbolic link and then to a copy, for
+# example when the input is on a different file system.
+.linkOrCopyRead = function(source.file = NULL,
+                           target.file = NULL,
+                           link.reads = FALSE) {
+
+  if (file.exists(target.file) == TRUE) { unlink(target.file) }
+
+  if (link.reads == TRUE) {
+    if (isTRUE(file.link(source.file, target.file))) { return(invisible(TRUE)) }
+    if (isTRUE(file.symlink(normalizePath(source.file), target.file))) { return(invisible(TRUE)) }
+  }
+
+  if (file.copy(source.file, target.file, overwrite = TRUE) == FALSE) {
+    stop("Could not place ", source.file, " at ", target.file, ".")
+  }
+
+  return(invisible(TRUE))
+}#end .linkOrCopyRead

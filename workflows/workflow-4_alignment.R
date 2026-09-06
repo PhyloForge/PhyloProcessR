@@ -49,6 +49,8 @@ if (annotate.targets == TRUE) {
     overwrite = overwrite,
     quiet = quiet,
     blast.path = blast.path,
+    last.path = last.path,
+    search.method = annotate.search.method,
     cdhit.path = cdhit.path
   )
 }#end if

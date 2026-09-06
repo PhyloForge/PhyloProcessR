@@ -10,11 +10,14 @@ expandMissingAssembly(
   mapping.reads = "decontaminated-reads",
   reference = NULL,
   output.directory = "expand-missing-assembly",
+  expanded.directory = NULL,
   min.match.percent = 60,
   min.match.length = 100,
   min.match.coverage = 35,
   phase2.reference = c("contig", "reference"),
   recover.all.missing = FALSE,
+  mismatch.corrector = TRUE,
+  kmer.values = c(33, 55, 77, 99, 127),
   memory = 8,
   threads = 1,
   spades.path = NULL,
@@ -36,18 +39,21 @@ the subdirectory specified by \code{mapping.reads}.}
 
 \item{mapping.reads}{name of the subdirectory within \code{read.directory}
 that contains the per-sample read folders to use for Phase 2 read mapping.
-Should be paired (non-merged) reads. Common choices: \code{"decontaminated-reads"}
-(default), \code{"cleaned-reads"}, \code{"pe-merged-reads"}. Using
-pre-merged reads is not recommended for mapping as HISAT2 expects paired
-input.}
+Must be paired (non-merged) reads. Common choices:
+\code{"decontaminated-reads"} (default), \code{"cleaned-reads"}. All read
+pairs in the sample folder are mapped, so multi-lane samples are handled.
+Merged reads cannot be used because HISAT2 expects paired input.}
 
 \item{reference}{path to the FASTA file of reference/target sequences used
 for BLAST matching and HISAT2 mapping.}
 
-\item{output.directory}{path to the directory where per-sample working files
-and the final expanded assemblies will be written. Final assemblies are
-saved to \code{output.directory/expanded-assemblies/}. Default:
-\code{"expand-missing-assembly"}.}
+\item{output.directory}{path to the directory where the per-sample working
+files are written. Default: \code{"expand-missing-assembly"}.}
+
+\item{expanded.directory}{path to the directory where the final expanded
+assemblies are written, one \code{<sample>.fa} file per sample. If
+\code{NULL} they are written to
+\code{output.directory/expanded-assemblies/}. Default: \code{NULL}.}
 
 \item{min.match.percent}{minimum BLAST percent identity required to accept a
 contig-to-target match. Default: \code{60}.}
@@ -72,6 +78,12 @@ not present in \code{final.save} at all). These loci are always mapped
 against the original reference sequences since no cross-sample contig
 exists. This pass can be time-consuming for large datasets. Default:
 \code{FALSE}.}
+
+\item{mismatch.corrector}{logical; if \code{TRUE} passes \code{--careful} to
+SPAdes when the recovered reads are assembled. Default: \code{TRUE}.}
+
+\item{kmer.values}{integer vector of k-mer sizes passed to SPAdes when the
+recovered reads are assembled. Default: \code{c(33, 55, 77, 99, 127)}.}
 
 \item{memory}{RAM in GB to pass to SPAdes and fastp. Default: \code{8}.}
 
@@ -105,7 +117,9 @@ Default: \code{TRUE}.}
 }
 \value{
 Invisibly returns nothing. Expanded assemblies are saved as
-\code{output.directory/expanded-assemblies/<sample>.fa}.
+\code{expanded.directory/<sample>.fa}. Newly assembled
+contigs are renamed to their matched target, so the expanded assembly uses
+the same contig names as the input assembly.
 }
 \description{
 Attempts to recover target loci that are missing or poorly

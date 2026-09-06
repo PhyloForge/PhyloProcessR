@@ -28,26 +28,30 @@ and per-target count CSVs will be saved. Default:
 \item{target.fasta}{path to the FASTA file of target probe/marker sequences
 used for sequence capture.}
 
-\item{bwa.path}{system path to the directory containing the \code{bwa}
-executable; NULL searches the system PATH.}
+\item{bwa.path}{system path to the directory that contains the \code{bwa}
+executable, or the full path to the executable; NULL searches the system
+PATH.}
 
-\item{samtools.path}{system path to the directory containing the
-\code{samtools} executable; NULL searches the system PATH.}
+\item{samtools.path}{system path to the directory that contains the
+\code{samtools} executable, or the full path to the executable; NULL
+searches the system PATH.}
 
 \item{threads}{number of CPU threads to pass to BWA and samtools.}
 
-\item{mem}{amount of RAM in GB (currently reserved for future use).}
+\item{mem}{amount of RAM in GB, passed to the samtools sort buffer.}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing. Default: \code{FALSE}.}
+recreated before processing. FALSE resumes and skips only the lanes that
+already have a saved result. Default: \code{FALSE}.}
 
 \item{quiet}{logical; if TRUE BWA and samtools screen output is suppressed.
 Default: \code{TRUE}.}
 }
 \value{
-invisibly; writes per-sample per-target count CSVs to
-output.directory and a cross-sample summary to
-logs/assessCaptureEfficiency_summary.csv.
+invisibly returns the summary data frame; writes per-sample
+per-target count CSVs to output.directory and a cross-sample summary to
+logs/assessCaptureEfficiency_summary.csv. Only primary alignments are
+counted, so pctReadsOnTarget cannot go above 100.
 }
 \description{
 Maps cleaned reads back to the target probe/marker sequences

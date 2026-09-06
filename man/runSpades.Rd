@@ -21,7 +21,8 @@ runSpades(
 }
 \arguments{
 \item{read.paths}{character vector of 1, 2, or 3 paths to the input fastq.gz
-read files (READ1, READ2, and optionally merged READ3).}
+read files (READ1, READ2, and optionally merged READ3). More than 3 paths
+raise an error.}
 
 \item{full.path.spades}{system path to the directory containing spades.py;
 NULL searches the system PATH.}

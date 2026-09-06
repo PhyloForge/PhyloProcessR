@@ -6,9 +6,13 @@ authors:
   - family-names: Hutter
     given-names: Carl
     orcid: "https://orcid.org/0000-0001-6381-6339"
+    affiliation: "Louisiana State University, Museum of Natural History; Virus and Prion Research Unit, National Animal Disease Center, Agricultural Research Service, United States Department of Agriculture"
 version: 1.0.0
+date-released: 2026-08-27
+doi: 10.5281/zenodo.22134845
 license: GPL-3.0-or-later
 repository-code: "https://github.com/PhyloForge/PhyloProcessR"
+repository-artifact: "https://doi.org/10.5281/zenodo.22134845"
 url: "https://github.com/PhyloForge/PhyloProcessR"
 keywords:
   - phylogenomics

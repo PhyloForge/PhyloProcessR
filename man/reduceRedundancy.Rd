@@ -23,7 +23,8 @@ per sample.}
 will be written. Default: \code{"reduced-redundancy"}.}
 
 \item{similarity}{sequence identity threshold for cd-hit-est clustering
-(0.6-1.0). Must be >= 0.6. Default: \code{0.95}.}
+(0.8-1.0). Must be >= 0.8, which is the lowest threshold cd-hit-est
+accepts. Default: \code{0.95}.}
 
 \item{cdhit.path}{path to the directory containing \code{cd-hit-est}. If
 \code{NULL} expected on the system PATH. Default: \code{NULL}.}
@@ -36,7 +37,8 @@ will be written. Default: \code{"reduced-redundancy"}.}
 \item{overwrite}{logical; if \code{TRUE} the output directory is deleted and
 recreated. Default: \code{FALSE}.}
 
-\item{quiet}{logical; reserved for future use. Default: \code{TRUE}.}
+\item{quiet}{logical; if \code{TRUE} cd-hit-est screen output is written to
+the per-sample log instead of the console. Default: \code{TRUE}.}
 }
 \value{
 Invisibly returns nothing. Writes one dereplicated FASTA file per

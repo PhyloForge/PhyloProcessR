@@ -12,7 +12,8 @@
 #'
 #' @param input.reads path to a directory of processed reads. Each sample must
 #'   occupy its own subdirectory containing FASTQ files whose names encode read
-#'   number and pair identity.
+#'   number and pair identity. The subdirectory name is the sample name and is
+#'   matched exactly.
 #'
 #' @param output.directory path to the directory where per-sample SPAdes working
 #'   directories will be written. Default:
@@ -111,7 +112,7 @@ assembleSpades = function(input.reads = NULL,
   if (is.null(input.reads) == TRUE) {
     stop("Please provide input reads.")
   }
-  if (file.exists(input.reads) == F) {
+  if (dir.exists(input.reads) == F) {
     stop("Input reads not found.")
   }
   if (is.null(output.directory) == TRUE) {
@@ -123,25 +124,25 @@ assembleSpades = function(input.reads = NULL,
 
   # Sets directory and reads
   if (dir.exists(output.directory) == F) {
-    dir.create(output.directory)
+    dir.create(output.directory, recursive = TRUE)
   } else {
     if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
     }
   } # end else
 
   # Sets directory and reads
   if (dir.exists(assembly.directory) == F) {
-    dir.create(assembly.directory)
+    dir.create(assembly.directory, recursive = TRUE)
   } else {
     if (overwrite == TRUE) {
-      system(paste0("rm -r ", assembly.directory))
-      dir.create(assembly.directory)
+      unlink(assembly.directory, recursive = TRUE)
+      dir.create(assembly.directory, recursive = TRUE)
     }
   } # end else
 
-  # Creates output directory
+  # Creates the log directory. Failed samples keep their spades.log here.
   if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   if (isolate == TRUE && mismatch.corrector == TRUE) {
@@ -160,19 +161,21 @@ assembleSpades = function(input.reads = NULL,
     mismatch.string = "--careful "
   }
 
-  # Sets up the reads
+  # Sets up the reads. The extension is matched on the file name only, so a
+  # directory called "fastq" does not select every file below it.
   files <- list.files(path = input.reads, full.names = T, recursive = T)
-  reads <- files[grep(pattern = "fastq|fq|clustS", x = files)]
+  reads <- files[grep(pattern = "fastq|fq|clustS", x = basename(files))]
 
-  samples <- gsub(paste0(input.reads, "/"), "", reads)
-  samples <- unique(gsub("/.*", "", samples))
+  # The sample is the first directory below input.reads. The name is kept for
+  # each read so samples are matched exactly and not by a regular expression.
+  read.samples <- gsub(paste0(input.reads, "/"), "", reads, fixed = TRUE)
+  read.samples <- gsub("/.*", "", read.samples)
+  samples <- unique(read.samples)
 
   # Skips samples already finished
   if (overwrite == FALSE) {
-    done.names <- list.files(assembly.directory)
-    samples <- samples[!samples %in% gsub(".fa$", "", done.names)]
-  } else {
-    samples <- samples
+    done.names <- list.files(assembly.directory, pattern = "\\.fa$")
+    samples <- samples[!samples %in% gsub("\\.fa$", "", done.names)]
   }
 
   if (length(samples) == 0) {
@@ -181,10 +184,7 @@ assembleSpades = function(input.reads = NULL,
   #Header data for features and whatnot
   for (i in seq_along(samples)){
 
-    sample.reads = reads[grep(pattern = paste0(samples[i], "_"), x = reads)]
-
-    #Checks the Sample column in case already renamed
-    if (length(sample.reads) == 0){ sample.reads = reads[grep(pattern = samples[i], x = reads)] }
+    sample.reads = reads[read.samples == samples[i]]
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
@@ -205,32 +205,53 @@ assembleSpades = function(input.reads = NULL,
 
     #Creates assembly reads folder if not present
     save.assem = paste0(output.directory, "/", samples[i])
-    dir.create(save.assem)
+    dir.create(save.assem, showWarnings = FALSE, recursive = TRUE)
 
     #Sorts reads
     sample.lanes = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
 
-    #Creates a spades character string to run different reads and library configurations
+    #Creates a spades character string to run different reads and library configurations.
+    #Spades numbers each library type separately, so paired and single-end
+    #libraries get their own counters.
     final.read.string = c()
-    for (j in 1:length(sample.lanes)) {
+    pe.count = 0
+    se.count = 0
+    for (j in seq_along(sample.lanes)) {
       #Gets the sample reads
-      lib.reads = sample.reads[grep(paste0(sample.lanes[j]), sample.reads)]
+      lib.reads = sample.reads[grep(sample.lanes[j], sample.reads, fixed = TRUE)]
 
       #Concatenate together
       lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", lib.reads)]
       lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", lib.reads)]
       lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", lib.reads)]
 
-      #Checks for different read lengths
+      #Checks for different read lengths. Spades needs a paired library before it
+      #accepts merged reads, so a lone merged file is given as single-end.
       read.string = ""
-      if (length(lib.read1) == 1 && length(lib.read2) == 0) {
-        read.string = paste0("--s1 ", lib.read1, " ")
-      } else if (length(lib.read1) == 1 && length(lib.read2) == 1) {
-        read.string = paste0("--pe", j, "-1 ", lib.read1, " --pe", j, "-2 ", lib.read2, " ")
+      if (length(lib.read1) == 1 && length(lib.read2) == 1) {
+        pe.count = pe.count + 1
+        read.string = paste0("--pe", pe.count, "-1 ", shQuote(lib.read1),
+                             " --pe", pe.count, "-2 ", shQuote(lib.read2), " ")
+        if (length(lib.read3) == 1) {
+          read.string = paste0(read.string, "--pe", pe.count, "-m ", shQuote(lib.read3), " ")
+        }
+      } else if (length(lib.read1) == 1 && length(lib.read2) == 0) {
+        se.count = se.count + 1
+        read.string = paste0("--s", se.count, " ", shQuote(lib.read1), " ")
+      } else if (length(lib.read1) == 0 && length(lib.read2) == 0 && length(lib.read3) == 1) {
+        se.count = se.count + 1
+        read.string = paste0("--s", se.count, " ", shQuote(lib.read3), " ")
       }
-      if (length(lib.read3) == 1) {
-        read.string = paste0(read.string, "--pe", j, "-m ", lib.read3, " ")
+
+      #Warns when a library does not match a supported layout. Spades would drop
+      #these reads without a message.
+      if (read.string == "" || length(lib.read3) > 1) {
+        warning(samples[i], ", library ", basename(sample.lanes[j]),
+                ": unsupported read layout (", length(lib.read1), " read1, ",
+                length(lib.read2), " read2, ", length(lib.read3),
+                " merged or singleton files). These reads are not assembled.")
       }
+
       final.read.string = paste0(final.read.string, read.string)
     }#end j loop
 
@@ -241,29 +262,47 @@ assembleSpades = function(input.reads = NULL,
 #     mg.read3 = sample.reads[grep("_READ3", sample.reads)]
 #     if (length(mg.read3) != 0){ mg.read3.string = paste0("--pe", rep(1:length(mg.read3)), "-m ", mg.read3, collapse = " ") }
 
+    #Skips the sample when no library produced a usable spades string
+    if (length(final.read.string) == 0 || final.read.string == "") {
+      warning(samples[i], " has no reads in a layout spades accepts. Skipping.")
+      next
+    }
+
     tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
-    dir.create(tmp.dir, showWarnings = FALSE)
+    dir.create(tmp.dir, showWarnings = FALSE, recursive = TRUE)
 
     #Runs spades command
     system(paste0(spades.path, "spades.py ", final.read.string,
-                  "--tmp-dir ", tmp.dir, " -o ", save.assem, " -k ", k.val, " ", mismatch.string,
+                  "--tmp-dir ", shQuote(tmp.dir), " -o ", shQuote(save.assem),
+                  " -k ", k.val, " ", mismatch.string,
                   "-t ", threads, " -m ", memory),
            ignore.stdout = quiet, ignore.stderr = quiet)
 
-    #Crashes function if spades failed, also copies new assemblies to assembly.directory
+    #Warns if spades failed, also copies new assemblies to assembly.directory
     if (file.exists(paste0(save.assem, "/scaffolds.fasta")) == TRUE ){
-      system(paste0("cp ", save.assem, "/scaffolds.fasta ",  assembly.directory,
-                    "/", samples[i], ".fa"))
-    } else { warning(paste0("spades error for ", samples[i], ", check spades.log file in spades-assembly folder.")); next }
+      file.copy(paste0(save.assem, "/scaffolds.fasta"),
+                paste0(assembly.directory, "/", samples[i], ".fa"), overwrite = TRUE)
+    } else {
+      #Keeps the spades log so the failure can be inspected after clean up.
+      if (file.exists(paste0(save.assem, "/spades.log")) == TRUE) {
+        file.copy(paste0(save.assem, "/spades.log"),
+                  paste0("logs/sample_logs/FAILURE_", samples[i], "_spades.log"),
+                  overwrite = TRUE)
+      }
+      unlink(tmp.dir, recursive = TRUE)
+      warning(paste0("spades error for ", samples[i],
+                     ", check logs/sample_logs/FAILURE_", samples[i], "_spades.log."))
+      next
+    }
 
     if (clean.up.spades == TRUE) {
-      system(paste0("rm -rf ", save.assem))
+      unlink(save.assem, recursive = TRUE)
     } else {
       if (save.corrected.reads == FALSE) {
-        system(paste0("rm -rf ", save.assem, "/corrected"))
+        unlink(paste0(save.assem, "/corrected"), recursive = TRUE)
       }
-      system(paste0("rm -rf ", tmp.dir))
     }
+    unlink(tmp.dir, recursive = TRUE)
     print(paste0(samples[i], " Completed Spades asssembly!"))
 
   }#end sample loop

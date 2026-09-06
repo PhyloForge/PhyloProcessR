@@ -24,7 +24,8 @@ assembleSpades(
 \arguments{
 \item{input.reads}{path to a directory of processed reads. Each sample must
 occupy its own subdirectory containing FASTQ files whose names encode read
-number and pair identity.}
+number and pair identity. The subdirectory name is the sample name and is
+matched exactly.}
 
 \item{output.directory}{path to the directory where per-sample SPAdes working
 directories will be written. Default:

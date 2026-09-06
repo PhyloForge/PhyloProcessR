@@ -17,6 +17,16 @@ working.directory = "/Path/to/where/the/stuff/will/happen"
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. Default shown.
 assembly.directory = "data-analysis/contigs/3_target-contigs"
+# Optional. The directory of contigs recovered by the workflow 2 missing locus
+# step. Each sample reference becomes the union of its assembly.directory contigs
+# and the recovered contigs. Set this only if you ran workflow 2 with
+# expand.missing = TRUE. NULL uses assembly.directory alone.
+expanded.contig.directory = NULL
+# expanded.contig.directory = "data-analysis/contigs/3b_expanded-contigs"
+# expanded.contig.directory = "data-analysis/contigs/3c_binned-contigs"
+# Use the curated contigs when curate.contigs was TRUE in workflow 2. The
+# variant caller maps reads to these, so a curated set gives better genotypes.
+# assembly.directory = "data-analysis/contigs/3d_curated-contigs"
 # Temporary directory where GATK JVM and Picard sorting temp files are saved.
 # Must be a dedicated subdirectory — do NOT set this to working.directory itself
 # or temp files will accumulate in the project root.

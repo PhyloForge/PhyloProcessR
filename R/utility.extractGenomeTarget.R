@@ -18,9 +18,11 @@
 #'   Required column: \code{Accession} (or the name given in
 #'   \code{accession.column}).  Optional column: \code{Name} (or
 #'   \code{name.column}) for a human-readable sample label; the accession is
-#'   used when absent.  Downloads are performed with the NCBI \code{datasets}
-#'   CLI tool one genome at a time and the FASTA is deleted immediately after
-#'   extraction to minimise disk usage.
+#'   used when absent.  Each assembly is downloaded one at a time in pure R --
+#'   the Entrez API resolves the GenBank FTP path and \code{download.file()}
+#'   fetches it -- and the FASTA is deleted immediately after extraction to
+#'   minimise disk usage.  No NCBI command-line tools are required; the only
+#'   external need is a working \code{curl} and outbound HTTPS.
 #'
 #' @param accession.column name of the column in \code{genome.accessions} that
 #'   holds the GCA/GCF accession strings.  Default \code{"Accession"}.
