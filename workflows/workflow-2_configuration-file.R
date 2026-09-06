@@ -178,6 +178,7 @@ conda.env = "/PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 cdhit.path    = conda.env
 spades.path   = conda.env
 megahit.path  = conda.env
+cap3.path     = conda.env
 blast.path    = conda.env
 hisat2.path   = conda.env
 bwa.path      = conda.env

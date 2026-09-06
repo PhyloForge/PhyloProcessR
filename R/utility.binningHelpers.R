@@ -503,15 +503,66 @@
 
 # Recovers targets that have no sequence in this sample at all.
 #
+# cap3 assembles the rescued reads of one target. The reads are unpaired and few,
+# so an overlap assembler fits where a de Bruijn one does not. cap3 writes its
+# output beside the input, so each target gets its own file name.
+.assembleOneRescue = function(target = NULL,
+                              bam.file = NULL,
+                              target.dir = NULL,
+                              samtools.command = NULL,
+                              cap3.command = NULL) {
+
+  reads.file = paste0(target.dir, "/", target, ".fa")
+  empty.result = Biostrings::DNAStringSet()
+  cap3.files = paste0(reads.file, c("", ".cap.contigs", ".cap.contigs.links",
+                                    ".cap.contigs.qual", ".cap.ace", ".cap.info",
+                                    ".cap.singlets"))
+
+  # ignore.stdout must stay FALSE. R adds its own redirect for it, which would
+  # win over the one that writes reads.file and leave the file empty.
+  extract.status = suppressWarnings(system(
+    paste0(samtools.command, " view -b ", shQuote(bam.file), " ", target,
+           " | ", samtools.command, " fasta - > ", shQuote(reads.file)),
+    ignore.stdout = FALSE, ignore.stderr = TRUE))
+
+  if (extract.status != 0 || file.exists(reads.file) == FALSE ||
+      file.size(reads.file) == 0) {
+    unlink(cap3.files)
+    return(empty.result)
+  }
+
+  cap3.status = suppressWarnings(system(paste0(cap3.command, " ", shQuote(reads.file)),
+                                        ignore.stdout = TRUE, ignore.stderr = TRUE))
+
+  contig.file = paste0(reads.file, ".cap.contigs")
+  result = empty.result
+
+  if (cap3.status == 0 && file.exists(contig.file) == TRUE &&
+      file.size(contig.file) > 0) {
+    result = Biostrings::readDNAStringSet(contig.file)
+    if (length(result) > 0) {
+      names(result) = paste0(target, "_", gsub(" .*", "", names(result)))
+    }
+  }
+
+  unlink(cap3.files)
+
+  return(result)
+}#end .assembleOneRescue
+
+
 # bwa cannot recruit a read that is 35 percent divergent from its bait. On a test
 # of 207 read pairs from such a locus, bwa mapped none and LAST aligned 293 of
 # the 414 reads. Numbers in HANDOFF.md. LAST therefore does the recruiting here.
 #
-# The recruited reads are assembled together in one run, not one run per target.
-# The targets are separate graph components, and the result only has to be good
-# enough to bait the paired rounds that follow. LAST reports one alignment per
-# read and sets no pair flags, so these reads are unpaired. The paired rounds
-# recover the mates, and with them the flanking sequence.
+# The recruited reads are assembled one target at a time. A full run rescues about
+# 24,000 targets and recruits millions of alignments, which no single assembly can
+# hold. LAST reports one alignment per read and sets no pair flags, so these reads
+# are unpaired and shallow: a median of about 9 per target. cap3 suits that. It
+# overlaps reads in pairs and applies no coverage model, so it returns a seed from
+# as few as two reads where a de Bruijn assembler returns nothing. Numbers in
+# HANDOFF.md. The seed only has to bait the paired rounds that follow, and those
+# rounds recover the mates and the flanking sequence.
 .rescueMissingTargets = function(missing.seqs = NULL,
                                  read.files = NULL,
                                  work.dir = NULL,
@@ -519,14 +570,12 @@
                                  lastal.command = NULL,
                                  mafconvert.command = NULL,
                                  samtools.command = NULL,
-                                 spades.command = NULL,
+                                 cap3.command = NULL,
                                  headers = NULL,
-                                 kmer.values = c(21, 33, 55, 77, 99),
                                  min.contig.length = 100,
                                  min.match.percent = 60,
                                  min.match.length = 60,
                                  min.match.coverage = 20,
-                                 memory = 4,
                                  threads = 1,
                                  quiet = TRUE) {
 
@@ -570,39 +619,47 @@
               quiet = quiet, task = "LAST read rescue", keep.stdout = TRUE)
   unlink(reads.fasta)
 
+  # A coordinate sort and an index let each target's reads be read on their own
   .runCommand(paste0(mafconvert.command, " -d sam ", shQuote(rescue.maf),
                      " | ", samtools.command, " view -bt ", shQuote(paste0(missing.file, ".fai")), " -",
-                     " | ", samtools.command, " sort -n -@ ", threads,
+                     " | ", samtools.command, " sort -@ ", threads,
                      " -T ", shQuote(paste0(rescue.dir, "/sorting")),
                      " -o ", shQuote(rescue.bam)),
               quiet = quiet, task = "rescue read collection")
   unlink(rescue.maf)
+  .runCommand(paste0(samtools.command, " index -@ ", threads, " ", shQuote(rescue.bam)),
+              quiet = quiet, task = "rescue read indexing")
 
-  rescue.reads = paste0(rescue.dir, "/rescue.fastq")
-  .runCommand(paste0(samtools.command, " fastq ", shQuote(rescue.bam),
-                     " > ", shQuote(rescue.reads)),
-              quiet = quiet, task = "rescue read extraction", keep.stdout = TRUE)
-  unlink(rescue.bam)
+  # idxstats counts the reads of every target in one pass. cap3 joins two reads
+  # that overlap, so one read cannot give a seed.
+  idx.file = paste0(rescue.dir, "/idxstats.txt")
+  .runCommand(paste0(samtools.command, " idxstats ", shQuote(rescue.bam),
+                     " > ", shQuote(idx.file)),
+              quiet = quiet, task = "rescue read counting", keep.stdout = TRUE)
 
-  if (file.exists(rescue.reads) == FALSE || file.size(rescue.reads) < 100) {
-    return(NULL)
-  }
+  idx.data = utils::read.table(idx.file, sep = "\t", header = FALSE,
+                               stringsAsFactors = FALSE)
+  colnames(idx.data) = c("target", "length", "mapped", "unmapped")
+  run.targets = idx.data$target[idx.data$target != "*" & idx.data$mapped >= 2]
+  if (length(run.targets) == 0) return(NULL)
 
-  spades.dir = paste0(rescue.dir, "/spades")
-  spades.status = suppressWarnings(system(
-    paste0(spades.command, " --only-assembler",
-           " -k ", paste(kmer.values, collapse = ","),
-           " -t ", threads, " -m ", memory,
-           " -s ", shQuote(rescue.reads),
-           " -o ", shQuote(spades.dir)),
-    ignore.stdout = TRUE, ignore.stderr = TRUE))
-  unlink(rescue.reads)
+  target.dir = paste0(rescue.dir, "/targets")
+  dir.create(target.dir, showWarnings = FALSE)
 
-  contig.file = paste0(spades.dir, "/contigs.fasta")
-  if (spades.status != 0 || file.exists(contig.file) == FALSE ||
-      file.size(contig.file) == 0) {
-    return(NULL)
-  }
+  contig.list = parallel::mclapply(run.targets, function(target) {
+    .assembleOneRescue(target = target,
+                       bam.file = rescue.bam,
+                       target.dir = target.dir,
+                       samtools.command = samtools.command,
+                       cap3.command = cap3.command)
+  }, mc.cores = min(threads, length(run.targets)), mc.preschedule = FALSE)
+
+  contig.list = contig.list[vapply(contig.list, function(x)
+    inherits(x, "DNAStringSet") && length(x) > 0, logical(1))]
+  if (length(contig.list) == 0) return(NULL)
+
+  contig.file = paste0(rescue.dir, "/rescue-contigs.fa")
+  Biostrings::writeXStringSet(do.call(c, unname(contig.list)), contig.file)
 
   # The same LAST search that assigns a draft contig assigns a rescued contig
   seed.contigs = .identifyDraftContigs(draft.file = contig.file,

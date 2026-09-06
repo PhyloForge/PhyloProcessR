@@ -1,7 +1,7 @@
 #' @title setupCheck
 #'
 #' @description Verifies that the required external bioinformatics programs are
-#'   accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit,
+#'   accessible on the system. Checks for fastp, samtools, bwa, spades.py, megahit, cap3,
 #'   bbmap.sh, bbnorm.sh, blastn, makeblastdb, mafft, iqtree2, and trimal. If
 #'   an anaconda.environment path is provided all tool paths are automatically
 #'   set to that environment's bin/ directory before checking. Prints a FOUND or
@@ -23,6 +23,9 @@
 #'   check.
 #'
 #' @param megahit.path system path to the directory containing megahit; NULL
+#'   uses the anaconda environment path.
+#'
+#' @param cap3.path system path to the directory containing cap3; NULL
 #'   uses the anaconda environment path.
 #'
 #' @param spades.path system path to the directory containing spades.py; NULL
@@ -56,6 +59,7 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
                       bwa.path = NULL,
                       spades.path = NULL,
                       megahit.path = NULL,
+                      cap3.path = NULL,
                       bbmap.path = NULL,
                       bbnorm.path = NULL,
                       blast.path = NULL,
@@ -71,6 +75,7 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
     bwa.path = paste0(anaconda.environment, "/bin")
     spades.path = paste0(anaconda.environment, "/bin")
     megahit.path = paste0(anaconda.environment, "/bin")
+    cap3.path = paste0(anaconda.environment, "/bin")
     bbmap.path = paste0(anaconda.environment, "/bin")
     bbnorm.path = paste0(anaconda.environment, "/bin")
     blast.path = paste0(anaconda.environment, "/bin")
@@ -125,6 +130,15 @@ setupCheck = function(anaconda.environment = "conda/PhyloCap",
   } #end else
   #CHecks if it was even inputted
   if (is.null(megahit.path) == TRUE) { pass = TRUE }
+
+  if (file.exists(paste0(cap3.path, "/cap3")) == TRUE){
+    print("Cap3 was found.")
+  } else {
+    pass = FALSE
+    print("Cap3 could not be found.")
+  } #end else
+  #CHecks if it was even inputted
+  if (is.null(cap3.path) == TRUE) { pass = TRUE }
 
   if (file.exists(paste0(bbmap.path, "/bbmap.sh")) == TRUE){
     print("BBMap was found.")

@@ -49,8 +49,6 @@ read.length = 150
 assess.capture = TRUE
 # Path to the target probe/marker FASTA used for sequence capture
 target.fasta = "/Path/to/probe-set.fa"
-# The output folder for the capture efficiency results
-capture.directory = "sample-capture-assessment"
 
 # For downloading reads from dropbox
 #########################

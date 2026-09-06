@@ -8,6 +8,7 @@ dependencies:
   - openjdk=17
   - spades>=3.15.2
   - megahit>=1.2.9
+  - cap3=10.2011
   - samtools=1.24
   - r-doparallel=1.0.17
   - r-ape=5.7_1

@@ -16,6 +16,9 @@ setwd(working.directory)
 
 #Begins by creating processed read directory
 dir.create(processed.reads, showWarnings = FALSE)
+# The shared results and log directories used by the later workflows
+dir.create("data-analysis", showWarnings = FALSE)
+dir.create("logs", showWarnings = FALSE)
 
 if (dropbox.download == TRUE){
   #Run download function. The token file is read by the function itself.
@@ -70,7 +73,7 @@ if (organize.reads == TRUE) {
 
 if (summary.fastq == TRUE){
   fastqStats(read.directory = input.reads,
-             output.name = "fastq-stats",
+             output.name = "logs/fastq-stats",
              read.length = read.length,
              threads = threads,
              mem = memory,
@@ -80,7 +83,7 @@ if (summary.fastq == TRUE){
 # Quick scan of raw reads against the target probe set to flag poor samples early
 if (assess.capture == TRUE){
   assessCaptureEfficiency(input.reads = input.reads,
-                          output.directory = capture.directory,
+                          output.directory = "data-analysis/sample-capture-assessment",
                           target.fasta = target.fasta,
                           bwa.path = bwa.path,
                           samtools.path = samtools.path,

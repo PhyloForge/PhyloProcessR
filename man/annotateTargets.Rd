@@ -27,7 +27,7 @@ annotateTargets(
 \item{assembly.directory}{path to the directory containing per-sample contig FASTA files
 (one file per sample, named \code{sampleName.fa}).}
 
-\item{target.file}{path to the FASTA file of target marker sequences used for BLAST
+\item{target.file}{path to the FASTA file of target marker sequences used for the search
 matching.}
 
 \item{alignment.contig.name}{base name (without extension) used for the combined output
@@ -36,14 +36,14 @@ FASTA and summary CSV files. Default "annotated-contigs-all".}
 \item{output.directory}{path to the directory where per-sample annotated contig files
 will be saved. Default "annotated-contigs".}
 
-\item{min.match.percent}{minimum BLAST percent identity required to retain a hit.
+\item{min.match.percent}{minimum percent identity required to retain a hit.
 Default 60.}
 
-\item{min.match.length}{minimum BLAST alignment length (in bp) required to retain a hit.
+\item{min.match.length}{minimum alignment length (in bp) required to retain a hit.
 Default 60.}
 
 \item{min.match.coverage}{minimum proportion of the target sequence length that must be
-covered by the BLAST hit (expressed as a percentage). Default 50.}
+covered by the hit (expressed as a percentage). Default 50.}
 
 \item{retain.paralogs}{logical. If TRUE, potential paralogs (multiple contigs matching
 the same target) are retained by keeping the highest-bitscore hit. If FALSE, the
@@ -53,7 +53,8 @@ best-scoring contig is selected. Default FALSE.}
 
 \item{memory}{total memory (in GB) to allocate across all threads. Default 1.}
 
-\item{blast.path}{path to the directory containing BLAST executables. If NULL, BLAST
+\item{blast.path}{path to the directory containing BLAST executables. Only
+needed when \code{search.method = "blast"}. If NULL, BLAST
 tools are expected to be on the system PATH.}
 
 \item{last.path}{path to the directory containing \code{lastdb} and
@@ -72,31 +73,33 @@ CD-HIT-EST is expected to be on the system PATH.}
 \item{overwrite}{logical. If TRUE, previously completed samples are reprocessed;
 if FALSE, they are skipped. Default FALSE.}
 
-\item{quiet}{logical. If TRUE, suppresses BLAST screen output. Default TRUE.}
+\item{quiet}{logical. If TRUE, suppresses the search program screen output. Default TRUE.}
 }
 \value{
 Writes per-sample annotated FASTA files to \code{output.directory}, a combined
 FASTA file for alignment, and a summary CSV to the working directory. Two log files are
 also written:
 \itemize{
-\item \code{logs/sample_logs/<Sample>_blast-matches.csv} -- the filtered BLAST table
+\item \code{logs/sample_logs/<Sample>_blast-matches.csv} -- the filtered hit table
 for each sample (one row per hit: target, contig, pident, bitscore, evalue, lengths).
 \item \code{logs/annotateTargets_summary.csv} -- one row per sample summarising
 deduplicated contig count, number of targets matched, annotated target count, and
-mean/max BLAST identity and bitscore.
+mean/max identity and bitscore.
 }
 No value is returned to R.
 }
 \description{
-Annotates assembly contigs by matching them to a set of target marker
-sequences using BLAST. For each sample, contigs are first deduplicated with CD-HIT-EST,
-then BLASTed against the target file. BLAST hits are filtered by percent identity,
-match length, and coverage. Contigs that span multiple targets or targets that span
-multiple contigs are handled by trimming or joining with N padding. The annotated
-contigs for each sample are saved as a per-sample FASTA file in \code{output.directory}.
-A combined FASTA file suitable for downstream alignment (named
-\code{alignment.contig.name_to-align.fa}) and a summary CSV are written to the working
-directory.
+Annotates assembly contigs. It matches them to a set of target
+marker sequences. For each sample, the function first removes redundant contigs
+with CD-HIT-EST. It then searches the contigs against the target file.
+\code{search.method} selects the program. The default is LAST. The function
+filters the hits by percent identity, match length, and coverage. Contigs
+that span multiple targets or targets that span multiple contigs are handled
+by trimming or joining with N padding. The annotated contigs for each sample
+are saved as a per-sample FASTA file in \code{output.directory}. A combined
+FASTA file suitable for downstream alignment (named
+\code{alignment.contig.name_to-align.fa}) and a summary CSV are written to
+the working directory.
 }
 \details{
 The structural curation moved to \code{curateTargetContigs}, which

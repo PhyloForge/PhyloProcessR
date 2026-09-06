@@ -1,10 +1,11 @@
 #' @title removeOffTargetContigs
 #'
-#' @description Filters each sample's assembly to retain only contigs that have
-#'   a BLAST match to the provided target markers. One BLAST database is built
-#'   from the target markers and each assembly is queried against it
-#'   (dc-megablast). Hits are filtered by alignment length, percent identity, and
-#'   coverage of the target. Surviving contigs are renamed to match their target
+#' @description Filters each sample's assembly. It keeps only the contigs that
+#'   match the given target markers. The function builds one search database from
+#'   the target markers. It then searches each assembly against that database.
+#'   \code{search.method} selects the program. The default is LAST. The function
+#'   filters the hits by alignment length, percent identity, and coverage of the
+#'   target. Surviving contigs are renamed to match their target
 #'   and saved as a single FASTA per sample in the output directory. When several
 #'   contigs match the same target, each contig is kept once, with its best hit,
 #'   and the duplicate names are made unique with a numeric suffix. Samples that
@@ -15,7 +16,7 @@
 #'   one per sample.
 #'
 #' @param target.markers path to a FASTA file of target marker sequences used
-#'   as the BLAST reference database.
+#'   as the search reference database.
 #'
 #' @param output.directory path to the directory where filtered per-sample FASTA
 #'   files will be written. Default: \code{"target-contigs"}.
@@ -31,27 +32,28 @@
 #'   \code{NULL} the programs must be on the system PATH. Default: \code{NULL}.
 #'
 #' @param blast.path path to the directory containing \code{makeblastdb} and
-#'   \code{blastn}. If \code{NULL} expected on the system PATH. Default:
+#'   \code{blastn}. Only needed when \code{search.method = "blast"}. If
+#'   \code{NULL} expected on the system PATH. Default:
 #'   \code{NULL}.
 #'
-#' @param min.match.length minimum BLAST alignment length (bp) a hit must exceed
+#' @param min.match.length minimum alignment length (bp) a hit must exceed
 #'   to be accepted. Default: \code{60}.
 #'
-#' @param min.match.percent minimum BLAST percent identity (0-100) required to
+#' @param min.match.percent minimum percent identity (0-100) required to
 #'   accept a hit. Default: \code{60}.
 #'
 #' @param min.match.coverage minimum percentage of the target length that a
-#'   BLAST hit must cover to be accepted. Default: \code{30}.
+#'   hit must cover to be accepted. Default: \code{30}.
 #'
 #' @param memory not currently used; reserved for future use. Default: \code{1}.
 #'
-#' @param threads number of CPU threads passed to \code{blastn}. Default:
+#' @param threads number of CPU threads passed to the search program. Default:
 #'   \code{1}.
 #'
 #' @param overwrite logical; if \code{TRUE} the output directory is deleted and
 #'   recreated and all samples are rerun. Default: \code{FALSE}.
 #'
-#' @param quiet logical; if \code{TRUE} \code{makeblastdb} screen output is
+#' @param quiet logical; if \code{TRUE} the search program screen output is
 #'   suppressed. Default: \code{TRUE}.
 #'
 #' @return Invisibly returns nothing. Writes one filtered FASTA file per sample

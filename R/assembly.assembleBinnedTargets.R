@@ -153,7 +153,7 @@
 #' @param megahit.path path to the directory that holds \code{megahit}.
 #'   Default: \code{NULL}.
 #'
-#' @param spades.path path to the directory that holds \code{spades.py}. Only
+#' @param cap3.path path to the directory that holds \code{cap3}. Only
 #'   \code{rescue.missing = TRUE} needs it. Default: \code{NULL}.
 #'
 #' @param last.path path to the directory that holds \code{lastdb},
@@ -200,7 +200,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                                  bwa.path = NULL,
                                  samtools.path = NULL,
                                  megahit.path = NULL,
-                                 spades.path = NULL,
+                                 cap3.path = NULL,
                                  last.path = NULL,
                                  overwrite = FALSE,
                                  quiet = TRUE) {
@@ -230,10 +230,10 @@ assembleBinnedTargets = function(read.directory = NULL,
   samtools.command = .toolCommand("samtools", samtools.path)
   megahit.command  = .toolCommand("megahit", megahit.path)
 
-  # Only the rescue step still uses SPAdes, so it is the only thing that needs it
+  # Only the rescue step uses cap3, so it is the only thing that needs it
   use.rescue = rescue.missing == TRUE && bait.source != "reference"
-  spades.command = NULL
-  if (use.rescue == TRUE) spades.command = .toolCommand("spades.py", spades.path)
+  cap3.command = NULL
+  if (use.rescue == TRUE) cap3.command = .toolCommand("cap3", cap3.path)
 
   # LAST does every divergent search in this function, so it is always needed
   use.draft = is.null(draft.assembly.directory) == FALSE
@@ -382,14 +382,12 @@ assembleBinnedTargets = function(read.directory = NULL,
           lastal.command = lastal.command,
           mafconvert.command = mafconvert.command,
           samtools.command = samtools.command,
-          spades.command = spades.command,
+          cap3.command = cap3.command,
           headers = headers,
-          kmer.values = kmer.values,
           min.contig.length = min.contig.length,
           min.match.percent = min.match.percent,
           min.match.length = min.match.length,
           min.match.coverage = min.match.coverage,
-          memory = memory,
           threads = threads,
           quiet = quiet)
 
