@@ -99,3 +99,60 @@ test_that("a dinucleotide repeat is flagged and a varied sequence is not", {
 
   expect_equal(unname(.lowComplexity(seqs)), c(TRUE, FALSE))
 })
+
+test_that("a sample with no contigs of its own is skipped", {
+
+  contigs = Biostrings::DNAStringSet(c(locus1 = "ACGTACGTAC"))
+
+  # Odontophrynus: a contig source was given, the sample is absent from it
+  expect_true(.sampleHasNoContigs(own.contigs = NULL,
+                                  draft.contigs = NULL,
+                                  assembly.directory = "contigs/3_target-contigs",
+                                  draft.assembly.directory = "contigs/2_reduced-redundancy"))
+
+  # anything of its own is enough to proceed
+  expect_false(.sampleHasNoContigs(own.contigs = contigs,
+                                   draft.contigs = NULL,
+                                   assembly.directory = "contigs/3_target-contigs"))
+  expect_false(.sampleHasNoContigs(own.contigs = NULL,
+                                   draft.contigs = contigs,
+                                   draft.assembly.directory = "contigs/2_reduced-redundancy"))
+
+  # a deliberate reference-only run gives no contig source and is left alone
+  expect_false(.sampleHasNoContigs(own.contigs = NULL,
+                                   draft.contigs = NULL,
+                                   assembly.directory = NULL,
+                                   draft.assembly.directory = NULL))
+
+  # an empty set counts the same as no set
+  expect_true(.sampleHasNoContigs(own.contigs = contigs[0],
+                                  draft.contigs = contigs[0],
+                                  assembly.directory = "contigs/3_target-contigs"))
+})
+
+test_that("a sample absent from every contig source is skipped before the reads", {
+
+  tmp = file.path(tempdir(), "contigsource")
+  dir.create(tmp, showWarnings = FALSE, recursive = TRUE)
+  writeLines(c(">locus1", "ACGT"), file.path(tmp, "PresentSample.fa"))
+
+  # Odontophrynus: no file in the only source given
+  expect_true(.sampleHasNoContigFile(sample = "AbsentSample",
+                                     assembly.directory = tmp))
+
+  # a sample with a file proceeds
+  expect_false(.sampleHasNoContigFile(sample = "PresentSample",
+                                      assembly.directory = tmp))
+
+  # a file in either source is enough
+  expect_false(.sampleHasNoContigFile(sample = "PresentSample",
+                                      assembly.directory = NULL,
+                                      draft.assembly.directory = tmp))
+
+  # a deliberate reference-only run gives no source and is left alone
+  expect_false(.sampleHasNoContigFile(sample = "AbsentSample",
+                                      assembly.directory = NULL,
+                                      draft.assembly.directory = NULL))
+
+  unlink(tmp, recursive = TRUE)
+})

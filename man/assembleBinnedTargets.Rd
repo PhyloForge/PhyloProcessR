@@ -215,6 +215,12 @@ The step is additive. It does not replace \code{assembleSpades}. Give it the
 assembly directory of the main pipeline and it keeps the longer sequence for
 each target, so a locus that assembled well keeps its own contig.
 
+A sample needs an assembly of its own. One that is absent from both
+\code{assembly.directory} and \code{draft.assembly.directory} is skipped
+with a warning, because every target would fall into the rescue pool and the
+step would run for days to give what reference baits alone give. Assemble
+such a sample with \code{assembleSpades} first, then bin it.
+
 Divergence is handled at the identification step, not at the mapping step. A
 target locus assembles in the draft assembly whatever its divergence,
 because de novo assembly needs no reference. The locus is then lost when

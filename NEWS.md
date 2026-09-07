@@ -106,6 +106,12 @@
 
 ### Improvements
 
+- `assembleBinnedTargets()` skips a sample that has no contigs of its own in
+  either `assembly.directory` or `draft.assembly.directory`, with a warning that
+  names the fix. Such a sample puts every target in the rescue pool. One outgroup
+  of 34,058 targets and 12.6 GB of reads ran for 14 hours and was about 26
+  percent through the cap3 step when it was stopped. The check is a file test and
+  runs before the lanes are joined, so the skip costs nothing.
 - `assembleBinnedTargets()` writes
   `logs/assembleBinnedTargets_summary.csv`, one row per sample. The row is added
   as each sample finishes, so a batch that stops early keeps the rows it earned,

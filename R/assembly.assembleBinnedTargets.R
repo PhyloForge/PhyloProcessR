@@ -13,6 +13,12 @@
 #'   assembly directory of the main pipeline and it keeps the longer sequence for
 #'   each target, so a locus that assembled well keeps its own contig.
 #'
+#'   A sample needs an assembly of its own. One that is absent from both
+#'   \code{assembly.directory} and \code{draft.assembly.directory} is skipped
+#'   with a warning, because every target would fall into the rescue pool and the
+#'   step would run for days to give what reference baits alone give. Assemble
+#'   such a sample with \code{assembleSpades} first, then bin it.
+#'
 #'   Divergence is handled at the identification step, not at the mapping step. A
 #'   target locus assembles in the draft assembly whatever its divergence,
 #'   because de novo assembly needs no reference. The locus is then lost when
@@ -334,6 +340,18 @@ assembleBinnedTargets = function(read.directory = NULL,
       next
     }
 
+    # A sample absent from every contig source cannot be extended or patched, and
+    # every target would fall into the rescue pool, which is days of cap3 on a
+    # large read set. This is a file test, so the skip costs nothing and happens
+    # before the lanes are joined. Numbers in HANDOFF.md.
+    if (.sampleHasNoContigFile(sample = sample,
+                               assembly.directory = assembly.directory,
+                               draft.assembly.directory = draft.assembly.directory) == TRUE) {
+      warning(sample, ": no contigs of its own in the assembly or the draft. ",
+              "Skipping. Assemble this sample before binning it.")
+      next
+    }
+
     # bwa mem takes one file per mate, so several lanes are joined first
     read1 = read.pair$read1
     read2 = read.pair$read2
@@ -391,6 +409,18 @@ assembleBinnedTargets = function(read.directory = NULL,
       } else {
         print(paste0(sample, ": no draft assembly found at ", draft.file, "."))
       }
+    }
+
+    # A sample missing from the assembly puts every target in the rescue pool.
+    # That is days of work for a result reference baits alone would give, so it
+    # is skipped before the rescue runs. Numbers in HANDOFF.md.
+    if (.sampleHasNoContigs(own.contigs = own.contigs,
+                            draft.contigs = draft.contigs,
+                            assembly.directory = assembly.directory,
+                            draft.assembly.directory = draft.assembly.directory) == TRUE) {
+      warning(sample, ": no contigs of its own in the assembly or the draft. ",
+              "Skipping. Assemble this sample before binning it.")
+      next
     }
 
     target.names = locus.names

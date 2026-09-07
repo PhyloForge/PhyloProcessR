@@ -30,6 +30,48 @@
 }#end .pairSampleReads
 
 
+# TRUE when a contig source was given but this sample has no file in any of
+# them. This is a file test only, so it can run before the lanes are joined and
+# before any read is touched. It catches the common case, a sample that is
+# absent from the assembly. `.sampleHasNoContigs` catches the rest, a file that
+# exists but yields nothing.
+.sampleHasNoContigFile = function(sample = NULL,
+                                  assembly.directory = NULL,
+                                  draft.assembly.directory = NULL) {
+
+  has.file = function(one.dir) {
+    if (is.null(one.dir) == TRUE) return(FALSE)
+    file.exists(paste0(sub("/+$", "", one.dir), "/", sample, ".fa"))
+  }
+
+  has.source = is.null(assembly.directory) == FALSE ||
+               is.null(draft.assembly.directory) == FALSE
+
+  return(has.source == TRUE &&
+         has.file(assembly.directory) == FALSE &&
+         has.file(draft.assembly.directory) == FALSE)
+}#end .sampleHasNoContigFile
+
+
+# TRUE when a contig source was given but this sample holds nothing in it. Such
+# a sample cannot be extended or patched, and every target falls into the rescue
+# pool, which is days of cap3 on a large read set for a result that reference
+# baits alone would give. A run given no contig source at all is a deliberate
+# reference-only run and is left alone.
+.sampleHasNoContigs = function(own.contigs = NULL,
+                               draft.contigs = NULL,
+                               assembly.directory = NULL,
+                               draft.assembly.directory = NULL) {
+
+  has.source = is.null(assembly.directory) == FALSE ||
+               is.null(draft.assembly.directory) == FALSE
+
+  return(has.source == TRUE &&
+         length(own.contigs) == 0 &&
+         length(draft.contigs) == 0)
+}#end .sampleHasNoContigs
+
+
 # Strips the suffix that make.unique added to a duplicated target name. A target
 # name can hold an underscore itself, so a name is only cut when the cut form is
 # a real target.
