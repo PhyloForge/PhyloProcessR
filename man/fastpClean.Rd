@@ -35,7 +35,8 @@ sequence from the read pairs (--detect_adapter_for_pe). FALSE disables
 adapter trimming.}
 
 \item{remove.duplicate.reads}{logical; TRUE removes PCR and optical
-duplicate read pairs (--dedup).}
+duplicate read pairs using fastp's default deduplication accuracy
+(--dedup).}
 
 \item{error.correction}{logical; TRUE corrects mismatched bases in the
 overlap of a read pair by majority vote (--correction).}
@@ -75,7 +76,7 @@ already have complete output.}
 \value{
 invisibly returns the summary data frame; writes cleaned fastq.gz
 files to output.directory, the fastp HTML and JSON reports to
-logs/sample_logs, and a CSV summary to logs/fastpClean_summary.csv.
+logs/sample_logs, and a CSV summary to logs/fastp_summary.csv.
 }
 \description{
 Cleans raw paired-end Illumina reads with a single pass of

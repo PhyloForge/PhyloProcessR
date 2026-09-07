@@ -18,7 +18,8 @@
 #'   adapter trimming.
 #'
 #' @param remove.duplicate.reads logical; TRUE removes PCR and optical
-#'   duplicate read pairs (--dedup).
+#'   duplicate read pairs using fastp's default deduplication accuracy
+#'   (--dedup).
 #'
 #' @param error.correction logical; TRUE corrects mismatched bases in the
 #'   overlap of a read pair by majority vote (--correction).
@@ -57,7 +58,7 @@
 #'
 #' @return invisibly returns the summary data frame; writes cleaned fastq.gz
 #'   files to output.directory, the fastp HTML and JSON reports to
-#'   logs/sample_logs, and a CSV summary to logs/fastpClean_summary.csv.
+#'   logs/sample_logs, and a CSV summary to logs/fastp_summary.csv.
 #'
 #' @export
 
@@ -114,7 +115,7 @@ fastpClean = function(input.reads = NULL,
   if (trim.poly.x == TRUE){ fastp.args = c(fastp.args, "--trim_poly_x") }
 
   if (remove.duplicate.reads == TRUE){
-    fastp.args = c(fastp.args, "--dedup --dup_calc_accuracy 5")
+    fastp.args = c(fastp.args, "--dedup")
   }
 
   if (error.correction == TRUE){ fastp.args = c(fastp.args, "--correction") }
@@ -131,7 +132,7 @@ fastpClean = function(input.reads = NULL,
                 fastp.args = paste(fastp.args, collapse = " "),
                 task = "fastp-clean",
                 report.tag = "fastp-clean",
-                summary.csv = "logs/fastpClean_summary.csv",
+                summary.csv = "logs/fastp_summary.csv",
                 threads = threads,
                 mem = mem,
                 overwrite = overwrite,

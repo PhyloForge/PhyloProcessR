@@ -43,7 +43,8 @@
 #'
 #' @param overwrite.reference logical; if TRUE an existing BWA index in
 #'   ref-index/ is deleted and rebuilt. The index is also rebuilt on its own
-#'   when the contaminant reference files have changed.
+#'   when the contaminant reference files have changed. The index is removed
+#'   when the function exits.
 #'
 #' @param quiet logical; if TRUE BWA and samtools stdout/stderr are suppressed.
 #'
@@ -90,6 +91,9 @@ removeContamination = function(input.reads = "cleaned-reads",
   #Checks that both programs are installed before any sample is processed
   bwa.command = .toolCommand("bwa", bwa.path)
   samtools.command = .toolCommand("samtools", samtools.path)
+
+  # The combined reference index is temporary and is removed when this step exits.
+  on.exit(unlink("ref-index", recursive = TRUE), add = TRUE)
 
   #Sets up the output directory
   if (dir.exists(output.directory) == F){

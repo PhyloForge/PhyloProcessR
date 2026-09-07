@@ -3,7 +3,8 @@
 #' @description Removes PCR and optical duplicate read pairs from processed
 #'   paired-end fastq files using fastp's --dedup mode. Adapter trimming,
 #'   quality filtering, and length filtering are disabled so that only
-#'   duplicate removal is performed.
+#'   duplicate removal is performed. fastp's default deduplication accuracy is
+#'   used.
 #'
 #' @param input.reads path to a directory of processed paired-end reads in
 #'   fastq.gz format, organised in per-sample sub-directories.
@@ -43,7 +44,7 @@ removeDuplicateReads = function(input.reads = NULL,
   .runFastpStep(input.reads = input.reads,
                 output.directory = output.directory,
                 fastp.path = fastp.path,
-                fastp.args = paste0("--dedup --dup_calc_accuracy 6",
+                fastp.args = paste0("--dedup",
                                     " --disable_adapter_trimming --disable_quality_filtering",
                                     " --disable_length_filtering --compression 6"),
                 task = "deduplicate-reads",

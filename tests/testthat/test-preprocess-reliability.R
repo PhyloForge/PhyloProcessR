@@ -130,6 +130,37 @@ test_that("fastp resume rebuilds complete summaries and rejects changed settings
 })
 
 
+test_that("deduplication uses the fastp default accuracy", {
+  fastp.calls = list()
+  local_mocked_bindings(
+    .runFastpStep = function(...) {
+      fastp.calls[[length(fastp.calls) + 1]] <<- list(...)
+    },
+    .package = "PhyloProcessR"
+  )
+
+  fastpClean(input.reads = "input", output.directory = "output")
+  removeDuplicateReads(input.reads = "input", output.directory = "output")
+
+  expect_length(fastp.calls, 2)
+  expect_identical(fastp.calls[[1]]$summary.csv, "logs/fastp_summary.csv")
+  for (fastp.call in fastp.calls) {
+    expect_match(fastp.call$fastp.args, "(^| )--dedup($| )")
+    expect_false(grepl("--dup_calc_accuracy", fastp.call$fastp.args,
+                       fixed = TRUE))
+  }
+})
+
+
+test_that("the environment pins the tested fastp version", {
+  environment.file = test_path("..", "..", "setup-files", "environment.yml")
+  expect_true(file.exists(environment.file))
+  environment.lines = readLines(environment.file)
+  expect_identical(grep("^  - fastp=", environment.lines, value = TRUE),
+                   "  - fastp=1.3.6")
+})
+
+
 test_that("empty summaries remove obsolete sample rows", {
   root = tempfile("preprocess-summary-")
   dir.create(root)
@@ -213,7 +244,7 @@ test_that("SRA filters fail clearly when metadata columns are absent", {
 
 
 test_that("workflow 1 rejects simultaneous download sources before setup", {
-  workflow.file = normalizePath("workflows/workflow-1_preprocess.R", mustWork = TRUE)
+  workflow.file = test_path("..", "..", "workflows", "workflow-1_preprocess.R")
   root = tempfile("preprocess-workflow-")
   dir.create(root)
   file.copy(workflow.file, file.path(root, "workflow-1_preprocess.R"))
@@ -297,6 +328,45 @@ test_that("contaminant indexes use checksums and require every BWA component", {
       reference.directory, shQuote(fake.bwa), quiet = TRUE
     )
     expect_true(file.exists(file.path(root, "ref-index", "reference.sa")))
+  })
+})
+
+
+test_that("temporary reference indexes are removed when preprocessing exits", {
+  root = tempfile("preprocess-temporary-indexes-")
+  dir.create(root)
+  input.directory = file.path(root, "input")
+  reference.directory = file.path(root, "references")
+  dir.create(input.directory)
+  dir.create(reference.directory)
+  target.file = file.path(root, "targets.fa")
+  writeLines(c(">target", "ACGT"), target.file)
+
+  fake.bwa = file.path(root, "bwa")
+  writeLines(c(
+    "#!/bin/sh",
+    "shift",
+    "prefix=\"$1\"",
+    "for suffix in amb ann bwt pac sa; do : > \"${prefix}.${suffix}\"; done"
+  ), fake.bwa)
+  Sys.chmod(fake.bwa, mode = "0755")
+  fake.samtools = file.path(root, "samtools")
+  writeLines("#!/bin/sh", fake.samtools)
+  Sys.chmod(fake.samtools, mode = "0755")
+
+  with_preprocess_test_directory(root, {
+    dir.create("ref-index")
+    removeContamination(input.reads = input.directory,
+                        output.directory = "decontaminated-reads",
+                        decontamination.path = reference.directory,
+                        bwa.path = fake.bwa, samtools.path = fake.samtools)
+    expect_false(dir.exists("ref-index"))
+
+    assessCaptureEfficiency(input.reads = input.directory,
+                            output.directory = "sample-capture-assessment",
+                            target.fasta = target.file,
+                            bwa.path = fake.bwa, samtools.path = fake.samtools)
+    expect_false(dir.exists("sample-capture-assessment/target-index"))
   })
 })
 

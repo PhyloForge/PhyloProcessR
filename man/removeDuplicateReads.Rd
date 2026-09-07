@@ -45,5 +45,6 @@ logs/removeDuplicateReads_summary.csv.
 Removes PCR and optical duplicate read pairs from processed
 paired-end fastq files using fastp's --dedup mode. Adapter trimming,
 quality filtering, and length filtering are disabled so that only
-duplicate removal is performed.
+duplicate removal is performed. fastp's default deduplication accuracy is
+used.
 }

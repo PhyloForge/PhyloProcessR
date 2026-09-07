@@ -50,7 +50,7 @@ Default: \code{TRUE}.}
 \value{
 invisibly returns the summary data frame; writes per-sample
 per-target count CSVs to output.directory and a cross-sample summary to
-logs/assessCaptureEfficiency_summary.csv. Only primary alignments are
+logs/sample-capture-assessment_summary.csv. Only primary alignments are
 counted, so pctReadsOnTarget cannot go above 100.
 }
 \description{

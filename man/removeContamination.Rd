@@ -54,7 +54,8 @@ already have complete output.}
 
 \item{overwrite.reference}{logical; if TRUE an existing BWA index in
 ref-index/ is deleted and rebuilt. The index is also rebuilt on its own
-when the contaminant reference files have changed.}
+when the contaminant reference files have changed. The index is removed
+when the function exits.}
 
 \item{quiet}{logical; if TRUE BWA and samtools stdout/stderr are suppressed.}
 }

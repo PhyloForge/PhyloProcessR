@@ -40,7 +40,7 @@
 #'
 #' @return invisibly returns the summary data frame; writes per-sample
 #'   per-target count CSVs to output.directory and a cross-sample summary to
-#'   logs/assessCaptureEfficiency_summary.csv. Only primary alignments are
+#'   logs/sample-capture-assessment_summary.csv. Only primary alignments are
 #'   counted, so pctReadsOnTarget cannot go above 100.
 #'
 #' @export
@@ -90,8 +90,9 @@ assessCaptureEfficiency = function(input.reads = NULL,
   #################################################
   ### Part A: build the target index once
   #################################################
-  # The index is kept between runs and identified by the target checksum.
+  # The index is used only for this assessment and removed when the function exits.
   index.path = paste0(output.directory, "/target-index")
+  on.exit(unlink(index.path, recursive = TRUE), add = TRUE)
   target.copy = paste0(index.path, "/targets.fa")
   target.manifest = paste0(normalizePath(target.fasta), "\t",
                            unname(tools::md5sum(target.fasta)))
@@ -309,7 +310,7 @@ assessCaptureEfficiency = function(input.reads = NULL,
   summary.data$pctTargetsHit    = round(summary.data$targetsHit / summary.data$totalTargets * 100, 2)
   summary.data$pctReadsOnTarget = round(summary.data$mappedReads / (summary.data$readPairs * 2) * 100, 2)
 
-  .appendSummary(summary.data, "logs/assessCaptureEfficiency_summary.csv")
+  .appendSummary(summary.data, "logs/sample-capture-assessment_summary.csv")
 
   return(invisible(summary.data))
 }#end function

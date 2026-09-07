@@ -434,8 +434,8 @@ for (i in 1:length(sample.names)) {
   ##############################################################
   write.csv(all.fastq.stats, "logs/X2_fastq-stats_rolling.csv", row.names = FALSE)
   # fastpClean and assessCaptureEfficiency write and append their own
-  # CSVs directly — logs/fastpClean_summary.csv and
-  # logs/assessCaptureEfficiency_summary.csv grow after every sample
+  # CSVs directly — logs/fastp_summary.csv and
+  # logs/sample-capture-assessment_summary.csv grow after every sample
 
   cat(" Sample", sample.name, "complete!\n")
 
@@ -460,8 +460,8 @@ if (nrow(all.fastq.stats) > 0) {
 
 # --- Aggregate fastp stats per sample (sum across lanes) ---
 # fastpClean appends to its CSV directly; read it here for the merge.
-if (file.exists("logs/fastpClean_summary.csv")) {
-  fp.raw = read.csv("logs/fastpClean_summary.csv", stringsAsFactors = FALSE)
+if (file.exists("logs/fastp_summary.csv")) {
+  fp.raw = read.csv("logs/fastp_summary.csv", stringsAsFactors = FALSE)
   fp.agg = aggregate(cbind(startPairs, removePairs, endPairs) ~ Sample,
                      data = fp.raw, FUN = sum)
   fp.agg$pctRemovedByFastp = round(fp.agg$removePairs / fp.agg$startPairs * 100, 2)
@@ -471,8 +471,8 @@ if (file.exists("logs/fastpClean_summary.csv")) {
 }
 
 # --- Capture stats: already aggregated per sample by assessCaptureEfficiency ---
-if (file.exists("logs/assessCaptureEfficiency_summary.csv")) {
-  cap.agg = read.csv("logs/assessCaptureEfficiency_summary.csv", stringsAsFactors = FALSE)
+if (file.exists("logs/sample-capture-assessment_summary.csv")) {
+  cap.agg = read.csv("logs/sample-capture-assessment_summary.csv", stringsAsFactors = FALSE)
 } else {
   cap.agg = data.frame()
 }

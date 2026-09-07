@@ -139,6 +139,13 @@ if (decontamination == TRUE){
                       overwrite = overwrite,
                       overwrite.reference = overwrite.contaminant.database,
                       quiet = quiet)
+
+  # References downloaded for this run are temporary. User-provided reference
+  # directories are left unchanged.
+  if (download.contaminant.genomes == TRUE &&
+      dir.exists("contaminant-references") == TRUE) {
+    unlink("contaminant-references", recursive = TRUE)
+  }
   input.reads = paste0(processed.reads, "/decontaminated-reads")
 }
 

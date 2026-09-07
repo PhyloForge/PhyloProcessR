@@ -33,5 +33,5 @@ dependencies:
   - hisat2=2.2.1
   - last=1654
   - gatk4=4.4.0.0
-  - fastp=0.23.2
+  - fastp=1.3.6
   - r-stringi=1.7.12
