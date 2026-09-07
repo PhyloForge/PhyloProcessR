@@ -1,12 +1,7 @@
-# Internal helpers for the workflow 1 preprocess functions. These functions are
-# not exported. They hold the logic that was previously repeated in each
-# preprocess function: program lookup, safe shell calls, sample matching, read
-# counting, and summary log writing.
+# Shared internal helpers for workflow 1 preprocessing: program lookup, safe
+# shell calls, sample matching, read counting, and summary log writing.
 
 
-# Builds the shell command for an external program. program.path can be the
-# directory that holds the executable, the full path to the executable, or NULL
-# to use the system PATH. The function stops when the program is not found.
 # Length of a sequence without its Ns. Two fragments of one target are joined with
 # N padding, so the padding would otherwise count as recovered sequence.
 .baseWidth = function(seqs = NULL) {
@@ -16,6 +11,9 @@
 }#end .baseWidth
 
 
+# Builds the shell command for an external program. program.path can be the
+# directory that holds the executable, the full path to the executable, or NULL
+# to use the system PATH. The function stops when the program is not found.
 .toolCommand = function(program = NULL,
                         program.path = NULL) {
 
@@ -53,9 +51,19 @@
                        task = "external command",
                        keep.stdout = FALSE) {
 
+  drop.stdout = quiet && keep.stdout == FALSE
+  drop.stderr = quiet
+
+  # R appends its redirections to the end of the string, where a shell binds them
+  # to the last stage of a pipeline only. A subshell makes them cover every stage,
+  # which is what silences bwa in the "bwa mem | samtools view" pipes.
+  if ((drop.stdout || drop.stderr) && grepl("|", command, fixed = TRUE)) {
+    command = paste0("( ", command, " )")
+  }
+
   status = system(command,
-                  ignore.stdout = quiet && keep.stdout == FALSE,
-                  ignore.stderr = quiet)
+                  ignore.stdout = drop.stdout,
+                  ignore.stderr = drop.stderr)
   if (status != 0) {
     stop("The ", task, " step failed with exit status ", status, ".\nCommand: ", command)
   }
@@ -81,15 +89,28 @@
 .relativePaths = function(file.paths = NULL,
                           base.dir = NULL) {
 
-  base.dir = sub("/+$", "", base.dir)
-  return(sub(paste0("^", base.dir, "/+"), "", file.paths, fixed = FALSE))
+  base.dir = paste0(sub("/+$", "", base.dir), "/")
+  relative.paths = file.paths
+  inside.base = startsWith(file.paths, base.dir)
+  relative.paths[inside.base] = substring(file.paths[inside.base], nchar(base.dir) + 1)
+  return(relative.paths)
 }#end .relativePaths
 
 
-# Selects the files whose match string starts with a prefix and a separator.
-# The comparison uses fixed strings, so a regular expression character in a
-# sample name is safe. The separator stops a short name from matching a longer
-# one, for example Sample1 and Sample10.
+# Lists only supported FASTQ files. Reports, sentinels, and other files in a
+# read directory must not take part in sample or lane discovery.
+.listFastqFiles = function(read.directory = NULL,
+                           recursive = TRUE) {
+
+  reads = list.files(read.directory, recursive = recursive, full.names = TRUE)
+  reads = reads[grepl("\\.(fastq|fq)(\\.gz)?$", reads, ignore.case = TRUE)]
+  return(reads)
+}#end .listFastqFiles
+
+
+# Selects the files whose match string starts with a prefix and a recognized
+# separator or bare READ label. Fixed-string comparisons keep regular
+# expression characters safe and stop Sample1 from matching Sample10.
 .matchPrefix = function(file.paths = NULL,
                         match.strings = NULL,
                         prefix = NULL) {
@@ -97,7 +118,8 @@
   keep = startsWith(match.strings, paste0(prefix, "_")) |
          startsWith(match.strings, paste0(prefix, "-")) |
          startsWith(match.strings, paste0(prefix, ".")) |
-         startsWith(match.strings, paste0(prefix, "/"))
+         startsWith(match.strings, paste0(prefix, "/")) |
+         startsWith(toupper(match.strings), paste0(toupper(prefix), "READ"))
 
   return(file.paths[keep])
 }#end .matchPrefix
@@ -107,15 +129,63 @@
 # prefix, for example Sample_L001. Multiple lanes give multiple prefixes.
 .stripReadSuffix = function(file.paths = NULL) {
 
-  read.suffix = paste0("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|",
-                       "_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|",
-                       "-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|",
-                       "-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|",
-                       "READ-singleton.*|READ_singleton.*|_READ-singleton.*|",
-                       "-READ_singleton.*|-READ-singleton.*|_READ_singleton.*")
-
-  return(unique(gsub(read.suffix, "", file.paths)))
+  named.suffix = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123])",
+                        ".*\\.(fastq|fq)(\\.gz)?$")
+  lane.prefixes = sub(named.suffix, "", file.paths, ignore.case = TRUE)
+  numeric.suffix = paste0("(_[123]|-[123])([_.-].*)?",
+                          "\\.(fastq|fq)(\\.gz)?$")
+  lane.prefixes = sub(numeric.suffix, "", lane.prefixes, ignore.case = TRUE)
+  singleton.suffix = paste0("(_singleton|-singleton|READ-singleton|READ_singleton|",
+                            "_READ-singleton|-READ_singleton|-READ-singleton|",
+                            "_READ_singleton).*\\.(fastq|fq)(\\.gz)?$")
+  lane.prefixes = sub(singleton.suffix, "", lane.prefixes, ignore.case = TRUE)
+  return(unique(lane.prefixes))
 }#end .stripReadSuffix
+
+
+# Puts read files in first-mate, second-mate, optional third-read order. Every
+# naming form accepted by the older preprocessing functions remains supported,
+# including extra instrument text around the mate label.
+.orderReadFiles = function(read.files = NULL,
+                           allow.third = TRUE) {
+
+  read.files = read.files[grepl("\\.(fastq|fq)(\\.gz)?$", read.files, ignore.case = TRUE)]
+  base.names = basename(read.files)
+  mate.pattern = function(number) {
+    paste0("((_R", number, "|-R", number, "|_READ", number, "|-READ", number,
+           "|READ", number, ").*|(_", number, "|-", number, ")([_.-].*)?)",
+           "\\.(fastq|fq)(\\.gz)?$")
+  }
+  mate.matches = sapply(1:3, function(number) {
+    grepl(mate.pattern(number), base.names, ignore.case = TRUE)
+  })
+  if (length(read.files) == 1) { mate.matches = matrix(mate.matches, nrow = 1) }
+  singleton.pattern = paste0("(_singleton|-singleton|READ-singleton|READ_singleton|",
+                             "_READ-singleton|-READ_singleton|-READ-singleton|",
+                             "_READ_singleton)")
+  singleton = grepl(singleton.pattern, base.names, ignore.case = TRUE)
+  mate.matches[singleton, ] = FALSE
+  mate.matches[singleton, 3] = TRUE
+  mate.number = max.col(mate.matches, ties.method = "first")
+  mate.number[rowSums(mate.matches) != 1] = NA_integer_
+
+  valid.length = length(read.files) == 2 || (allow.third == TRUE && length(read.files) == 3)
+  if (sum(mate.number == 1, na.rm = TRUE) != 1 ||
+      sum(mate.number == 2, na.rm = TRUE) != 1 ||
+      sum(mate.number == 3, na.rm = TRUE) > as.integer(allow.third) ||
+      any(is.na(mate.number)) || valid.length == FALSE) {
+    stop("Expected exactly one READ1 and one READ2 FASTQ file, but found: ",
+         paste(base.names, collapse = ", "))
+  }
+
+  return(read.files[order(mate.number)])
+}#end .orderReadFiles
+
+
+.orderReadPair = function(read.files = NULL) {
+
+  return(.orderReadFiles(read.files, allow.third = FALSE))
+}#end .orderReadPair
 
 
 # Lists the sample names in a read directory. Samples are sub-directories when
@@ -125,8 +195,9 @@
   sample.names = list.dirs(read.directory, recursive = FALSE, full.names = FALSE)
 
   if (length(sample.names) == 0) {
-    sample.names = list.files(read.directory, recursive = FALSE, full.names = FALSE)
-    sample.names = unique(gsub("_L00.*", "", sample.names))
+    read.files = .listFastqFiles(read.directory, recursive = FALSE)
+    sample.names = basename(.stripReadSuffix(read.files))
+    sample.names = unique(sub("_L[0-9]+$", "", sample.names))
     sample.names = sample.names[nchar(sample.names) > 0]
   }
 
@@ -159,11 +230,19 @@
 
   if (file.exists(json.file) == FALSE) { return(NULL) }
 
-  report = jsonlite::fromJSON(json.file)
-  if (is.null(report$summary$before_filtering$total_reads) == TRUE) { return(NULL) }
+  report = tryCatch(jsonlite::fromJSON(json.file), error = function(e) NULL)
+  if (is.null(report) == TRUE ||
+      is.null(report$summary$before_filtering$total_reads) == TRUE ||
+      is.null(report$summary$after_filtering$total_reads) == TRUE) { return(NULL) }
 
-  counts = list(startPairs = report$summary$before_filtering$total_reads / 2,
-                endPairs = report$summary$after_filtering$total_reads / 2,
+  before.reads = suppressWarnings(as.numeric(report$summary$before_filtering$total_reads))
+  after.reads = suppressWarnings(as.numeric(report$summary$after_filtering$total_reads))
+  if (length(before.reads) != 1 || length(after.reads) != 1 ||
+      is.finite(before.reads) == FALSE || is.finite(after.reads) == FALSE ||
+      before.reads < 0 || after.reads < 0) { return(NULL) }
+
+  counts = list(startPairs = before.reads / 2,
+                endPairs = after.reads / 2,
                 mergedReads = NA_real_)
 
   # fastp reports merged reads in a separate block when --merge is used
@@ -180,18 +259,23 @@
 # samples in this run replace the older rows. This lets a resumed run build one
 # complete log instead of a log that holds only the last batch of samples.
 .appendSummary = function(summary.data = NULL,
-                          out.csv = NULL) {
+                          out.csv = NULL,
+                          replace.samples = NULL) {
 
-  if (is.null(summary.data) == TRUE || nrow(summary.data) == 0) { return(invisible(NULL)) }
+  if (is.null(summary.data) == TRUE) { return(invisible(NULL)) }
+  if (is.null(replace.samples) == TRUE && nrow(summary.data) > 0) {
+    replace.samples = unique(summary.data$Sample)
+  }
 
   if (file.exists(out.csv) == TRUE) {
     existing = read.csv(out.csv, stringsAsFactors = FALSE)
     if (identical(sort(names(existing)), sort(names(summary.data))) == TRUE) {
-      existing = existing[!existing$Sample %in% summary.data$Sample, , drop = FALSE]
+      existing = existing[!existing$Sample %in% replace.samples, , drop = FALSE]
       summary.data = rbind(existing[, names(summary.data), drop = FALSE], summary.data)
     }
   }
 
+  dir.create(dirname(out.csv), recursive = TRUE, showWarnings = FALSE)
   write.csv(summary.data, file = out.csv, row.names = FALSE)
   return(invisible(summary.data))
 }#end .appendSummary
@@ -212,10 +296,199 @@
 # failed on a path that holds a space.
 .resetDirectory = function(output.directory = NULL) {
 
+  output.path = normalizePath(output.directory, mustWork = FALSE)
+  protected.paths = c(normalizePath("/", mustWork = TRUE),
+                      normalizePath(path.expand("~"), mustWork = TRUE),
+                      normalizePath(getwd(), mustWork = TRUE))
+  if (nchar(output.directory) == 0 || output.path %in% protected.paths) {
+    stop("Refusing to reset a protected or empty output directory.")
+  }
   if (dir.exists(output.directory) == TRUE) { unlink(output.directory, recursive = TRUE) }
   dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
   return(invisible(output.directory))
 }#end .resetDirectory
+
+
+# Rejects an output directory that is the input directory or contains it. It
+# also rejects an output below the input because recursive read discovery would
+# otherwise find prior outputs as new inputs.
+.normalizedPath = function(path = NULL) {
+
+  missing.parts = character()
+  existing.path = path
+  while (file.exists(existing.path) == FALSE) {
+    missing.parts = c(basename(existing.path), missing.parts)
+    parent.path = dirname(existing.path)
+    if (identical(parent.path, existing.path)) { break }
+    existing.path = parent.path
+  }
+  normalized.path = normalizePath(existing.path, mustWork = TRUE)
+  if (length(missing.parts) > 0) {
+    normalized.path = do.call(file.path, as.list(c(normalized.path, missing.parts)))
+  }
+  return(normalized.path)
+}#end .normalizedPath
+
+
+.checkDirectoryOverlap = function(input.directory = NULL,
+                                  output.directory = NULL) {
+
+  input.path = .normalizedPath(input.directory)
+  output.path = .normalizedPath(output.directory)
+
+  nested = identical(input.path, output.path) ||
+           startsWith(paste0(input.path, "/"), paste0(output.path, "/")) ||
+           startsWith(paste0(output.path, "/"), paste0(input.path, "/"))
+  if (nested == TRUE) {
+    stop("The input and output directories must be separate and cannot contain one another.")
+  }
+  return(invisible(TRUE))
+}#end .checkDirectoryOverlap
+
+
+.checkFileOutsideOutput = function(input.file = NULL,
+                                   output.directory = NULL) {
+
+  input.path = .normalizedPath(input.file)
+  output.path = .normalizedPath(output.directory)
+  if (identical(input.path, output.path) ||
+      startsWith(input.path, paste0(output.path, "/"))) {
+    stop("The output directory cannot contain an input file that it may overwrite.")
+  }
+  return(invisible(TRUE))
+}#end .checkFileOutsideOutput
+
+
+# Checks the File/Sample tables used by organization and download functions.
+# Sample names become directory names and therefore cannot contain path or
+# control components. Distinct names that clean to the same value are rejected.
+.validateRenameTable = function(sample.data = NULL,
+                                sanitize.samples = FALSE) {
+
+  required.columns = c("File", "Sample")
+  if (all(required.columns %in% names(sample.data)) == FALSE) {
+    stop("The rename table must contain File and Sample columns.")
+  }
+
+  file.names = trimws(as.character(sample.data$File))
+  sample.names = trimws(as.character(sample.data$Sample))
+  if (any(is.na(file.names)) || any(nchar(file.names) == 0)) {
+    stop("The File column cannot contain missing or blank values.")
+  }
+  if (any(is.na(sample.names)) || any(nchar(sample.names) == 0)) {
+    stop("The Sample column cannot contain missing or blank values.")
+  }
+  if (any(grepl("[/\\\\]", sample.names)) || any(sample.names %in% c(".", ".."))) {
+    stop("Sample names cannot contain directory separators or path components.")
+  }
+
+  clean.names = .sanitizeName(sample.names)
+  name.map = unique(data.frame(original = sample.names, clean = clean.names,
+                               stringsAsFactors = FALSE))
+  if (sanitize.samples == TRUE && any(duplicated(name.map$clean))) {
+    stop("Distinct sample names become identical after filename cleaning.")
+  }
+
+  sample.data$File = file.names
+  sample.data$Sample = if (sanitize.samples == TRUE) clean.names else sample.names
+  return(sample.data)
+}#end .validateRenameTable
+
+
+# Records the lightweight identity of large read files. Paths, sizes, and
+# modification times catch ordinary replacement or reordering without hashing
+# every FASTQ file on every resume.
+.laneMetadata = function(input.files = NULL,
+                         parameters = list()) {
+
+  input.files = normalizePath(input.files, mustWork = TRUE)
+  file.data = file.info(input.files)
+  metadata = c()
+  for (i in seq_along(input.files)) {
+    metadata[paste0("input.", i, ".path")] = input.files[i]
+    metadata[paste0("input.", i, ".size")] = format(file.data$size[i], scientific = FALSE)
+    metadata[paste0("input.", i, ".modified")] = format(as.numeric(file.data$mtime[i]),
+                                                          scientific = FALSE)
+  }
+  if (length(parameters) > 0) {
+    parameter.values = vapply(parameters, function(value) paste(value, collapse = ";"), character(1))
+    names(parameter.values) = paste0("parameter.", names(parameters))
+    metadata = c(metadata, parameter.values)
+  }
+  return(metadata)
+}#end .laneMetadata
+
+
+.metadataMatches = function(metadata.file = NULL,
+                            metadata = NULL) {
+
+  saved = .readLaneMetadata(metadata.file)
+  if (is.null(saved) == TRUE) { return(FALSE) }
+  current = data.frame(Field = names(metadata), Value = unname(as.character(metadata)),
+                       stringsAsFactors = FALSE)
+  return(identical(saved, current))
+}#end .metadataMatches
+
+
+.readLaneMetadata = function(metadata.file = NULL) {
+
+  if (file.exists(metadata.file) == FALSE) { return(NULL) }
+  saved = tryCatch(read.csv(metadata.file, stringsAsFactors = FALSE,
+                            colClasses = "character"),
+                   error = function(e) NULL)
+  if (is.null(saved) == TRUE || !identical(names(saved), c("Field", "Value"))) {
+    return(NULL)
+  }
+  return(saved)
+}#end .readLaneMetadata
+
+
+# A readable metadata file with different values means the completed output
+# belongs to other inputs or settings. Missing or malformed metadata is treated
+# as an interrupted write and the lane is rebuilt.
+.metadataConflicts = function(metadata.file = NULL,
+                              metadata = NULL) {
+
+  if (is.null(.readLaneMetadata(metadata.file)) == TRUE) { return(FALSE) }
+  return(.metadataMatches(metadata.file, metadata) == FALSE)
+}#end .metadataConflicts
+
+
+.writeLaneMetadata = function(metadata = NULL,
+                              metadata.file = NULL) {
+
+  dir.create(dirname(metadata.file), recursive = TRUE, showWarnings = FALSE)
+  temp.file = tempfile(pattern = paste0(basename(metadata.file), "-"),
+                       tmpdir = dirname(metadata.file))
+  write.csv(data.frame(Field = names(metadata), Value = unname(as.character(metadata)),
+                       stringsAsFactors = FALSE), temp.file, row.names = FALSE)
+  if (file.rename(temp.file, metadata.file) == FALSE) {
+    unlink(temp.file)
+    stop("Could not publish completion metadata at ", metadata.file, ".")
+  }
+  return(invisible(metadata.file))
+}#end .writeLaneMetadata
+
+
+# Moves completed temporary files into place. Temporary files are created in
+# the destination directory so rename is atomic on the local file system.
+.publishFiles = function(temp.files = NULL,
+                         output.files = NULL) {
+
+  if (length(temp.files) != length(output.files)) {
+    stop("Temporary and output file lists have different lengths.")
+  }
+  for (i in seq_along(output.files)) {
+    if (file.exists(temp.files[i]) == FALSE) {
+      stop("Expected temporary output was not created: ", temp.files[i])
+    }
+    if (file.exists(output.files[i]) == TRUE) { unlink(output.files[i]) }
+    if (file.rename(temp.files[i], output.files[i]) == FALSE) {
+      stop("Could not publish output file: ", output.files[i])
+    }
+  }
+  return(invisible(output.files))
+}#end .publishFiles
 
 
 # Reports whether every output file of a lane is present. An interrupted lane is
@@ -224,21 +497,23 @@
 # empty output file is a valid result, for example the merged read file of a
 # sample whose read pairs do not overlap.
 .laneComplete = function(output.files = NULL,
-                         require.size = TRUE) {
+                         require.size = TRUE,
+                         metadata.file = NULL,
+                         metadata = NULL) {
 
   if (length(output.files) == 0) { return(FALSE) }
   if (all(file.exists(output.files)) == FALSE) { return(FALSE) }
-  if (require.size == FALSE) { return(TRUE) }
-  return(all(file.info(output.files)$size > 0))
+  if (require.size == TRUE && all(file.info(output.files)$size > 0) == FALSE) { return(FALSE) }
+  if (is.null(metadata.file) == FALSE &&
+      .metadataMatches(metadata.file, metadata) == FALSE) { return(FALSE) }
+  return(TRUE)
 }#end .laneComplete
 
 
 # Runs one fastp cleaning step over every sample lane in a read directory. The
 # fastp preprocess functions differ only in the fastp arguments they use, so
 # they all call this helper. The HTML and JSON reports are written straight into
-# the sample log directory. An earlier version wrote them to the working
-# directory under a fixed name, which two runs in the same directory could
-# overwrite.
+# the sample log directory so simultaneous runs cannot overwrite one another.
 .runFastpStep = function(input.reads = NULL,
                          output.directory = NULL,
                          fastp.path = NULL,
@@ -257,6 +532,14 @@
   if (is.null(input.reads) == TRUE){ stop("Please provide raw reads.") }
   if (file.exists(input.reads) == F){ stop("Input reads not found.") }
   if (is.null(output.directory) == TRUE){ stop("Please provide an output directory.") }
+  if (length(threads) != 1 || is.numeric(threads) == FALSE ||
+      is.finite(threads) == FALSE || threads < 1) {
+    stop("threads must be one positive number.")
+  }
+  if (length(overwrite) != 1 || is.logical(overwrite) == FALSE || is.na(overwrite)) {
+    stop("overwrite must be TRUE or FALSE.")
+  }
+  .checkDirectoryOverlap(input.reads, output.directory)
 
   #Checks that fastp is installed before any sample is processed
   fastp.command = .toolCommand("fastp", fastp.path)
@@ -273,7 +556,7 @@
 
   #Read in sample data
   input.reads = sub("/+$", "", input.reads)
-  reads = list.files(input.reads, recursive = T, full.names = T)
+  reads = .listFastqFiles(input.reads)
   read.names = .relativePaths(reads, input.reads)
   sample.names = .listSampleNames(input.reads)
 
@@ -302,18 +585,17 @@
       next
     } #end if statement
 
-    #Check for empty or near-empty input files (sequencing failures)
+    # A zero-byte file is incomplete. Small compressed files can still contain
+    # valid reads, including a valid empty FASTQ from an earlier filter.
+    failure.file = paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt")
     file.sizes = file.info(sample.reads)$size
-    file.sizes = file.sizes[is.na(file.sizes) == FALSE]
-    if (length(file.sizes) == 0 || max(file.sizes) < 1000) {
-      largest.size = if (length(file.sizes) == 0) 0 else max(file.sizes)
-      failure.msg = paste0("Sample failed: input read files are empty or near-empty",
-                           " (max file size: ", largest.size, " bytes).",
-                           " This indicates a sequencing or library preparation failure.")
-      writeLines(failure.msg, paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt"))
-      warning(sample.names[i], " has empty input read files. Skipping.")
+    if (any(is.na(file.sizes)) || any(file.sizes == 0)) {
+      writeLines("Sample skipped because at least one input read file is missing or zero bytes.",
+                 failure.file)
+      warning(sample.names[i], " has a missing or zero-byte input read file. Skipping.")
       next
     }
+    if (file.exists(failure.file) == TRUE) { unlink(failure.file) }
 
     #Creates new directory
     out.path = paste0(output.directory, "/", sample.names[i])
@@ -325,13 +607,18 @@
 
     for (j in seq_along(lane.prefixes)){
 
-      lane.reads = sort(.matchPrefix(reads, reads, lane.prefixes[j]))
+      lane.reads = .matchPrefix(reads, reads, lane.prefixes[j])
 
       #Returns a warning if reads are not found
-      if (length(lane.reads) < 2 ){
+      if (length(lane.reads) != 2 ){
         warning(lane.prefixes[j], " does not have a read pair present. Skipping.")
         next
       } #end if statement
+      lane.reads = tryCatch(.orderReadPair(lane.reads), error = function(e) {
+        warning(conditionMessage(e))
+        return(NULL)
+      })
+      if (is.null(lane.reads) == TRUE) { next }
 
       lane.name = basename(lane.prefixes[j])
 
@@ -348,25 +635,54 @@
 
       html.report = paste0(report.path, "/", lane.name, "_", report.tag, ".html")
       json.report = paste0(report.path, "/", lane.name, "_", report.tag, ".json")
+      metadata.file = paste0(report.path, "/", lane.name, "_", report.tag, "-metadata.csv")
+      metadata = .laneMetadata(lane.reads,
+                               list(task = task, fastp.arguments = fastp.args,
+                                    merge.reads = merge.reads))
 
-      # Skips a lane only when every output file is present and fastp wrote its
-      # report, which it does at the end of a successful run. An earlier version
-      # skipped a sample as soon as its directory existed, which left an
-      # interrupted sample unfinished for good.
+      # The metadata file is written last, after outputs and reports. It is the
+      # completion marker and records the input identity and relevant settings.
       if (overwrite == FALSE && .laneComplete(expected.files, require.size = FALSE) == TRUE &&
-          is.null(.fastpReadCounts(json.report)) == FALSE) {
+          file.exists(html.report) == TRUE &&
+          is.null(.fastpReadCounts(json.report)) == FALSE &&
+          .metadataMatches(metadata.file, metadata) == TRUE) {
+        lane.counts = .fastpReadCounts(json.report)
+        temp.remove = data.frame(Sample = sample.names[i],
+                                 Lane = gsub(".*_", "", lane.name),
+                                 Task = task,
+                                 Program = "fastp",
+                                 startPairs = lane.counts$startPairs,
+                                 removePairs = lane.counts$startPairs - lane.counts$endPairs,
+                                 endPairs = lane.counts$endPairs)
+        if (merge.reads == TRUE){ temp.remove$mergedReads = lane.counts$mergedReads }
+        summary.data = rbind(summary.data, temp.remove)
         print(paste0(lane.name, " is already complete. Skipping."))
         next
       }
+      if (overwrite == FALSE && .metadataConflicts(metadata.file, metadata) == TRUE) {
+        stop(lane.name, " was completed with different inputs or settings. ",
+             "Use overwrite = TRUE to replace it.")
+      }
+
+      unlink(c(expected.files, html.report, json.report, metadata.file))
+      temp.reads = vapply(expected.files, function(output.file) {
+        tempfile(pattern = paste0(basename(output.file), "-"),
+                 tmpdir = dirname(output.file), fileext = ".fastq.gz")
+      }, character(1))
+      temp.html = tempfile(pattern = paste0(basename(html.report), "-"),
+                           tmpdir = report.path, fileext = ".html")
+      temp.json = tempfile(pattern = paste0(basename(json.report), "-"),
+                           tmpdir = report.path, fileext = ".json")
+      on.exit(unlink(c(temp.reads, temp.html, temp.json)), add = TRUE)
 
       merge.arg = ""
-      if (merge.reads == TRUE){ merge.arg = paste0(" --merged_out ", shQuote(outread.m)) }
+      if (merge.reads == TRUE){ merge.arg = paste0(" --merged_out ", shQuote(temp.reads[3])) }
 
       .runCommand(paste0(fastp.command,
                          " --in1 ", shQuote(lane.reads[1]), " --in2 ", shQuote(lane.reads[2]),
-                         " --out1 ", shQuote(outreads[1]), " --out2 ", shQuote(outreads[2]),
+                         " --out1 ", shQuote(temp.reads[1]), " --out2 ", shQuote(temp.reads[2]),
                          merge.arg, " ", fastp.args,
-                         " --html ", shQuote(html.report), " --json ", shQuote(json.report),
+                         " --html ", shQuote(temp.html), " --json ", shQuote(temp.json),
                          " --report_title ", shQuote(lane.name),
                          " --thread ", threads),
                   quiet = quiet, task = paste0("fastp ", task))
@@ -377,12 +693,14 @@
       # fastp already counts the reads before and after filtering, so the counts
       # come from its JSON report. Counting the fastq files again with gzip
       # doubled the read and write load of every step.
-      lane.counts = .fastpReadCounts(json.report)
+      lane.counts = .fastpReadCounts(temp.json)
       if (is.null(lane.counts) == TRUE){
-        lane.counts = list(startPairs = .countFastqReads(lane.reads[1]),
-                           endPairs = .countFastqReads(outreads[1]),
-                           mergedReads = NA_real_)
+        stop("fastp did not write a complete JSON report for ", lane.name, ".")
       }
+
+      .publishFiles(c(temp.reads, temp.html, temp.json),
+                    c(expected.files, html.report, json.report))
+      .writeLaneMetadata(metadata, metadata.file)
 
       temp.remove = data.frame(Sample = sample.names[i],
                                Lane = gsub(".*_", "", lane.name),
@@ -445,8 +763,8 @@
     '    for (i = 12; i <= NF; i++) {',
     '      if (substr($i, 1, 5) == "NM:i:") { nm = substr($i, 6) + 0; break }',
     '    }',
-    '    qlen = length($10)',
-    '    if (nm >= 0 && qlen > 0 && nm / qlen <= MAXMM) { hit = 1; count[$3] = count[$3] + 1 }',
+    '    alen = alignedLength($6)',
+    '    if (nm >= 0 && alen > 0 && nm / alen <= MAXMM) { hit = 1; count[$3] = count[$3] + 1 }',
     '  }',
     '}',
     'END {',
@@ -457,6 +775,18 @@
     'function emit(   i) {',
     '  if (hit == 1) { removed = removed + 1 }',
     '  else { kept = kept + 1; for (i = 1; i <= n; i++) { print buf[i] } }',
+    '}',
+    'function alignedLength(cigar,   rest, token, amount, operation, total) {',
+    '  rest = cigar; total = 0',
+    '  while (match(rest, /^[0-9]+[MIDNSHP=X]/)) {',
+    '    token = substr(rest, RSTART, RLENGTH)',
+    '    amount = substr(token, 1, length(token) - 1) + 0',
+    '    operation = substr(token, length(token), 1)',
+    '    if (operation == "M" || operation == "I" || operation == "D" ||',
+    '        operation == "=" || operation == "X") { total = total + amount }',
+    '    rest = substr(rest, RLENGTH + 1)',
+    '  }',
+    '  return(total)',
     '}'
   ), script.file)
 

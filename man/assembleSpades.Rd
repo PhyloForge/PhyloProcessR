@@ -9,10 +9,13 @@ assembleSpades(
   output.directory = "processed-reads/spades-assembly",
   assembly.directory = "draft-assemblies",
   spades.path = NULL,
-  mismatch.corrector = TRUE,
+  mismatch.corrector = FALSE,
+  error.correction = FALSE,
   isolate = FALSE,
   kmer.values = c(33, 55, 77, 99, 127),
   threads = 1,
+  parallel.samples = 1,
+  retry.failed = TRUE,
   memory = 4,
   overwrite = FALSE,
   save.corrected.reads = FALSE,
@@ -39,8 +42,19 @@ FASTA files (.fa) are copied after assembly. Default:
 \code{NULL} expected on the system PATH. Default: \code{NULL}.}
 
 \item{mismatch.corrector}{logical; if \code{TRUE} passes \code{--careful} to
-SPAdes to reduce mismatches and indels in the assembly. Cannot be \code{TRUE}
-when \code{isolate = TRUE}. Default: \code{TRUE}.}
+SPAdes. SPAdes then runs MismatchCorrector after the assembly. This step
+adds about a third to the run time and finds almost no extra targets, so
+the default is \code{FALSE}. Cannot be \code{TRUE} when
+\code{isolate = TRUE}. Numbers in HANDOFF-assembly-speed.md. Default:
+\code{FALSE}.}
+
+\item{error.correction}{logical; if \code{TRUE} SPAdes runs BayesHammer to
+correct read errors before it assembles. If \code{FALSE} the function
+passes \code{--only-assembler} and SPAdes skips that step. BayesHammer
+also takes about a third of the run time. The draft contigs are baits for
+\code{assembleBinnedTargets}, which tolerates high divergence, and later
+steps map the reads back to call sites. The small loss of base accuracy
+therefore does not reach the final sequences. Default: \code{FALSE}.}
 
 \item{isolate}{logical; if \code{TRUE} passes \code{--isolate} to SPAdes,
 recommended for highly covered isolate genomes. Cannot be \code{TRUE} when
@@ -49,10 +63,29 @@ recommended for highly covered isolate genomes. Cannot be \code{TRUE} when
 \item{kmer.values}{integer vector of k-mer sizes passed to SPAdes with
 \code{-k}. Default: \code{c(33, 55, 77, 99, 127)}.}
 
-\item{threads}{number of CPU threads passed to SPAdes with \code{-t}.
-Default: \code{1}.}
+\item{threads}{total number of CPU threads. The function divides them
+between the samples that run at the same time, so each SPAdes receives
+\code{floor(threads / parallel.samples)}. Default: \code{1}.}
 
-\item{memory}{RAM in GB passed to SPAdes with \code{-m}. Default: \code{4}.}
+\item{parallel.samples}{number of samples to assemble at the same time.
+SPAdes scales poorly above about 8 threads, so several small runs finish a
+set sooner than one large run. \code{threads} and \code{memory} are
+divided between them. Raise this only when the memory of one run allows it:
+every concurrent run holds its own peak. Default: \code{1}, which
+assembles the samples one after another. Numbers in
+HANDOFF-assembly-speed.md.}
+
+\item{retry.failed}{logical; if \code{TRUE} the function assembles again any
+sample that failed, one at a time, with all of \code{threads} and
+\code{memory}. A large sample can exhaust its share and still assemble
+when it has everything. The retry runs only when
+\code{parallel.samples > 1}, because a serial first pass already used
+every resource. A skipped sample is not retried: empty or unusable reads
+fail whatever the memory. Default: \code{TRUE}.}
+
+\item{memory}{total RAM in GB. The function divides it between the samples
+that run at the same time, so each SPAdes receives
+\code{floor(memory / parallel.samples)}. Default: \code{4}.}
 
 \item{overwrite}{logical; if \code{TRUE} existing output and assembly
 directories are deleted and recreated and all samples are rerun. Default:
@@ -75,7 +108,10 @@ Default: \code{TRUE}.}
 }
 \value{
 Invisibly returns nothing. Assembled scaffolds for each sample are
-saved as \code{<assembly.directory>/<sample>.fa}.
+saved as \code{<assembly.directory>/<sample>.fa}. The SPAdes log of each
+sample is copied to \code{logs/sample_logs/<sample>/spades.log}. The log
+holds the run time of each stage and the peak memory, and it stays after
+\code{clean.up.spades} deletes the working directory.
 }
 \description{
 Runs SPAdes (\code{spades.py}) on a directory of processed reads

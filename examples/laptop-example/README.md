@@ -57,7 +57,7 @@ export PHYLOPROCESSR_SOURCE=/path/to/PhyloProcessR
 Rscript run_laptop_example.R
 ```
 
-The script composes `fastqStats()`, `fastpComplete()`, `assembleSpades()`,
+The script composes `fastqStats()`, `fastpClean()`, `assembleSpades()`,
 `reduceRedundancy()`, and `removeOffTargetContigs()`. Outputs are written under
 `results/`, including per-sample contigs, count summaries, target recovery,
 step timings, and the software environment.

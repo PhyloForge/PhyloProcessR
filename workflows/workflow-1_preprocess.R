@@ -1,4 +1,8 @@
 source("workflow-1_configuration-file.R")
+if (dropbox.download == TRUE && sra.download == TRUE) {
+  stop("Workflow 1 accepts one download source at a time. Choose Dropbox or SRA before running.")
+}
+
 if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
   if (!requireNamespace("remotes", quietly = TRUE)) {
     stop("Install the remotes package to use install.latest.github = TRUE.")
@@ -41,6 +45,7 @@ if (sra.download == TRUE){
               sample.name.column      = sra.sample.name.column,
               output.directory        = paste0(processed.reads, "/raw-reads"),
               filter.library.strategy = sra.filter.strategy,
+              filter.library.layout   = "PAIRED",
               max.retries             = sra.max.retries,
               retry.delay             = sra.retry.delay,
               skip.not.found          = sra.skip.not.found,
@@ -51,15 +56,6 @@ if (sra.download == TRUE){
   organize.reads = TRUE
   sample.file    = "file_rename_sra.csv"
 }#end if
-
-# If both sources were active, merge their rename tables into one file so that
-# organizeReads sees all samples regardless of origin.
-if (dropbox.download == TRUE && sra.download == TRUE) {
-  combined.rename = rbind(read.csv("file_rename_dropbox.csv"),
-                          read.csv("file_rename_sra.csv"))
-  write.csv(combined.rename, "file_rename_combined.csv", row.names = FALSE)
-  sample.file = "file_rename_combined.csv"
-}
 
 #Organizes reads if scattered elsewhere i.e. creates a sub-dataset
 if (organize.reads == TRUE) {
@@ -93,63 +89,26 @@ if (assess.capture == TRUE){
                           quiet = quiet)
 }#end assess.capture if
 
-#The complete processing through fastp at once. +++ for speed.
-if (fastp.complete == TRUE) {
-  fastpComplete(input.reads = input.reads,
-                 output.directory = paste0(processed.reads, "/cleaned-reads"),
-                 fastp.path = fastp.path,
-                 threads = threads,
-                 mem = memory,
-                 overwrite = overwrite,
-                 quiet = quiet)
+# Cleans the reads with one pass of fastp. The fastp command is built from the
+# TRUE/FALSE settings in the configuration file, so every step that is TRUE
+# runs in that single pass.
+if (clean.reads == TRUE) {
+  fastpClean(input.reads = input.reads,
+             output.directory = paste0(processed.reads, "/cleaned-reads"),
+             remove.adaptors = remove.adaptors,
+             remove.duplicate.reads = remove.duplicate.reads,
+             error.correction = error.correction,
+             quality.trim.reads = quality.trim.reads,
+             quality.filter = quality.filter,
+             low.complexity.filter = low.complexity.filter,
+             trim.poly.x = trim.poly.x,
+             min.read.length = min.read.length,
+             fastp.path = fastp.path,
+             threads = threads,
+             mem = memory,
+             overwrite = overwrite,
+             quiet = quiet)
   input.reads = paste0(processed.reads, "/cleaned-reads")
-}
-
-if (remove.adaptors == TRUE && fastp.complete == FALSE) {
-  removeAdaptors(input.reads = input.reads,
-                 output.directory = paste0(processed.reads, "/adaptor-removed-reads"),
-                 fastp.path = fastp.path,
-                 threads = threads,
-                 mem = memory,
-                 overwrite = overwrite,
-                 quiet = quiet)
-  input.reads = paste0(processed.reads, "/adaptor-removed-reads")
-}
-
-# Removes exact PCR duplicates
-if (remove.duplicate.reads == TRUE && fastp.complete == FALSE) {
-  removeDuplicateReads(input.reads = input.reads,
-                      output.directory = paste0(processed.reads, "/deduped-reads"),
-                      fastp.path = fastp.path,
-                      threads = threads,
-                      mem = memory,
-                      overwrite = overwrite,
-                      quiet = quiet)
-  input.reads = paste0(processed.reads, "/deduped-reads")
-}
-
-# Runs read error correction
-if (error.correction == TRUE && fastp.complete == FALSE) {
-  readErrorCorrection(input.reads = input.reads,
-                      output.directory = paste0(processed.reads, "/error-corrected-reads"),
-                      fastp.path = fastp.path,
-                      threads = threads,
-                      mem = memory,
-                      overwrite = overwrite,
-                      quiet = quiet)
-  input.reads = paste0(processed.reads, "/error-corrected-reads")
-}
-
-# Trims low quality read ends
-if (quality.trim.reads == TRUE && fastp.complete == FALSE) {
-  qualityTrimReads(input.reads = input.reads,
-                   output.directory = paste0(processed.reads, "/quality-trimmed-reads"),
-                   fastp.path = fastp.path,
-                   threads = threads,
-                   mem = memory,
-                   overwrite = overwrite,
-                   quiet = quiet)
-  input.reads = paste0(processed.reads, "/quality-trimmed-reads")
 }
 
 #Runs decontamination of reads

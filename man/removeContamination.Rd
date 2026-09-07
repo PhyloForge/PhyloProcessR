@@ -29,9 +29,11 @@ will be saved (one sub-directory per sample).}
 genome FASTA files (e.g. produced by createContaminantDB()).}
 
 \item{map.match}{numeric between 0 and 1; the minimum alignment identity that
-makes a read a contaminant. 0.90 means 90 percent identity. The value sets
-both which pairs are removed and which pairs are counted, so the read set
-and the contamination report always agree.}
+makes a read a contaminant. 0.90 means 90 percent identity. Identity is
+calculated across the aligned CIGAR operations M, I, D, =, and X, excluding
+soft-clipped bases. The NM tag counts mismatches and inserted/deleted bases.
+The value sets both which pairs are removed and which pairs are counted, so
+the read set and the contamination report always agree.}
 
 \item{samtools.path}{system path to the directory that contains the samtools
 executable, or the full path to the executable; NULL searches the system

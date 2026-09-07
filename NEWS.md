@@ -1,5 +1,27 @@
 # PhyloProcessR (development version)
 
+## Workflow 1 preprocessing
+
+### Breaking changes
+
+- `fastpComplete()` is renamed `fastpClean()`. The new function builds the fastp
+  command from logical arguments, so one pass over the reads runs every step
+  that is TRUE. It takes `remove.adaptors`, `remove.duplicate.reads`,
+  `error.correction`, `quality.trim.reads`, `quality.filter`,
+  `low.complexity.filter`, `trim.poly.x` and `min.read.length`. The summary CSV
+  is now `logs/fastpClean_summary.csv`.
+- The workflow 1 configuration file no longer has `fastp.complete`. Use
+  `clean.reads` to run or skip the fastp step. The separate steps are no longer
+  a different code path. They are settings on the one fastp command.
+
+### Behaviour changes
+
+- `fastpClean()` uses `--compression 6`, the value that every other fastp step
+  uses. `fastpComplete()` used `--compression 8`.
+- Workflow 1 no longer calls `removeAdaptors()`, `removeDuplicateReads()`,
+  `readErrorCorrection()` or `qualityTrimReads()`. The functions are still
+  exported and still work on their own.
+
 ## Workflow 2 assembly
 
 ### Deprecations
@@ -60,6 +82,14 @@
 
 ### Bug fixes
 
+- `assembleBinnedTargets()` counts a merged read as a whole insert. The bin gate
+  counts BAM records and divides by two, and a merged READ3 read is one record
+  that spans the whole insert, so it scored as half a pair. A library with 27
+  percent merged reads lost 13.5 percent of its inserts at the gate. The read cap
+  is corrected by the same change.
+- `quiet = TRUE` now silences every stage of a piped command. R appends its
+  redirection to the end of the string, where a shell binds it to the last stage
+  only, so `samtools` was quiet and `bwa` was not.
 - `mergePairedEndReads()` no longer fails with a missing argument error when the
   first search for a lane returns no files.
 - `removeDuplicateReads()` passes `--dup_calc_accuracy` to fastp correctly. The
@@ -76,6 +106,13 @@
 
 ### Improvements
 
+- `assembleBinnedTargets()` writes
+  `logs/assembleBinnedTargets_summary.csv`, one row per sample. The row is added
+  as each sample finishes, so a batch that stops early keeps the rows it earned,
+  and a rerun of one sample replaces its row. It records the targets recovered,
+  the targets extended and the base pairs added, the bait sources, both rescue
+  steps, the bins and targets of round 1, and the run time. The new
+  `log.directory` argument sets where it goes. Default: `"logs"`.
 - Every external command is checked before the first sample is processed, and a
   failure now stops the run with the command and its exit status.
 - Read counts come from the fastp JSON report and from samtools instead of a

@@ -134,7 +134,7 @@ fastqStats(
   mem = 4
 )
 
-fastpComplete(
+fastpClean(
   input.reads = "raw-reads",
   output.directory = "processed-reads/cleaned-reads",
   fastp.path = tool_bin,

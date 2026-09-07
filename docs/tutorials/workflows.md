@@ -25,7 +25,7 @@ function calls.
 
 | Workflow | Purpose | Principal functions |
 |---|---|---|
-| 1 | Process raw reads | `organizeReads`, `fastqStats`, `fastpComplete`, `removeContamination`, `mergePairedEndReads` |
+| 1 | Process raw reads | `organizeReads`, `fastqStats`, `fastpClean`, `removeContamination`, `mergePairedEndReads` |
 | 2 | Assemble reads and recover targets | `assembleSpades`, `reduceRedundancy`, `removeOffTargetContigs`, `expandMissingAssembly` |
 | 3 | Call variants and make consensus contigs | `prepareBAM`, `mapReferenceSample`, `haplotypeCaller`, `genotypeSamples`, `VCFtoContigs` |
 | 4 | Annotate contigs and align targets | `filterHeterozygosity`, `annotateTargets`, `alignTargets` |

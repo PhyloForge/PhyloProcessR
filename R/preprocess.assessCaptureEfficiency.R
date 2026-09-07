@@ -60,6 +60,18 @@ assessCaptureEfficiency = function(input.reads = NULL,
   if (file.exists(input.reads) == FALSE) { stop("Input reads not found.") }
   if (is.null(target.fasta) == TRUE) { stop("Please provide a target FASTA file.") }
   if (file.exists(target.fasta) == FALSE) { stop("Target FASTA file not found.") }
+  if (length(threads) != 1 || is.numeric(threads) == FALSE ||
+      is.finite(threads) == FALSE || threads < 1) {
+    stop("threads must be one positive number.")
+  }
+  if (length(mem) != 1 || is.numeric(mem) == FALSE ||
+      is.finite(mem) == FALSE || mem <= 0) {
+    stop("mem must be one positive number.")
+  }
+  if (length(overwrite) != 1 || is.logical(overwrite) == FALSE || is.na(overwrite)) {
+    stop("overwrite must be TRUE or FALSE.")
+  }
+  .checkDirectoryOverlap(input.reads, output.directory)
 
   # Checks that both programs are installed before any sample is processed
   bwa.command = .toolCommand("bwa", bwa.path)
@@ -78,18 +90,47 @@ assessCaptureEfficiency = function(input.reads = NULL,
   #################################################
   ### Part A: build the target index once
   #################################################
-  # The index is kept between runs. An earlier version copied and indexed the
-  # probe set again on every call.
+  # The index is kept between runs and identified by the target checksum.
   index.path = paste0(output.directory, "/target-index")
-  if (dir.exists(index.path) == FALSE) { dir.create(index.path, recursive = TRUE) }
   target.copy = paste0(index.path, "/targets.fa")
+  target.manifest = paste0(normalizePath(target.fasta), "\t",
+                           unname(tools::md5sum(target.fasta)))
+  manifest.file = paste0(index.path, "/reference_files.txt")
+  index.files = c(target.copy, paste0(target.copy, c(".amb", ".ann", ".bwt", ".pac", ".sa")),
+                  manifest.file)
+  index.stale = all(file.exists(index.files)) == FALSE
+  if (index.stale == FALSE) {
+    index.stale = !identical(readLines(manifest.file, warn = FALSE), target.manifest)
+  }
 
-  if (file.exists(target.copy) == FALSE ||
-      file.exists(paste0(target.copy, ".bwt")) == FALSE ||
-      file.mtime(target.fasta) > file.mtime(target.copy)) {
-    file.copy(target.fasta, target.copy, overwrite = TRUE)
-    .runCommand(paste0(bwa.command, " index ", shQuote(target.copy)),
+  if (index.stale == TRUE) {
+    temp.index = tempfile(pattern = "target-index-", tmpdir = output.directory)
+    dir.create(temp.index)
+    on.exit(unlink(temp.index, recursive = TRUE), add = TRUE)
+    temp.target = file.path(temp.index, "targets.fa")
+    if (file.copy(target.fasta, temp.target, overwrite = TRUE) == FALSE) {
+      stop("Could not copy the target FASTA into the index directory.")
+    }
+    .runCommand(paste0(bwa.command, " index ", shQuote(temp.target)),
                 quiet = quiet, task = "bwa index")
+    temp.files = c(temp.target,
+                   paste0(temp.target, c(".amb", ".ann", ".bwt", ".pac", ".sa")))
+    if (all(file.exists(temp.files)) == FALSE) {
+      stop("BWA did not create a complete target index.")
+    }
+    writeLines(target.manifest, file.path(temp.index, "reference_files.txt"))
+    old.index = NULL
+    if (dir.exists(index.path) == TRUE) {
+      old.index = tempfile(pattern = "target-index-old-", tmpdir = output.directory)
+      if (file.rename(index.path, old.index) == FALSE) {
+        stop("Could not move the old target index before replacement.")
+      }
+    }
+    if (file.rename(temp.index, index.path) == FALSE) {
+      if (is.null(old.index) == FALSE) { file.rename(old.index, index.path) }
+      stop("Could not publish the completed target index.")
+    }
+    if (is.null(old.index) == FALSE) { unlink(old.index, recursive = TRUE) }
   }
 
   # Count total number of target loci in the reference
@@ -99,7 +140,7 @@ assessCaptureEfficiency = function(input.reads = NULL,
 
   # Read in sample data
   input.reads = sub("/+$", "", input.reads)
-  reads = list.files(input.reads, recursive = TRUE, full.names = TRUE)
+  reads = .listFastqFiles(input.reads)
   read.names = .relativePaths(reads, input.reads)
   sample.names = .listSampleNames(input.reads)
 
@@ -125,18 +166,16 @@ assessCaptureEfficiency = function(input.reads = NULL,
       next
     }#end if
 
-    # Check for empty or near-empty input files (sequencing failures)
+    # A zero-byte file is incomplete. Small gzip files can contain valid reads.
+    failure.file = paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt")
     file.sizes = file.info(sample.reads)$size
-    file.sizes = file.sizes[is.na(file.sizes) == FALSE]
-    if (length(file.sizes) == 0 || max(file.sizes) < 1000) {
-      largest.size = if (length(file.sizes) == 0) 0 else max(file.sizes)
-      failure.msg = paste0("Sample failed: input read files are empty or near-empty",
-                           " (max file size: ", largest.size, " bytes).",
-                           " This indicates a sequencing or library preparation failure.")
-      writeLines(failure.msg, paste0("logs/sample_logs/FAILURE_", sample.names[i], ".txt"))
-      warning(sample.names[i], " has empty input read files. Skipping.")
+    if (any(is.na(file.sizes)) || any(file.sizes == 0)) {
+      writeLines("Sample skipped because at least one input read file is missing or zero bytes.",
+                 failure.file)
+      warning(sample.names[i], " has a missing or zero-byte input read file. Skipping.")
       next
     }
+    if (file.exists(failure.file) == TRUE) { unlink(failure.file) }
 
     # Creates per-sample output directory
     out.path = paste0(output.directory, "/", sample.names[i])
@@ -151,27 +190,50 @@ assessCaptureEfficiency = function(input.reads = NULL,
       lane.reads = .matchPrefix(reads, reads, lane.prefixes[j])
       lane.name = basename(lane.prefixes[j])
 
-      read1 = lane.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", basename(lane.reads))]
-      read2 = lane.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", basename(lane.reads))]
-
-      if (length(read1) == 0 || length(read2) == 0) {
-        warning(lane.name, " read pairs could not be identified. Skipping.")
+      lane.reads = tryCatch(.orderReadPair(lane.reads), error = function(e) {
+        warning(conditionMessage(e))
+        return(NULL)
+      })
+      if (is.null(lane.reads) == TRUE) {
         next
       }
+      read1 = lane.reads[1]
+      read2 = lane.reads[2]
 
       lane.csv = paste0(out.path, "/", lane.name, "_capture-summary.csv")
+      target.csv = paste0(out.path, "/", lane.name, "_per-target-counts.csv")
+      metadata.file = paste0("logs/sample_logs/", sample.names[i], "/",
+                             lane.name, "_capture-metadata.csv")
+      metadata = .laneMetadata(lane.reads,
+                               list(target = target.manifest))
 
       # Reuses a finished lane so an interrupted run continues where it stopped
-      if (overwrite == FALSE && file.exists(lane.csv) == TRUE) {
-        lane.data = rbind(lane.data, read.csv(lane.csv, stringsAsFactors = FALSE))
-        print(paste0(lane.name, " is already complete. Skipping."))
-        next
+      if (overwrite == FALSE && file.exists(lane.csv) == TRUE &&
+          file.exists(target.csv) == TRUE &&
+          .metadataMatches(metadata.file, metadata) == TRUE) {
+        lane.summary = tryCatch(read.csv(lane.csv, stringsAsFactors = FALSE),
+                                error = function(e) NULL)
+        target.data = tryCatch(read.csv(target.csv, stringsAsFactors = FALSE),
+                               error = function(e) NULL)
+        if (is.null(lane.summary) == FALSE && is.null(target.data) == FALSE &&
+            identical(names(lane.summary), names(lane.data)) &&
+            identical(names(target.data), c("target", "length", "mapped", "unmapped"))) {
+          lane.data = rbind(lane.data, lane.summary)
+          print(paste0(lane.name, " is already complete. Skipping."))
+          next
+        }
+      }
+      if (overwrite == FALSE && .metadataConflicts(metadata.file, metadata) == TRUE) {
+        stop(lane.name, " was assessed with different inputs or a different target reference. ",
+             "Use overwrite = TRUE to replace it.")
       }
 
       # Maps reads to target sequences. Secondary and supplementary records are
       # dropped here, so a read is counted once. Unmapped records are kept, and
       # they give the read pair total without a second pass over the fastq file.
-      bam.file = paste0(out.path, "/", lane.name, "_capture.bam")
+      bam.file = tempfile(pattern = paste0(lane.name, "-capture-"),
+                          tmpdir = out.path, fileext = ".bam")
+      on.exit(unlink(c(bam.file, paste0(bam.file, ".bai"))), add = TRUE)
       .runPipeline(paste0(bwa.command, " mem -M -t ", threads, " ",
                           shQuote(target.copy), " ",
                           shQuote(read1[1]), " ", shQuote(read2[1]),
@@ -187,7 +249,8 @@ assessCaptureEfficiency = function(input.reads = NULL,
       #################################################
       ### Part D: summarize mapping results
       #################################################
-      idx.file = paste0(out.path, "/", lane.name, "_idxstats.txt")
+      idx.file = tempfile(pattern = paste0(lane.name, "-idxstats-"), tmpdir = out.path)
+      on.exit(unlink(idx.file), add = TRUE)
       .runCommand(paste0(samtools.command, " idxstats ", shQuote(bam.file),
                          " > ", shQuote(idx.file)),
                   quiet = quiet, task = "samtools idxstats", keep.stdout = TRUE)
@@ -197,8 +260,9 @@ assessCaptureEfficiency = function(input.reads = NULL,
       idx.data = idx.data[idx.data$target != "*", ]
 
       # Per-target count CSV for detailed inspection
-      write.csv(idx.data, file = paste0(out.path, "/", lane.name, "_per-target-counts.csv"),
-                row.names = FALSE)
+      temp.target.csv = tempfile(pattern = paste0(lane.name, "-targets-"),
+                                 tmpdir = out.path, fileext = ".csv")
+      write.csv(idx.data, file = temp.target.csv, row.names = FALSE)
 
       # Calculates summary statistics. The first mate of every primary record
       # gives the read pair count.
@@ -213,8 +277,13 @@ assessCaptureEfficiency = function(input.reads = NULL,
                                totalTargets = n.targets,
                                stringsAsFactors = FALSE)
 
-      write.csv(temp.remove, file = lane.csv, row.names = FALSE)
+      temp.lane.csv = tempfile(pattern = paste0(lane.name, "-summary-"),
+                               tmpdir = out.path, fileext = ".csv")
+      write.csv(temp.remove, file = temp.lane.csv, row.names = FALSE)
       lane.data = rbind(lane.data, temp.remove)
+
+      .publishFiles(c(temp.target.csv, temp.lane.csv), c(target.csv, lane.csv))
+      .writeLaneMetadata(metadata, metadata.file)
 
       # Removes BAM to save disk space
       unlink(c(bam.file, paste0(bam.file, ".bai")))

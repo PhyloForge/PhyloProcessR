@@ -146,8 +146,22 @@ curate.match.coverage = 30
 #########################
 #The selected k-mer values for spades
 spades.kmer.values = c(33, 55, 77, 99, 127)
+#Number of samples to assemble at the same time. Spades scales poorly above
+#about 8 threads, so several small runs finish a set sooner than one large run.
+#"threads" and "memory" are divided between them. Raise this only when the
+#memory of one run allows it: every concurrent run holds its own peak.
+spades.parallel.samples = 1
 #Whether to use mismatch corrector (requires a lot of RAM and resources, recommended if possible)
-spades.mismatch.corrector = TRUE
+#TRUE runs spades with --careful, which runs MismatchCorrector after the
+#assembly. The step adds about a third to the run time and finds almost no
+#extra targets. Numbers in HANDOFF-assembly-speed.md.
+spades.mismatch.corrector = FALSE
+#TRUE runs BayesHammer to correct read errors before the assembly. FALSE passes
+#--only-assembler and skips it, which removes about a third of the run time.
+#The draft contigs are baits for assembleBinnedTargets, which tolerates high
+#divergence, and later steps map the reads back to call sites. The small loss
+#of base accuracy therefore does not reach the final sequences.
+spades.error.correction = FALSE
 #TRUE runs spades in --isolate mode, for high coverage isolate data.
 #Cannot be TRUE at the same time as spades.mismatch.corrector.
 spades.isolate = FALSE

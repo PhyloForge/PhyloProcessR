@@ -68,6 +68,9 @@
 #'   files. If \code{NULL} they go to \code{output.directory/binned-assemblies}.
 #'   Default: \code{NULL}.
 #'
+#' @param log.directory path to the directory for the cross-sample summary CSV.
+#'   Default: \code{"logs"}.
+#'
 #' @param locus.set which targets to bin. \code{"missing"} uses only the targets
 #'   absent from the assembly of that sample. \code{"all"} uses every target, so
 #'   the targets the sample already has are extended as well. Default:
@@ -184,6 +187,14 @@
 #'   sample. The table gives the bait source, the reads in the bin, the new
 #'   length and the previous length for every target.
 #'
+#'   It also adds one row per sample to
+#'   \code{log.directory/assembleBinnedTargets_summary.csv}. The row is written
+#'   as each sample finishes, so a batch that stops early keeps the rows it
+#'   earned, and a rerun of one sample replaces its row. The columns cover the
+#'   targets recovered, the targets extended and the base pairs added, the bait
+#'   sources, both rescue steps, and the run time. Use it to compare samples
+#'   across a large batch.
+#'
 #' @export
 
 assembleBinnedTargets = function(read.directory = NULL,
@@ -193,6 +204,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                                  draft.assembly.directory = NULL,
                                  output.directory = "binned-target-assembly",
                                  binned.directory = NULL,
+                                 log.directory = "logs",
                                  locus.set = c("all", "missing"),
                                  bait.source = c("hybrid", "reference"),
                                  min.bait.coverage = 0.5,
@@ -304,8 +316,9 @@ assembleBinnedTargets = function(read.directory = NULL,
   for (i in seq_along(sample.names)) {
   tryCatch({
 
-    sample     = sample.names[i]
-    sample.dir = paste0(output.directory, "/", sample)
+    sample       = sample.names[i]
+    sample.start = Sys.time()
+    sample.dir   = paste0(output.directory, "/", sample)
     out.file   = paste0(binned.directory, "/", sample, ".fa")
 
     if (overwrite == FALSE && file.exists(out.file) == TRUE) {
@@ -438,6 +451,12 @@ assembleBinnedTargets = function(read.directory = NULL,
     stats.table  = bait.set$table
     stats.table$reads = 0
 
+    # Counters for the one row this sample adds to the summary CSV
+    bins.per.round      = integer(0)
+    targets.per.round   = integer(0)
+    divergent.pool      = 0
+    divergent.recovered = 0
+
     for (round in seq_len(iterations)) {
 
       round.dir = paste0(sample.dir, "/round", round)
@@ -456,7 +475,8 @@ assembleBinnedTargets = function(read.directory = NULL,
       # One bwa call takes either two mate files or one single-end file, so the
       # merged reads need a second pass. samtools cat joins the two unsorted BAMs,
       # which share a header because both used this bait index.
-      map.bams = paste0(round.dir, "/map-pe.bam")
+      map.bams      = paste0(round.dir, "/map-pe.bam")
+      merged.counts = NULL
       .runCommand(paste0(bwa.command, " mem -t ", threads,
                          " -k 15 -B 3 -O 5 -T 25 ",
                          shQuote(bait.file), " ", shQuote(read1), " ", shQuote(read2),
@@ -471,6 +491,21 @@ assembleBinnedTargets = function(read.directory = NULL,
                            " | ", samtools.command, " view -b -o ", shQuote(merged.bam), " -"),
                     quiet = quiet, task = "merged read mapping")
         map.bams = c(map.bams, merged.bam)
+
+        # A merged read is one record that spans the whole insert, so the pair
+        # count below must score it as a pair and not as half of one. The count
+        # is taken here, while the merged reads are still in a file of their own.
+        merged.file = paste0(round.dir, "/merged-counts.txt")
+        .runCommand(paste0(samtools.command, " view -F 4 ", shQuote(merged.bam),
+                           " | awk '{ c[$3]++ } END { for (k in c) print k \"\\t\" c[k] }'",
+                           " > ", shQuote(merged.file)),
+                    quiet = quiet, task = "merged read counting", keep.stdout = TRUE)
+
+        if (file.exists(merged.file) == TRUE && file.info(merged.file)$size > 0) {
+          merged.data   = utils::read.table(merged.file, sep = "\t", header = FALSE,
+                                            stringsAsFactors = FALSE)
+          merged.counts = stats::setNames(as.numeric(merged.data$V2), merged.data$V1)
+        }
       }
 
       .runCommand(paste0(samtools.command, " cat ",
@@ -499,11 +534,22 @@ assembleBinnedTargets = function(read.directory = NULL,
 
       bait.reads = idx.data$mapped + idx.data$unmapped
       names(bait.reads) = idx.data$bait
+
+      # idxstats counts records, and the test below divides by two to get pairs.
+      # A merged read is a whole insert in one record, so its record is added a
+      # second time. Without this a merged library loses about an eighth of its
+      # inserts at the gate. Numbers in HANDOFF.md.
+      if (is.null(merged.counts) == FALSE) {
+        extra.reads = merged.counts[names(bait.reads)]
+        extra.reads[is.na(extra.reads)] = 0
+        bait.reads = bait.reads + extra.reads
+      }
       round.reads = as.numeric(bait.reads[bait.set$table$bait])
       round.reads[is.na(round.reads)] = 0
       if (round == 1) stats.table$reads = round.reads[match(stats.table$locus, bait.set$table$locus)]
 
       run.index = which(round.reads >= (min.pairs * 2))
+      bins.per.round = c(bins.per.round, length(run.index))
       print(paste0(sample, " round ", round, ": ", length(run.index), " of ",
                    nrow(bait.set$table), " bins hold at least ", min.pairs,
                    " read pairs. Assembling."))
@@ -566,6 +612,7 @@ assembleBinnedTargets = function(read.directory = NULL,
 
       # A later round must not lose a target that an earlier round recovered
       best.contigs = .keepLonger(best.contigs, round.best)
+      targets.per.round = c(targets.per.round, length(round.best))
 
       print(paste0(sample, " round ", round, ": ", length(round.best),
                    " targets assembled, ", length(best.contigs), " total."))
@@ -597,6 +644,8 @@ assembleBinnedTargets = function(read.directory = NULL,
             quiet = quiet)
 
           best.contigs = .keepLonger(best.contigs, failed.contigs)
+          divergent.pool      = length(failed.names)
+          divergent.recovered = if (is.null(failed.contigs)) 0 else length(failed.contigs)
           print(paste0(sample, ": LAST recovered ",
                        if (is.null(failed.contigs)) 0 else length(failed.contigs),
                        " of ", length(failed.names),
@@ -632,12 +681,26 @@ assembleBinnedTargets = function(read.directory = NULL,
     names(final.contigs) = make.unique(names(final.contigs), sep = "_")
     Biostrings::writeXStringSet(final.contigs, out.file)
 
-    .writeBinnedStats(sample = sample,
-                      sample.dir = sample.dir,
-                      bait.table = stats.table,
-                      locus.names = locus.names,
-                      new.contigs = best.contigs,
-                      old.contigs = old.contigs)
+    locus.stats = .writeBinnedStats(sample = sample,
+                                    sample.dir = sample.dir,
+                                    bait.table = stats.table,
+                                    locus.names = locus.names,
+                                    new.contigs = best.contigs,
+                                    old.contigs = old.contigs)
+
+    .appendBinnedSummary(sample = sample,
+                         locus.stats = locus.stats,
+                         bait.table = stats.table,
+                         old.contigs = old.contigs,
+                         final.contigs = final.contigs,
+                         rescue.pool = length(rescue.names),
+                         rescue.seeds = if (is.null(seed.contigs)) 0 else length(seed.contigs),
+                         divergent.pool = divergent.pool,
+                         divergent.recovered = divergent.recovered,
+                         bins.per.round = bins.per.round,
+                         targets.per.round = targets.per.round,
+                         minutes = as.numeric(difftime(Sys.time(), sample.start, units = "mins")),
+                         log.directory = log.directory)
 
     print(paste0(sample, " finished: ", length(best.contigs),
                  " targets assembled from bins, ", length(final.contigs),

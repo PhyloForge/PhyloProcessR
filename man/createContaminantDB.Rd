@@ -32,7 +32,8 @@ the contaminant directory; NULL skips this step.}
 
 \item{overwrite}{logical; if TRUE an existing output.directory is deleted
 and every genome is downloaded again. If FALSE the function keeps the
-genomes that are already present and downloads only the missing ones.}
+genomes that are already present and downloads only the missing ones.
+Downloads are published only after their FASTA content is verified.}
 }
 \value{
 invisibly returns the paths of the contaminant files; side effect is
@@ -46,5 +47,6 @@ NCBI Datasets API for assembly accessions (GCA_ or GCF_) and with Entrez
 efetch for nucleotide accessions. The function can also add the NCBI UniVec
 vector sequences, extra GenBank accessions, or a custom FASTA file. Each
 genome is downloaded only once, so an interrupted run continues where it
-stopped.
+stopped. Cached references that are no longer requested are retained but
+omitted from active-references.csv and the resulting contaminant index.
 }

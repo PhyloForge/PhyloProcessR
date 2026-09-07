@@ -41,8 +41,9 @@ whose 'LibraryStrategy' column matches this string are downloaded (e.g.
 
 \item{filter.library.layout}{character or NULL; restrict downloads to
 "PAIRED" or "SINGLE". NULL (default) reads the LibraryLayout column per
-row; falls back to PAIRED if the column is absent. The ENA file report
-overrides this when it is available.}
+row and falls back to the ENA file layout when the column is absent. A
+requested filter requires the LibraryLayout column. The ENA file report
+still verifies the resolved file layout.}
 
 \item{max.retries}{integer; number of download attempts per file before
 giving up. Default 3.}

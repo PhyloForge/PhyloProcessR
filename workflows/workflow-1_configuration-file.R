@@ -66,8 +66,8 @@ skip.not.found = FALSE
 # TRUE to download reads from NCBI SRA using an SraRunInfo CSV file.
 # Export your SRA Run Selector results as SraRunInfo.csv from the NCBI SRA
 # Run Selector (https://www.ncbi.nlm.nih.gov/Traces/study/) and provide the
-# path below. Can be used together with dropbox.download = TRUE. The workflow
-# then merges the two rename tables into file_rename_combined.csv.
+# path below. Workflow 1 accepts one download source at a time, so leave
+# dropbox.download = FALSE when this setting is TRUE.
 sra.download = FALSE
 # Path to the SraRunInfo CSV downloaded from the NCBI SRA Run Selector.
 # Must contain at minimum a 'Run' column with SRR/ERR/DRR accession numbers.
@@ -90,22 +90,32 @@ sra.skip.not.found = TRUE
 
 #FASTP read cleaning
 #########################
-# = TRUE to run all processing steps at once (much faster). Overrides settings below.
-# = FALSE to run the separate analyses with TRUE below
-fastp.complete = TRUE
+# All of the settings below are built into one fastp command and run in a
+# single pass over the reads. A step that is FALSE is left out of the command.
+# TRUE runs the fastp cleaning step. FALSE skips it completely.
+clean.reads = TRUE
 #TRUE = to run adaptor removal on reads
 remove.adaptors = TRUE
 #TRUE to remove exact PCR duplicates
 remove.duplicate.reads = TRUE
 #TRUE to correct errors using the other read pair
 error.correction = TRUE
+# TRUE trims low quality ends off of reads (not recommended, hurts assembly)
+quality.trim.reads = FALSE
+# TRUE discards a read when more than 40 percent of its bases are below Q15.
+# This is the fastp default. It discards bad reads but does not trim read ends.
+quality.filter = TRUE
+# TRUE discards low complexity reads, for example long single-base repeats
+low.complexity.filter = TRUE
+# TRUE trims poly-X tails, such as the poly-G tails of NovaSeq and NextSeq data
+trim.poly.x = TRUE
+# Minimum read length in bp. A shorter read is discarded. 0 disables the filter.
+min.read.length = 60
 
 #Other read processing tasks
 ############################
 #Merge paired end reads, helps with assembly
 merge.pe.reads = TRUE
-# Trims low quality ends off of reads (not recommended, hurts assembly)
-quality.trim.reads = FALSE
 
 #Decontamination settings
 #########################

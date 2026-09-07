@@ -12,6 +12,7 @@ assembleBinnedTargets(
   draft.assembly.directory = NULL,
   output.directory = "binned-target-assembly",
   binned.directory = NULL,
+  log.directory = "logs",
   locus.set = c("all", "missing"),
   bait.source = c("hybrid", "reference"),
   min.bait.coverage = 0.5,
@@ -71,6 +72,9 @@ LAST is not needed. Default: \code{NULL}.}
 \item{binned.directory}{path to the directory for the final per-sample FASTA
 files. If \code{NULL} they go to \code{output.directory/binned-assemblies}.
 Default: \code{NULL}.}
+
+\item{log.directory}{path to the directory for the cross-sample summary CSV.
+Default: \code{"logs"}.}
 
 \item{locus.set}{which targets to bin. \code{"missing"} uses only the targets
 absent from the assembly of that sample. \code{"all"} uses every target, so
@@ -188,6 +192,14 @@ file per sample to \code{binned.directory}, and one
 \code{<sample>_binned-stats.txt} table to the working directory of the
 sample. The table gives the bait source, the reads in the bin, the new
 length and the previous length for every target.
+
+It also adds one row per sample to
+\code{log.directory/assembleBinnedTargets_summary.csv}. The row is written
+as each sample finishes, so a batch that stops early keeps the rows it
+earned, and a rerun of one sample replaces its row. The columns cover the
+targets recovered, the targets extended and the base pairs added, the bait
+sources, both rescue steps, and the run time. Use it to compare samples
+across a large batch.
 }
 \description{
 Assembles each target locus on its own, to recover targets that

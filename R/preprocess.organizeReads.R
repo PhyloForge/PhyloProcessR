@@ -21,7 +21,8 @@
 #' @param link.reads logical; if TRUE the reads are hard-linked instead of
 #'   copied, and a symbolic link is used when a hard link is not possible. This
 #'   avoids a second copy of a read set that is often hundreds of gigabytes.
-#'   FALSE copies the files.
+#'   FALSE copies the files. Plain .fastq and .fq inputs are compressed once
+#'   because organized output always uses the .fastq.gz convention.
 #'
 #' @param overwrite logical; if TRUE the output directory is deleted and
 #'   recreated. Completed lanes are skipped when overwrite is FALSE.
@@ -43,6 +44,18 @@ organizeReads = function(read.directory = NULL,
   if (file.exists(read.directory) == F){ stop("Input reads not found.") }
   if (is.null(rename.file) == TRUE){ stop("Please provide a table of file to sample name conversions.") }
   if (file.exists(rename.file) == F){ stop("Rename file not found.") }
+  if (length(link.reads) != 1 || is.logical(link.reads) == FALSE || is.na(link.reads)) {
+    stop("link.reads must be TRUE or FALSE.")
+  }
+  if (length(overwrite) != 1 || is.logical(overwrite) == FALSE || is.na(overwrite)) {
+    stop("overwrite must be TRUE or FALSE.")
+  }
+
+  sample.data = read.csv(rename.file, stringsAsFactors = FALSE)
+  sample.data = .validateRenameTable(sample.data)
+  if (nrow(sample.data) == 0){ return("no samples available to organize.") }
+  .checkDirectoryOverlap(read.directory, output.directory)
+  .checkFileOutsideOutput(rename.file, output.directory)
 
   #Sets directory and reads in
   if (dir.exists(output.directory) == F){
@@ -53,12 +66,9 @@ organizeReads = function(read.directory = NULL,
 
   #Read in sample data and finds reads
   read.directory = sub("/+$", "", read.directory)
-  reads = list.files(read.directory, recursive = T, full.names = T)
-  reads = reads[grep("fastq.gz$|fastq$|fq.gz$|fq$", reads)]
+  reads = .listFastqFiles(read.directory)
   read.names = .relativePaths(reads, read.directory)
-
-  sample.data = read.csv(rename.file)
-  if (nrow(sample.data) == 0){ return("no samples available to organize.") }
+  if (dir.exists("logs/sample_logs") == FALSE) { dir.create("logs/sample_logs", recursive = TRUE) }
 
   sample.names = unique(sample.data$Sample)
 
@@ -76,12 +86,11 @@ organizeReads = function(read.directory = NULL,
       outread.1 = paste0(out.path, "/", temp.data$Sample[j], "_", lane.tag, "_READ1.fastq.gz")
       outread.2 = paste0(out.path, "/", temp.data$Sample[j], "_", lane.tag, "_READ2.fastq.gz")
 
-      # Skips a lane only when both read files are present and hold data. A lane
-      # that stopped part way through is organized again.
-      if (overwrite == FALSE && .laneComplete(c(outread.1, outread.2)) == TRUE) { next }
-
       # Finds all files for this given sample
       sample.reads = .matchPrefix(reads, read.names, temp.data$File[j])
+      if (length(sample.reads) == 0) {
+        sample.reads = reads[grepl(temp.data$File[j], read.names, fixed = TRUE)]
+      }
       # Checks the Sample column in case already renamed
       if (length(sample.reads) == 0) {
         sample.reads = .matchPrefix(reads, read.names, temp.data$Sample[j])
@@ -95,12 +104,19 @@ organizeReads = function(read.directory = NULL,
         ))
       } # end if statement
 
-      if (length(sample.reads) == 1) {
-        stop(paste0(temp.data$Sample[j], " only one read file found. The other is missing."))
-      }
+      sample.reads = .orderReadPair(sample.reads)
+      metadata.file = file.path("logs/sample_logs", temp.data$Sample[j],
+                                paste0(temp.data$Sample[j], "_", lane.tag,
+                                       "_organization-metadata.csv"))
+      metadata = .laneMetadata(sample.reads,
+                               list(file.match = temp.data$File[j], sample = temp.data$Sample[j]))
 
-      if (length(sample.reads) >= 3) {
-        stop(paste0(temp.data$Sample[j], " had more than 2 read files associated, all file names must be unique."))
+      if (overwrite == FALSE &&
+          .laneComplete(c(outread.1, outread.2), metadata.file = metadata.file,
+                        metadata = metadata) == TRUE) { next }
+      if (overwrite == FALSE && .metadataConflicts(metadata.file, metadata) == TRUE) {
+        stop(temp.data$Sample[j], " ", lane.tag,
+             " was organized from different input reads. Use overwrite = TRUE to replace it.")
       }
 
       #################################################
@@ -111,11 +127,9 @@ organizeReads = function(read.directory = NULL,
         dir.create(out.path, recursive = TRUE)
       }
 
-      # Sorts the pair so READ1 is always the first mate
-      sample.reads = sort(sample.reads)
-
       .linkOrCopyRead(sample.reads[1], outread.1, link.reads)
       .linkOrCopyRead(sample.reads[2], outread.2, link.reads)
+      .writeLaneMetadata(metadata, metadata.file)
     } # end j loop
 
   }#end i loop
@@ -130,16 +144,28 @@ organizeReads = function(read.directory = NULL,
                            target.file = NULL,
                            link.reads = FALSE) {
 
-  if (file.exists(target.file) == TRUE) { unlink(target.file) }
+  temp.file = tempfile(pattern = paste0(basename(target.file), "-"),
+                       tmpdir = dirname(target.file), fileext = ".fastq.gz")
+  on.exit(unlink(temp.file), add = TRUE)
 
-  if (link.reads == TRUE) {
-    if (isTRUE(file.link(source.file, target.file))) { return(invisible(TRUE)) }
-    if (isTRUE(file.symlink(normalizePath(source.file), target.file))) { return(invisible(TRUE)) }
+  compressed = grepl("\\.gz$", source.file, ignore.case = TRUE)
+
+  if (link.reads == TRUE && compressed == TRUE) {
+    if (isTRUE(file.link(source.file, temp.file)) == FALSE &&
+        isTRUE(file.symlink(normalizePath(source.file), temp.file)) == FALSE &&
+        file.copy(source.file, temp.file, overwrite = TRUE) == FALSE) {
+      stop("Could not place ", source.file, " at ", target.file, ".")
+    }
+  } else if (compressed == TRUE) {
+    if (file.copy(source.file, temp.file, overwrite = TRUE) == FALSE) {
+      stop("Could not place ", source.file, " at ", target.file, ".")
+    }
+  } else {
+    .runCommand(paste0("gzip -c ", shQuote(source.file), " > ", shQuote(temp.file)),
+                quiet = TRUE, task = "FASTQ compression", keep.stdout = TRUE)
   }
 
-  if (file.copy(source.file, target.file, overwrite = TRUE) == FALSE) {
-    stop("Could not place ", source.file, " at ", target.file, ".")
-  }
+  .publishFiles(temp.file, target.file)
 
   return(invisible(TRUE))
 }#end .linkOrCopyRead

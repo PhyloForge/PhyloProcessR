@@ -102,7 +102,7 @@ if (use.dropbox == TRUE) {
 }
 
 # fastqStats accumulator — written as a rolling CSV after every sample.
-# fastpComplete and assessCaptureEfficiency write their own growing CSVs directly.
+# fastpClean and assessCaptureEfficiency write their own growing CSVs directly.
 all.fastq.stats = data.frame()
 
 ##################################################################################################
@@ -339,15 +339,15 @@ for (i in 1:length(sample.names)) {
   ## (adaptor removal, dedup, low-complexity filter, length >=60)
   ## No decontamination — just enough cleaning to map reliably.
   ##############################################################
-  fastpComplete(input.reads       = input.dir,
-                output.directory  = cleaned.dir,
-                fastp.path        = fastp.path,
-                threads           = threads,
-                mem               = memory,
-                overwrite         = TRUE,
-                quiet             = quiet)
+  fastpClean(input.reads       = input.dir,
+             output.directory  = cleaned.dir,
+             fastp.path        = fastp.path,
+             threads           = threads,
+             mem               = memory,
+             overwrite         = TRUE,
+             quiet             = quiet)
 
-  # fastpComplete now appends to its own CSV automatically —
+  # fastpClean now appends to its own CSV automatically —
   # no manual accumulation needed here.
 
   ##############################################################
@@ -379,7 +379,7 @@ for (i in 1:length(sample.names)) {
 
   ##############################################################
   ## Step 4b: Assess capture efficiency on cleaned reads
-  ## (fastpComplete writes cleaned reads to cleaned.dir/sample/)
+  ## (fastpClean writes cleaned reads to cleaned.dir/sample/)
   ##############################################################
   assessCaptureEfficiency(input.reads      = cleaned.dir,
                           output.directory = "sample-capture-assessment",
@@ -433,8 +433,8 @@ for (i in 1:length(sample.names)) {
   ## be safely interrupted and resumed without losing data.
   ##############################################################
   write.csv(all.fastq.stats, "logs/X2_fastq-stats_rolling.csv", row.names = FALSE)
-  # fastpComplete and assessCaptureEfficiency write and append their own
-  # CSVs directly — logs/fastpComplete_summary.csv and
+  # fastpClean and assessCaptureEfficiency write and append their own
+  # CSVs directly — logs/fastpClean_summary.csv and
   # logs/assessCaptureEfficiency_summary.csv grow after every sample
 
   cat(" Sample", sample.name, "complete!\n")
@@ -459,9 +459,9 @@ if (nrow(all.fastq.stats) > 0) {
 }
 
 # --- Aggregate fastp stats per sample (sum across lanes) ---
-# fastpComplete appends to its CSV directly; read it here for the merge.
-if (file.exists("logs/fastpComplete_summary.csv")) {
-  fp.raw = read.csv("logs/fastpComplete_summary.csv", stringsAsFactors = FALSE)
+# fastpClean appends to its CSV directly; read it here for the merge.
+if (file.exists("logs/fastpClean_summary.csv")) {
+  fp.raw = read.csv("logs/fastpClean_summary.csv", stringsAsFactors = FALSE)
   fp.agg = aggregate(cbind(startPairs, removePairs, endPairs) ~ Sample,
                      data = fp.raw, FUN = sum)
   fp.agg$pctRemovedByFastp = round(fp.agg$removePairs / fp.agg$startPairs * 100, 2)

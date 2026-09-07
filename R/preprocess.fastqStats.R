@@ -52,8 +52,7 @@ fastqStats = function(read.directory = NULL,
   }#end if
 
   read.directory = sub("/+$", "", read.directory)
-  reads = list.files(read.directory, recursive = T, full.names = T)
-  reads = reads[grep("\\.fastq\\.gz$|\\.fq\\.gz$|\\.fastq$|\\.fq$", reads)]
+  reads = .listFastqFiles(read.directory)
   read.names = .relativePaths(reads, read.directory)
 
   if (is.null(sub.directory) != TRUE) {
@@ -86,13 +85,18 @@ fastqStats = function(read.directory = NULL,
 
     for (j in seq_along(lane.prefixes)){
 
-      lane.reads = sort(.matchPrefix(reads, reads, lane.prefixes[j]))
+      lane.reads = .matchPrefix(reads, reads, lane.prefixes[j])
 
       #Returns an error if reads are not found
       if (length(lane.reads) == 0 ){
         warning(lane.prefixes[j], " does not have any reads present. Skipping.")
         next
       } #end if statement
+      lane.reads = tryCatch(.orderReadFiles(lane.reads), error = function(e) {
+        warning(conditionMessage(e))
+        return(NULL)
+      })
+      if (is.null(lane.reads) == TRUE) { next }
 
       lane.list[[length(lane.list) + 1]] = list(sample = sample.names[i],
                                                 lane = gsub(".*_", "", basename(lane.prefixes[j])),

@@ -517,8 +517,86 @@
               file = paste0(sample.dir, "/", sample, "_binned-stats.txt"),
               sep = "\t", quote = FALSE, row.names = FALSE)
 
-  return(invisible(NULL))
+  return(invisible(stats.table))
 }#end .writeBinnedStats
+
+
+# Adds one row for a finished sample to a CSV that grows across a batch. The row
+# is written as each sample finishes, so a batch that stops early keeps the rows
+# it earned. A rerun of one sample replaces its row instead of adding a second.
+.appendBinnedSummary = function(sample = NULL,
+                                locus.stats = NULL,
+                                bait.table = NULL,
+                                old.contigs = NULL,
+                                final.contigs = NULL,
+                                rescue.pool = 0,
+                                rescue.seeds = 0,
+                                divergent.pool = 0,
+                                divergent.recovered = 0,
+                                bins.per.round = integer(0),
+                                targets.per.round = integer(0),
+                                minutes = NA_real_,
+                                log.directory = "logs") {
+
+  if (is.null(locus.stats) == TRUE || nrow(locus.stats) == 0) return(invisible(NULL))
+
+  had        = locus.stats$previousLength > 0
+  gain       = locus.stats$finalLength - locus.stats$previousLength
+  extended   = gain > 0 & had
+  bait.count = function(tag) sum(bait.table$source == tag)
+
+  previous.bp = if (is.null(old.contigs)) 0 else sum(Biostrings::width(old.contigs))
+  final.bp    = if (is.null(final.contigs)) 0 else sum(Biostrings::width(final.contigs))
+
+  summary.row = data.frame(
+    sample                = sample,
+    targetsBinned         = nrow(locus.stats),
+    contigsOut            = if (is.null(final.contigs)) 0 else length(final.contigs),
+    targetsWithContig     = sum(had),
+    targetsNew            = sum(had == FALSE),
+    targetsExtended       = sum(extended),
+    percentExtended       = if (sum(had) > 0) round(100 * sum(extended) / sum(had), 1) else NA_real_,
+    medianBpAdded         = if (any(extended)) stats::median(gain[extended]) else 0,
+    totalBpExtended       = sum(gain[extended]),
+    previousBp            = previous.bp,
+    finalBp               = final.bp,
+    bpGained              = final.bp - previous.bp,
+    baitContig            = bait.count("contig"),
+    baitDraft             = bait.count("draft"),
+    baitReference         = bait.count("reference"),
+    baitRescue            = bait.count("rescue"),
+    rescueMissingPool     = rescue.pool,
+    rescueMissingSeeds    = rescue.seeds,
+    divergentPool         = divergent.pool,
+    divergentRecovered    = divergent.recovered,
+    rounds                = length(targets.per.round),
+    round1Bins            = if (length(bins.per.round) > 0) bins.per.round[1] else NA_integer_,
+    round1Targets         = if (length(targets.per.round) > 0) targets.per.round[1] else NA_integer_,
+    minutes               = round(minutes, 1),
+    stringsAsFactors      = FALSE
+  )
+
+  dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+  out.csv = paste0(sub("/+$", "", log.directory), "/assembleBinnedTargets_summary.csv")
+
+  if (file.exists(out.csv) == TRUE) {
+    existing = utils::read.csv(out.csv, stringsAsFactors = FALSE)
+    if ("sample" %in% colnames(existing) == TRUE) {
+      existing = existing[existing$sample %in% summary.row$sample == FALSE, , drop = FALSE]
+    }
+    # An older file can hold a different set of columns. Fill both sides so the
+    # rows of a previous version are kept rather than dropped.
+    for (m in setdiff(colnames(existing), colnames(summary.row))) summary.row[[m]] = NA
+    for (m in setdiff(colnames(summary.row), colnames(existing))) existing[[m]] = NA
+    if (nrow(existing) > 0) {
+      summary.row = rbind(existing[, colnames(summary.row), drop = FALSE], summary.row)
+    }
+  }
+
+  utils::write.csv(summary.row, file = out.csv, row.names = FALSE)
+
+  return(invisible(out.csv))
+}#end .appendBinnedSummary
 
 
 # Recovers targets that have no sequence in this sample at all.

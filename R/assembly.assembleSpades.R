@@ -27,8 +27,19 @@
 #'   \code{NULL} expected on the system PATH. Default: \code{NULL}.
 #'
 #' @param mismatch.corrector logical; if \code{TRUE} passes \code{--careful} to
-#'   SPAdes to reduce mismatches and indels in the assembly. Cannot be \code{TRUE}
-#'   when \code{isolate = TRUE}. Default: \code{TRUE}.
+#'   SPAdes. SPAdes then runs MismatchCorrector after the assembly. This step
+#'   adds about a third to the run time and finds almost no extra targets, so
+#'   the default is \code{FALSE}. Cannot be \code{TRUE} when
+#'   \code{isolate = TRUE}. Numbers in HANDOFF-assembly-speed.md. Default:
+#'   \code{FALSE}.
+
+#' @param error.correction logical; if \code{TRUE} SPAdes runs BayesHammer to
+#'   correct read errors before it assembles. If \code{FALSE} the function
+#'   passes \code{--only-assembler} and SPAdes skips that step. BayesHammer
+#'   also takes about a third of the run time. The draft contigs are baits for
+#'   \code{assembleBinnedTargets}, which tolerates high divergence, and later
+#'   steps map the reads back to call sites. The small loss of base accuracy
+#'   therefore does not reach the final sequences. Default: \code{FALSE}.
 #'
 #' @param isolate logical; if \code{TRUE} passes \code{--isolate} to SPAdes,
 #'   recommended for highly covered isolate genomes. Cannot be \code{TRUE} when
@@ -37,10 +48,29 @@
 #' @param kmer.values integer vector of k-mer sizes passed to SPAdes with
 #'   \code{-k}. Default: \code{c(33, 55, 77, 99, 127)}.
 #'
-#' @param threads number of CPU threads passed to SPAdes with \code{-t}.
-#'   Default: \code{1}.
+#' @param threads total number of CPU threads. The function divides them
+#'   between the samples that run at the same time, so each SPAdes receives
+#'   \code{floor(threads / parallel.samples)}. Default: \code{1}.
+
+#' @param retry.failed logical; if \code{TRUE} the function assembles again any
+#'   sample that failed, one at a time, with all of \code{threads} and
+#'   \code{memory}. A large sample can exhaust its share and still assemble
+#'   when it has everything. The retry runs only when
+#'   \code{parallel.samples > 1}, because a serial first pass already used
+#'   every resource. A skipped sample is not retried: empty or unusable reads
+#'   fail whatever the memory. Default: \code{TRUE}.
+
+#' @param parallel.samples number of samples to assemble at the same time.
+#'   SPAdes scales poorly above about 8 threads, so several small runs finish a
+#'   set sooner than one large run. \code{threads} and \code{memory} are
+#'   divided between them. Raise this only when the memory of one run allows it:
+#'   every concurrent run holds its own peak. Default: \code{1}, which
+#'   assembles the samples one after another. Numbers in
+#'   HANDOFF-assembly-speed.md.
 #'
-#' @param memory RAM in GB passed to SPAdes with \code{-m}. Default: \code{4}.
+#' @param memory total RAM in GB. The function divides it between the samples
+#'   that run at the same time, so each SPAdes receives
+#'   \code{floor(memory / parallel.samples)}. Default: \code{4}.
 #'
 #' @param overwrite logical; if \code{TRUE} existing output and assembly
 #'   directories are deleted and recreated and all samples are rerun. Default:
@@ -61,7 +91,10 @@
 #'   Default: \code{TRUE}.
 #'
 #' @return Invisibly returns nothing. Assembled scaffolds for each sample are
-#'   saved as \code{<assembly.directory>/<sample>.fa}.
+#'   saved as \code{<assembly.directory>/<sample>.fa}. The SPAdes log of each
+#'   sample is copied to \code{logs/sample_logs/<sample>/spades.log}. The log
+#'   holds the run time of each stage and the peak memory, and it stays after
+#'   \code{clean.up.spades} deletes the working directory.
 #'
 #' @export
 
@@ -69,10 +102,13 @@ assembleSpades = function(input.reads = NULL,
                           output.directory = "processed-reads/spades-assembly",
                           assembly.directory = "draft-assemblies",
                           spades.path = NULL,
-                          mismatch.corrector = TRUE,
+                          mismatch.corrector = FALSE,
+                          error.correction = FALSE,
                           isolate = FALSE,
                           kmer.values = c(33,55,77,99,127),
                           threads = 1,
+                          parallel.samples = 1,
+                          retry.failed = TRUE,
                           memory = 4,
                           overwrite = FALSE,
                           save.corrected.reads = FALSE,
@@ -142,7 +178,7 @@ assembleSpades = function(input.reads = NULL,
     }
   } # end else
 
-  # Creates the log directory. Failed samples keep their spades.log here.
+  # Creates the log directory. Every sample keeps its spades.log below this.
   if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
 
   if (isolate == TRUE && mismatch.corrector == TRUE) {
@@ -159,6 +195,15 @@ assembleSpades = function(input.reads = NULL,
   
   if (mismatch.corrector == TRUE) {
     mismatch.string = "--careful "
+  }
+
+  # --only-assembler turns off BayesHammer. SPAdes then writes no corrected
+  # reads, so save.corrected.reads has nothing to keep.
+  if (error.correction == TRUE) {
+    correction.string = ""
+  } else {
+    correction.string = "--only-assembler "
+    save.corrected.reads = FALSE
   }
 
   # Sets up the reads. The extension is matched on the file name only, so a
@@ -181,23 +226,40 @@ assembleSpades = function(input.reads = NULL,
   if (length(samples) == 0) {
     stop("No samples to run or incorrect directory.")
   }
+
+  # Divides the resources between the samples that run at the same time. SPAdes
+  # scales poorly above about 8 threads, so several small runs finish a set
+  # sooner than one large run. Each concurrent run holds its own peak memory.
+  if (is.null(parallel.samples) == TRUE || parallel.samples < 1) { parallel.samples = 1 }
+  parallel.samples = min(parallel.samples, length(samples))
+  thread.cl = max(1, floor(threads / parallel.samples))
+  mem.cl = max(1, floor(memory / parallel.samples))
+
+  if (parallel.samples > 1) {
+    print(paste0("Assembling ", parallel.samples, " samples at a time with ",
+                 thread.cl, " threads and ", mem.cl, "GB each."))
+  }
+
   #Header data for features and whatnot
-  for (i in seq_along(samples)){
+  # Assembles one sample. The thread and memory counts are arguments so the
+  # retry below can give a failed sample everything.
+  assemble.one = function(i, use.threads, use.memory) {
+  tryCatch({
 
     sample.reads = reads[read.samples == samples[i]]
 
     #Returns an error if reads are not found
     if (length(sample.reads) == 0 ){
-      warning(samples[i], " does not have any reads present. Skipping.")
-      next
+      print(paste0(samples[i], " does not have any reads present. Skipping."))
+      return("skipped")
     } #end if statement
 
     #Skip samples with empty or near-empty read files (e.g. all reads removed by decontamination)
     file.sizes = file.info(sample.reads)$size
     if (any(is.na(file.sizes)) || max(file.sizes, na.rm = TRUE) < 1000) {
-      warning(samples[i], " read files are empty or near-empty (max file size: ",
-              max(file.sizes, na.rm = TRUE), " bytes). Skipping.")
-      next
+      print(paste0(samples[i], " read files are empty or near-empty (max file size: ",
+                   max(file.sizes, na.rm = TRUE), " bytes). Skipping."))
+      return("skipped")
     }
 
     #Run SPADES on sample
@@ -246,10 +308,10 @@ assembleSpades = function(input.reads = NULL,
       #Warns when a library does not match a supported layout. Spades would drop
       #these reads without a message.
       if (read.string == "" || length(lib.read3) > 1) {
-        warning(samples[i], ", library ", basename(sample.lanes[j]),
-                ": unsupported read layout (", length(lib.read1), " read1, ",
-                length(lib.read2), " read2, ", length(lib.read3),
-                " merged or singleton files). These reads are not assembled.")
+        print(paste0(samples[i], ", library ", basename(sample.lanes[j]),
+                     ": unsupported read layout (", length(lib.read1), " read1, ",
+                     length(lib.read2), " read2, ", length(lib.read3),
+                     " merged or singleton files). These reads are not assembled."))
       }
 
       final.read.string = paste0(final.read.string, read.string)
@@ -264,8 +326,8 @@ assembleSpades = function(input.reads = NULL,
 
     #Skips the sample when no library produced a usable spades string
     if (length(final.read.string) == 0 || final.read.string == "") {
-      warning(samples[i], " has no reads in a layout spades accepts. Skipping.")
-      next
+      print(paste0(samples[i], " has no reads in a layout spades accepts. Skipping."))
+      return("skipped")
     }
 
     tmp.dir <- paste0(temp.directory, "/spades_", samples[i])
@@ -274,25 +336,31 @@ assembleSpades = function(input.reads = NULL,
     #Runs spades command
     system(paste0(spades.path, "spades.py ", final.read.string,
                   "--tmp-dir ", shQuote(tmp.dir), " -o ", shQuote(save.assem),
-                  " -k ", k.val, " ", mismatch.string,
-                  "-t ", threads, " -m ", memory),
+                  " -k ", k.val, " ", mismatch.string, correction.string,
+                  "-t ", use.threads, " -m ", use.memory),
            ignore.stdout = quiet, ignore.stderr = quiet)
+
+    # Saves the spades log for every sample, not only for a failure. The log
+    # gives the run time of each stage and the peak memory, and the working
+    # directory may be deleted below.
+    sample.log.directory = paste0("logs/sample_logs/", samples[i])
+    if (dir.exists(sample.log.directory) == FALSE) {
+      dir.create(sample.log.directory, recursive = TRUE, showWarnings = FALSE)
+    }
+    if (file.exists(paste0(save.assem, "/spades.log")) == TRUE) {
+      file.copy(paste0(save.assem, "/spades.log"),
+                paste0(sample.log.directory, "/spades.log"), overwrite = TRUE)
+    }
 
     #Warns if spades failed, also copies new assemblies to assembly.directory
     if (file.exists(paste0(save.assem, "/scaffolds.fasta")) == TRUE ){
       file.copy(paste0(save.assem, "/scaffolds.fasta"),
                 paste0(assembly.directory, "/", samples[i], ".fa"), overwrite = TRUE)
     } else {
-      #Keeps the spades log so the failure can be inspected after clean up.
-      if (file.exists(paste0(save.assem, "/spades.log")) == TRUE) {
-        file.copy(paste0(save.assem, "/spades.log"),
-                  paste0("logs/sample_logs/FAILURE_", samples[i], "_spades.log"),
-                  overwrite = TRUE)
-      }
       unlink(tmp.dir, recursive = TRUE)
-      warning(paste0("spades error for ", samples[i],
-                     ", check logs/sample_logs/FAILURE_", samples[i], "_spades.log."))
-      next
+      print(paste0("spades error for ", samples[i],
+                   ", check ", sample.log.directory, "/spades.log."))
+      return("failed")
     }
 
     if (clean.up.spades == TRUE) {
@@ -304,8 +372,42 @@ assembleSpades = function(input.reads = NULL,
     }
     unlink(tmp.dir, recursive = TRUE)
     print(paste0(samples[i], " Completed Spades asssembly!"))
+    return("done")
 
-  }#end sample loop
+  }, error = function(e) {
+    print(paste0(samples[i], " failed: ", conditionMessage(e)))
+    return("failed")
+  })
+  }#end assemble.one
+
+  results = parallel::mclapply(seq_along(samples),
+                               function(i) assemble.one(i, thread.cl, mem.cl),
+                               mc.cores = parallel.samples) # end i loop
+
+  # A large sample can exhaust its share of the memory and still assemble when
+  # it has all of it. The retry runs the failed samples one at a time with
+  # every thread and gigabyte. It runs only when the first pass divided the
+  # resources, because a serial first pass already used everything. A skipped
+  # sample is not retried: empty or unusable reads fail whatever the memory.
+  retry.index = which(vapply(results, function(x) identical(x, "failed"), logical(1)))
+  if (retry.failed == TRUE && parallel.samples > 1 && length(retry.index) != 0) {
+    print(paste0("Retrying ", length(retry.index), " failed sample(s) one at a time with ",
+                 threads, " threads and ", memory, "GB."))
+    for (i in retry.index) {
+      # Clears the partial working directory so spades starts clean.
+      unlink(paste0(output.directory, "/", samples[i]), recursive = TRUE)
+      results[[i]] = assemble.one(i, threads, memory)
+    }
+  }
+
+  # A warning raised in a forked child never reaches the parent, so a failed
+  # sample must be counted here. The count is taken after the retry.
+  fail.index = which(vapply(results, function(x) identical(x, "failed"), logical(1)))
+  if (length(fail.index) != 0) {
+    print(paste0(length(fail.index), " of ", length(samples),
+                 " samples failed: ", paste(samples[fail.index], collapse = ", "),
+                 ". Each has a log in logs/sample_logs/<sample>/spades.log."))
+  }
 
 }#end function
 

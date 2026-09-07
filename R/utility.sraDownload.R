@@ -35,8 +35,9 @@
 #'
 #' @param filter.library.layout character or NULL; restrict downloads to
 #'   "PAIRED" or "SINGLE". NULL (default) reads the LibraryLayout column per
-#'   row; falls back to PAIRED if the column is absent. The ENA file report
-#'   overrides this when it is available.
+#'   row and falls back to the ENA file layout when the column is absent. A
+#'   requested filter requires the LibraryLayout column. The ENA file report
+#'   still verifies the resolved file layout.
 #'
 #' @param max.retries integer; number of download attempts per file before
 #'   giving up. Default 3.
@@ -60,56 +61,95 @@
 #'
 #' @export
 
-sraDownload = function(sra.info.file           = NULL,
-                       sample.name.column       = NULL,
-                       output.directory         = NULL,
-                       filter.library.strategy  = NULL,
-                       filter.library.layout    = NULL,
-                       max.retries              = 3,
-                       retry.delay              = 10,
-                       skip.not.found           = TRUE,
-                       overwrite                = FALSE,
-                       quiet                    = FALSE) {
+sraDownload = function(sra.info.file = NULL,
+                       sample.name.column = NULL,
+                       output.directory = NULL,
+                       filter.library.strategy = NULL,
+                       filter.library.layout = NULL,
+                       max.retries = 3,
+                       retry.delay = 10,
+                       skip.not.found = TRUE,
+                       overwrite = FALSE,
+                       quiet = FALSE) {
 
-  # -- Argument checks ---------------------------------------------------------
-  if (is.null(sra.info.file))      stop("Please provide an sra.info.file path.")
-  if (!file.exists(sra.info.file)) stop("sra.info.file not found: ", sra.info.file)
-  if (is.null(output.directory))   stop("Please provide an output.directory.")
+  #Quick checks
+  if (is.null(sra.info.file) == TRUE){ stop("Please provide an sra.info.file path.") }
+  if (file.exists(sra.info.file) == FALSE){ stop("sra.info.file not found: ", sra.info.file) }
+  if (is.null(output.directory) == TRUE){ stop("Please provide an output.directory.") }
+  if (length(max.retries) != 1 || is.numeric(max.retries) == FALSE ||
+      is.finite(max.retries) == FALSE || max.retries < 1 || max.retries %% 1 != 0) {
+    stop("max.retries must be one positive integer.")
+  }
+  if (length(retry.delay) != 1 || is.numeric(retry.delay) == FALSE ||
+      is.finite(retry.delay) == FALSE || retry.delay < 0) {
+    stop("retry.delay must be one non-negative number.")
+  }
+  if (length(skip.not.found) != 1 || is.logical(skip.not.found) == FALSE || is.na(skip.not.found)) {
+    stop("skip.not.found must be TRUE or FALSE.")
+  }
+  if (length(overwrite) != 1 || is.logical(overwrite) == FALSE || is.na(overwrite)) {
+    stop("overwrite must be TRUE or FALSE.")
+  }
 
-  # -- Output directory ---------------------------------------------------------
-  if (dir.exists(output.directory)) {
-    if (overwrite) { .resetDirectory(output.directory) }
+  #Reads the SRA information table
+  sra.data = read.csv(sra.info.file, stringsAsFactors = FALSE)
+
+  if ("Run" %in% names(sra.data) == FALSE){
+    stop("sra.info.file must contain a 'Run' column with SRR/ERR/DRR accessions.")
+  }
+  sra.data$Run = trimws(as.character(sra.data$Run))
+  if (any(is.na(sra.data$Run)) || any(nchar(sra.data$Run) == 0)) {
+    stop("The Run column cannot contain missing or blank accessions.")
+  }
+
+  # Optional row filters
+  if (is.null(filter.library.strategy) == FALSE &&
+      "LibraryStrategy" %in% names(sra.data) == FALSE){
+    stop("filter.library.strategy was requested, but LibraryStrategy is absent from sra.info.file.")
+  }
+  if (is.null(filter.library.strategy) == FALSE){
+    sra.data = sra.data[which(sra.data$LibraryStrategy == filter.library.strategy), , drop = FALSE]
+  }
+
+  if (is.null(filter.library.layout) == FALSE &&
+      "LibraryLayout" %in% names(sra.data) == FALSE){
+    stop("filter.library.layout was requested, but LibraryLayout is absent from sra.info.file.")
+  }
+  if (is.null(filter.library.layout) == FALSE){
+    filter.library.layout = toupper(filter.library.layout)
+    sra.data = sra.data[which(toupper(sra.data$LibraryLayout) == filter.library.layout), , drop = FALSE]
+  }
+
+  if (nrow(sra.data) == 0){
+    stop("No rows remain in sra.info.file after applying filters.")
+  }
+
+  .checkFileOutsideOutput(sra.info.file, output.directory)
+
+  #Sets up the output directory
+  if (dir.exists(output.directory) == TRUE) {
+    if (overwrite == TRUE) { .resetDirectory(output.directory) }
   } else {
     dir.create(output.directory, recursive = TRUE)
   }
+  if (dir.exists("logs/sample_logs") == FALSE) { dir.create("logs/sample_logs", recursive = TRUE) }
 
-  # -- Read SRA info table ------------------------------------------------------
-  sra.data = read.csv(sra.info.file, stringsAsFactors = FALSE)
-
-  if (!"Run" %in% names(sra.data))
-    stop("sra.info.file must contain a 'Run' column with SRR/ERR/DRR accessions.")
-
-  # Optional row filters
-  if (!is.null(filter.library.strategy) && "LibraryStrategy" %in% names(sra.data))
-    sra.data = sra.data[sra.data$LibraryStrategy == filter.library.strategy, ]
-
-  if (!is.null(filter.library.layout) && "LibraryLayout" %in% names(sra.data))
-    sra.data = sra.data[sra.data$LibraryLayout == filter.library.layout, ]
-
-  if (nrow(sra.data) == 0)
-    stop("No rows remain in sra.info.file after applying filters.")
-
-  # -- Build sample names -------------------------------------------------------
+  #Builds the sample names
   # Priority:
   #   1. sample.name.column explicitly set -> use that column directly
   #   2. ScientificName + SampleName both present -> Genus_species_SampleName
   #      (falls back to Genus_species_Run for rows where SampleName is blank)
   #   3. ScientificName only              -> Genus_species_Run
   #   4. Neither                          -> Run accession alone
-  if (!is.null(sample.name.column)) {
-    if (!sample.name.column %in% names(sra.data))
+  if (is.null(sample.name.column) == FALSE) {
+    if (sample.name.column %in% names(sra.data) == FALSE){
       stop("sample.name.column '", sample.name.column, "' not found in sra.info.file.")
+    }
     sra.data$sample.name = as.character(sra.data[[sample.name.column]])
+    if (any(is.na(sra.data$sample.name)) ||
+        any(nchar(trimws(sra.data$sample.name)) == 0)) {
+      stop("sample.name.column cannot contain missing or blank values.")
+    }
   } else if ("ScientificName" %in% names(sra.data)) {
     sci = trimws(sra.data$ScientificName)
     if ("SampleName" %in% names(sra.data)) {
@@ -126,11 +166,18 @@ sraDownload = function(sra.info.file           = NULL,
 
   # A sample name reaches a file path and a CSV field, so a space, a comma, or a
   # regular expression character is replaced here.
-  sra.data$sample.name = .sanitizeName(sra.data$sample.name)
-  blank.names = nchar(sra.data$sample.name) == 0
-  if (any(blank.names)) { sra.data$sample.name[blank.names] = sra.data$Run[blank.names] }
+  original.names = trimws(as.character(sra.data$sample.name))
+  blank.names = is.na(original.names) | nchar(original.names) == 0
+  original.names[blank.names] = sra.data$Run[blank.names]
+  sra.data$sample.name = .sanitizeName(original.names)
+  name.map = unique(data.frame(original = original.names,
+                               clean = sra.data$sample.name,
+                               stringsAsFactors = FALSE))
+  if (any(duplicated(name.map$clean))) {
+    stop("Distinct SRA sample names become identical after filename cleaning.")
+  }
 
-  # -- Internal: file locations for an accession -------------------------------
+  #Finds the files for one accession
   # The ENA file report gives the true file paths and their MD5 checksums. It
   # handles runs that hold only one file and runs that hold an extra unpaired
   # file. The URL pattern below is the fallback when the report is unavailable.
@@ -146,63 +193,73 @@ sraDownload = function(sra.info.file           = NULL,
                 md5.r2 = NA_character_))
   }
 
-  # -- Main download loop -------------------------------------------------------
+  #Runs the download
   # Multiple SRR accessions that resolve to the same sample name (same
   # ScientificName + SampleName) are treated as sequencing lanes of a single
   # individual, exactly as dropboxDownload handles multi-lane samples.
   # They are downloaded as L001, L002, ... and share one Sample entry in the
   # rename CSV so organizeReads merges them automatically.
-  #
-  # Sentinel: one file per sample named SampleName.fastq.sra_done, written
-  # only after ALL lanes for that sample complete. The .fastq.* component
-  # matches the gsub strip used by fastqStats / readStats so the sentinel
-  # collapses to SampleName and is never treated as a separate sample.
-  # The dot separator (not underscore) means the prefix match in those same
-  # functions never picks it up as a read file.
-  unique.samples  = unique(sra.data$sample.name)
-  n.total         = length(unique.samples)
-  rename.out      = data.frame(File = character(), Sample = character(),
-                               stringsAsFactors = FALSE)
+  unique.samples = unique(sra.data$sample.name)
+  n.total = length(unique.samples)
+  rename.out = data.frame(File = character(), Sample = character(),
+                          stringsAsFactors = FALSE)
+  excluded.runs = data.frame(Run = character(), Sample = character(),
+                             Reason = character(), stringsAsFactors = FALSE)
 
   for (i in seq_len(n.total)) {
 
-    samp      = unique.samples[i]
+    samp = unique.samples[i]
     samp.rows = sra.data[sra.data$sample.name == samp, ]
-    n.lanes   = nrow(samp.rows)
+    n.lanes = nrow(samp.rows)
 
-    if (!quiet) message(sprintf("[%d/%d] %s  (%d run(s))", i, n.total, samp, n.lanes))
+    if (quiet == FALSE) { message(sprintf("[%d/%d] %s  (%d run(s))", i, n.total, samp, n.lanes)) }
 
-    # Sample-level sentinel -- fast skip when all lanes completed in a prior run.
-    sentinel = file.path(output.directory, paste0(samp, ".fastq.sra_done"))
-    if (file.exists(sentinel)) {
-      if (!quiet) message("  all lanes already completed -- skipping")
-      # Recover rename entries from the files that actually exist on disk
-      existing.lanes = list.files(output.directory)
-      existing.lanes = existing.lanes[startsWith(existing.lanes, paste0(samp, "_")) &
-                                        endsWith(existing.lanes, "_READ1.fastq.gz")]
-      lane.tags = sub("_READ1\\.fastq\\.gz$", "", substring(existing.lanes, nchar(samp) + 2))
-      for (lt in sort(lane.tags)) {
-        rename.out = rbind(rename.out,
-                           data.frame(File   = paste0(samp, "_", lt),
-                                      Sample = samp, stringsAsFactors = FALSE))
-      }
-      next
+    sample.log = file.path("logs/sample_logs", samp)
+    dir.create(sample.log, recursive = TRUE, showWarnings = FALSE)
+    sentinel = file.path(sample.log, paste0(samp, "_sra-metadata.csv"))
+    sample.metadata = c("sample" = samp,
+                        "accessions" = paste(samp.rows$Run, collapse = ";"),
+                        "layouts" = if ("LibraryLayout" %in% names(samp.rows)) {
+                          paste(samp.rows$LibraryLayout, collapse = ";")
+                        } else {
+                          "not supplied"
+                        })
+    if (overwrite == FALSE && .metadataConflicts(sentinel, sample.metadata) == TRUE) {
+      stop(samp, " has a completed SRA download with a different accession list or order. ",
+           "Use overwrite = TRUE to replace it.")
     }
 
-    # -- Inner lane loop --------------------------------------------------------
+    #Runs each lane
     all.lanes.ok = TRUE
 
     for (j in seq_len(n.lanes)) {
 
-      acc       = samp.rows$Run[j]
-      layout    = if ("LibraryLayout" %in% names(samp.rows)) samp.rows$LibraryLayout[j] else "PAIRED"
-      lane.tag  = sprintf("L%03d", j)
+      acc = samp.rows$Run[j]
+      if ("LibraryLayout" %in% names(samp.rows)) {
+        layout = samp.rows$LibraryLayout[j]
+        if (is.na(layout) || nchar(trimws(layout)) == 0) { layout = "PAIRED" }
+      } else {
+        layout = "PAIRED"
+      }
+      lane.tag = sprintf("L%03d", j)
 
-      if (!quiet && n.lanes > 1)
+      if (quiet == FALSE && n.lanes > 1){
         message(sprintf("  lane %d/%d (%s)", j, n.lanes, acc))
+      }
 
       run.files = .runFiles(acc, layout)
       is.paired = is.na(run.files$r2) == FALSE
+
+      if (identical(filter.library.layout, "PAIRED") && is.paired == FALSE) {
+        msg = paste0(acc, " resolved to one FASTQ file, but paired reads were requested.")
+        excluded.runs = rbind(excluded.runs,
+                              data.frame(Run = acc, Sample = samp, Reason = msg,
+                                         stringsAsFactors = FALSE))
+        if (skip.not.found == FALSE) { stop(msg) }
+        warning(msg)
+        all.lanes.ok = FALSE
+        next
+      }
 
       # Destination paths for this lane
       r1.dest = file.path(output.directory, paste0(samp, "_", lane.tag, "_READ1.fastq.gz"))
@@ -210,64 +267,105 @@ sraDownload = function(sra.info.file           = NULL,
                   file.path(output.directory, paste0(samp, "_", lane.tag, "_READ2.fastq.gz"))
                 else NULL
 
-      # Skip this lane if its files already exist (prior partial run)
-      if (.laneComplete(c(r1.dest, r2.dest)) == TRUE) {
-        if (!quiet) message("    ", lane.tag, " files exist -- skipping")
+      metadata.file = file.path(sample.log,
+                                paste0(samp, "_", lane.tag, "_sra-lane-metadata.csv"))
+      metadata = c("accession" = acc, "layout" = if (is.paired) "PAIRED" else "SINGLE",
+                   "source.1" = run.files$r1,
+                   "source.2" = if (is.paired) run.files$r2 else "",
+                   "md5.1" = run.files$md5.r1,
+                   "md5.2" = if (is.paired) run.files$md5.r2 else "")
+
+      # Skip this lane only when its files and matching completion metadata exist.
+      if (.laneComplete(c(r1.dest, r2.dest), metadata.file = metadata.file,
+                        metadata = metadata) == TRUE) {
+        if (quiet == FALSE) { message("    ", lane.tag, " files exist -- skipping") }
         rename.out = rbind(rename.out,
-                           data.frame(File   = paste0(samp, "_", lane.tag),
+                           data.frame(File = paste0(samp, "_", lane.tag),
                                       Sample = samp, stringsAsFactors = FALSE))
         next
       }
+      if (overwrite == FALSE && .metadataConflicts(metadata.file, metadata) == TRUE) {
+        stop(samp, " ", lane.tag, " was downloaded from a different SRA run. ",
+             "Use overwrite = TRUE to replace it.")
+      }
+
+      output.files = c(r1.dest, r2.dest)
+      temp.files = vapply(output.files, function(output.file) {
+        tempfile(pattern = paste0(basename(output.file), "-"),
+                 tmpdir = output.directory, fileext = ".fastq.gz")
+      }, character(1))
+      on.exit(unlink(temp.files), add = TRUE)
 
       # Download READ1
-      r1.ok = .dl(run.files$r1, r1.dest, max.retries, retry.delay, quiet, run.files$md5.r1)
+      r1.ok = .dl(run.files$r1, temp.files[1], max.retries, retry.delay, quiet,
+                  run.files$md5.r1)
       if (!r1.ok) {
-        if (file.exists(r1.dest)) file.remove(r1.dest)
         msg = sprintf("  READ1 download failed for %s (%s) after %d attempts",
                       acc, lane.tag, max.retries)
-        if (!skip.not.found) stop(msg) else { warning(msg); all.lanes.ok = FALSE; next }
+        excluded.runs = rbind(excluded.runs,
+                              data.frame(Run = acc, Sample = samp, Reason = msg,
+                                         stringsAsFactors = FALSE))
+        if (skip.not.found == FALSE) {
+          stop(msg)
+        } else {
+          warning(msg)
+          all.lanes.ok = FALSE
+          next
+        }
       }
 
       # Download READ2 (PAIRED only)
       if (is.paired) {
-        r2.ok = .dl(run.files$r2, r2.dest, max.retries, retry.delay, quiet, run.files$md5.r2)
+        r2.ok = .dl(run.files$r2, temp.files[2], max.retries, retry.delay, quiet,
+                    run.files$md5.r2)
         if (!r2.ok) {
-          if (file.exists(r1.dest)) file.remove(r1.dest)
-          if (file.exists(r2.dest)) file.remove(r2.dest)
+          unlink(temp.files)
           msg = sprintf("  READ2 download failed for %s (%s) after %d attempts",
                         acc, lane.tag, max.retries)
-          if (!skip.not.found) stop(msg) else { warning(msg); all.lanes.ok = FALSE; next }
+          excluded.runs = rbind(excluded.runs,
+                                data.frame(Run = acc, Sample = samp, Reason = msg,
+                                           stringsAsFactors = FALSE))
+          if (skip.not.found == FALSE) {
+            stop(msg)
+          } else {
+            warning(msg)
+            all.lanes.ok = FALSE
+            next
+          }
         }
       }
 
-      if (!quiet) message("    ", lane.tag, " done")
+      .publishFiles(temp.files, output.files)
+      .writeLaneMetadata(metadata, metadata.file)
+
+      if (quiet == FALSE) { message("    ", lane.tag, " done") }
       rename.out = rbind(rename.out,
-                         data.frame(File   = paste0(samp, "_", lane.tag),
+                         data.frame(File = paste0(samp, "_", lane.tag),
                                     Sample = samp, stringsAsFactors = FALSE))
     } # end lane loop
 
-    # Write sample-level sentinel only when every lane succeeded
+    # Write sample metadata only when every requested lane succeeded.
     if (all.lanes.ok) {
-      writeLines(c(
-        paste0("sample:    ", samp),
-        paste0("lanes:     ", n.lanes),
-        paste0("accessions:", paste(samp.rows$Run, collapse = " ")),
-        paste0("completed: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-      ), sentinel)
+      .writeLaneMetadata(sample.metadata, sentinel)
     }
 
   } # end sample loop
 
-  # -- Write rename CSV ---------------------------------------------------------
+  #Writes the rename CSV
   # The CSV is quoted so that a sample name with a comma cannot break the table
   write.csv(rename.out,
-            file      = "file_rename_sra.csv",
+            file = "file_rename_sra.csv",
             row.names = FALSE)
+  if (nrow(excluded.runs) > 0) {
+    dir.create("logs", showWarnings = FALSE)
+    write.csv(excluded.runs, "logs/sraDownload_excluded-runs.csv", row.names = FALSE)
+  }
 
-  if (!quiet)
+  if (quiet == FALSE){
     message("\nDone. ", nrow(rename.out), " sample(s) recorded in file_rename_sra.csv.")
+  }
 
-  invisible(rename.out)
+  return(invisible(rename.out))
 
 } # end sraDownload
 

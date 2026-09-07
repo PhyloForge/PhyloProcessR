@@ -70,7 +70,7 @@ run_step(
 cleaned_reads <- file.path(results_directory, "processed-reads", "cleaned-reads")
 run_step(
   "clean paired reads with fastp",
-  fastpComplete(
+  fastpClean(
     input.reads = raw_reads,
     output.directory = cleaned_reads,
     fastp.path = tool_bin,
@@ -150,7 +150,7 @@ input_pairs <- aggregate(
 names(input_pairs)[2] <- "input_pairs"
 
 cleaning_summary <- read.csv(
-  file.path(example_directory, "logs", "fastpComplete_summary.csv")
+  file.path(example_directory, "logs", "fastpClean_summary.csv")
 )
 cleaned_pairs <- aggregate(
   cleaning_summary$endPairs,

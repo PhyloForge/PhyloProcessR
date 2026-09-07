@@ -26,7 +26,8 @@ desired output sample name).}
 \item{link.reads}{logical; if TRUE the reads are hard-linked instead of
 copied, and a symbolic link is used when a hard link is not possible. This
 avoids a second copy of a read set that is often hundreds of gigabytes.
-FALSE copies the files.}
+FALSE copies the files. Plain .fastq and .fq inputs are compressed once
+because organized output always uses the .fastq.gz convention.}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
 recreated. Completed lanes are skipped when overwrite is FALSE.}
