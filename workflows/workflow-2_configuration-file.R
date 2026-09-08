@@ -79,13 +79,19 @@ binned.draft.directory = "data-analysis/contigs/2_reduced-redundancy"
 binned.min.bait.coverage = 0.5
 # TRUE = recruit reads with LAST for the targets that have no sequence in the
 # sample, assemble them, and use the result as the bait. bwa cannot recruit a
-# read that is 35 percent divergent from its bait, so without this step a
-# divergent target that the draft assembly also lost cannot be recovered.
-binned.rescue.missing = TRUE
+# read that is 35 percent divergent from its bait.
+# TRUE also takes those targets away from binned.rescue.failed.divergent, which
+# recovers far more of them. On the test sample TRUE gave 9,884 targets and
+# FALSE gave 11,111, the extra ones a median of 135 bp. FALSE is the default
+# because a short fragment is still data, and the alignment steps can drop it.
+# Numbers in HANDOFF.md.
+binned.rescue.missing = FALSE
 # TRUE = after round 1, use LAST to recruit reads for the targets that no bin
 # produced. bwa needs about 90 percent identity, so a divergent target recruits
-# nothing. Costs one more pass over the reads, about 8 minutes per sample.
-binned.rescue.failed.divergent = FALSE
+# nothing. Costs one more pass over the reads, about 8 minutes per sample, and
+# recovered 916 and 656 targets on the two test runs, about 9 percent of the
+# output. Numbers in HANDOFF.md.
+binned.rescue.failed.divergent = TRUE
 # Which targets to bin:
 #   "all"     = every target. Recovers missing loci and extends the ones present.
 #   "missing" = only the targets absent from that sample. Much faster, and the
@@ -122,6 +128,15 @@ binned.match.coverage = 30
 # The k-mer values for the per-bin SPAdes runs. Every value must be below the
 # read length. Fewer values is faster.
 binned.kmer.values = c(21, 33, 55, 77, 99)
+# Number of samples to bin at the same time. threads and memory are divided
+# between them, the way spades.parallel.samples divides them. One sample already
+# uses every thread it is given, because the bin assembly is thousands of
+# single-threaded megahit jobs, so raise this to fill a node across a batch and
+# not to make one sample faster. About 87 percent of a run scales with cores, so
+# one sample on 48 threads is 3.6 times faster than on 8 but costs 22.4
+# core-hours against 13.5. Several samples at 8 to 16 threads each is the
+# cheaper shape. Numbers in HANDOFF.md.
+binned.parallel.samples = 6
 
 #Contig curation settings
 #########################

@@ -16,8 +16,8 @@ assembleBinnedTargets(
   locus.set = c("all", "missing"),
   bait.source = c("hybrid", "reference"),
   min.bait.coverage = 0.5,
-  rescue.missing = TRUE,
-  rescue.failed.divergent = FALSE,
+  rescue.missing = FALSE,
+  rescue.failed.divergent = TRUE,
   iterations = 1,
   min.pairs = 6,
   max.pairs = 3000,
@@ -31,6 +31,7 @@ assembleBinnedTargets(
   kmer.values = c(21, 33, 55, 77, 99),
   memory = 8,
   threads = 1,
+  parallel.samples = 1,
   bwa.path = NULL,
   samtools.path = NULL,
   megahit.path = NULL,
@@ -48,7 +49,16 @@ example \code{"processed-reads"}).}
 holds the per-sample read folders. The reads must be paired. A directory
 that also holds merged reads, which \code{mergePairedEndReads} writes as
 READ3, is used in full: the pairs and the merged reads are mapped in
-separate passes into one BAM. Default: \code{"decontaminated-reads"}.}
+separate passes into one BAM.
+
+Prefer unmerged reads here. Merging costs targets and returns nothing: it
+recovered 213 fewer targets on a test sample and gave the same contig on
+the targets both found. A capture insert straddles the target edge, so
+merging turns an exonic mate and an intronic mate into one half-off-target
+query, and a local alignment can only score over the on-target part. The
+pair also gets bwa's mate rescue, which a single-end merged read does not.
+Merged reads run about 30 percent faster. Numbers in HANDOFF.md.
+Default: \code{"decontaminated-reads"}.}
 
 \item{target.markers}{path to the FASTA file of target markers. Each sequence
 becomes one bin.}
@@ -97,7 +107,16 @@ instead. Default: \code{0.5}.}
 targets that have no sequence in this sample, assembles them, and uses the
 result as the bait. bwa cannot recruit a read that is 35 percent divergent
 from its bait, so without this step a divergent target that the draft
-assembly also lost cannot be recovered. Default: \code{TRUE}.}
+assembly also lost cannot be recovered.
+
+Setting it makes those targets take the strict path. The seed becomes a
+bait, and the target must then gate a bin at \code{min.pairs}, assemble
+under megahit, and clear \code{min.contig.length}. It also removes them
+from \code{rescue.failed.divergent}, which writes its contig straight to
+the output under the match filters alone. On the test sample the strict
+path returned 379 targets and the permissive path 1,879, the extra ones a
+median of 135 bp. \code{FALSE} therefore recovers many more targets, and
+they are short. Numbers in HANDOFF.md. Default: \code{FALSE}.}
 
 \item{rescue.failed.divergent}{logical. \code{TRUE} recruits reads with
 LAST for the targets that no bin produced, after round 1. A bin fails when
@@ -106,8 +125,10 @@ no contig passed the filters. bwa needs about 90 percent identity to
 recruit, so a divergent target recruits nothing however deep it is. The
 targets that \code{rescue.missing} already searched are not searched again.
 The step costs one more pass over the reads, about 8 minutes for a
-5 million read sample, whatever the number of targets. Numbers in
-HANDOFF.md. Default: \code{FALSE}.}
+5 million read sample, whatever the number of targets. It recovered 916 and
+656 targets on the two test runs, about 9 percent of the output, which is
+the largest single gain in this function. Numbers in HANDOFF.md.
+Default: \code{TRUE}.}
 
 \item{iterations}{number of bait-and-assemble rounds. One round recovers about
 one insert length of flank on each side. A later round baits with the
@@ -161,8 +182,26 @@ Default: \code{c(21, 33, 55, 77, 99)}.}
 Default: \code{8}.}
 
 \item{threads}{number of CPU threads. The mapping step uses all of them. The
-assembly step runs this many single-threaded megahit jobs at once. Default:
-\code{1}.}
+assembly step runs this many single-threaded megahit jobs at once. When
+\code{parallel.samples > 1} each sample receives
+\code{floor(threads / parallel.samples)}. Default: \code{1}.}
+
+\item{parallel.samples}{number of samples to assemble at the same time.
+\code{threads} and \code{memory} are divided between them, the way
+\code{assembleSpades} divides them. Unlike SPAdes, one sample here already
+uses every thread it is given: the bin assembly is one single-threaded
+megahit per bin over \code{mc.cores = threads}, some 10,000 of them, and
+the cap3 rescue is the same shape. On a test sample that phase was 88 of
+101 minutes, so about 87 percent of a run scales with cores on its own.
+
+Raise this to fill a node across a batch, not to make one sample faster.
+With 87 percent parallel, one sample on 48 threads runs about 3.6 times
+faster than on 8 but costs 22.4 core-hours against 13.5, because the serial
+fraction, bwa mem and the samtools sort and the LAST database, holds the
+rest idle. Several samples at 8 to 16 threads each keep those cores busy
+instead. The per-bin memory does not change when this is raised, because
+\code{memory} and \code{threads} are divided together. Default: \code{1}.
+Numbers in HANDOFF.md.}
 
 \item{bwa.path}{path to the directory that holds \code{bwa}. If \code{NULL}
 the program must be on the system PATH. Default: \code{NULL}.}
@@ -200,6 +239,20 @@ earned, and a rerun of one sample replaces its row. The columns cover the
 targets recovered, the targets extended and the base pairs added, the bait
 sources, both rescue steps, and the run time. Use it to compare samples
 across a large batch.
+
+The row is rewritten by reading the whole file and writing it back, so
+concurrent jobs must not share a \code{log.directory}. Give each array task
+its own and join the files afterwards.
+
+\code{percentExtended} is measured against whatever sat in
+\code{assembly.directory}. A trimmed input set raises it without the step
+behaving differently, so it is comparable only between runs that began from
+the same contigs. \code{medianPreviousLength} and
+\code{medianBinnedLength} sit beside it so the baseline is visible.
+\code{baitContig} and the other bait counts are what was offered;
+\code{targetsFromContig} and its three partners are what came back.
+\code{targetsUnderMinLength} counts the contigs that reached the assembly
+below \code{min.contig.length}, which the divergent rescue never tests.
 }
 \description{
 Assembles each target locus on its own, to recover targets that

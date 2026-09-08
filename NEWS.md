@@ -42,11 +42,42 @@
 - `curateTargetContigs()` and `annotateTargets()` no longer count N padding as
   sequence in the length test. Two fragments of one target are joined with Ns,
   and the padding is not recovered sequence.
-- `assembleBinnedTargets()` gained `rescue.failed.divergent`, default `FALSE`.
-  After round 1 it uses LAST to recruit reads for the targets that no bin
-  produced, because bwa needs about 90 percent identity and a divergent target
-  recruits nothing. It costs one more pass over the reads, about 8 minutes for a
-  5 million read sample.
+- `assembleBinnedTargets()` gained `rescue.failed.divergent`, now default
+  `TRUE`. After round 1 it uses LAST to recruit reads for the targets that no
+  bin produced, because bwa needs about 90 percent identity and a divergent
+  target recruits nothing. It costs one more pass over the reads, about 8
+  minutes for a 5 million read sample, and recovered 916 and 656 targets on two
+  test runs, about 9 percent of the output.
+- `assembleBinnedTargets()` changed `rescue.missing` to default `FALSE`. Setting
+  it takes the targets with no sequence away from `rescue.failed.divergent` and
+  sends them down a stricter path, where a seed must bait a bin, gate at
+  `min.pairs` and clear `min.contig.length`. On a test sample `TRUE` gave 9,884
+  targets and `FALSE` gave 11,111. The extra targets are short, a median of
+  135 bp, and the alignment steps can drop them.
+- `assembleBinnedTargets()` gained `parallel.samples`, default `1`. It divides
+  `threads` and `memory` between the samples that run at the same time, the way
+  `assembleSpades` does, and `binned.parallel.samples` sets it from the workflow
+  2 configuration file. One sample already uses every thread it is given, since
+  the bin assembly is thousands of single-threaded megahit jobs, so raise this
+  to fill a node across a batch rather than to make one sample faster. About 87
+  percent of a run scales with cores.
+- `assembleBinnedTargets()` writes the summary row of each sample to
+  `log.directory/sample_summaries/<sample>.csv` and joins them into
+  `assembleBinnedTargets_summary.csv`. The joined file is written through a
+  temporary file and renamed, so concurrent samples cannot lose a row or leave a
+  half-written table.
+- `assembleBinnedTargets()` adds `medianPreviousLength` and
+  `medianBinnedLength` to the summary, because `percentExtended` is measured
+  against whatever sat in `assembly.directory` and is comparable only between
+  runs that began from the same contigs. It also adds `targetsFromContig`,
+  `targetsFromDraft`, `targetsFromReference` and `targetsFromRescue`, which are
+  the targets each bait source returned rather than the baits it was given, and
+  `targetsUnderMinLength`, the contigs that reached the assembly below
+  `min.contig.length`.
+- `assembleBinnedTargets()` documents `mapping.reads`. Unmerged reads recover
+  more targets than merged reads, 1 to 2 percent across three samples, because a
+  capture insert straddles the target edge and merging makes one half-off-target
+  query out of two mates. The default was already `"decontaminated-reads"`.
 - `assembleBinnedTargets()` assembles each bin with megahit instead of SPAdes.
   SPAdes returns nothing for a bin below about 30 read pairs, which is a third
   to a half of all bins. The function takes `megahit.path` for this.

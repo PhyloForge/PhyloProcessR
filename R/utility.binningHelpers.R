@@ -578,6 +578,7 @@
                                 bins.per.round = integer(0),
                                 targets.per.round = integer(0),
                                 minutes = NA_real_,
+                                min.contig.length = 100,
                                 log.directory = "logs") {
 
   if (is.null(locus.stats) == TRUE || nrow(locus.stats) == 0) return(invisible(NULL))
@@ -598,6 +599,12 @@
     targetsNew            = sum(had == FALSE),
     targetsExtended       = sum(extended),
     percentExtended       = if (sum(had) > 0) round(100 * sum(extended) / sum(had), 1) else NA_real_,
+    # percentExtended is measured against whatever sat in assembly.directory, so
+    # it is only comparable between runs that started from the same contigs. A
+    # trimmed input raises it without the step doing anything differently. These
+    # two make the baseline visible next to it. Numbers in HANDOFF.md.
+    medianPreviousLength  = if (sum(had) > 0) stats::median(locus.stats$previousLength[had]) else 0,
+    medianBinnedLength    = stats::median(locus.stats$binnedLength),
     medianBpAdded         = if (any(extended)) stats::median(gain[extended]) else 0,
     totalBpExtended       = sum(gain[extended]),
     previousBp            = previous.bp,
@@ -607,6 +614,16 @@
     baitDraft             = bait.count("draft"),
     baitReference         = bait.count("reference"),
     baitRescue            = bait.count("rescue"),
+    # The bait counts above are what was offered. These are what came back, so
+    # the two together say which bait source actually earned its targets.
+    targetsFromContig     = sum(locus.stats$baitSource == "contig", na.rm = TRUE),
+    targetsFromDraft      = sum(locus.stats$baitSource == "draft", na.rm = TRUE),
+    targetsFromReference  = sum(locus.stats$baitSource == "reference", na.rm = TRUE),
+    targetsFromRescue     = sum(locus.stats$baitSource == "rescue", na.rm = TRUE),
+    # The divergent rescue writes its contig straight to the output under the
+    # match filters alone, so min.contig.length never tests it. This counts what
+    # reached the assembly below that floor.
+    targetsUnderMinLength = sum(locus.stats$binnedLength < min.contig.length),
     rescueMissingPool     = rescue.pool,
     rescueMissingSeeds    = rescue.seeds,
     divergentPool         = divergent.pool,
@@ -618,27 +635,61 @@
     stringsAsFactors      = FALSE
   )
 
-  dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
-  out.csv = paste0(sub("/+$", "", log.directory), "/assembleBinnedTargets_summary.csv")
+  # Each sample writes its own row file and never touches another's. Samples run
+  # concurrently under parallel.samples, and a single shared CSV read, modified
+  # and written by every sample would lose rows.
+  log.directory = sub("/+$", "", log.directory)
+  row.dir = paste0(log.directory, "/sample_summaries")
+  dir.create(row.dir, recursive = TRUE, showWarnings = FALSE)
+  row.file = paste0(row.dir, "/", sample, ".csv")
+  utils::write.csv(summary.row, file = row.file, row.names = FALSE)
 
-  if (file.exists(out.csv) == TRUE) {
-    existing = utils::read.csv(out.csv, stringsAsFactors = FALSE)
-    if ("sample" %in% colnames(existing) == TRUE) {
-      existing = existing[existing$sample %in% summary.row$sample == FALSE, , drop = FALSE]
-    }
-    # An older file can hold a different set of columns. Fill both sides so the
-    # rows of a previous version are kept rather than dropped.
-    for (m in setdiff(colnames(existing), colnames(summary.row))) summary.row[[m]] = NA
-    for (m in setdiff(colnames(summary.row), colnames(existing))) existing[[m]] = NA
-    if (nrow(existing) > 0) {
-      summary.row = rbind(existing[, colnames(summary.row), drop = FALSE], summary.row)
-    }
-  }
+  # Refresh the joined table so a batch that stops early still leaves a usable
+  # one. The parent joins again at the end, when nothing else is writing.
+  .mergeBinnedSummaries(log.directory)
 
-  utils::write.csv(summary.row, file = out.csv, row.names = FALSE)
+  return(invisible(row.file))
+}#end .appendBinnedSummary
+
+
+# Joins the per-sample row files into the one summary CSV.
+#
+# Written through a temporary file in the same directory and then renamed,
+# because rename is atomic on POSIX. A reader therefore sees either the old
+# table or the new one, never a half-written file, however many samples are
+# finishing at once. The pid is in the temporary name so two samples finishing
+# together cannot collide on it.
+.mergeBinnedSummaries = function(log.directory = "logs") {
+
+  log.directory = sub("/+$", "", log.directory)
+  row.dir = paste0(log.directory, "/sample_summaries")
+  if (dir.exists(row.dir) == FALSE) return(invisible(NULL))
+
+  row.files = list.files(row.dir, pattern = "\\.csv$", full.names = TRUE)
+  if (length(row.files) == 0) return(invisible(NULL))
+
+  rows = lapply(row.files, function(f) {
+    tryCatch(utils::read.csv(f, stringsAsFactors = FALSE), error = function(e) NULL)
+  })
+  rows = rows[vapply(rows, function(x) is.data.frame(x) && nrow(x) > 0, logical(1))]
+  if (length(rows) == 0) return(invisible(NULL))
+
+  # A row written by an earlier version can carry a different set of columns.
+  all.cols = unique(unlist(lapply(rows, colnames)))
+  rows = lapply(rows, function(d) {
+    for (m in setdiff(all.cols, colnames(d))) d[[m]] = NA
+    d[, all.cols, drop = FALSE]
+  })
+  joined = do.call(rbind, rows)
+  joined = joined[order(joined$sample), , drop = FALSE]
+
+  out.csv = paste0(log.directory, "/assembleBinnedTargets_summary.csv")
+  tmp.csv = paste0(out.csv, ".tmp", Sys.getpid())
+  utils::write.csv(joined, file = tmp.csv, row.names = FALSE)
+  file.rename(tmp.csv, out.csv)
 
   return(invisible(out.csv))
-}#end .appendBinnedSummary
+}#end .mergeBinnedSummaries
 
 
 # Recovers targets that have no sequence in this sample at all.

@@ -190,6 +190,7 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
     kmer.values        = binned.kmer.values,
     memory             = memory,
     threads            = threads,
+    parallel.samples   = get0("binned.parallel.samples", ifnotfound = 1),
     bwa.path           = bwa.path,
     samtools.path      = samtools.path,
     megahit.path       = megahit.path,

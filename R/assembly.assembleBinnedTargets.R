@@ -49,7 +49,16 @@
 #'   holds the per-sample read folders. The reads must be paired. A directory
 #'   that also holds merged reads, which \code{mergePairedEndReads} writes as
 #'   READ3, is used in full: the pairs and the merged reads are mapped in
-#'   separate passes into one BAM. Default: \code{"decontaminated-reads"}.
+#'   separate passes into one BAM.
+#'
+#'   Prefer unmerged reads here. Merging costs targets and returns nothing: it
+#'   recovered 213 fewer targets on a test sample and gave the same contig on
+#'   the targets both found. A capture insert straddles the target edge, so
+#'   merging turns an exonic mate and an intronic mate into one half-off-target
+#'   query, and a local alignment can only score over the on-target part. The
+#'   pair also gets bwa's mate rescue, which a single-end merged read does not.
+#'   Merged reads run about 30 percent faster. Numbers in HANDOFF.md.
+#'   Default: \code{"decontaminated-reads"}.
 #'
 #' @param target.markers path to the FASTA file of target markers. Each sequence
 #'   becomes one bin.
@@ -98,7 +107,16 @@
 #'   targets that have no sequence in this sample, assembles them, and uses the
 #'   result as the bait. bwa cannot recruit a read that is 35 percent divergent
 #'   from its bait, so without this step a divergent target that the draft
-#'   assembly also lost cannot be recovered. Default: \code{TRUE}.
+#'   assembly also lost cannot be recovered.
+#'
+#'   Setting it makes those targets take the strict path. The seed becomes a
+#'   bait, and the target must then gate a bin at \code{min.pairs}, assemble
+#'   under megahit, and clear \code{min.contig.length}. It also removes them
+#'   from \code{rescue.failed.divergent}, which writes its contig straight to
+#'   the output under the match filters alone. On the test sample the strict
+#'   path returned 379 targets and the permissive path 1,879, the extra ones a
+#'   median of 135 bp. \code{FALSE} therefore recovers many more targets, and
+#'   they are short. Numbers in HANDOFF.md. Default: \code{FALSE}.
 #'
 #' @param rescue.failed.divergent logical. \code{TRUE} recruits reads with
 #'   LAST for the targets that no bin produced, after round 1. A bin fails when
@@ -107,8 +125,10 @@
 #'   recruit, so a divergent target recruits nothing however deep it is. The
 #'   targets that \code{rescue.missing} already searched are not searched again.
 #'   The step costs one more pass over the reads, about 8 minutes for a
-#'   5 million read sample, whatever the number of targets. Numbers in
-#'   HANDOFF.md. Default: \code{FALSE}.
+#'   5 million read sample, whatever the number of targets. It recovered 916 and
+#'   656 targets on the two test runs, about 9 percent of the output, which is
+#'   the largest single gain in this function. Numbers in HANDOFF.md.
+#'   Default: \code{TRUE}.
 #'
 #' @param iterations number of bait-and-assemble rounds. One round recovers about
 #'   one insert length of flank on each side. A later round baits with the
@@ -162,8 +182,26 @@
 #'   Default: \code{8}.
 #'
 #' @param threads number of CPU threads. The mapping step uses all of them. The
-#'   assembly step runs this many single-threaded megahit jobs at once. Default:
-#'   \code{1}.
+#'   assembly step runs this many single-threaded megahit jobs at once. When
+#'   \code{parallel.samples > 1} each sample receives
+#'   \code{floor(threads / parallel.samples)}. Default: \code{1}.
+#'
+#' @param parallel.samples number of samples to assemble at the same time.
+#'   \code{threads} and \code{memory} are divided between them, the way
+#'   \code{assembleSpades} divides them. Unlike SPAdes, one sample here already
+#'   uses every thread it is given: the bin assembly is one single-threaded
+#'   megahit per bin over \code{mc.cores = threads}, some 10,000 of them, and
+#'   the cap3 rescue is the same shape. On a test sample that phase was 88 of
+#'   101 minutes, so about 87 percent of a run scales with cores on its own.
+#'
+#'   Raise this to fill a node across a batch, not to make one sample faster.
+#'   With 87 percent parallel, one sample on 48 threads runs about 3.6 times
+#'   faster than on 8 but costs 22.4 core-hours against 13.5, because the serial
+#'   fraction, bwa mem and the samtools sort and the LAST database, holds the
+#'   rest idle. Several samples at 8 to 16 threads each keep those cores busy
+#'   instead. The per-bin memory does not change when this is raised, because
+#'   \code{memory} and \code{threads} are divided together. Default: \code{1}.
+#'   Numbers in HANDOFF.md.
 #'
 #' @param bwa.path path to the directory that holds \code{bwa}. If \code{NULL}
 #'   the program must be on the system PATH. Default: \code{NULL}.
@@ -201,6 +239,20 @@
 #'   sources, both rescue steps, and the run time. Use it to compare samples
 #'   across a large batch.
 #'
+#'   The row is rewritten by reading the whole file and writing it back, so
+#'   concurrent jobs must not share a \code{log.directory}. Give each array task
+#'   its own and join the files afterwards.
+#'
+#'   \code{percentExtended} is measured against whatever sat in
+#'   \code{assembly.directory}. A trimmed input set raises it without the step
+#'   behaving differently, so it is comparable only between runs that began from
+#'   the same contigs. \code{medianPreviousLength} and
+#'   \code{medianBinnedLength} sit beside it so the baseline is visible.
+#'   \code{baitContig} and the other bait counts are what was offered;
+#'   \code{targetsFromContig} and its three partners are what came back.
+#'   \code{targetsUnderMinLength} counts the contigs that reached the assembly
+#'   below \code{min.contig.length}, which the divergent rescue never tests.
+#'
 #' @export
 
 assembleBinnedTargets = function(read.directory = NULL,
@@ -214,8 +266,8 @@ assembleBinnedTargets = function(read.directory = NULL,
                                  locus.set = c("all", "missing"),
                                  bait.source = c("hybrid", "reference"),
                                  min.bait.coverage = 0.5,
-                                 rescue.missing = TRUE,
-                                 rescue.failed.divergent = FALSE,
+                                 rescue.missing = FALSE,
+                                 rescue.failed.divergent = TRUE,
                                  iterations = 1,
                                  min.pairs = 6,
                                  max.pairs = 3000,
@@ -229,6 +281,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                                  kmer.values = c(21, 33, 55, 77, 99),
                                  memory = 8,
                                  threads = 1,
+                                 parallel.samples = 1,
                                  bwa.path = NULL,
                                  samtools.path = NULL,
                                  megahit.path = NULL,
@@ -317,9 +370,25 @@ assembleBinnedTargets = function(read.directory = NULL,
     stop("No sample folders were found in ", actual.read.dir, ".")
   }
 
-  assembly.memory = max(2, floor(memory / max(1, threads)))
+  # Divides the resources between the samples that run at the same time, the way
+  # assembleSpades does. The per-bin allocation is unchanged by the split:
+  # each megahit still gets floor(memory / threads), because both are divided by
+  # parallel.samples. What changes is how many samples are in flight.
+  if (is.null(parallel.samples) == TRUE || parallel.samples < 1) { parallel.samples = 1 }
+  parallel.samples = min(parallel.samples, length(sample.names))
+  thread.cl = max(1, floor(threads / parallel.samples))
+  mem.cl    = max(1, floor(memory / parallel.samples))
 
-  for (i in seq_along(sample.names)) {
+  if (parallel.samples > 1) {
+    print(paste0("Assembling ", parallel.samples, " samples at a time with ",
+                 thread.cl, " threads and ", mem.cl, "GB each."))
+  }
+
+  # threads and memory are arguments, so they shadow the totals for everything
+  # below and every inner step takes this sample's share without further change.
+  assemble.one = function(i, threads, memory) {
+
+  assembly.memory = max(2, floor(memory / max(1, threads)))
   tryCatch({
 
     sample       = sample.names[i]
@@ -329,7 +398,7 @@ assembleBinnedTargets = function(read.directory = NULL,
 
     if (overwrite == FALSE && file.exists(out.file) == TRUE) {
       print(paste0(sample, " already finished, skipping."))
-      next
+      return(invisible(NULL))
     }
     if (overwrite == TRUE) unlink(sample.dir, recursive = TRUE)
     dir.create(sample.dir, recursive = TRUE, showWarnings = FALSE)
@@ -337,7 +406,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     read.pair = .pairSampleReads(paste0(actual.read.dir, "/", sample))
     if (is.null(read.pair) == TRUE) {
       warning(sample, ": paired reads were not found in ", mapping.reads, ". Skipping.")
-      next
+      return(invisible(NULL))
     }
 
     # A sample absent from every contig source cannot be extended or patched, and
@@ -349,7 +418,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                                draft.assembly.directory = draft.assembly.directory) == TRUE) {
       warning(sample, ": no contigs of its own in the assembly or the draft. ",
               "Skipping. Assemble this sample before binning it.")
-      next
+      return(invisible(NULL))
     }
 
     # bwa mem takes one file per mate, so several lanes are joined first
@@ -420,7 +489,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                             draft.assembly.directory = draft.assembly.directory) == TRUE) {
       warning(sample, ": no contigs of its own in the assembly or the draft. ",
               "Skipping. Assemble this sample before binning it.")
-      next
+      return(invisible(NULL))
     }
 
     target.names = locus.names
@@ -430,7 +499,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     if (length(target.names) == 0) {
       print(paste0(sample, ": no target needs binning. The previous assembly is saved unchanged."))
       if (is.null(old.contigs) == FALSE) Biostrings::writeXStringSet(old.contigs, out.file)
-      next
+      return(invisible(NULL))
     }
 
     # Targets with no sequence in this sample at all. bwa cannot recruit for
@@ -700,7 +769,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     if (is.null(best.contigs) == TRUE || length(best.contigs) == 0) {
       print(paste0(sample, ": nothing was recovered. The previous assembly is saved unchanged."))
       if (is.null(old.contigs) == FALSE) Biostrings::writeXStringSet(old.contigs, out.file)
-      next
+      return(invisible(NULL))
     }
 
     final.contigs = .mergeBinnedAssembly(old.contigs = old.contigs,
@@ -730,6 +799,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                          bins.per.round = bins.per.round,
                          targets.per.round = targets.per.round,
                          minutes = as.numeric(difftime(Sys.time(), sample.start, units = "mins")),
+                         min.contig.length = min.contig.length,
                          log.directory = log.directory)
 
     print(paste0(sample, " finished: ", length(best.contigs),
@@ -739,7 +809,17 @@ assembleBinnedTargets = function(read.directory = NULL,
   }, error = function(e) {
     print(paste0(sample.names[i], " failed: ", conditionMessage(e)))
   })
-  } # end sample loop
+  }# end assemble.one
+
+  # A warning raised in a forked child never reaches the parent, so each sample
+  # reports itself as it finishes rather than through the return value.
+  parallel::mclapply(seq_along(sample.names),
+                     function(i) assemble.one(i, thread.cl, mem.cl),
+                     mc.cores = parallel.samples)
+
+  # Each sample wrote its own row. Join them once, in the parent, where nothing
+  # else is writing.
+  .mergeBinnedSummaries(log.directory)
 
   unlink(db.dir, recursive = TRUE)
 
