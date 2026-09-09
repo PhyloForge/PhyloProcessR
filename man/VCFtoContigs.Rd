@@ -2,13 +2,13 @@
 % Please edit documentation in R/variants.VCFtoContigs.R
 \name{VCFtoContigs}
 \alias{VCFtoContigs}
-\title{VCFtoContigs}
+\title{Apply filtered variants and depth rules to sample assemblies}
 \usage{
 VCFtoContigs(
-  genotype.directory = "variant-calling",
-  mapping.directory = "sample-mapping",
-  output.directory = "final-contigs",
-  vcf.file = c("SNP", "Indel", "Both"),
+  genotype.directory = NULL,
+  mapping.directory = NULL,
+  output.directory = "sample-contigs",
+  vcf.file = "SNP",
   consensus.sequences = FALSE,
   ambiguity.codes = TRUE,
   threads = 1,
@@ -16,53 +16,66 @@ VCFtoContigs(
   temp.directory = NULL,
   gatk4.path = NULL,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  sample.names = NULL,
+  depth.files = NULL,
+  depth.filter.mode = "site",
+  min.site.depth = 1,
+  min.mean.depth = 1,
+  max.n.proportion = NULL,
+  use.base.recalibration = FALSE,
+  samtools.path = NULL,
+  ploidy = 2
 )
 }
 \arguments{
-\item{genotype.directory}{path to the directory containing per-sample
-genotype sub-directories (output of genotypeSamples()).}
+\item{genotype.directory}{Per-sample genotype directory.}
 
-\item{mapping.directory}{path to the directory containing per-sample
-reference index sub-directories (output of mapReferenceSample() or
-mapReferenceConsensus()), used to locate each sample's reference.fa.}
+\item{mapping.directory}{Per-sample mapping/reference directory.}
 
-\item{output.directory}{path to the directory where output FASTA contig
-files (one per sample) will be saved.}
+\item{output.directory}{FASTA output directory.}
 
-\item{vcf.file}{character; which variant type to apply: "SNP" uses the
-SNP-only VCF, "Indel" uses the indel-only VCF, "Both" uses the combined
-genotype VCF.}
+\item{vcf.file}{One of \code{SNP}, \code{Indel}, or \code{Both}.}
 
-\item{consensus.sequences}{logical; if TRUE GATK produces a consensus
-sequence (majority allele). Cannot be TRUE when ambiguity.codes is TRUE.}
+\item{consensus.sequences}{Produce ordinary alternate-reference output.}
 
-\item{ambiguity.codes}{logical; if TRUE GATK produces IUPAC ambiguity codes
-at heterozygous sites (--use-iupac-sample). Cannot be TRUE when
-consensus.sequences is TRUE.}
+\item{ambiguity.codes}{Produce IUPAC output.}
 
-\item{threads}{number of parallel samples to process simultaneously.}
+\item{threads}{Concurrent samples.}
 
-\item{memory}{total RAM in GB; divided equally across threads.}
+\item{memory}{Total JVM heap budget in GB.}
 
-\item{temp.directory}{path to a dedicated directory for GATK JVM and Picard
-sorting temp files. NULL defaults to the current working directory, which
-will cause temp files to accumulate in the project root.}
+\item{temp.directory}{Temporary directory.}
 
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
+\item{gatk4.path}{GATK path/directory or NULL.}
 
-\item{overwrite}{logical; if TRUE already-completed samples are reprocessed.}
+\item{overwrite}{Recompute output.}
 
-\item{quiet}{logical; currently unused.}
+\item{quiet}{Suppress tool output while retaining logs.}
+
+\item{sample.names}{Optional retained sample set.}
+
+\item{depth.files}{Optional named depth-table paths shared between output modes.}
+
+\item{depth.filter.mode}{\code{none}, \code{site}, \code{mean}, or \code{both} (default \code{site}).}
+
+\item{min.site.depth}{Sites below this depth become N; default 1 retains 1x.}
+
+\item{min.mean.depth}{Contigs below this full-span mean are removed.}
+
+\item{max.n.proportion}{Optional final N-fraction cutoff.}
+
+\item{use.base.recalibration}{Select recalibrated BAM when calculating depth.}
+
+\item{samtools.path}{samtools path/directory or NULL.}
+
+\item{ploidy}{Used only for a targeted non-diploid IUPAC warning.}
 }
 \value{
-invisibly; writes one FASTA file per sample to output.directory.
+Invisibly returns sample names.
 }
 \description{
-Converts per-sample VCF variant files into FASTA contig
-sequences using GATK4 FastaAlternateReferenceMaker. For each sample the
-chosen VCF (SNPs, indels, or both) is applied to the sample's reference
-FASTA to produce either IUPAC ambiguity-coded sequences or straight
-consensus sequences. Samples are processed in parallel.
+Produces an alternate-reference sequence from passing variants, optionally
+encoding supported heterozygous SNP genotypes with IUPAC codes. Reference
+bases remain outside applied variants. This is not phased haplotype output.
 }

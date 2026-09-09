@@ -49,10 +49,16 @@
 .runCommand = function(command = NULL,
                        quiet = TRUE,
                        task = "external command",
-                       keep.stdout = FALSE) {
+                       keep.stdout = FALSE,
+                       stderr.log = NULL) {
 
   drop.stdout = quiet && keep.stdout == FALSE
-  drop.stderr = quiet
+  drop.stderr = quiet && is.null(stderr.log)
+
+  if (!is.null(stderr.log)) {
+    dir.create(dirname(stderr.log), recursive = TRUE, showWarnings = FALSE)
+    command = paste0(command, " 2>> ", shQuote(stderr.log))
+  }
 
   # The default /bin/sh does not report a failed early pipeline stage. Run
   # pipelines with pipefail so a mapper or converter failure reaches the caller.
@@ -68,6 +74,96 @@
   }
   return(invisible(status))
 }#end .runCommand
+
+
+# Explicit pipeline entry point. .runCommand also detects pipes for backwards
+# compatibility, but callers use this name when pipefail is part of the contract.
+.runPipeline = function(command = NULL, quiet = TRUE,
+                        task = "external pipeline", stderr.log = NULL) {
+  .runCommand(command, quiet = quiet, task = task, keep.stdout = TRUE,
+              stderr.log = stderr.log)
+}
+
+
+.validateResources = function(threads = 1, memory = 1, samples = 1,
+                              simultaneous.jvms = 1) {
+  if (length(threads) != 1 || !is.finite(threads) || threads < 1 ||
+      threads != as.integer(threads)) stop("threads must be a positive integer.")
+  if (length(memory) != 1 || !is.finite(memory) || memory <= 0)
+    stop("memory must be a positive number of GB.")
+  workers = min(as.integer(threads), max(1L, as.integer(samples)))
+  heap.mb = floor(memory * 1024 / workers / simultaneous.jvms)
+  if (heap.mb < 1) stop("The requested memory budget provides no usable JVM heap.")
+  list(workers = workers, heap.mb = heap.mb)
+}
+
+
+.ensureDirectory = function(path, label = "directory") {
+  if (!dir.exists(path)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+  if (!dir.exists(path)) stop("Could not create ", label, ": ", path)
+  invisible(path)
+}
+
+
+.stageMarker = function(directory, stage) file.path(directory, paste0(".", stage, ".complete"))
+
+.stageComplete = function(directory, stage, outputs) {
+  file.exists(.stageMarker(directory, stage)) && length(outputs) > 0 &&
+    all(file.exists(outputs)) && all(file.info(outputs)$size > 0)
+}
+
+.markStageComplete = function(directory, stage, details = character()) {
+  writeLines(c("complete=true", details), .stageMarker(directory, stage))
+}
+
+.invalidateStage = function(directory, stage) {
+  marker = .stageMarker(directory, stage)
+  if (file.exists(marker)) file.remove(marker)
+  invisible(NULL)
+}
+
+.collectWorkers = function(results, sample.names, stage) {
+  failed = vapply(seq_along(sample.names), function(i) {
+    result = if (i <= length(results)) results[[i]] else NULL
+    is.null(result) || inherits(result, "try-error") || !isTRUE(result$success)
+  }, logical(1))
+  if (any(failed)) {
+    messages = vapply(which(failed), function(i) {
+      result = if (i <= length(results)) results[[i]] else NULL
+      if (is.list(result) && !is.null(result$message)) result$message else "worker did not return success"
+    }, character(1))
+    stop(stage, " failed for sample(s): ",
+         paste(paste0(sample.names[failed], " (", messages, ")"), collapse = ", "))
+  }
+  invisible(results)
+}
+
+.gatkCommand = function(gatk, temp.directory, heap.mb) {
+  java.options = paste0("-Djava.io.tmpdir=", temp.directory, " -Xmx", heap.mb, "m")
+  paste(gatk, "--java-options", shQuote(java.options))
+}
+
+.laneDirectories = function(sample.directory) {
+  dirs = list.dirs(sample.directory, recursive = FALSE, full.names = TRUE)
+  dirs[grepl("^Lane_[0-9]+$", basename(dirs))]
+}
+
+.selectedSampleBam = function(mapping.directory, sample, use.base.recalibration = FALSE) {
+  if (use.base.recalibration) {
+    bqsr = file.path(mapping.directory, sample, "Lane_Merge", "bqsr-mapped-all.bam")
+    if (file.exists(bqsr)) return(bqsr)
+    bqsr = list.files(file.path(mapping.directory, sample), "^bqsr-mapped-all\\.bam$",
+                      recursive = TRUE, full.names = TRUE)
+    if (length(bqsr) == 1) return(bqsr)
+  }
+  merged = file.path(mapping.directory, sample, "Lane_Merge", "final-mapped-all.bam")
+  if (file.exists(merged)) return(merged)
+  lanes = .laneDirectories(file.path(mapping.directory, sample))
+  bams = file.path(lanes, "final-mapped-all.bam")
+  bams = bams[file.exists(bams)]
+  if (length(bams) == 1) return(bams)
+  stop("Could not select exactly one calling BAM for sample ", sample, ".")
+}
 
 
 # Runs a shell command and returns the standard output. Stops when the command

@@ -2,7 +2,7 @@
 % Please edit documentation in R/variants.mapReferenceSample.R
 \name{mapReferenceSample}
 \alias{mapReferenceSample}
-\title{mapReferenceSample}
+\title{Map prepared BAMs to each sample's assembly}
 \usage{
 mapReferenceSample(
   mapping.directory = NULL,
@@ -19,49 +19,27 @@ mapReferenceSample(
 )
 }
 \arguments{
-\item{mapping.directory}{path to the directory containing per-sample
-sub-directories with pre-processed BAM files (all_reads.bam) created by
-prepareBAM().}
+\item{mapping.directory}{Directory produced by \code{\link[=prepareBAM]{prepareBAM()}}.}
 
-\item{assembly.directory}{path to the directory of per-sample draft assembly
-FASTA files (.fa or .fasta), one file per sample.}
+\item{assembly.directory}{Directory of \code{.fa} or \code{.fasta} sample assemblies.}
 
-\item{check.assemblies}{logical; if TRUE an error is raised when the number
-of assemblies does not match the number of sample BAM directories. If FALSE
-samples without a matching assembly are silently skipped.}
+\item{check.assemblies}{Fail when a prepared sample lacks an assembly.}
 
-\item{samtools.path}{system path to the directory containing samtools; NULL
-searches the system PATH.}
+\item{samtools.path, bwa.path, gatk4.path}{Tool directories, executable paths, or NULL.}
 
-\item{bwa.path}{system path to the directory containing bwa; NULL searches
-the system PATH.}
+\item{threads}{BWA threads.}
 
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
+\item{memory}{Total heap budget in GB (two concurrent JVMs in mapping pipes).}
 
-\item{threads}{number of CPU threads for BWA and GATK operations.}
+\item{temp.directory}{Temporary directory.}
 
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
+\item{overwrite}{Rebuild indices and mapped outputs.}
 
-\item{temp.directory}{path to a GATK JVM temp directory; NULL uses the
-current working directory.}
-
-\item{overwrite}{logical; if FALSE samples that already have a
-final-mapped-all.bam are skipped.}
-
-\item{quiet}{logical; if TRUE BWA and samtools stdout/stderr are suppressed.}
+\item{quiet}{Suppress tool output; diagnostic logs are retained.}
 }
 \value{
-invisibly; writes final-mapped-all.bam files to per-sample lane
-sub-directories in mapping.directory, and per-sample BWA indices to
-mapping.directory/sample/index/. The reference used for each sample is
-saved as mapping.directory/sample/index/reference.fa.
+Invisibly returns every retained sample name, including completed ones.
 }
 \description{
-Indexes a per-sample reference assembly with BWA and GATK, then
-maps per-sample pre-processed BAM files (from prepareBAM()) against that
-sample's own reference using the GATK best-practices pipeline (SamToFastq
-| bwa mem | MergeBamAlignment | SortSam | MarkDuplicates |
-SetNmAndUqTags). Used for per-sample variant calling workflows where each
-sample is mapped to its own draft assembly.
+Map prepared BAMs to each sample's assembly
 }

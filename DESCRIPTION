@@ -26,6 +26,7 @@ Depends:
 Imports:
     ape (>= 5.0),
     Biostrings,
+    IRanges,
     data.table (>= 1.10),
     doParallel,
     foreach,

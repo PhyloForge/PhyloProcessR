@@ -2,99 +2,63 @@
 % Please edit documentation in R/variants.genotypeSamples.R
 \name{genotypeSamples}
 \alias{genotypeSamples}
-\title{genotypeSamples}
+\title{Genotype and hard-filter per-sample GVCFs}
 \usage{
 genotypeSamples(
-  mapping.directory = "sample-mapping",
-  haplotype.caller.directory = "haplotype-caller",
+  mapping.directory = NULL,
+  haplotype.caller.directory = NULL,
   output.directory = "sample-genotypes",
   use.base.recalibration = FALSE,
-  custom.SNP.QD = NULL,
-  custom.SNP.QUAL = NULL,
-  custom.SNP.SOR = NULL,
-  custom.SNP.FS = NULL,
-  custom.SNP.MQ = NULL,
-  custom.SNP.MQRankSum = NULL,
-  custom.SNP.ReadPosRankSum = NULL,
-  custom.INDEL.QD = NULL,
-  custom.INDEL.QUAL = NULL,
-  custom.INDEL.FS = NULL,
-  custom.INDEL.ReadPosRankSum = NULL,
+  custom.SNP.QD = 2,
+  custom.SNP.QUAL = 30,
+  custom.SNP.SOR = 3,
+  custom.SNP.FS = 60,
+  custom.SNP.MQ = 40,
+  custom.SNP.MQRankSum = -12.5,
+  custom.SNP.ReadPosRankSum = -8,
+  custom.INDEL.QD = 2,
+  custom.INDEL.QUAL = 30,
+  custom.INDEL.FS = 60,
+  custom.INDEL.ReadPosRankSum = -8,
   gatk4.path = NULL,
   temp.directory = NULL,
   threads = 1,
   memory = 1,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  sample.names = NULL
 )
 }
 \arguments{
-\item{mapping.directory}{path to the directory containing per-sample
-reference index sub-directories.}
+\item{mapping.directory}{Mapping directory.}
 
-\item{haplotype.caller.directory}{path to the directory of per-sample
-haplotype caller GVCF files (output of haplotypeCaller()).}
+\item{haplotype.caller.directory}{GVCF directory.}
 
-\item{output.directory}{path where per-sample genotype VCF sub-directories
-will be saved.}
+\item{output.directory}{Genotype output directory.}
 
-\item{use.base.recalibration}{logical; if TRUE the BQSR-recalibrated GVCF
-(gatk4-bqsr-haplotype-caller.g.vcf.gz) is used as input; if FALSE the
-standard GVCF (gatk4-haplotype-caller.g.vcf.gz) is used.}
+\item{use.base.recalibration}{Select BQSR GVCFs.}
 
-\item{custom.SNP.QD}{numeric QD filter threshold for SNPs (variant is
-filtered if QD < this value).}
+\item{custom.SNP.QD, custom.SNP.QUAL, custom.SNP.SOR, custom.SNP.FS, custom.SNP.MQ, custom.SNP.MQRankSum, custom.SNP.ReadPosRankSum}{SNP record thresholds.}
 
-\item{custom.SNP.QUAL}{numeric QUAL filter threshold for SNPs.}
+\item{custom.INDEL.QD, custom.INDEL.QUAL, custom.INDEL.FS, custom.INDEL.ReadPosRankSum}{indel record thresholds.}
 
-\item{custom.SNP.SOR}{numeric SOR filter threshold for SNPs (filtered if
-SOR > this value).}
+\item{gatk4.path}{GATK path/directory or NULL.}
 
-\item{custom.SNP.FS}{numeric FS filter threshold for SNPs (filtered if
-FS > this value).}
+\item{temp.directory}{Temporary directory.}
 
-\item{custom.SNP.MQ}{numeric MQ filter threshold for SNPs (filtered if
-MQ < this value).}
+\item{threads}{Concurrent samples.}
 
-\item{custom.SNP.MQRankSum}{numeric MQRankSum filter threshold for SNPs
-(filtered if MQRankSum < this value).}
+\item{memory}{Total JVM heap budget in GB.}
 
-\item{custom.SNP.ReadPosRankSum}{numeric ReadPosRankSum filter threshold for
-SNPs (filtered if ReadPosRankSum < this value).}
+\item{overwrite}{Recompute outputs.}
 
-\item{custom.INDEL.QD}{numeric QD filter threshold for indels.}
+\item{quiet}{Suppress tool output while retaining logs.}
 
-\item{custom.INDEL.QUAL}{numeric QUAL filter threshold for indels.}
-
-\item{custom.INDEL.FS}{numeric FS filter threshold for indels.}
-
-\item{custom.INDEL.ReadPosRankSum}{numeric ReadPosRankSum filter threshold
-for indels.}
-
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
-
-\item{temp.directory}{path to a temporary directory for GATK JVM temp files;
-NULL uses the current working directory.}
-
-\item{threads}{number of parallel samples to process simultaneously.}
-
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
-
-\item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
-
-\item{quiet}{logical; currently unused.}
+\item{sample.names}{Optional retained sample set.}
 }
 \value{
-invisibly; writes filtered VCF files to per-sample sub-directories
-in output.directory.
+Invisibly returns sample names.
 }
 \description{
-Performs per-sample genotyping and variant filtering using
-GATK4. For each sample, GenotypeGVCFs converts a haplotype caller GVCF
-to a genotyped VCF, SelectVariants separates SNPs and indels, and
-VariantFiltration applies user-specified hard filters. Final filtered VCFs
-for SNPs, indels, and their combination are saved per sample. Samples are
-processed in parallel.
+Genotype and hard-filter per-sample GVCFs
 }

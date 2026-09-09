@@ -2,7 +2,7 @@
 % Please edit documentation in R/variants.prepareBAM.R
 \name{prepareBAM}
 \alias{prepareBAM}
-\title{prepareBAM}
+\title{Prepare paired FASTQ reads as unmapped BAM files}
 \usage{
 prepareBAM(
   read.directory = NULL,
@@ -19,51 +19,29 @@ prepareBAM(
 )
 }
 \arguments{
-\item{read.directory}{path to a directory of processed paired-end fastq.gz
-read files, organised in per-sample sub-directories.}
+\item{read.directory}{Directory containing one directory per sample.}
 
-\item{output.directory}{path to the directory where per-sample per-lane
-unmapped BAM sub-directories will be created.}
+\item{output.directory}{Output mapping directory.}
 
-\item{auto.readgroup}{logical; if TRUE read group fields (RGID, RGPU) are
-automatically extracted from the Illumina fastq header of the first read.
-If FALSE generic read group labels are assigned using the lane index.}
+\item{auto.readgroup}{Derive Illumina read-group fields from the first header.}
 
-\item{samtools.path}{system path to the directory containing samtools; NULL
-searches the system PATH.}
+\item{samtools.path, bwa.path}{Retained for compatibility; unused by this step.}
 
-\item{bwa.path}{system path to the directory containing bwa; NULL searches
-the system PATH (currently unused in this step but reserved for pipeline
-consistency).}
+\item{gatk4.path}{Directory containing \code{gatk}, its path, or NULL for PATH.}
 
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
+\item{threads}{Number of samples processed concurrently.}
 
-\item{threads}{number of parallel samples to process simultaneously.}
+\item{memory}{Total JVM heap budget in GB across concurrent samples.}
 
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
+\item{temp.directory}{JVM temporary directory.}
 
-\item{temp.directory}{path to a GATK JVM temp directory; NULL uses the
-current working directory.}
+\item{overwrite}{Recompute owned outputs.}
 
-\item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated. If FALSE samples that already have a final-mapped-all.bam are
-skipped.}
-
-\item{quiet}{logical; currently unused.}
+\item{quiet}{Suppress tool output while retaining per-lane stderr logs.}
 }
 \value{
-invisibly; writes per-sample per-lane all_reads.bam files to
-output.directory.
+Invisibly returns the sample names.
 }
 \description{
-Converts processed paired-end fastq.gz read files into
-unmapped BAM files with correctly assigned read groups, following the GATK
-best-practices pre-processing pipeline. For each sample lane, GATK
-FastqToSam creates an unmapped BAM, RevertSam cleans it, and
-AddOrReplaceReadGroups assigns read group metadata. When auto.readgroup is
-TRUE, read group information (flowcell ID and lane) is parsed automatically
-from the Illumina fastq headers. Samples are processed in parallel.
-The resulting all_reads.bam files are inputs to mapReferenceSample() or
-mapReferenceConsensus().
+Prepare paired FASTQ reads as unmapped BAM files
 }

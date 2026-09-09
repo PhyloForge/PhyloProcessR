@@ -62,7 +62,8 @@ ploidy = 2
 #   https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
 # Quality score
 custom.SNP.QUAL = 30
-# Quality by Depth: quality score normalized by depth
+# Quality by Depth: variant quality normalized by depth; this is not a minimum
+# read-depth cutoff (QD = 2 does not mean 2x coverage).
 custom.SNP.QD = 2
 # Strand Odds Ratio: odds ratio of strand bias
 custom.SNP.SOR = 3
@@ -74,7 +75,7 @@ custom.SNP.MQ = 40
 custom.SNP.MQRankSum = -12.5
 # Read position rank sum: tests for site position within reads
 custom.SNP.ReadPosRankSum = -8
-# Indel quality by depth: quality score normalized by depth
+# Indel variant quality normalized by depth, not minimum read coverage.
 custom.INDEL.QD = 2
 # Indel quality
 custom.INDEL.QUAL = 30
@@ -89,8 +90,20 @@ custom.INDEL.ReadPosRankSum = -8
 vcf.file = "SNP"
 # TRUE to save contigs with ambiguity codes placed at heterozygous sites
 ambiguity.codes = TRUE
-# TRUE to save contigs using a consensus base (randomly selected) for each heterozygous site.
+# TRUE to save GATK alternate-reference contigs. This is not random allele
+# sampling or phased haplotype output; reference bases remain outside passing variants.
 consensus.sequences = TRUE
+
+# Read-depth rules are separate from the variant hard filters above. Hard filters
+# assess variant records only; they do not assess invariant or zero-coverage bases.
+# Modes: "none", "site", "mean", or "both". Site masking currently requires SNP VCFs.
+depth.filter.mode = "site"
+# Depths strictly below this value become N (the 1x default masks only zero depth).
+min.site.depth = 1
+# Full-span mean includes zero-depth bases and assembly N padding.
+min.mean.depth = 1
+# Optional 0-1 cutoff after masking; equality passes. NULL disables this cutoff.
+max.n.proportion = NULL
 
 #Program paths
 #########################

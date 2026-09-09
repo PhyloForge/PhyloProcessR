@@ -16,7 +16,7 @@ setwd(working.directory)
 
 # Begins by creating processed read directory
 if (file.exists(paste0("data-analysis/", dataset.name)) == FALSE) {
-  dir.create(paste0("data-analysis/", dataset.name))
+  dir.create(paste0("data-analysis/", dataset.name), recursive = TRUE)
 }#end if
 
 # Dedicated GATK temp directory — must exist before any GATK call is made
@@ -38,7 +38,7 @@ prepareBAM(
 )
 
 #Function that maps each sample to its own assembly
-mapReferenceSample(
+retained.samples = mapReferenceSample(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   assembly.directory = assembly.directory,
   check.assemblies = check.assemblies,
@@ -64,6 +64,7 @@ haplotypeCaller(
   memory = memory,
   overwrite = overwrite,
   quiet = quiet
+  ,sample.names = retained.samples
 )
 
 # Function that recalibrates bases and calls haplotypes again.
@@ -80,6 +81,8 @@ if (use.base.recalibration == TRUE) {
     clean.up = clean.up,
     overwrite = overwrite,
     quiet = quiet
+    ,ploidy = ploidy
+    ,sample.names = retained.samples
   )
 }#end if
 
@@ -106,7 +109,21 @@ genotypeSamples(
   memory = memory,
   overwrite = overwrite,
   quiet = quiet
+  ,sample.names = retained.samples
 )
+
+depth.files = NULL
+if (depth.filter.mode != "none" || !is.null(max.n.proportion)) {
+  depth.files = calculateSampleDepth(
+    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+    output.directory = paste0("data-analysis/", dataset.name, "/depth"),
+    sample.names = retained.samples,
+    use.base.recalibration = use.base.recalibration,
+    samtools.path = samtools.path,
+    overwrite = overwrite,
+    quiet = quiet
+  )
+}
 
 if (consensus.sequences == TRUE) {
   # Function that converts SNP files back into finished and SNP called contigs, choose format
@@ -123,6 +140,15 @@ if (consensus.sequences == TRUE) {
     memory = memory,
     overwrite = overwrite,
     quiet = quiet
+    ,sample.names = retained.samples
+    ,depth.files = depth.files
+    ,depth.filter.mode = depth.filter.mode
+    ,min.site.depth = min.site.depth
+    ,min.mean.depth = min.mean.depth
+    ,max.n.proportion = max.n.proportion
+    ,use.base.recalibration = use.base.recalibration
+    ,samtools.path = samtools.path
+    ,ploidy = ploidy
   )
 }
 
@@ -141,6 +167,15 @@ if (ambiguity.codes == TRUE) {
     memory = memory,
     overwrite = overwrite,
     quiet = quiet
+    ,sample.names = retained.samples
+    ,depth.files = depth.files
+    ,depth.filter.mode = depth.filter.mode
+    ,min.site.depth = min.site.depth
+    ,min.mean.depth = min.mean.depth
+    ,max.n.proportion = max.n.proportion
+    ,use.base.recalibration = use.base.recalibration
+    ,samtools.path = samtools.path
+    ,ploidy = ploidy
   )
 }
 

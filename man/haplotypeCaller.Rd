@@ -2,7 +2,7 @@
 % Please edit documentation in R/variants.haplotypeCaller.R
 \name{haplotypeCaller}
 \alias{haplotypeCaller}
-\title{haplotypeCaller}
+\title{Run GATK HaplotypeCaller per sample}
 \usage{
 haplotypeCaller(
   mapping.directory = NULL,
@@ -14,48 +14,36 @@ haplotypeCaller(
   threads = 1,
   memory = 1,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  sample.names = NULL
 )
 }
 \arguments{
-\item{mapping.directory}{path to the directory of per-sample BAM files and
-reference indices (output of mapReferenceSample() or
-mapReferenceConsensus()).}
+\item{mapping.directory}{Mapped sample directory.}
 
-\item{output.directory}{path to the directory where per-sample GVCF files
-will be saved.}
+\item{output.directory}{GVCF output directory.}
 
-\item{reference.type}{character; "sample" to use each sample's own reference
-FASTA (located at mapping.directory/sample/index/reference.fa), or
-"consensus" to use a shared reference at index/reference.fa in the working
-directory.}
+\item{reference.type}{\code{sample} or \code{consensus}.}
 
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
+\item{gatk4.path}{GATK executable directory/path or NULL.}
 
-\item{temp.directory}{path to a temporary directory for GATK JVM temp files;
-NULL uses the current working directory.}
+\item{temp.directory}{Temporary directory.}
 
-\item{ploidy}{integer ploidy to pass to HaplotypeCaller (-ploidy).}
+\item{ploidy}{Positive integer ploidy.}
 
-\item{threads}{number of parallel samples to process simultaneously.}
+\item{threads}{Concurrent samples.}
 
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
+\item{memory}{Total JVM heap budget in GB.}
 
-\item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
+\item{overwrite}{Recompute outputs.}
 
-\item{quiet}{logical; currently unused.}
+\item{quiet}{Suppress tool output while retaining logs.}
+
+\item{sample.names}{Optional retained sample set.}
 }
 \value{
-invisibly; writes per-sample GVCF (.g.vcf.gz) files and realigned
-BAM files to output.directory.
+Invisibly returns sample names.
 }
 \description{
-Runs GATK4 HaplotypeCaller in GVCF mode (-ERC GVCF) on
-per-sample BAM files. When a sample has multiple lanes, the lane BAMs are
-first merged, sorted, and deduplicated with GATK MergeSamFiles,
-MarkDuplicates, and SetNmAndUqTags before calling haplotypes. The reference
-can be a per-sample assembly or a shared consensus reference. Samples are
-processed in parallel.
+Run GATK HaplotypeCaller per sample
 }

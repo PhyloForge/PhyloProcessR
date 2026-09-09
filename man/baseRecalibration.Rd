@@ -13,7 +13,9 @@ baseRecalibration(
   memory = 1,
   clean.up = TRUE,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  ploidy = 2,
+  sample.names = NULL
 )
 }
 \arguments{
@@ -33,8 +35,8 @@ NULL, the current working directory is used.}
 
 \item{threads}{number of parallel samples to process simultaneously.}
 
-\item{memory}{total RAM in GB to allocate; used per-thread as a JVM heap
-(-Xmx).}
+\item{memory}{total JVM heap budget in GB across concurrent samples. Native
+memory and JVM overhead require additional headroom.}
 
 \item{clean.up}{logical; if TRUE intermediate VCF files generated during the
 first-pass genotyping and filtering steps are deleted after the BQSR run.}
@@ -43,6 +45,10 @@ first-pass genotyping and filtering steps are deleted after the BQSR run.}
 reprocessed.}
 
 \item{quiet}{logical; currently unused.}
+
+\item{ploidy}{positive integer ploidy used for the recalibrated caller pass.}
+
+\item{sample.names}{optional retained sample set.}
 }
 \value{
 invisibly; writes recalibrated GVCFs to haplotype.caller.directory

@@ -1,196 +1,72 @@
-#' @title VCFtoContigs
+#' Apply filtered variants and depth rules to sample assemblies
 #'
-#' @description Converts per-sample VCF variant files into FASTA contig
-#'   sequences using GATK4 FastaAlternateReferenceMaker. For each sample the
-#'   chosen VCF (SNPs, indels, or both) is applied to the sample's reference
-#'   FASTA to produce either IUPAC ambiguity-coded sequences or straight
-#'   consensus sequences. Samples are processed in parallel.
+#' Produces an alternate-reference sequence from passing variants, optionally
+#' encoding supported heterozygous SNP genotypes with IUPAC codes. Reference
+#' bases remain outside applied variants. This is not phased haplotype output.
 #'
-#' @param genotype.directory path to the directory containing per-sample
-#'   genotype sub-directories (output of genotypeSamples()).
-#'
-#' @param mapping.directory path to the directory containing per-sample
-#'   reference index sub-directories (output of mapReferenceSample() or
-#'   mapReferenceConsensus()), used to locate each sample's reference.fa.
-#'
-#' @param output.directory path to the directory where output FASTA contig
-#'   files (one per sample) will be saved.
-#'
-#' @param vcf.file character; which variant type to apply: "SNP" uses the
-#'   SNP-only VCF, "Indel" uses the indel-only VCF, "Both" uses the combined
-#'   genotype VCF.
-#'
-#' @param consensus.sequences logical; if TRUE GATK produces a consensus
-#'   sequence (majority allele). Cannot be TRUE when ambiguity.codes is TRUE.
-#'
-#' @param ambiguity.codes logical; if TRUE GATK produces IUPAC ambiguity codes
-#'   at heterozygous sites (--use-iupac-sample). Cannot be TRUE when
-#'   consensus.sequences is TRUE.
-#'
-#' @param threads number of parallel samples to process simultaneously.
-#'
-#' @param memory total RAM in GB; divided equally across threads.
-#'
-#' @param temp.directory path to a dedicated directory for GATK JVM and Picard
-#'   sorting temp files. NULL defaults to the current working directory, which
-#'   will cause temp files to accumulate in the project root.
-#'
-#' @param gatk4.path system path to the directory containing the gatk
-#'   executable; NULL searches the system PATH.
-#'
-#' @param overwrite logical; if TRUE already-completed samples are reprocessed.
-#'
-#' @param quiet logical; currently unused.
-#'
-#' @return invisibly; writes one FASTA file per sample to output.directory.
-#'
+#' @param genotype.directory Per-sample genotype directory.
+#' @param mapping.directory Per-sample mapping/reference directory.
+#' @param output.directory FASTA output directory.
+#' @param vcf.file One of `SNP`, `Indel`, or `Both`.
+#' @param consensus.sequences Produce ordinary alternate-reference output.
+#' @param ambiguity.codes Produce IUPAC output.
+#' @param threads Concurrent samples.
+#' @param memory Total JVM heap budget in GB.
+#' @param temp.directory Temporary directory.
+#' @param gatk4.path GATK path/directory or NULL.
+#' @param overwrite Recompute output.
+#' @param quiet Suppress tool output while retaining logs.
+#' @param sample.names Optional retained sample set.
+#' @param depth.files Optional named depth-table paths shared between output modes.
+#' @param depth.filter.mode `none`, `site`, `mean`, or `both` (default `site`).
+#' @param min.site.depth Sites below this depth become N; default 1 retains 1x.
+#' @param min.mean.depth Contigs below this full-span mean are removed.
+#' @param max.n.proportion Optional final N-fraction cutoff.
+#' @param use.base.recalibration Select recalibrated BAM when calculating depth.
+#' @param samtools.path samtools path/directory or NULL.
+#' @param ploidy Used only for a targeted non-diploid IUPAC warning.
+#' @return Invisibly returns sample names.
 #' @export
-
-VCFtoContigs = function(genotype.directory = "variant-calling",
-                        mapping.directory = "sample-mapping",
-                        output.directory = "final-contigs",
-                        vcf.file = c("SNP", "Indel", "Both"),
-                        consensus.sequences = FALSE,
-                        ambiguity.codes = TRUE,
-                        threads = 1,
-                        memory = 1,
-                        temp.directory = NULL,
-                        gatk4.path = NULL,
-                        overwrite = FALSE,
-                        quiet = TRUE) {
-
-  #Debugging
-  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
-  # genotype.directory <- "/Volumes/LaCie/Mantellidae/data-analysis/variant-calling/sample-genotypes"
-  # mapping.directory <- "variant-calling/sample-mapping"
-  # output.directory = "contigs/5_iupac-contigs"
-  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- TRUE
-  # consensus.sequences = FALSE
-  # ambiguity.codes = TRUE
-  # vcf.file = "SNP"
-
-  if (is.null(temp.directory) == TRUE) { temp.directory = tempdir() }
-
-  # Same adds to bbmap path
-  if (is.null(gatk4.path) == FALSE) {
-    b.string <- unlist(strsplit(gatk4.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      gatk4.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    gatk4.path <- ""
-  }
-
-  # Quick checks
-  if (is.null(genotype.directory) == TRUE) {
-    stop("Please provide the genotype directory.")
-  }
-  if (file.exists(genotype.directory) == FALSE) {
-    stop("Genotype directory not found.")
-  }
-
-  # Quick checks
-  if (is.null(output.directory) == TRUE) {
-    stop("Please provide the output directory.")
-  }
-
-  if (consensus.sequences == TRUE && ambiguity.codes == TRUE) {
-    stop("Cannot have both consensus sequences and ambiguity codes. If both are needed, run function twice")
-  }
-
-  vcf.string = NULL
-  if (vcf.file == "SNP") {
-    vcf.string = "gatk4-final-snps.vcf"
-  }
-
-  if (vcf.file == "Indel" || vcf.file == "indel" || vcf.file == "INDEL") {
-    vcf.string = "gatk4-final-indels.vcf"
-  }
-
-  if (vcf.file == "Both" || vcf.file == "both" || vcf.file == "BOTH") {
-    vcf.string <- "gatk4-final-genotypes.vcf"
-  }
-
-  if (is.null(vcf.string) == TRUE) {
-    stop("please choose SNP, Indel, or Both for vcf.string.")
-  }
-
-  # Creates output directory
-  if (dir.exists(output.directory) == FALSE) {
-    dir.create(output.directory)
-  }
-
-  # Get multifile databases together
-  sample.names <- list.dirs(genotype.directory, recursive = FALSE, full.names = FALSE)
-
-  # Resumes file download
-  if (overwrite == FALSE) {
-    done.files <- list.files(output.directory, full.names = FALSE)
-    done.names <- gsub(".fa$", "", done.files)
-    sample.names <- sample.names[!sample.names %in% done.names]
-  }
-
-  if (length(sample.names) == 0) {
-    return("no samples available to analyze.")
-  }
-
-  ############################################################################################
-  ########### Step 1 #########################################################################
-  ##### Start up loop for each sample
-  ############################################################################################
-
-  mem.cl <- floor(memory / threads)
-
-  #Loops through each locus and does operations on them
-  parallel::mclapply(seq_along(sample.names), function(i) {
-  tryCatch({
-
-    # Obtains sample vcf
-    sample.vcf = paste0(genotype.directory, "/", sample.names[i], "/", vcf.string)
-    reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
-
-    gatk = paste0(gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=",
-                  temp.directory, " -Xmx", mem.cl, "G\"")
-
-    if (ambiguity.codes == TRUE) {
-      system(paste0(gatk, " FastaAlternateReferenceMaker",
-                    " -R ", reference.path,
-                    " -V ", sample.vcf,
-                    " -O ", output.directory, "/", sample.names[i], ".fa",
-                    " --use-iupac-sample ", sample.names[i]))
-    }
-
-    if (consensus.sequences == TRUE) {
-      system(paste0(gatk, " FastaAlternateReferenceMaker",
-                    " -R ", reference.path,
-                    " -V ", sample.vcf,
-                    " -O ", output.directory, "/", sample.names[i], ".fa"))
-    }
-
-    contigs = Biostrings::readDNAStringSet(paste0(output.directory, "/", sample.names[i], ".fa"), format = "fasta")
-    names(contigs) = gsub(":.*", "", names(contigs))
-    names(contigs) = gsub(".* ", "", names(contigs))
-
-    system(paste0("rm ", output.directory, "/", sample.names[i], ".fa.fai"))
-    system(paste0("rm ", output.directory, "/", sample.names[i], ".dict"))
-
-    # Saves above threshold contigs
-    final.loci = as.list(as.character(contigs))
-    PhyloProcessR::writeFasta(
-      sequences = final.loci, names = names(final.loci),
-      paste0(output.directory, "/", sample.names[i], ".fa"), nbchar = 1000000, as.string = TRUE
-    )
-
-  }, error = function(e) {
-    warning(sample.names[i], " failed: ", conditionMessage(e))
-  })
-  }, mc.cores = threads) #end i loop
-
-}#end function
-
-# #END SCRIPT
+VCFtoContigs = function(genotype.directory=NULL,mapping.directory=NULL,
+ output.directory="sample-contigs",vcf.file="SNP",consensus.sequences=FALSE,
+ ambiguity.codes=TRUE,threads=1,memory=1,temp.directory=NULL,gatk4.path=NULL,
+ overwrite=FALSE,quiet=TRUE,sample.names=NULL,depth.files=NULL,
+ depth.filter.mode="site",min.site.depth=1,min.mean.depth=1,max.n.proportion=NULL,
+ use.base.recalibration=FALSE,samtools.path=NULL,ploidy=2) {
+  choice=match.arg(tolower(vcf.file),c("snp","indel","both")); vcf.file=c(snp="SNP",indel="Indel",both="Both")[[choice]]
+  if(xor(isTRUE(consensus.sequences),isTRUE(ambiguity.codes))==FALSE) stop("Exactly one of consensus.sequences and ambiguity.codes must be TRUE.")
+  settings=.validateDepthSettings(depth.filter.mode,min.site.depth,min.mean.depth,max.n.proportion)
+  if(vcf.file!="SNP"&&settings$mode%in%c("site","both")) stop("Site depth masking currently requires vcf.file = 'SNP'; use mean or none for indel output.")
+  if(ambiguity.codes&&ploidy!=2) warning("GATK IUPAC output does not fully encode non-diploid genotypes.")
+  if(is.null(genotype.directory)||!dir.exists(genotype.directory)) stop("Genotype directory not found.")
+  if(is.null(mapping.directory)||!dir.exists(mapping.directory)) stop("Mapping directory not found.")
+  discovered=list.dirs(genotype.directory,recursive=FALSE,full.names=FALSE); if(is.null(sample.names)) sample.names=discovered
+  if(!length(sample.names)) stop("No samples are available for FASTA conversion.")
+  vname=switch(vcf.file,SNP="gatk4-final-snps.vcf",Indel="gatk4-final-indels.vcf",Both="gatk4-final-genotypes.vcf")
+  vcfs=file.path(genotype.directory,sample.names,vname); refs=file.path(mapping.directory,sample.names,"index","reference.fa")
+  if(any(!file.exists(vcfs))) stop("Missing selected VCF for sample(s): ",paste(sample.names[!file.exists(vcfs)],collapse=", "))
+  if(any(!file.exists(refs))) stop("Missing reference for sample(s): ",paste(sample.names[!file.exists(refs)],collapse=", "))
+  need.depth=settings$mode!="none"||!is.null(max.n.proportion)
+  if(need.depth&&is.null(depth.files)) depth.files=calculateSampleDepth(mapping.directory,file.path(dirname(output.directory),"depth"),sample.names,use.base.recalibration,samtools.path,overwrite,quiet)
+  resources=.validateResources(threads,memory,length(sample.names)); gatk=.toolCommand("gatk",gatk4.path)
+  if(is.null(temp.directory)) temp.directory=tempdir(); .ensureDirectory(temp.directory)
+  if(overwrite&&dir.exists(output.directory)) unlink(output.directory,recursive=TRUE); .ensureDirectory(output.directory); .ensureDirectory("logs/sample_logs")
+  command=.gatkCommand(gatk,temp.directory,resources$heap.mb); mode=if(ambiguity.codes) "iupac" else "consensus"
+  results=parallel::mclapply(seq_along(sample.names),function(i) tryCatch({
+    s=sample.names[i]; final=file.path(output.directory,paste0(s,".fa")); marker=.stageMarker(output.directory,paste0(s,"-VCFtoContigs-",mode)); report=file.path(output.directory,paste0(s,".",mode,".depth-filter.tsv"))
+    details=c(paste0("vcf=",normalizePath(vcfs[i])),paste0("mode=",settings$mode),paste0("min.site.depth=",settings$min.site.depth),paste0("min.mean.depth=",settings$min.mean.depth),paste0("max.n.proportion=",if(is.null(settings$max.n.proportion))"NULL" else settings$max.n.proportion))
+    if(!overwrite&&file.exists(marker)&&file.exists(final)&&identical(readLines(marker,warn=FALSE),c("complete=true",details))) return(list(success=TRUE))
+    file.remove(marker); tmp.raw=tempfile(paste0(s,"-raw-"),tmpdir=output.directory,fileext=".fa"); tmp.done=tempfile(paste0(s,"-processed-"),tmpdir=output.directory,fileext=".fa")
+    log=file.path("logs/sample_logs",s,paste0("VCFtoContigs-",mode,".stderr.log")); .ensureDirectory(dirname(log))
+    iupac=if(ambiguity.codes) paste("--use-iupac-sample",shQuote(s)) else ""
+    .runCommand(paste(command,"FastaAlternateReferenceMaker -R",shQuote(refs[i]),"-V",shQuote(vcfs[i]),"-O",shQuote(tmp.raw),iupac),quiet,"FASTA conversion",stderr.log=log)
+    if(!file.exists(tmp.raw)) stop("GATK did not create its temporary FASTA")
+    seqs=Biostrings::readDNAStringSet(tmp.raw); names(seqs)=sub("^[0-9]+ ","",names(seqs))
+    if(need.depth) { df=depth.files[[s]]; if(is.null(df)||!file.exists(df)) stop("Depth result missing for ",s); seqs=.filterDepthSequences(seqs,df,settings,report) }
+    Biostrings::writeXStringSet(seqs,tmp.done,format="fasta",width=1000000)
+    if(!file.rename(tmp.done,final)) stop("Could not publish final FASTA for ",s)
+    file.remove(c(tmp.raw,paste0(tmp.raw,".fai"),sub("\\.fa$",".dict",tmp.raw)))
+    writeLines(c("complete=true",details),marker); list(success=TRUE)
+  },error=function(e) list(success=FALSE,message=conditionMessage(e))),mc.cores=resources$workers)
+  .collectWorkers(results,sample.names,"FASTA conversion"); invisible(sample.names)
+}

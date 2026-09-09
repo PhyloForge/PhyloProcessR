@@ -86,9 +86,39 @@ Rscript workflow-2_assembly.R
 Use `workflow-3_configuration-file.R` with
 `workflow-3_variant-calling.R`.
 
-Workflow 3 maps reads to sample assemblies, calls variants, and makes consensus
-contigs. It can produce IUPAC consensus contigs and separate haplotype contigs.
-The workflow requires BWA, Samtools, and GATK.
+Workflow 3 maps reads to each sample's assembly, calls variants, and makes
+alternate-reference contigs. It can produce ordinary sequences and IUPAC codes
+at supported heterozygous SNPs; these are not phased haplotypes or random allele
+samples. Reference bases are retained outside passing variants. The workflow
+requires BWA, Samtools, and GATK.
+
+Variant hard filters and depth filters answer different questions. QD, QUAL,
+SOR, FS, MQ, and rank-sum settings label individual variant records; QD 2 is not
+a 2x coverage cutoff, QUAL is not per-base quality or genotype GQ, and a
+high-depth variant does not rescue a failed hard filter. A rejected correction
+leaves the assembly base unless the independent depth rule masks that position.
+
+Depth processing then operates across the original full contig span, including
+invariant and zero-coverage positions. In `site` mode, depths below
+`min.site.depth` become N. In `mean` mode, sample-contigs below the full-span mean
+are removed. `both` applies both rules, while `none` preserves the earlier
+behavior. `max.n.proportion` optionally removes a contig after masking. Site
+masking currently supports SNP output only because indels shift coordinates.
+
+For example, with a 10x site cutoff, both a passing SNP and an invariant base at
+2x become N, while at 12x the passing SNP is applied and the invariant assembly
+base remains. A SNP failing QUAL at 12x leaves the assembly base. A 100-base
+contig with 50 bases at 20x and 50 at zero has mean depth 10x: it passes a 10x
+mean rule but has half its sequence masked by a 10x site rule.
+
+The effective order is optional BQSR, genotyping and record hard filtering,
+application of passing variants, depth masking, mean/N contig filtering, and
+then workflow 4's heterozygosity and target filters. N is missing sequence;
+IUPAC codes are heterozygosity, and the two are reported separately. Workflow
+4's current heterozygosity denominator is total length (including Ns): a
+100-base contig with 80 Ns and 10 IUPAC bases is 10% by that definition, but 50%
+among its 20 non-N bases. Its target match coverage is alignment coverage (%),
+not sequencing depth (x), and a depth-passing contig can still fail assignment.
 
 ```bash
 Rscript workflow-3_variant-calling.R

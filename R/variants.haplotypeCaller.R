@@ -1,238 +1,59 @@
-#' @title haplotypeCaller
-#'
-#' @description Runs GATK4 HaplotypeCaller in GVCF mode (-ERC GVCF) on
-#'   per-sample BAM files. When a sample has multiple lanes, the lane BAMs are
-#'   first merged, sorted, and deduplicated with GATK MergeSamFiles,
-#'   MarkDuplicates, and SetNmAndUqTags before calling haplotypes. The reference
-#'   can be a per-sample assembly or a shared consensus reference. Samples are
-#'   processed in parallel.
-#'
-#' @param mapping.directory path to the directory of per-sample BAM files and
-#'   reference indices (output of mapReferenceSample() or
-#'   mapReferenceConsensus()).
-#'
-#' @param output.directory path to the directory where per-sample GVCF files
-#'   will be saved.
-#'
-#' @param reference.type character; "sample" to use each sample's own reference
-#'   FASTA (located at mapping.directory/sample/index/reference.fa), or
-#'   "consensus" to use a shared reference at index/reference.fa in the working
-#'   directory.
-#'
-#' @param gatk4.path system path to the directory containing the gatk
-#'   executable; NULL searches the system PATH.
-#'
-#' @param temp.directory path to a temporary directory for GATK JVM temp files;
-#'   NULL uses the current working directory.
-#'
-#' @param ploidy integer ploidy to pass to HaplotypeCaller (-ploidy).
-#'
-#' @param threads number of parallel samples to process simultaneously.
-#'
-#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
-#'
-#' @param overwrite logical; if TRUE the output directory is deleted and
-#'   recreated before processing.
-#'
-#' @param quiet logical; currently unused.
-#'
-#' @return invisibly; writes per-sample GVCF (.g.vcf.gz) files and realigned
-#'   BAM files to output.directory.
-#'
+#' Run GATK HaplotypeCaller per sample
+#' @param mapping.directory Mapped sample directory.
+#' @param output.directory GVCF output directory.
+#' @param reference.type `sample` or `consensus`.
+#' @param gatk4.path GATK executable directory/path or NULL.
+#' @param temp.directory Temporary directory.
+#' @param ploidy Positive integer ploidy.
+#' @param threads Concurrent samples.
+#' @param memory Total JVM heap budget in GB.
+#' @param overwrite Recompute outputs.
+#' @param quiet Suppress tool output while retaining logs.
+#' @param sample.names Optional retained sample set.
+#' @return Invisibly returns sample names.
 #' @export
-
-haplotypeCaller = function(mapping.directory = NULL,
-                          output.directory = "haplotype-caller",
-                          reference.type = c("sample", "consensus"),
-                          gatk4.path = NULL,
-                          temp.directory = NULL,
-                          ploidy = 2,
-                          threads = 1,
-                          memory = 1,
-                          overwrite = FALSE,
-                          quiet = TRUE) {
-
-  #Debugging
-  #Home directoroies
-  # Debugging
-  # Home directoroies
-  # library(PhyloCap)
-  # library(doParallel)
-  # setwd("/Volumes/LaCie/Mantellidae")
-  # output.directory <- "variant-discovery/haplotype-caller"
-  # mapping.directory <- "/Volumes/LaCie/Mantellidae/variant-discovery/sample-mapping"
-
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- TRUE
-
-  # Same adds to bbmap path
-  if (is.null(gatk4.path) == FALSE) {
-    b.string <- unlist(strsplit(gatk4.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      gatk4.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    gatk4.path <- ""
-  }
-
-  #Quick checks
-  if (is.null(mapping.directory) == TRUE){ stop("Please provide the bam directory.") }
-  if (file.exists(mapping.directory) == F){ stop("BAM folder not found.") }
-
-  # Creates output directory
-  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
-
-  # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.directory) == F) {
-    dir.create(output.directory)
-  } else {
-    if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
-    }
-  } # end else
-
-  if (is.null(temp.directory) == TRUE){
-    temp.directory = tempdir()
-  }
-
-
-  #Read in sample data
-  bam.files = list.files(mapping.directory, recursive = T, full.names = T)
-  bam.files = bam.files[grep("final-mapped-all.bam$", bam.files)]
-  sample.names <- list.dirs(mapping.directory, recursive = F, full.names = F)
-
-  # Resumes file download
-  if (overwrite == FALSE) {
-    done.files <- list.files(output.directory, full.names = T, recursive = T)
-    done.files <- done.files[grep("gatk4-haplotype-caller.g.vcf.gz$", done.files)]
-    done.names <- gsub("/gatk4-haplotype-caller.g.vcf.gz$", "", done.files)
-    done.names <- gsub(".*\\/", "", done.names)
-    sample.names <- sample.names[!sample.names %in% done.names]
-  }
-
-  if (length(sample.names) == 0){ return("no samples remain to analyze.") }
-
-  ############################################################################################
-  ########### Step 1 #########################################################################
-  ##### Start up loop for each sample
-  ############################################################################################
-  mem.cl <- floor(memory / threads)
-
-  #Loops through each locus and does operations on them
-  parallel::mclapply(seq_along(sample.names), function(i) {
-  tryCatch({
-    #################################################
-    ### Part A: prepare for loading and checks
-    #################################################
-    sample.dir = paste0(output.directory, "/", sample.names[i])
-    if (file.exists(sample.dir) == FALSE) { dir.create(sample.dir) }
-
-    #Gets the reads for the sample
-    sample.bams = bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
-    if (length(sample.bams) == 0){ sample.bams = bam.files[grep(pattern = sample.names[i], x = bam.files)] }
-
-    #Returns an error if reads are not found
-    if (length(sample.bams) == 0 ){
-      stop(sample.names[i], " does not have any reads present for files ")
-    } #end if statement
-
-    #CReates new directory
-    report.path = paste0("logs/sample_logs/", sample.names[i])
-    if (file.exists(report.path) == FALSE) { dir.create(report.path) }
-
-    # Sets up merging of bams from different lanes
-    input.string = paste0("-I ", sample.bams, collapse = " ")
-    if (reference.type == "sample") {
-      reference.path = paste0(mapping.directory, "/", sample.names[i], "/index/reference.fa")
-    }
-
-    if (reference.type == "consensus") {
-      reference.path = paste0("index/reference.fa")
-    }
-
-    if (length(sample.bams) != 1) {
-
-      merge.dir = paste0(mapping.directory, "/", sample.names[i], "/Lane_Merge")
-      dir.create(merge.dir)
-
-      # Next combine .bam files together!
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " MergeSamFiles",
-        " ", input.string, " -O ", merge.dir, "/final-mapped-merge.bam",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      # Sort by coordinate for input into MarkDuplicates
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " SortSam",
-        " -INPUT ", merge.dir, "/final-mapped-merge.bam",
-        " -OUTPUT ", merge.dir, "/final-mapped-sort.bam",
-        " -CREATE_INDEX true -SORT_ORDER coordinate",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      # Marks duplicate reads
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " MarkDuplicates",
-        " -INPUT ", merge.dir, "/final-mapped-sort.bam",
-        " -OUTPUT ", merge.dir, "/final-mapped-dup.bam",
-        " -CREATE_INDEX true -METRICS_FILE logs/sample_logs/", sample.names[i], "/duplicate_metrics.txt",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      # Sorts and stuff
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " SortSam",
-        " -INPUT ", merge.dir, "/final-mapped-dup.bam",
-        " -OUTPUT /dev/stdout -SORT_ORDER coordinate",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-        " SetNmAndUqTags",
-        " -INPUT /dev/stdin -OUTPUT ", merge.dir, "/final-mapped-all.bam",
-        " -CREATE_INDEX true -R ", reference.path,
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      input.bam = paste0(merge.dir, "/final-mapped-all.bam")
-
-      # Delete old files to make more space
-      system(paste0("rm ", merge.dir, "/final-mapped-dup.bam"))
-      system(paste0("rm ", merge.dir, "/final-mapped-sort.bam"))
-      system(paste0("rm ", merge.dir, "/final-mapped-merge.bam"))
-    } else {
-      # lane 1 if thats all there is
-      input.bam = paste0(mapping.directory, "/", sample.names[i], "/Lane_1/final-mapped-all.bam")
-    } # end else
-
-    #Starts to finally look for Haplotypes! *here
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " HaplotypeCaller",
-      " -R ", reference.path, " -O ", sample.dir, "/gatk4-haplotype-caller.g.vcf.gz",
-      " -I ", input.bam,
-      " -ERC GVCF",
-      " -ploidy ", ploidy,
-      " -bamout ", sample.dir, "/gatk4-haplotype-caller.bam"
-    ))
-
-    print(paste0(sample.names[i], " completed GATK4 haplotype caller!"))
-
-  }, error = function(e) {
-    warning(sample.names[i], " failed: ", conditionMessage(e))
-  })
-  }, mc.cores = threads) # end i loop
-
-}#end function
-
-# END SCRIPT
+haplotypeCaller = function(mapping.directory = NULL, output.directory = "haplotype-caller",
+  reference.type = c("sample", "consensus"), gatk4.path = NULL, temp.directory = NULL,
+  ploidy = 2, threads = 1, memory = 1, overwrite = FALSE, quiet = TRUE,
+  sample.names = NULL) {
+  reference.type = match.arg(reference.type)
+  if (length(ploidy) != 1 || !is.finite(ploidy) || ploidy < 1 || ploidy != as.integer(ploidy)) stop("ploidy must be a positive integer.")
+  if (is.null(mapping.directory) || !dir.exists(mapping.directory)) stop("BAM folder not found.")
+  discovered = list.dirs(mapping.directory, recursive = FALSE, full.names = FALSE)
+  if (is.null(sample.names)) sample.names = discovered else if (any(!sample.names %in% discovered)) stop("Selected sample directories are missing: ", paste(setdiff(sample.names, discovered), collapse = ", "))
+  if (!length(sample.names)) stop("No samples are available to analyze.")
+  resources = .validateResources(threads, memory, length(sample.names))
+  gatk = .toolCommand("gatk", gatk4.path)
+  if (is.null(temp.directory)) temp.directory = tempdir()
+  .ensureDirectory(temp.directory); if (overwrite && dir.exists(output.directory)) unlink(output.directory, recursive = TRUE)
+  .ensureDirectory(output.directory); .ensureDirectory("logs/sample_logs")
+  command = .gatkCommand(gatk, temp.directory, resources$heap.mb)
+  results = parallel::mclapply(sample.names, function(sample) tryCatch({
+    out.dir = file.path(output.directory, sample); .ensureDirectory(out.dir)
+    gvcf = file.path(out.dir, "gatk4-haplotype-caller.g.vcf.gz"); idx = paste0(gvcf, ".tbi")
+    if (!overwrite && .stageComplete(out.dir, "haplotypeCaller", c(gvcf, idx))) return(list(success = TRUE))
+    .invalidateStage(out.dir, "haplotypeCaller"); file.remove(c(gvcf, idx))
+    reference = if (reference.type == "sample") file.path(mapping.directory, sample, "index", "reference.fa") else file.path("index", "reference.fa")
+    if (!file.exists(reference)) stop("Reference not found: ", reference)
+    lanes = .laneDirectories(file.path(mapping.directory, sample)); bams = file.path(lanes, "final-mapped-all.bam"); bams = bams[file.exists(bams)]
+    if (!length(bams)) stop("No completed source lane BAMs found")
+    log = file.path("logs/sample_logs", sample, "haplotypeCaller.stderr.log"); .ensureDirectory(dirname(log))
+    if (length(bams) > 1) {
+      merge.dir = file.path(mapping.directory, sample, "Lane_Merge"); .ensureDirectory(merge.dir)
+      merged = file.path(merge.dir, "final-mapped-merge.bam"); sorted = file.path(merge.dir, "final-mapped-sort.bam"); dup = file.path(merge.dir, "final-mapped-dup.bam"); input.bam = file.path(merge.dir, "final-mapped-all.bam")
+      inputs = paste(rep("-I", length(bams)), shQuote(bams), collapse = " ")
+      .runCommand(paste(command, "MergeSamFiles", inputs, "-O", shQuote(merged), "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true"), quiet, "lane merge", stderr.log = log)
+      .runCommand(paste(command, "SortSam -INPUT", shQuote(merged), "-OUTPUT", shQuote(sorted), "-CREATE_INDEX true -SORT_ORDER coordinate -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"), quiet, "merged BAM sort", stderr.log = log)
+      .runCommand(paste(command, "MarkDuplicates -INPUT", shQuote(sorted), "-OUTPUT", shQuote(dup), "-CREATE_INDEX true -METRICS_FILE", shQuote(file.path("logs/sample_logs", sample, "duplicate_metrics.txt")), "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true"), quiet, "merged duplicate marking", stderr.log = log)
+      .runPipeline(paste(command, "SortSam -INPUT", shQuote(dup), "-OUTPUT /dev/stdout -SORT_ORDER coordinate -USE_JDK_DEFLATER true -USE_JDK_INFLATER true |", command, "SetNmAndUqTags -INPUT /dev/stdin -OUTPUT", shQuote(input.bam), "-CREATE_INDEX true -R", shQuote(reference), "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true"), quiet, "merged BAM finalization", log)
+      if (!file.exists(input.bam)) stop("Merged BAM was not created")
+      file.remove(c(merged, sorted, dup, paste0(sorted, ".bai"), paste0(dup, ".bai")))
+    } else input.bam = bams[1]
+    .runCommand(paste(command, "HaplotypeCaller -R", shQuote(reference), "-O", shQuote(gvcf), "-I", shQuote(input.bam), "-ERC GVCF -ploidy", ploidy, "--native-pair-hmm-threads 1 -bamout", shQuote(file.path(out.dir, "gatk4-haplotype-caller.bam"))), quiet, "HaplotypeCaller", stderr.log = log)
+    if (!all(file.exists(c(gvcf, idx)))) stop("HaplotypeCaller did not create the GVCF and index")
+    .markStageComplete(out.dir, "haplotypeCaller", c(paste0("bam=", input.bam), paste0("ploidy=", ploidy)))
+    list(success = TRUE)
+  }, error = function(e) list(success = FALSE, message = conditionMessage(e))), mc.cores = resources$workers)
+  .collectWorkers(results, sample.names, "HaplotypeCaller")
+  invisible(sample.names)
+}
