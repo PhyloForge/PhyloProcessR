@@ -31,33 +31,6 @@ overwrite = FALSE
 # Hide verbose output for each function
 quiet = FALSE
 
-# Missing locus recovery settings
-#########################
-# TRUE = run expandMissingAssembly after the main assembly pipeline.
-# Deprecated. Use the binned target assembly below instead.
-expand.missing = FALSE
-# Which read subdirectory within processed.reads to use for Phase 2 mapping.
-# Should be paired (non-merged) reads. Options (use whichever is the last step run in workflow 1):
-#   "decontaminated-reads" (default — recommended)
-#   "cleaned-reads"
-#   "error-corrected-reads"
-# Do NOT use "pe-merged-reads" — HISAT2 expects paired input
-mapping.reads = "decontaminated-reads"
-# Reference to use for Phase 2 read mapping:
-#   "contig"    = use the best assembled contig from other samples (default; closer match, better read recovery)
-#   "reference" = use the original probe/bait sequences (useful when cross-sample contigs are absent or poor)
-phase2.reference = "contig"
-# TRUE = also attempt to recover loci absent from every sample's assembly,
-#        mapping reads directly to the original reference sequences.
-#        Can add substantial run time on large datasets.
-recover.all.missing = FALSE
-# Blast filters applied to the recovered contigs. These are usually less strict
-# than the target contig filters above, because a recovered locus is expected to
-# be shorter and more divergent.
-expand.match.length = 100
-expand.match.percent = 60
-expand.match.coverage = 35
-
 #Binned per-locus assembly settings
 #########################
 # TRUE = run assembleBinnedTargets after the main assembly pipeline.

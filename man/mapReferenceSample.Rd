@@ -7,7 +7,6 @@
 mapReferenceSample(
   mapping.directory = NULL,
   assembly.directory = NULL,
-  expanded.directory = NULL,
   check.assemblies = TRUE,
   samtools.path = NULL,
   bwa.path = NULL,
@@ -26,11 +25,6 @@ prepareBAM().}
 
 \item{assembly.directory}{path to the directory of per-sample draft assembly
 FASTA files (.fa or .fasta), one file per sample.}
-
-\item{expanded.directory}{path to a directory of expanded assemblies from
-expandMissingAssembly(), one file per sample. Each sample reference is then
-the union of its assembly.directory contigs and the recovered contigs whose
-name is not already present. NULL uses assembly.directory alone.}
 
 \item{check.assemblies}{logical; if TRUE an error is raised when the number
 of assemblies does not match the number of sample BAM directories. If FALSE

@@ -106,58 +106,18 @@ contig.start = final.contig.directory
 ##################################################################################################
 ##################################################################################################
 #################################################
-## Step 2 (optional): Recover missing loci
-## Attempts to assemble loci absent from each sample by mapping reads to
-## cross-sample contigs and/or the original reference, then running SPAdes.
-## Enable with expand.missing = TRUE in the configuration file.
-## The recovered contigs are saved to 3b_expanded-contigs. To use them, set
-## expanded.contig.directory in the workflow 3 configuration file.
-##################
-
-if (isTRUE(get0("expand.missing", ifnotfound = FALSE))) {
-  expandMissingAssembly(
-    assembly.directory  = contig.start,
-    read.directory      = processed.reads,
-    mapping.reads       = mapping.reads,
-    reference           = target.markers,
-    output.directory    = "data-analysis/expand-missing-assembly",
-    expanded.directory  = "data-analysis/contigs/3b_expanded-contigs",
-    phase2.reference    = phase2.reference,
-    recover.all.missing = recover.all.missing,
-    min.match.percent   = expand.match.percent,
-    min.match.length    = expand.match.length,
-    min.match.coverage  = expand.match.coverage,
-    mismatch.corrector  = spades.mismatch.corrector,
-    kmer.values         = spades.kmer.values,
-    memory              = memory,
-    threads             = threads,
-    spades.path         = spades.path,
-    hisat2.path         = hisat2.path,
-    samtools.path       = samtools.path,
-    fastp.path          = fastp.path,
-    blast.path          = blast.path,
-    overwrite           = overwrite,
-    quiet               = quiet
-  )
-  final.contig.directory = "data-analysis/contigs/3b_expanded-contigs"
-} # end expand.missing
-
-##################################################################################################
-##################################################################################################
-#################################################
-## Step 3 (optional): Binned per-locus assembly
+## Step 2 (optional): Binned per-locus assembly
 ## Assembles every target on its own. Reads are binned by their best matching
 ## target, and each bin is assembled separately. This recovers targets the
 ## whole-library assembly lost, and it extends the targets it found, because the
 ## mate of an anchored read reaches into the flanking sequence.
 ## Enable with binned.assembly = TRUE in the configuration file.
-## The merged contigs are saved to 3c_binned-contigs. To use them, set
-## expanded.contig.directory in the workflow 3 configuration file.
+## The merged contigs are saved to 3c_binned-contigs and become the input to
+## final curation when that step is enabled.
 ##################
 
 if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
 
-  # Builds on the expanded contigs when step 2 ran, on the target contigs if not
   binned.input = final.contig.directory
 
   # An empty setting turns off the LAST search of the draft assembly
@@ -204,7 +164,7 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
 ##################################################################################################
 ##################################################################################################
 #################################################
-## Step 4 (optional): Curate the contigs
+## Step 3 (optional): Curate the contigs
 ## Joins the fragments of one target that sit on separate contigs, and cuts
 ## apart a contig that spans more than one target. This runs before variant
 ## calling, because the variant caller maps the reads back to these contigs. A
@@ -241,8 +201,6 @@ if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
 
 message("Workflow 2 final contigs: ", final.contig.directory,
         "\nSet workflow 3 assembly.directory = ",
-        dQuote(final.contig.directory),
-        " and expanded.contig.directory = NULL. The selected directory already ",
-        "contains the complete final contig set.")
+        dQuote(final.contig.directory), ".")
 
 # End script

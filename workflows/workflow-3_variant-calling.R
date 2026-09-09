@@ -41,7 +41,6 @@ prepareBAM(
 mapReferenceSample(
   mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
   assembly.directory = assembly.directory,
-  expanded.directory = get0("expanded.contig.directory", ifnotfound = NULL),
   check.assemblies = check.assemblies,
   samtools.path = samtools.path,
   bwa.path = bwa.path,

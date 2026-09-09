@@ -14,11 +14,6 @@
 #' @param assembly.directory path to the directory of per-sample draft assembly
 #'   FASTA files (.fa or .fasta), one file per sample.
 #'
-#' @param expanded.directory path to a directory of expanded assemblies from
-#'   expandMissingAssembly(), one file per sample. Each sample reference is then
-#'   the union of its assembly.directory contigs and the recovered contigs whose
-#'   name is not already present. NULL uses assembly.directory alone.
-#'
 #' @param check.assemblies logical; if TRUE an error is raised when the number
 #'   of assemblies does not match the number of sample BAM directories. If FALSE
 #'   samples without a matching assembly are silently skipped.
@@ -53,7 +48,6 @@
 
 mapReferenceSample = function(mapping.directory = NULL,
                               assembly.directory = NULL,
-                              expanded.directory = NULL,
                               check.assemblies = TRUE,
                               samtools.path = NULL,
                               bwa.path = NULL,
@@ -119,10 +113,6 @@ mapReferenceSample = function(mapping.directory = NULL,
   if (file.exists(mapping.directory) == FALSE) {
     stop("BAM folder not found.")
   }
-  if (is.null(expanded.directory) == FALSE && dir.exists(expanded.directory) == FALSE) {
-    stop("Expanded assembly folder not found: ", expanded.directory)
-  }
-
   if (is.null(temp.directory) == TRUE){
     temp.directory = tempdir()
   }
@@ -182,20 +172,7 @@ mapReferenceSample = function(mapping.directory = NULL,
 
     reference.location <- paste0(mapping.directory, "/", sample.name, "/index/reference.fa")
     assembly.file <- paste0(assembly.directory, "/", sample.files[i])
-    expanded.file <- paste0(expanded.directory, "/", sample.files[i])
-
-    # Adds the loci recovered by expandMissingAssembly(). A recovered contig is
-    # only added when its name is absent, so a target contig is never replaced.
-    # The expanded assembly can hold fewer contigs than assembly.directory,
-    # because its blast filters are stricter, so the two sets are combined.
-    if (is.null(expanded.directory) == FALSE && file.exists(expanded.file) == TRUE) {
-      target.contigs <- Biostrings::readDNAStringSet(assembly.file)
-      expanded.contigs <- Biostrings::readDNAStringSet(expanded.file)
-      new.contigs <- expanded.contigs[!names(expanded.contigs) %in% names(target.contigs)]
-      Biostrings::writeXStringSet(append(target.contigs, new.contigs), reference.location)
-    } else {
-      file.copy(assembly.file, reference.location, overwrite = TRUE)
-    }
+    file.copy(assembly.file, reference.location, overwrite = TRUE)
 
     # Indexes the reference
     system(paste0(bwa.path, "bwa index -a bwtsw ", reference.location),
