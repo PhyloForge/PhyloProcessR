@@ -66,6 +66,8 @@ removeOffTargetContigs(
   quiet = quiet
 )
 
+final.contig.directory = "data-analysis/contigs/3_target-contigs"
+
 ##################################################################################################
 ##################################################################################################
 #################################################
@@ -85,6 +87,7 @@ if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
     min.match.percent  = curate.match.percent,
     min.match.length   = curate.match.length,
     min.match.coverage = curate.match.coverage,
+    similarity         = get0("curate.similarity", ifnotfound = 0.9),
     search.method      = curate.search.method,
     threads            = threads,
     memory             = memory,
@@ -94,13 +97,11 @@ if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
     overwrite          = overwrite,
     quiet              = quiet
   )
+  final.contig.directory = "data-analysis/contigs/3a_curated-contigs"
 }#end curate.contigs
 
 # The steps below start from the curated contigs when that step ran
-contig.start = "data-analysis/contigs/3_target-contigs"
-if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
-  contig.start = "data-analysis/contigs/3a_curated-contigs"
-}
+contig.start = final.contig.directory
 
 ##################################################################################################
 ##################################################################################################
@@ -138,6 +139,7 @@ if (isTRUE(get0("expand.missing", ifnotfound = FALSE))) {
     overwrite           = overwrite,
     quiet               = quiet
   )
+  final.contig.directory = "data-analysis/contigs/3b_expanded-contigs"
 } # end expand.missing
 
 ##################################################################################################
@@ -156,10 +158,7 @@ if (isTRUE(get0("expand.missing", ifnotfound = FALSE))) {
 if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
 
   # Builds on the expanded contigs when step 2 ran, on the target contigs if not
-  binned.input = contig.start
-  if (isTRUE(get0("expand.missing", ifnotfound = FALSE))) {
-    binned.input = "data-analysis/contigs/3b_expanded-contigs"
-  }
+  binned.input = final.contig.directory
 
   # An empty setting turns off the LAST search of the draft assembly
   binned.draft = get0("binned.draft.directory", ifnotfound = "")
@@ -199,6 +198,7 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
     overwrite          = overwrite,
     quiet              = quiet
   )
+  final.contig.directory = "data-analysis/contigs/3c_binned-contigs"
 } # end binned.assembly
 
 ##################################################################################################
@@ -214,16 +214,10 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
 ## The curated contigs are saved to 3d_curated-contigs. Use them in workflow 3.
 ##################
 
-if (isTRUE(get0("curate.contigs", ifnotfound = FALSE))) {
+if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
 
   # Takes the last contig set that the steps above produced
-  curate.input = contig.start
-  if (isTRUE(get0("expand.missing", ifnotfound = FALSE))) {
-    curate.input = "data-analysis/contigs/3b_expanded-contigs"
-  }
-  if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
-    curate.input = "data-analysis/contigs/3c_binned-contigs"
-  }
+  curate.input = final.contig.directory
 
   curateTargetContigs(
     assembly.directory = curate.input,
@@ -232,6 +226,7 @@ if (isTRUE(get0("curate.contigs", ifnotfound = FALSE))) {
     min.match.percent  = curate.match.percent,
     min.match.length   = curate.match.length,
     min.match.coverage = curate.match.coverage,
+    similarity         = get0("curate.similarity", ifnotfound = 0.9),
     search.method      = curate.search.method,
     threads            = threads,
     memory             = memory,
@@ -241,6 +236,13 @@ if (isTRUE(get0("curate.contigs", ifnotfound = FALSE))) {
     overwrite          = overwrite,
     quiet              = quiet
   )
+  final.contig.directory = "data-analysis/contigs/3d_curated-contigs"
 } # end curate.contigs
 
-#End script
+message("Workflow 2 final contigs: ", final.contig.directory,
+        "\nSet workflow 3 assembly.directory = ",
+        dQuote(final.contig.directory),
+        " and expanded.contig.directory = NULL. The selected directory already ",
+        "contains the complete final contig set.")
+
+# End script

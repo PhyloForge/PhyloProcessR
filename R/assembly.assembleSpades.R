@@ -130,16 +130,6 @@ assembleSpades = function(input.reads = NULL,
   # quiet = TRUE
   # resume = TRUE
 
-  # Same adds to bbmap path
-  if (is.null(spades.path) == FALSE) {
-    b.string = unlist(strsplit(spades.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      spades.path = paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    spades.path = ""
-  }
-
   if (is.null(temp.directory) == TRUE) {
     temp.directory = tempdir()
   }
@@ -208,8 +198,7 @@ assembleSpades = function(input.reads = NULL,
 
   # Sets up the reads. The extension is matched on the file name only, so a
   # directory called "fastq" does not select every file below it.
-  files <- list.files(path = input.reads, full.names = T, recursive = T)
-  reads <- files[grep(pattern = "fastq|fq|clustS", x = basename(files))]
+  reads <- .listFastqFiles(input.reads, recursive = TRUE)
 
   # The sample is the first directory below input.reads. The name is kept for
   # each read so samples are matched exactly and not by a regular expression.
@@ -220,20 +209,31 @@ assembleSpades = function(input.reads = NULL,
   # Skips samples already finished
   if (overwrite == FALSE) {
     done.names <- list.files(assembly.directory, pattern = "\\.fa$")
+    done.paths <- file.path(assembly.directory, done.names)
+    done.names <- done.names[file.exists(done.paths) & file.info(done.paths)$size > 0]
     samples <- samples[!samples %in% gsub("\\.fa$", "", done.names)]
   }
 
   if (length(samples) == 0) {
-    stop("No samples to run or incorrect directory.")
+    return(invisible(NULL))
   }
+
+  spades.command = .toolCommand("spades.py", spades.path)
 
   # Divides the resources between the samples that run at the same time. SPAdes
   # scales poorly above about 8 threads, so several small runs finish a set
   # sooner than one large run. Each concurrent run holds its own peak memory.
-  if (is.null(parallel.samples) == TRUE || parallel.samples < 1) { parallel.samples = 1 }
-  parallel.samples = min(parallel.samples, length(samples))
-  thread.cl = max(1, floor(threads / parallel.samples))
-  mem.cl = max(1, floor(memory / parallel.samples))
+  if (!is.numeric(threads) || length(threads) != 1 || !is.finite(threads) || threads < 1 ||
+      !is.numeric(memory) || length(memory) != 1 || !is.finite(memory) || memory < 1 ||
+      !is.numeric(parallel.samples) || length(parallel.samples) != 1 ||
+      !is.finite(parallel.samples) || parallel.samples < 1) {
+    stop("threads, memory, and parallel.samples must be positive finite values.")
+  }
+  threads = floor(threads)
+  parallel.samples = min(floor(parallel.samples), length(samples), threads,
+                         max(1, floor(memory)))
+  thread.cl = floor(threads / parallel.samples)
+  mem.cl = floor(memory / parallel.samples)
 
   if (parallel.samples > 1) {
     print(paste0("Assembling ", parallel.samples, " samples at a time with ",
@@ -270,7 +270,24 @@ assembleSpades = function(input.reads = NULL,
     dir.create(save.assem, showWarnings = FALSE, recursive = TRUE)
 
     #Sorts reads
-    sample.lanes = unique(gsub("_1.f.*|_2.f.*|_3.f.*|-1.f.*|-2.f.*|-3.f.*|_R1_.*|_R2_.*|_R3_.*|_READ1_.*|_READ2_.*|_READ3_.*|_R1.f.*|_R2.f.*|_R3.f.*|-R1.f.*|-R2.f.*|-R3.f.*|_READ1.f.*|_READ2.f.*|_READ3.f.*|-READ1.f.*|-READ2.f.*|-READ3.f.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", "", sample.reads))
+    read.base = basename(sample.reads)
+    read.number = rep(NA_integer_, length(sample.reads))
+    read.number[grepl("(_R1|-R1|_READ1|-READ1|READ1|_1|-1)([_.-]|$)", read.base,
+                      ignore.case = TRUE)] = 1L
+    read.number[grepl("(_R2|-R2|_READ2|-READ2|READ2|_2|-2)([_.-]|$)", read.base,
+                      ignore.case = TRUE)] = 2L
+    read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3|singleton)", read.base,
+                      ignore.case = TRUE)] = 3L
+    key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]|",
+                         "_[123]|-[123]|_singleton|-singleton|READ.singleton).*$")
+    read.key = sub(key.pattern, "", read.base, ignore.case = TRUE)
+    read.key = sub("\\.(fastq|fq)(\\.gz)?$", "", read.key, ignore.case = TRUE)
+    read.key = sub("[_.-]+$", "", read.key)
+    if (any(is.na(read.number)) || any(nchar(read.key) == 0)) {
+      stop(samples[i], " has FASTQ files without a supported read-number token: ",
+           paste(read.base[is.na(read.number) | nchar(read.key) == 0], collapse = ", "))
+    }
+    sample.lanes = unique(read.key)
 
     #Creates a spades character string to run different reads and library configurations.
     #Spades numbers each library type separately, so paired and single-end
@@ -280,12 +297,13 @@ assembleSpades = function(input.reads = NULL,
     se.count = 0
     for (j in seq_along(sample.lanes)) {
       #Gets the sample reads
-      lib.reads = sample.reads[grep(sample.lanes[j], sample.reads, fixed = TRUE)]
+      lib.index = read.key == sample.lanes[j]
+      lib.reads = sample.reads[lib.index]
 
       #Concatenate together
-      lib.read1 = lib.reads[grep("_1.f.*|-1.f.*|_R1_.*|-R1_.*|_R1-.*|-R1-.*|READ1.*|_R1.fast.*|-R1.fast.*", lib.reads)]
-      lib.read2 = lib.reads[grep("_2.f.*|-2.f.*|_R2_.*|-R2_.*|_R2-.*|-R2-.*|READ2.*|_R2.fast.*|-R2.fast.*", lib.reads)]
-      lib.read3 = lib.reads[grep("_3.f.*|-3.f.*|_R3_.*|-R3_.*|_R3-.*|-R3-.*|READ3.*|_R3.fast.*|-R3.fast.*|_READ3.fast.*|-READ3.fast.*|_singleton.*|-singleton.*|READ-singleton.*|READ_singleton.*|_READ-singleton.*|-READ_singleton.*|-READ-singleton.*|_READ_singleton.*", lib.reads)]
+      lib.read1 = lib.reads[read.number[lib.index] == 1]
+      lib.read2 = lib.reads[read.number[lib.index] == 2]
+      lib.read3 = lib.reads[read.number[lib.index] == 3]
 
       #Checks for different read lengths. Spades needs a paired library before it
       #accepts merged reads, so a lone merged file is given as single-end.
@@ -334,7 +352,7 @@ assembleSpades = function(input.reads = NULL,
     dir.create(tmp.dir, showWarnings = FALSE, recursive = TRUE)
 
     #Runs spades command
-    system(paste0(spades.path, "spades.py ", final.read.string,
+    spades.status = system(paste0(spades.command, " ", final.read.string,
                   "--tmp-dir ", shQuote(tmp.dir), " -o ", shQuote(save.assem),
                   " -k ", k.val, " ", mismatch.string, correction.string,
                   "-t ", use.threads, " -m ", use.memory),
@@ -353,9 +371,16 @@ assembleSpades = function(input.reads = NULL,
     }
 
     #Warns if spades failed, also copies new assemblies to assembly.directory
-    if (file.exists(paste0(save.assem, "/scaffolds.fasta")) == TRUE ){
-      file.copy(paste0(save.assem, "/scaffolds.fasta"),
-                paste0(assembly.directory, "/", samples[i], ".fa"), overwrite = TRUE)
+    scaffold.file = paste0(save.assem, "/scaffolds.fasta")
+    if (spades.status == 0 && file.exists(scaffold.file) == TRUE &&
+        file.access(scaffold.file, 4) == 0 && file.size(scaffold.file) > 0) {
+      final.file = paste0(assembly.directory, "/", samples[i], ".fa")
+      temp.file = paste0(final.file, ".tmp-", Sys.getpid())
+      if (file.copy(scaffold.file, temp.file, overwrite = TRUE) == FALSE ||
+          file.size(temp.file) == 0 || file.rename(temp.file, final.file) == FALSE) {
+        unlink(temp.file)
+        stop("Could not publish the SPAdes scaffolds for ", samples[i], ".")
+      }
     } else {
       unlink(tmp.dir, recursive = TRUE)
       print(paste0("spades error for ", samples[i],
@@ -410,4 +435,3 @@ assembleSpades = function(input.reads = NULL,
   }
 
 }#end function
-

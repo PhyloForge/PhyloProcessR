@@ -64,13 +64,13 @@ collectNovelContigs = function(contig.directory = NULL,
   }
 
   dir.create("logs", recursive = TRUE, showWarnings = FALSE)
+  dir.create(dirname(out.fa), recursive = TRUE, showWarnings = FALSE)
 
   fa.files    = list.files(contig.directory, pattern = "\\.fa$", full.names = TRUE)
   sample.names = gsub("\\.fa$", "", basename(fa.files))
 
   if (length(fa.files) == 0) {
-    print("No contig FASTA files found in contig.directory.")
-    return(invisible(NULL))
+    stop("No contig FASTA files found in contig.directory.")
   }
 
   print(paste0("Collecting novel contigs from ", length(fa.files), " samples..."))
@@ -83,6 +83,7 @@ collectNovelContigs = function(contig.directory = NULL,
 
       samp  = sample.names[i]
       ctgs  = Biostrings::readDNAStringSet(fa.files[i])
+      input.count = length(ctgs)
 
       if (length(ctgs) == 0) {
         return(data.frame(Sample = samp, InputContigs = 0L,
@@ -93,7 +94,7 @@ collectNovelContigs = function(contig.directory = NULL,
       ctgs = ctgs[Biostrings::width(ctgs) >= min.contig.length]
 
       if (length(ctgs) == 0) {
-        return(data.frame(Sample = samp, InputContigs = length(ctgs),
+        return(data.frame(Sample = samp, InputContigs = input.count,
                           RegionsRepresented = 0L, stringsAsFactors = FALSE))
       }
 
@@ -118,7 +119,7 @@ collectNovelContigs = function(contig.directory = NULL,
         seqs    = out.seqs,
         summary = data.frame(
           Sample             = samp,
-          InputContigs       = length(ctgs),
+          InputContigs       = input.count,
           RegionsRepresented = length(best.idx),
           stringsAsFactors   = FALSE
         )
@@ -147,12 +148,10 @@ collectNovelContigs = function(contig.directory = NULL,
     sum.rows[[length(sum.rows) + 1]] = r$summary
   }
 
-  summary.df = do.call(rbind, sum.rows)
-
-  if (length(all.seqs) == 0) {
-    print("No contigs passed filters. Check min.contig.length and input data.")
-    return(invisible(summary.df))
+  if (any(vapply(results, is.null, logical(1)))) {
+    stop("Contig collection failed for one or more samples.")
   }
+  summary.df = do.call(rbind, sum.rows)
 
   # Apply min.taxa filter: only keep loci present in >= min.taxa samples
   locus.names = sub("_\\|_.*$", "", names(all.seqs))
@@ -169,14 +168,18 @@ collectNovelContigs = function(contig.directory = NULL,
 
   # Write combined FASTA
   final.loci = as.list(as.character(all.seqs))
-  PhyloProcessR::writeFasta(
-    sequences = final.loci,
-    names     = names(final.loci),
-    file.out  = out.fa,
-    nbchar    = 1000000,
-    as.string = TRUE,
-    open      = "w"
-  )
+  if (length(all.seqs) == 0) {
+    writeLines(character(), out.fa)
+  } else {
+    PhyloProcessR::writeFasta(
+      sequences = final.loci,
+      names     = names(final.loci),
+      file.out  = out.fa,
+      nbchar    = 1000000,
+      as.string = TRUE,
+      open      = "w"
+    )
+  }
 
   # Per-locus summary: one row per locus with sample count and filter status
   locus.df = data.frame(
@@ -187,12 +190,10 @@ collectNovelContigs = function(contig.directory = NULL,
   )
   locus.df = locus.df[order(-locus.df$N_samples), ]
 
-  # Per-sample summary with contig length stats
-  # Recompute widths for sequences that passed the min.taxa filter
+  # Per-sample counts after the min.taxa filter
   if (length(all.seqs) > 0) {
-    pass.names  = sub("_\\|_.*$", "", names(all.seqs))
-    pass.widths = Biostrings::width(all.seqs)
-    per.samp.loci = tapply(pass.names, sub("^.*_\\|_", "", names(all.seqs)), function(x) length(x))
+    pass.samples = sub("^.*_\\|_", "", names(all.seqs))
+    per.samp.loci = table(pass.samples)
     summary.df$LociPassingFilter = as.integer(per.samp.loci[summary.df$Sample])
     summary.df$LociPassingFilter[is.na(summary.df$LociPassingFilter)] = 0L
   } else {

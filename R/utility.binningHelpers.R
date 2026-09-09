@@ -6,6 +6,18 @@
 # the FASTQ conversion, LAST does the divergent search, and bwa does the
 # mapping. There is no custom parsing of alignment records.
 
+.writeAtomicFasta = function(sequences = NULL,
+                             out.file = NULL) {
+  temp.file = paste0(out.file, ".tmp-", Sys.getpid())
+  Biostrings::writeXStringSet(sequences, temp.file)
+  if (!file.exists(temp.file) || file.size(temp.file) == 0 ||
+      file.rename(temp.file, out.file) == FALSE) {
+    unlink(temp.file)
+    stop("Could not publish FASTA output: ", out.file)
+  }
+  invisible(out.file)
+}
+
 
 # Finds the read pair files of one sample. Reads are selected by name, not by
 # position, so every lane is used and an extra file cannot shift the pair.
@@ -13,18 +25,35 @@
 
   if (dir.exists(sample.read.dir) == FALSE) return(NULL)
 
-  set.reads = list.files(sample.read.dir, full.names = TRUE)
-  set.reads = set.reads[grep("fastq|fq", basename(set.reads))]
+  set.reads = .listFastqFiles(sample.read.dir, recursive = FALSE)
   if (length(set.reads) == 0) return(NULL)
 
-  read1 = sort(set.reads[grep("_1\\.f|-1\\.f|_R1[_.-]|-R1[_.-]|READ1", basename(set.reads))])
-  read2 = sort(set.reads[grep("_2\\.f|-2\\.f|_R2[_.-]|-R2[_.-]|READ2", basename(set.reads))])
+  base.names = basename(set.reads)
+  read.number = rep(NA_integer_, length(set.reads))
+  read.number[grepl("(_R1|-R1|_READ1|-READ1|READ1|_1|-1)([_.-]|$)",
+                    base.names, ignore.case = TRUE)] = 1L
+  read.number[grepl("(_R2|-R2|_READ2|-READ2|READ2|_2|-2)([_.-]|$)",
+                    base.names, ignore.case = TRUE)] = 2L
+  read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3)([_.-]|$)",
+                    base.names, ignore.case = TRUE)] = 3L
+  key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]|",
+                       "_[123]|-[123]).*$")
+  lane.key = sub(key.pattern, "", base.names, ignore.case = TRUE)
+
+  read1.keys = lane.key[read.number == 1]
+  read2.keys = lane.key[read.number == 2]
+  if (length(read1.keys) == 0 || anyDuplicated(read1.keys) ||
+      anyDuplicated(read2.keys) || !setequal(read1.keys, read2.keys)) return(NULL)
+
+  lane.order = sort(read1.keys)
+  read1.index = which(read.number == 1)
+  read2.index = which(read.number == 2)
+  read1 = set.reads[read1.index[match(lane.order, lane.key[read1.index])]]
+  read2 = set.reads[read2.index[match(lane.order, lane.key[read2.index])]]
 
   # fastp writes the merged read of an overlapping pair to READ3. It carries the
   # whole insert, so it holds the flank that the mate of an unmerged pair gives.
-  read3 = sort(set.reads[grep("_3\\.f|-3\\.f|_R3[_.-]|-R3[_.-]|READ3", basename(set.reads))])
-
-  if (length(read1) == 0 || length(read1) != length(read2)) return(NULL)
+  read3 = set.reads[read.number == 3]
 
   return(list(read1 = read1, read2 = read2, read3 = read3))
 }#end .pairSampleReads
@@ -281,11 +310,10 @@
            shQuote(paste0(bin.dir, "/collate_", bait)),
            " | ", samtools.command, " fastq -N",
            " -1 ", shQuote(read1), " -2 ", shQuote(read2),
-           " -0 /dev/null -s ", shQuote(reads.single), " -"),
+           " -0 ", shQuote(reads.single), " -s ", shQuote(reads.single), " -"),
     ignore.stdout = TRUE, ignore.stderr = TRUE))
 
-  # A merged read maps on its own, so it lands here as a singleton. Discarding it
-  # would drop every overlapping pair of the library.
+  # Category-zero merged reads and singleton mates share the single-read file.
   has.size = function(f) file.exists(f) == TRUE && file.size(f) > 0
   have.pairs  = has.size(read1) && has.size(read2)
   have.single = has.size(reads.single)

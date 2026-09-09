@@ -156,6 +156,11 @@ curate.search.method = "last"
 curate.match.length = 50
 curate.match.percent = 60
 curate.match.coverage = 30
+# cd-hit-est identity threshold used only during contig curation. Lower values
+# remove more redundancy but can collapse recently duplicated paralogous copies;
+# higher values preserve more copies but may retain redundant assembly fragments.
+# Values from 0.8 through 1 are supported; 0.9 preserves previous behavior.
+curate.similarity = 0.9
 
 #Assembly settings
 #########################

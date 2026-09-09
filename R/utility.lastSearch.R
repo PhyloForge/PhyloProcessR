@@ -39,12 +39,23 @@
                        threads = 1,
                        quiet = TRUE) {
 
-  # grep removes the comment header. grep returns 1 when there is no hit, which
-  # is not an error here.
+  raw.file = paste0(out.file, ".last-raw-", Sys.getpid())
+  on.exit(unlink(raw.file), add = TRUE)
+
+  # Keep the LAST status separate from the header filtering status. A failed
+  # executable must not be mistaken for a successful search with no hits.
   .runCommand(paste0(lastal.command, " -P ", threads, " -f BlastTab+ ",
                      shQuote(db.prefix), " ", shQuote(query.file),
-                     " | grep -v '^#' > ", shQuote(out.file), " || true"),
+                     " > ", shQuote(raw.file)),
               quiet = quiet, task = "LAST search", keep.stdout = TRUE)
+
+  grep.status = suppressWarnings(system(paste0("grep -v '^#' ", shQuote(raw.file),
+                                                " > ", shQuote(out.file))))
+  if (grep.status == 1) {
+    file.create(out.file)
+  } else if (grep.status != 0) {
+    stop("The LAST result filtering step failed with exit status ", grep.status, ".")
+  }
 
   return(invisible(NULL))
 }#end .lastSearch

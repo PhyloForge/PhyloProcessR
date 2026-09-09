@@ -11,6 +11,7 @@ curateTargetContigs(
   min.match.percent = 60,
   min.match.length = 50,
   min.match.coverage = 30,
+  similarity = 0.9,
   search.method = c("last", "blast"),
   threads = 1,
   memory = 1,
@@ -44,6 +45,11 @@ permissive, because a later step can still remove a short locus, but this
 step cannot recover one it dropped. The rescue seeds of
 \code{assembleBinnedTargets} are short by design, and later rounds build
 them out. Default: \code{30}.}
+
+\item{similarity}{sequence-identity threshold used by \code{cd-hit-est} to
+remove redundant contigs before target matching. Lower values collapse
+more similar contigs and can merge recent paralogous copies. Must be from
+\code{0.8} through \code{1}. Default: \code{0.9}.}
 
 \item{search.method}{which program matches the target markers to the contigs.
 \code{"last"} (default) uses LAST, which matches a contig that is up to

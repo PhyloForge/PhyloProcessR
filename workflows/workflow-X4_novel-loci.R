@@ -20,7 +20,7 @@ setwd(working.directory)
 ## Outputs to data-analysis/novel-loci-discovery/:
 ##   sample-bams/      — per-sample genome-mapped BAM files (input to step 2)
 ##   novel_regions.bed — coordinates of shared novel regions
-##   novel_targets.fa  — genome sequences at those regions (target file for steps 4-5)
+##   novel_targets.fa  — genome sequences at those regions (target file for step 5)
 ##################################################################################################
 
 discoverSharedRegions(
@@ -47,12 +47,17 @@ discoverSharedRegions(
 ##################################################################################################
 ## Step 2: Assemble per-sample contigs for each novel region
 ##
-## For each sample and each discovered region, extracts the reads that mapped to that
-## region and runs SPAdes to assemble contigs. One FASTA per sample is written to
+## For each sample, extracts reads across all discovered regions and runs SPAdes once.
+## BLAST assigns assembled contigs to the regions. One FASTA per sample is written to
 ## data-analysis/contigs/9_genome-contigs/.
 ##################################################################################################
 
-if (file.exists("data-analysis/novel-loci-discovery/novel_regions.bed")) {
+region.file = "data-analysis/novel-loci-discovery/novel_regions.bed"
+if (!file.exists(region.file) || file.size(region.file) == 0) {
+  stop("No novel regions are available. Downstream X4 steps were not run.")
+}
+
+if (file.exists(region.file)) {
 
   assembleSharedRegions(
     discover.directory  = "data-analysis/novel-loci-discovery",
@@ -75,8 +80,9 @@ if (file.exists("data-analysis/novel-loci-discovery/novel_regions.bed")) {
 ##################################################################################################
 ## Step 3: Filter contigs for heterozygosity
 ##
-## Removes contigs with an excessive proportion of IUPAC ambiguity bases, which can
-## indicate chimeric assembly or mis-assembled paralogs.
+## Removes contigs with an excessive proportion of IUPAC ambiguity bases.
+## Ordinary SPAdes contigs do not encode heterozygous variants with IUPAC codes,
+## so this step does not validate heterozygosity or exclude paralogs in X4.
 ##################################################################################################
 
 if (file.exists("data-analysis/contigs") == FALSE) { dir.create("data-analysis/contigs") }
@@ -130,6 +136,10 @@ if (annotate.targets == TRUE) {
 dir.create("data-analysis/alignments", showWarnings = FALSE)
 
 if (align.targets == TRUE) {
+  to.align.file = paste0("data-analysis/", dataset.name, "_to-align.fa")
+  if (!file.exists(to.align.file) || file.size(to.align.file) == 0) {
+    stop("No novel contigs passed collection. Alignment and trimming were not run.")
+  }
   alignTargets(
     targets.to.align  = paste0("data-analysis/", dataset.name, "_to-align.fa"),
     target.file       = "data-analysis/novel-loci-discovery/novel_targets.fa",

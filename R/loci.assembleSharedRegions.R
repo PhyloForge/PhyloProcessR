@@ -75,18 +75,6 @@ assembleSharedRegions = function(discover.directory = NULL,
   # bedtools.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
   # blast.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
 
-  # Path normalisation
-  norm.path = function(p) {
-    if (is.null(p)) return("")
-    b = unlist(strsplit(p, ""))
-    if (b[length(b)] != "/") p = paste0(p, "/")
-    p
-  }
-  spades.path   = norm.path(spades.path)
-  samtools.path = norm.path(samtools.path)
-  bedtools.path = norm.path(bedtools.path)
-  blast.path    = norm.path(blast.path)
-
   # Input checks
   if (is.null(discover.directory)) { print("discover.directory not provided."); return(NULL) }
   if (is.null(output.directory))   { print("output.directory not provided.");   return(NULL) }
@@ -96,23 +84,39 @@ assembleSharedRegions = function(discover.directory = NULL,
   bam.dir     = paste0(discover.directory, "/sample-bams")
 
   if (!file.exists(region.bed)) {
-    print(paste0("novel_regions.bed not found in: ", discover.directory)); return(NULL)
+    stop("novel_regions.bed not found in: ", discover.directory)
   }
   if (!file.exists(novel.fa)) {
-    print(paste0("novel_targets.fa not found in: ", discover.directory)); return(NULL)
+    stop("novel_targets.fa not found in: ", discover.directory)
   }
   if (!dir.exists(bam.dir)) {
-    print(paste0("sample-bams/ not found in: ", discover.directory)); return(NULL)
+    stop("sample-bams/ not found in: ", discover.directory)
   }
 
+  spades.command = .toolCommand("spades.py", spades.path)
+  samtools.command = .toolCommand("samtools", samtools.path)
+  bedtools.command = .toolCommand("bedtools", bedtools.path)
+  blast.command = .toolCommand("blastn", blast.path)
+  makeblastdb.command = .toolCommand("makeblastdb", blast.path)
+  if (memory < 4) stop("Assembly requires at least 4 GB of memory.")
+
   dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
+  if (overwrite) {
+    old.fastas = list.files(output.directory, pattern = "\\.fa$", full.names = TRUE)
+    unlink(old.fastas)
+  }
 
   # Load region BED
+  if (file.size(region.bed) == 0) {
+    print("novel_regions.bed is empty -- no shared regions were found.")
+    return(invisible(NULL))
+  }
   regions = data.table::fread(region.bed, sep = "\t", header = FALSE)
   if (is.null(regions) || nrow(regions) == 0) {
     print("novel_regions.bed is empty -- no shared regions were found.")
     return(NULL)
   }
+  if (ncol(regions) != 4) stop("novel_regions.bed must contain four columns.")
   data.table::setnames(regions, c("chrom", "start", "end", "sample_count"))
   # Sanitize region names the same way discoverSharedRegions sanitizes novel_targets.fa
   # sequence names -- must match exactly so the BLAST tName lookup works.
@@ -125,85 +129,88 @@ assembleSharedRegions = function(discover.directory = NULL,
   # Get per-sample BAM files
   bam.files = list.files(bam.dir, pattern = "\\.bam$", full.names = TRUE)
   bam.files = bam.files[!grepl("\\.bai$", bam.files)]
+  sample.file = file.path(discover.directory, "samples.txt")
+  if (file.exists(sample.file)) {
+    current.samples = readLines(sample.file)
+    bam.files = file.path(bam.dir, paste0(current.samples, ".bam"))
+    if (!all(file.exists(bam.files))) stop("A current sample BAM is missing.")
+  }
   sample.names = gsub("\\.bam$", "", basename(bam.files))
 
-  if (length(bam.files) == 0) { print("No BAM files found in sample-bams/."); return(NULL) }
+  if (length(bam.files) == 0) stop("No BAM files found in sample-bams/.")
   print(paste0("Assembling ", length(sample.names), " samples..."))
 
   ##################################################################################################
   ## Build a shared BLAST database from novel_targets.fa (once, before parallel loop)
   ##################################################################################################
   blast.db = paste0(discover.directory, "/novel_targets_blast_db")
-  system(paste0(blast.path, "makeblastdb -in ", novel.fa,
-                " -dbtype nucl -out ", blast.db),
-         ignore.stdout = quiet, ignore.stderr = quiet)
+  .runCommand(paste0(makeblastdb.command, " -in ", shQuote(novel.fa),
+                " -dbtype nucl -out ", shQuote(blast.db)),
+         quiet = quiet)
 
   kmer.str  = paste0(kmer.values, collapse = ",")
-  mem.per   = max(floor(memory / threads), 4)
+  workers = min(threads, length(sample.names), floor(memory / 4))
+  mem.per = floor(memory / workers)
   blast.headers = c("qName", "tName", "pident", "length", "mismatch", "gapopen",
                     "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore")
 
   ##################################################################################################
   ## Per-sample assembly (parallel)
   ##################################################################################################
-  parallel::mclapply(seq_along(sample.names), function(s) {
+  sample.results = parallel::mclapply(seq_along(sample.names), function(s) {
+    samp = sample.names[s]
+    out.fa = file.path(output.directory, paste0(samp, ".fa"))
+    done.file = file.path(output.directory, paste0(".", samp, ".complete"))
     tryCatch({
 
-      samp = sample.names[s]
       bam  = bam.files[s]
 
-      if (overwrite == FALSE && file.exists(paste0(output.directory, "/", samp, ".fa"))) {
+      if (!overwrite && file.exists(out.fa) && file.exists(done.file)) {
         print(paste0(samp, ": contig FASTA already exists -- skipping."))
-        return(NULL)
+        return(TRUE)
       }
 
-      samp.dir = paste0(discover.directory, "/", samp)
+      unlink(c(out.fa, done.file))
+      samp.dir = tempfile(paste0("assembly_", samp, "_"), tmpdir = discover.directory)
       dir.create(samp.dir, showWarnings = FALSE)
 
       ##########################################################################
       # Step A: Extract all reads overlapping any novel region in one BAM pass
       ##########################################################################
       novel.bam = paste0(samp.dir, "/novel_reads.bam")
-      ret0 = system(paste0(samtools.path, "samtools view -b -L ", region.bed,
-                           " -o ", novel.bam, " ", bam),
-                    ignore.stdout = quiet, ignore.stderr = quiet)
+      ret0 = .runCommand(paste0(samtools.command, " view -b -L ", shQuote(region.bed),
+                           " -o ", shQuote(novel.bam), " ", shQuote(bam)),
+                    quiet = quiet)
       if (ret0 != 0 || !file.exists(novel.bam) || file.size(novel.bam) == 0) {
-        system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": failed to extract novel-region reads. Skipping."))
-        return(NULL)
+        unlink(samp.dir, recursive = TRUE)
+        stop("Failed to extract novel-region reads for ", samp)
       }
-      system(paste0(samtools.path, "samtools index ", novel.bam),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+      .runCommand(paste0(samtools.command, " index ", shQuote(novel.bam)),
+             quiet = quiet)
 
       n.novel = as.integer(trimws(
-        system(paste0(samtools.path, "samtools view -c ", novel.bam), intern = TRUE)))
+        .runCommandOutput(paste0(samtools.command, " view -c ", shQuote(novel.bam)))))
       print(paste0(samp, ": ", n.novel, " reads mapped to novel regions."))
 
       if (is.na(n.novel) || n.novel == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": no reads in novel regions -- skipping."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
 
       ##########################################################################
       # Step B: Count reads per region in one bedtools pass to determine which
       # regions have sufficient coverage (used to filter contigs after BLAST)
       ##########################################################################
-      cov.out = system(paste0(bedtools.path, "bedtools coverage -a ", region.bed,
-                              " -b ", novel.bam, " -counts"),
-                       intern = TRUE, ignore.stderr = quiet)
-
-      if (length(cov.out) == 0) {
-        system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": bedtools coverage produced no output -- skipping."))
-        return(NULL)
-      }
-
-      region.counts    = data.table::fread(text = paste(cov.out, collapse = "\n"), header = FALSE)
-      if (ncol(region.counts) == 0) {
-        system(paste0("rm -rf ", samp.dir))
-        print(paste0(samp, ": bedtools coverage output could not be parsed -- skipping."))
-        return(NULL)
+      cov.file = file.path(samp.dir, "region_counts.bed")
+      .runCommand(paste0(bedtools.command, " coverage -a ", shQuote(region.bed),
+                          " -b ", shQuote(novel.bam), " -counts > ", shQuote(cov.file)),
+                  quiet = quiet, keep.stdout = TRUE, task = "per-region read counts")
+      region.counts = data.table::fread(cov.file, header = FALSE)
+      if (nrow(region.counts) != nrow(regions) || ncol(region.counts) != 5) {
+        stop("Unexpected region count table for ", samp)
       }
       reads.per.region = region.counts[[ncol(region.counts)]]
       active.regions   = region.names[reads.per.region >= min.reads.assemble]
@@ -212,9 +219,11 @@ assembleSharedRegions = function(discover.directory = NULL,
                    " regions have >= ", min.reads.assemble, " reads."))
 
       if (length(active.regions) == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": no regions with sufficient reads -- skipping."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
 
       ##########################################################################
@@ -223,23 +232,26 @@ assembleSharedRegions = function(discover.directory = NULL,
       novel.fq   = paste0(samp.dir, "/novel_reads.fastq")
       spades.dir = paste0(samp.dir, "/spades_all")
 
-      system(paste0(samtools.path, "samtools fastq -o ", novel.fq, " ", novel.bam),
-             ignore.stdout = quiet, ignore.stderr = quiet)
-      system(paste0("rm -f ", novel.bam, " ", novel.bam, ".bai"))
+      .runPipeline(paste0(samtools.command, " collate -u -O ", shQuote(novel.bam),
+                           " | ", samtools.command, " fastq -N - > ", shQuote(novel.fq)),
+                   quiet = quiet, keep.stdout = TRUE, task = "assembly FASTQ conversion")
+      unlink(c(novel.bam, paste0(novel.bam, ".bai")))
 
-      system(paste0(spades.path, "spades.py -s ", novel.fq,
+      .runCommand(paste0(spades.command, " -s ", shQuote(novel.fq),
                     " -k ", kmer.str,
-                    " -o ", spades.dir,
+                    " -o ", shQuote(spades.dir),
                     " -m ", mem.per,
                     " --threads 1 --careful"),
-             ignore.stdout = quiet, ignore.stderr = quiet)
-      system(paste0("rm -f ", novel.fq))
+             quiet = quiet)
+      unlink(novel.fq)
 
       contig.fa = paste0(spades.dir, "/contigs.fasta")
       if (!file.exists(contig.fa) || file.size(contig.fa) == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": SPAdes produced no contigs."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
 
       ##########################################################################
@@ -247,30 +259,34 @@ assembleSharedRegions = function(discover.directory = NULL,
       # tName values in the output are chr_start_end, matching region.names.
       ##########################################################################
       blast.out = paste0(samp.dir, "/contig_blast.txt")
-      system(paste0(blast.path, "blastn -task blastn -db ", blast.db,
-                    " -query ", contig.fa,
-                    " -out ", blast.out,
+      .runCommand(paste0(blast.command, " -task blastn -db ", shQuote(blast.db),
+                    " -query ", shQuote(contig.fa),
+                    " -out ", shQuote(blast.out),
                     " -outfmt \"6 qseqid sseqid pident length mismatch gapopen",
                     " qstart qend sstart send evalue bitscore\"",
                     " -num_threads 1 -evalue 0.001"),
-             ignore.stdout = quiet, ignore.stderr = quiet)
+             quiet = quiet)
 
       ctgs = Biostrings::readDNAStringSet(contig.fa)
-      system(paste0("rm -rf ", spades.dir))
+      unlink(spades.dir, recursive = TRUE)
 
       if (!file.exists(blast.out) || file.size(blast.out) == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": no BLAST hits for assembled contigs."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
 
       blast.data = data.table::fread(blast.out, header = FALSE)
-      system(paste0("rm -f ", blast.out))
+      unlink(blast.out)
 
       if (nrow(blast.data) == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": no BLAST hits for assembled contigs."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
       data.table::setnames(blast.data, blast.headers)
 
@@ -284,9 +300,11 @@ assembleSharedRegions = function(discover.directory = NULL,
       blast.best = blast.best[tName %in% active.regions]
 
       if (nrow(blast.best) == 0) {
-        system(paste0("rm -rf ", samp.dir))
+        unlink(samp.dir, recursive = TRUE)
         print(paste0(samp, ": no contigs passed the read-depth filter."))
-        return(NULL)
+        writeLines(character(), out.fa)
+        file.create(done.file)
+        return(TRUE)
       }
 
       # Name contigs as region_contig_N (N = rank within region by bitscore desc)
@@ -306,23 +324,29 @@ assembleSharedRegions = function(discover.directory = NULL,
         print(paste0(samp, ": assembled ", length(all.contigs), " contigs across ",
                      length(unique(blast.best$tName)), " regions."))
       } else {
+        writeLines(character(), out.fa)
         print(paste0(samp, ": no contigs assembled."))
       }
 
       # Remove the per-sample working directory now that the FASTA is written
-      system(paste0("rm -rf ", samp.dir))
+      unlink(samp.dir, recursive = TRUE)
 
       rm(all.contigs, blast.data, blast.best, ctgs)
       gc()
+      file.create(done.file)
+      TRUE
 
     }, error = function(e) {
       print(paste0("Error assembling ", sample.names[s], ": ", e$message))
-      return(NULL)
+      FALSE
     })
-  }, mc.cores = threads)
+  }, mc.cores = workers)
+  if (!all(vapply(sample.results, isTRUE, logical(1)))) {
+    stop("Assembly failed for one or more samples. Correct the errors and rerun.")
+  }
 
   # Clean up shared BLAST database
-  system(paste0("rm -f ", blast.db, "*"))
+  unlink(Sys.glob(paste0(blast.db, ".*")))
 
   print("Shared region assembly complete.")
 

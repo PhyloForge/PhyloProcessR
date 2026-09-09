@@ -209,9 +209,10 @@ expandMissingAssembly = function(assembly.directory = NULL,
   # Writes the contigs that already matched a target. Used whenever no new contig
   # is added for a sample.
   saveOriginals = function(sample.name, sample.dir, save.file) {
-    found.contigs = Biostrings::readDNAStringSet(
-      paste0(sample.dir, "/", sample.name, "_matching-contigs.fa"))
-    Biostrings::writeXStringSet(found.contigs, save.file)
+    input.name = file.names[sub(fasta.pattern, "", file.names) == sample.name][1]
+    original.contigs = Biostrings::readDNAStringSet(
+      file.path(assembly.directory, input.name))
+    Biostrings::writeXStringSet(original.contigs, save.file)
   }
 
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
@@ -256,7 +257,14 @@ expandMissingAssembly = function(assembly.directory = NULL,
     ), ignore.stdout = quiet, ignore.stderr = quiet)
 
     if (!file.exists(blast.out) || file.size(blast.out) == 0) {
-      print(paste0(sample, ": no BLAST matches to reference. Skipping."))
+      Biostrings::writeXStringSet(Biostrings::DNAStringSet(),
+                                  paste0(species.dir, "/", sample,
+                                         "_matching-contigs.fa"))
+      write.table(as.data.frame(stats::setNames(replicate(length(headers),
+        logical(0), simplify = FALSE), headers)),
+        file = paste0(species.dir, "/filtered-blast-match.txt"),
+        row.names = FALSE, quote = FALSE, sep = "\t")
+      print(paste0(sample, ": no BLAST matches to reference."))
       return(NULL)
     }
 
@@ -417,20 +425,14 @@ expandMissingAssembly = function(assembly.directory = NULL,
       print(paste0(sample, ": no read directory found. Skipping."))
       next
     }
-    set.reads = list.files(paste0(actual.read.dir, "/", input.reads),
-                           full.names = TRUE)
-    set.reads = set.reads[grep("fastq|fq", basename(set.reads))]
-
-    # Reads are selected by name, not by position, so every lane is mapped and an
-    # extra file in the folder cannot shift the pair.
-    read1 = sort(set.reads[grep("_1\\.f|-1\\.f|_R1[_.-]|-R1[_.-]|READ1", basename(set.reads))])
-    read2 = sort(set.reads[grep("_2\\.f|-2\\.f|_R2[_.-]|-R2[_.-]|READ2", basename(set.reads))])
-
-    if (length(read1) == 0 || length(read1) != length(read2)) {
-      warning(sample, ": found ", length(read1), " read1 and ", length(read2),
-              " read2 files in ", mapping.reads, ". Paired reads are required. Skipping.")
+    read.pair = .pairSampleReads(paste0(actual.read.dir, "/", input.reads))
+    if (is.null(read.pair)) {
+      warning(sample, ": complete lane-matched paired reads were not found in ",
+              mapping.reads, ". Skipping.")
       next
     }
+    read1 = read.pair$read1
+    read2 = read.pair$read2
 
     ##########
     # Build HISAT2 index from missing targets (per-sample, unavoidable)
@@ -452,18 +454,18 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     # Extract: both mapped, R1-mapped/R2-unmapped, R2-mapped/R1-unmapped
     sam.file = paste0(species.dir, "/mapped_reads.sam")
-    system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -F 4 ", shQuote(sam.file),
-                  " > ", shQuote(paste0(species.dir, "/mapped_all.bam"))),
-           ignore.stdout = quiet, ignore.stderr = quiet)
-    system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -f 4 -F 264 ", shQuote(sam.file),
-                  " > ", shQuote(paste0(species.dir, "/mapped1.bam"))),
-           ignore.stdout = quiet, ignore.stderr = quiet)
-    system(paste0(samtools.path, "samtools view -@ ", threads,
-                  " -b -f 8 -F 260 ", shQuote(sam.file),
-                  " > ", shQuote(paste0(species.dir, "/mapped2.bam"))),
-           ignore.stdout = quiet, ignore.stderr = quiet)
+    .runCommand(paste0(samtools.path, "samtools view -@ ", threads,
+                       " -b -F 4 -o ", shQuote(paste0(species.dir, "/mapped_all.bam")),
+                       " ", shQuote(sam.file)), quiet = quiet,
+                task = paste(sample, "mapped read extraction"))
+    .runCommand(paste0(samtools.path, "samtools view -@ ", threads,
+                       " -b -f 4 -F 264 -o ", shQuote(paste0(species.dir, "/mapped1.bam")),
+                       " ", shQuote(sam.file)), quiet = quiet,
+                task = paste(sample, "first-mate extraction"))
+    .runCommand(paste0(samtools.path, "samtools view -@ ", threads,
+                       " -b -f 8 -F 260 -o ", shQuote(paste0(species.dir, "/mapped2.bam")),
+                       " ", shQuote(sam.file)), quiet = quiet,
+                task = paste(sample, "second-mate extraction"))
 
     system(paste0(samtools.path, "samtools merge -f -@ ", threads, " ",
                   shQuote(paste0(species.dir, "/mapped_combined.bam")), " ",
@@ -588,7 +590,7 @@ expandMissingAssembly = function(assembly.directory = NULL,
     }
 
     # Bitscore comes before identity so a long strong hit beats a short exact one
-    data.table::setorder(filt.data2, qName, tName, -bitscore, -pident, evalue)
+    data.table::setorder(filt.data2, qName, -bitscore, -pident, evalue, tName)
 
     # Keeps the best hit for each new contig and renames the contig to its target.
     # The expanded assembly then uses the same contig names as the input assembly.
@@ -612,8 +614,9 @@ expandMissingAssembly = function(assembly.directory = NULL,
 
     # Combine original matching contigs + newly assembled. The original contigs
     # come first so they keep their name if a target is recovered twice.
-    found.contigs  = Biostrings::readDNAStringSet(
-      paste0(species.dir, "/", sample, "_matching-contigs.fa"))
+    input.name = file.names[sub(fasta.pattern, "", file.names) == sample][1]
+    found.contigs = Biostrings::readDNAStringSet(
+      file.path(assembly.directory, input.name))
     output.contigs = append(found.contigs, new.contigs)
     names(output.contigs) = make.unique(names(output.contigs), sep = "_")
 

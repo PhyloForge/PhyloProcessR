@@ -40,6 +40,11 @@
 #'   \code{assembleBinnedTargets} are short by design, and later rounds build
 #'   them out. Default: \code{30}.
 #'
+#' @param similarity sequence-identity threshold used by \code{cd-hit-est} to
+#'   remove redundant contigs before target matching. Lower values collapse
+#'   more similar contigs and can merge recent paralogous copies. Must be from
+#'   \code{0.8} through \code{1}. Default: \code{0.9}.
+#'
 #' @param search.method which program matches the target markers to the contigs.
 #'   \code{"last"} (default) uses LAST, which matches a contig that is up to
 #'   about 35 percent divergent from its target. \code{"blast"} uses
@@ -80,6 +85,7 @@ curateTargetContigs = function(assembly.directory = NULL,
                                min.match.percent = 60,
                                min.match.length = 50,
                                min.match.coverage = 30,
+                               similarity = 0.9,
                                search.method = c("last", "blast"),
                                threads = 1,
                                memory = 1,
@@ -89,28 +95,29 @@ curateTargetContigs = function(assembly.directory = NULL,
                                overwrite = FALSE,
                                quiet = TRUE) {
 
-  #Add the slash character to path
-  if (is.null(blast.path) == FALSE){
-    b.string = unlist(strsplit(blast.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      blast.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { blast.path = "" }
-
-  if (is.null(cdhit.path) == FALSE){
-    b.string = unlist(strsplit(cdhit.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      cdhit.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { cdhit.path = "" }
-
   search.method = match.arg(search.method)
-  last.path = .programPrefix(last.path)
 
   #Initial checks
   if (is.null(assembly.directory) == TRUE) { stop("Please provide a contig directory.") }
+  if (dir.exists(assembly.directory) == FALSE) { stop("Contig directory not found.") }
   if (is.null(target.file) == TRUE) { stop("Please provide a target file.") }
   if (file.exists(target.file) == FALSE) { stop("Target file not found.") }
+  if (!is.numeric(similarity) || length(similarity) != 1 ||
+      !is.finite(similarity) || similarity < 0.8 || similarity > 1) {
+    stop("similarity must be a finite value from 0.8 through 1.")
+  }
+
+  if (similarity >= 0.95) {
+    word.length = 10
+  } else if (similarity >= 0.90) {
+    word.length = 8
+  } else if (similarity >= 0.88) {
+    word.length = 7
+  } else if (similarity >= 0.85) {
+    word.length = 6
+  } else {
+    word.length = 5
+  }
 
   if (dir.exists(output.directory) == FALSE) {
     dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
@@ -119,28 +126,46 @@ curateTargetContigs = function(assembly.directory = NULL,
     dir.create("logs/sample_logs", recursive = TRUE, showWarnings = FALSE)
   }
 
-  #Gets contig file names
-  file.names = list.files(assembly.directory)
+  fasta.pattern = "\\.(fa|fas|fasta|fna)$"
+  file.names = list.files(assembly.directory, pattern = fasta.pattern,
+                          ignore.case = TRUE)
+  if (length(file.names) == 0) stop("No FASTA files found in the contig directory.")
+
+  if (!is.numeric(threads) || length(threads) != 1 || !is.finite(threads) || threads < 1 ||
+      !is.numeric(memory) || length(memory) != 1 || !is.finite(memory) || memory <= 0) {
+    stop("threads and memory must be positive finite values.")
+  }
+  threads = min(floor(threads), length(file.names))
+  cdhit.command = .toolCommand("cd-hit-est", cdhit.path)
+  if (search.method == "last") {
+    lastdb.command = .toolCommand("lastdb", last.path)
+    lastal.command = .toolCommand("lastal", last.path)
+  } else {
+    makeblastdb.command = .toolCommand("makeblastdb", blast.path)
+    blastn.command = .toolCommand("blastn", blast.path)
+  }
 
   #headers for the search results
   headers = c("qName", "tName", "pident", "matches", "misMatches", "gapopen",
             "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
-  mem.cl <- floor(memory / threads)
+  mem.cl = max(1, floor((memory * 1000) / threads))
 
   results = parallel::mclapply(seq_along(file.names), function(i) {
   tryCatch({
 
     #Sets up working directories for each species
-    sample = gsub(pattern = ".fa$", replacement = "", x = file.names[i])
+    sample = sub(fasta.pattern, "", file.names[i], ignore.case = TRUE)
 
     #Checks if this has been done already (before creating any directory)
     if (overwrite == FALSE){
-      if (file.exists(paste0(output.directory, "/", sample, ".fa")) == TRUE){
+      existing.file = paste0(output.directory, "/", sample, ".fa")
+      if (file.exists(existing.file) == TRUE && file.size(existing.file) > 0) {
         print(paste0(sample, " already finished, skipping. Set overwrite = TRUE to redo."))
         return(NULL)
       }
     }#end
+    if (overwrite == TRUE) unlink(paste0(output.directory, "/", sample, ".fa"))
 
     # Temporary working directory kept inside logs so output.directory stays clean
     species.dir = paste0("logs/sample_logs/", sample)
@@ -150,14 +175,20 @@ curateTargetContigs = function(assembly.directory = NULL,
     # Part A: reduce redundancy
     #########################################################################
 
-    system(paste0(
-      cdhit.path, "cd-hit-est -i ", assembly.directory, "/", file.names[i],
-      " -o ", species.dir, "/", sample, "_red.fa -p 0 -T 1",
-      " -n 8 -c 0.9 -M ", mem.cl * 1000
-    ))
+    red.file = paste0(species.dir, "/", sample, "_red.fa")
+    rename.file = paste0(species.dir, "/", sample, "_rename.fa")
+    search.file = paste0(species.dir, "/", sample, "_target-blast-match.txt")
+    .runCommand(paste0(cdhit.command, " -i ",
+                       shQuote(file.path(assembly.directory, file.names[i])),
+                       " -o ", shQuote(red.file), " -p 0 -T 1",
+                       " -n ", word.length, " -c ", similarity, " -M ", mem.cl),
+                quiet = quiet, task = paste(sample, "cd-hit-est"))
+    if (!file.exists(red.file) || file.size(red.file) == 0) {
+      stop("cd-hit-est produced no sequences for ", sample, ".")
+    }
 
     ### Read in data
-    all.data = Biostrings::readDNAStringSet(file = paste0(species.dir, "/", sample, "_red.fa"), format = "fasta")
+    all.data = Biostrings::readDNAStringSet(file = red.file, format = "fasta")
 
     names(all.data) = paste0("contig_", seq(seq_along(all.data)))
 
@@ -165,7 +196,7 @@ curateTargetContigs = function(assembly.directory = NULL,
     final.loci = as.list(as.character(all.data))
     PhyloProcessR::writeFasta(
       sequences = final.loci, names = names(final.loci),
-      paste0(species.dir, "/", sample, "_rename.fa"),
+      rename.file,
       nbchar = 1000000, as.string = TRUE, open = "w"
     )
 
@@ -177,42 +208,48 @@ curateTargetContigs = function(assembly.directory = NULL,
     # file, so a hit names the target first and the contig second.
     # One thread per search, because the samples already run in parallel.
     if (search.method == "last") {
-      .lastBuildDB(reference.file = paste0(species.dir, "/", sample, "_rename.fa"),
+      .lastBuildDB(reference.file = rename.file,
                    db.prefix = paste0(species.dir, "/", sample, "_last_db"),
-                   lastdb.command = paste0(last.path, "lastdb"),
+                   lastdb.command = lastdb.command,
                    threads = 1,
                    quiet = quiet)
 
       .lastSearch(query.file = target.file,
                   db.prefix = paste0(species.dir, "/", sample, "_last_db"),
-                  out.file = paste0(species.dir, "/", sample, "_target-blast-match.txt"),
-                  lastal.command = paste0(last.path, "lastal"),
+                  out.file = search.file,
+                  lastal.command = lastal.command,
                   threads = 1,
                   quiet = quiet)
     } else {
-      system(paste0(
-        blast.path, "makeblastdb -in ", species.dir, "/", sample, "_rename.fa",
-        " -parse_seqids -dbtype nucl -out ", species.dir, "/", sample, "_nucl-blast_db"
-      ), ignore.stdout = quiet)
+      .runCommand(paste0(makeblastdb.command, " -in ", shQuote(rename.file),
+        " -parse_seqids -dbtype nucl -out ",
+        shQuote(paste0(species.dir, "/", sample, "_nucl-blast_db"))),
+        quiet = quiet, task = paste(sample, "BLAST database"))
 
-      system(paste0(
-        blast.path, "blastn -task dc-megablast -db ", species.dir, "/", sample, "_nucl-blast_db -evalue 0.001",
-        " -query ", target.file, " -out ", species.dir, "/", sample, "_target-blast-match.txt",
+      .runCommand(paste0(blastn.command, " -task dc-megablast -db ",
+        shQuote(paste0(species.dir, "/", sample, "_nucl-blast_db")), " -evalue 0.001",
+        " -query ", shQuote(target.file), " -out ", shQuote(search.file),
         " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
         " -num_threads 1"
-      ))
+      ), quiet = quiet, task = paste(sample, "BLAST search"))
     }
 
     # Remove the search database and the large intermediate contig files
-    system(paste0("rm -f ", species.dir, "/*nucl-blast_db* ", species.dir, "/*_last_db*"))
-    system(paste0("rm -f ",
-      species.dir, "/", sample, "_red.fa ",
-      species.dir, "/", sample, "_red.fa.clstr ",
-      species.dir, "/", sample, "_rename.fa"
-    ))
+    cleanup.files = list.files(species.dir, full.names = TRUE)
+    cleanup.base = basename(cleanup.files)
+    cleanup.files = cleanup.files[
+      startsWith(cleanup.base, paste0(sample, "_nucl-blast_db")) |
+      startsWith(cleanup.base, paste0(sample, "_last_db"))]
+    unlink(c(cleanup.files, red.file, paste0(red.file, ".clstr"), rename.file))
 
     #Loads in match data
-    match.data = data.table::fread(paste0(species.dir, "/", sample, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+    if (!file.exists(search.file)) stop("Search output was not created for ", sample, ".")
+    if (file.size(search.file) == 0) {
+      print(paste0(sample, " had no matches. Skipping"))
+      return(NULL)
+    }
+    match.data = data.table::fread(search.file, sep = "\t", header = FALSE,
+                                   stringsAsFactors = FALSE)
     data.table::setnames(match.data, headers)
 
     #Matches need to be greater than 12
@@ -234,226 +271,101 @@ curateTargetContigs = function(assembly.directory = NULL,
     #Reads in contigs
     contigs = all.data
 
-    #########################################################################
-    #Part C: Multiple sample contigs (tName) matching to one target (qName)
-    #########################################################################
-    #Pulls out
-    target.names = unique(filt.data[duplicated(filt.data$qName) == T,]$qName)
-
-    #Saves non duplicated data
-    good.data = filt.data[!filt.data$qName %in% target.names,]
-
-    #Only runs if there are duplicates
-    fix.seq = Biostrings::DNAStringSet()
-    if (length(target.names) != 0){
-      new.data = c()
-      for (j in 1:length(target.names)) {
-        #Subsets data
-        sub.match = filt.data[filt.data$qName %in% target.names[j],]
-
-        ########
-        #Saves if they are on the same contig and same locus and fragmented for some reason
-        ####################
-        if (length(unique(sub.match$qName)) == 1 && length(unique(sub.match$tName)) == 1){
-          new.qstart = min(sub.match$qStart, sub.match$qEnd)[1]
-          new.qend = max(sub.match$qStart, sub.match$qEnd)[1]
-          new.tstart = min(sub.match$tStart, sub.match$tEnd)[1]
-          new.tend = max(sub.match$tStart, sub.match$tEnd)[1]
-          sub.match$qStart = new.qstart
-          sub.match$qEnd = new.qend
-          sub.match$tStart = new.tstart
-          sub.match$tEnd = new.tend
-          sub.match$bitscore = sum(sub.match$bitscore)
-          sub.match$matches = sum(sub.match$matches)
-          new.data = rbind(new.data, sub.match[1,])
-          next
-        } #end if
-
-        ########
-        #Saves if they are two separate contigs but non-overlapping on the same locus; N repair
-        ####################
-        #Keep if they match to same contig, then not a paralog
-        if (length(unique(sub.match$qName)) == 1){
-
-          #Finds out if they are overlapping
-          for (k in 1:nrow(sub.match)){
-            new.start = min(sub.match$tStart[k], sub.match$tEnd[k])
-            new.end = max(sub.match$tStart[k], sub.match$tEnd[k])
-            sub.match$tStart[k] = new.start
-            sub.match$tEnd[k] = new.end
-          }#end k loop
-
-          #If the number is negative then problem!
-          hit.para = 0
-          for (k in 1:(nrow(sub.match)-1)){
-            if (sub.match$qStart[k+1]-sub.match$qEnd[k] < -30){ hit.para = 1 }
+    # Build one oriented candidate per target and contig. Multiple alignments on
+    # the same contig describe one copy; separate contigs remain separate copies.
+    interval.width = function(starts, ends) {
+      intervals = data.frame(start = pmin(starts, ends), end = pmax(starts, ends))
+      intervals = intervals[order(intervals$start, intervals$end), , drop = FALSE]
+      total = 0
+      current.start = intervals$start[1]
+      current.end = intervals$end[1]
+      if (nrow(intervals) > 1) {
+        for (row in 2:nrow(intervals)) {
+          if (intervals$start[row] <= current.end + 1) {
+            current.end = max(current.end, intervals$end[row])
+          } else {
+            total = total + current.end - current.start + 1
+            current.start = intervals$start[row]
+            current.end = intervals$end[row]
           }
+        }
+      }
+      total + current.end - current.start + 1
+    }
 
-          #If there are overlaps
-          if (hit.para == 1){
-            save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
-            new.data = rbind(new.data, save.match)
-            next
-          }#end if
+    fin.loci = Biostrings::DNAStringSet()
+    coverage.values = numeric(0)
+    target.lengths = numeric(0)
 
-          #Adjacent and barely overlapping
-          if (hit.para == 0){
-            #Cuts the node apart and saves separately
-            sub.match$qStart[1] = as.numeric(1)
-            sub.match$tStart[1] = as.numeric(1)
-            sub.match$qEnd[nrow(sub.match)] = sub.match$qLen[nrow(sub.match)]
-            sub.match$tEnd[nrow(sub.match)] = sub.match$tLen[nrow(sub.match)]
+    for (target.name in unique(filt.data$qName)) {
+      target.hits = filt.data[filt.data$qName == target.name, ]
+      pieces = list()
 
-            #Collects new sequence fragments
-            spp.seq = contigs[names(contigs) %in% sub.match$tName]
-            spp.seq = spp.seq[match(sub.match$tName, names(spp.seq))]
+      for (contig.name in unique(target.hits$tName)) {
+        hits = target.hits[target.hits$tName == contig.name, ]
+        strand.row = which.max(hits$bitscore)
+        same.strand = sign(hits$qEnd[strand.row] - hits$qStart[strand.row]) ==
+                      sign(hits$tEnd[strand.row] - hits$tStart[strand.row])
+        sequence = contigs[contig.name]
+        target.start = min(hits$qStart, hits$qEnd)
+        target.end = max(hits$qStart, hits$qEnd)
+        contig.start = min(hits$tStart, hits$tEnd)
+        contig.end = max(hits$tStart, hits$tEnd)
 
-            new.seq = Biostrings::DNAStringSet()
-            for (k in 1:length(spp.seq)){
-              n.pad = sub.match$qStart[k+1]-sub.match$qEnd[k]
-              new.seq = append(new.seq, Biostrings::subseq(x = spp.seq[k], start = sub.match$tStart[k], end = sub.match$tEnd[k]) )
-              if (is.na(n.pad) != T){ if (n.pad > 1){ new.seq = append(new.seq, Biostrings::DNAStringSet(paste0(rep("N", n.pad), collapse = "")) ) } }
-            }#end kloop
-
-            #Combine new sequence
-            save.contig = Biostrings::DNAStringSet(paste0(as.character(new.seq), collapse = "") )
-            names(save.contig) = sub.match$qName[1]
-            fix.seq = append(fix.seq, save.contig)
-            next
-          }#end if
-
-        }#end this if
-
-        #Saves highest bitscore
-        save.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),]
-        #Saves longest if equal bitscores
-        save.match = save.match[abs(save.match$qStart-save.match$qEnd) == max(abs(save.match$qStart-save.match$qEnd)),]
-        #saves top match here
-        if (nrow(save.match) >= 2){  save.match = save.match[1,] }
-        #Saves data
-        new.data = rbind(new.data, save.match)
-      } #end j
-
-      #Saves final dataset
-      save.data = rbind(good.data, new.data)
-    } else { save.data = good.data }
-
-    fix.seq.para = fix.seq
-
-    #########################################################################
-    #Part D: Multiple targets (qName) matching to one sample contig (tName)
-    #########################################################################
-
-    #red.contigs = contigs[names(contigs) %in% filt.data$tName]
-    dup.contigs = filt.data$tName[duplicated(filt.data$tName)]
-    dup.match = filt.data[filt.data$tName %in% dup.contigs, ]
-    dup.data = dup.match[order(dup.match$tName)]
-
-    #Loops through each potential duplicate
-    dup.loci = unique(dup.data$tName)
-
-    fix.seq = Biostrings::DNAStringSet()
-    if (length(dup.loci) != 0){
-      for (j in 1:length(dup.loci)){
-        #pulls out data that matches to multiple contigs
-        sub.data = dup.data[dup.data$tName %in% dup.loci[j],]
-        sub.data = sub.data[order(sub.data$tStart)]
-
-        #Fixes direction and adds into data
-        #Finds out if they are overlapping
-        for (k in 1:nrow(sub.data)){
-          new.start = min(sub.data$tStart[k], sub.data$tEnd[k])
-          new.end = max(sub.data$tStart[k], sub.data$tEnd[k])
-          sub.data$tStart[k] = new.start
-          sub.data$tEnd[k] = new.end
-        }#end k loop
-
-        #Saves them if it is split up across the same locus
-        if (length(unique(sub.data$tName)) == 1 && length(unique(sub.data$qName)) == 1){
-          spp.seq = contigs[names(contigs) %in% sub.data$tName]
-          names(spp.seq) = sub.data$qName[1]
-          fix.seq = append(fix.seq, spp.seq)
-          next
+        if (!same.strand) {
+          sequence = Biostrings::reverseComplement(sequence)
+          old.start = contig.start
+          contig.start = hits$tLen[1] - contig.end + 1
+          contig.end = hits$tLen[1] - old.start + 1
         }
 
-        #Cuts the node apart and saves separately
-        sub.data$tStart = sub.data$tStart-(sub.data$qStart-1)
-        #If it ends up with a negative start
-        sub.data$tStart[sub.data$tStart <= 0] = 1
-        #Fixes ends
-        sub.data$tEnd = sub.data$tEnd+(sub.data$qLen-sub.data$qEnd)
+        extract.start = max(1, contig.start - (target.start - 1))
+        extract.end = min(hits$tLen[1], contig.end + (hits$qLen[1] - target.end))
+        pieces[[length(pieces) + 1]] = list(
+          sequence = Biostrings::subseq(sequence, start = extract.start,
+                                        end = extract.end),
+          q.start = target.start,
+          q.end = target.end,
+          coverage = interval.width(hits$qStart, hits$qEnd),
+          target.length = max(hits$qLen)
+        )
+      }
 
-        #Fixes if the contig is smaller than the full target locus
-        sub.data$tEnd[sub.data$tEnd >= sub.data$tLen] = sub.data$tLen[1]
+      piece.order = order(vapply(pieces, `[[`, numeric(1), "q.start"),
+                          vapply(pieces, `[[`, numeric(1), "q.end"))
+      pieces = pieces[piece.order]
+      starts = vapply(pieces, `[[`, numeric(1), "q.start")
+      ends = vapply(pieces, `[[`, numeric(1), "q.end")
+      distinct.copies = length(pieces) > 1 && any(starts[-1] - ends[-length(ends)] < -30)
 
-        starts = c()
-        ends = c()
-        starts[1] = 1
-        for (k in 1:(nrow(sub.data)-1)){
-          ends[k] = sub.data$tEnd[k]+floor((sub.data$tStart[k+1]-sub.data$tEnd[k])/2)
-          starts[k+1] = ends[k]+1
-        } #end k loop
-        ends = append(ends, sub.data$tLen[1])
-
-        #Looks for overlapping contigs
-        tmp = ends-starts
-        if(length(tmp[tmp < 0 ]) != 0){
-          sub.data = sub.data[sub.data$bitscore == max(sub.data$bitscore),]
-          ends = sub.data$tEnd
-          starts = sub.data$tStart
-          # if (nrow(sub.data) != 1) { stop("ernor")}
+      if (distinct.copies) {
+        for (piece in pieces) {
+          names(piece$sequence) = target.name
+          fin.loci = append(fin.loci, piece$sequence)
+          coverage.values = c(coverage.values, piece$coverage)
+          target.lengths = c(target.lengths, piece$target.length)
         }
+      } else {
+        joined = character(0)
+        for (piece.index in seq_along(pieces)) {
+          joined = c(joined, as.character(pieces[[piece.index]]$sequence))
+          if (piece.index < length(pieces)) {
+            gap = pieces[[piece.index + 1]]$q.start - pieces[[piece.index]]$q.end - 1
+            if (gap > 0) joined = c(joined, paste(rep("N", gap), collapse = ""))
+          }
+        }
+        joined.sequence = Biostrings::DNAStringSet(paste(joined, collapse = ""))
+        names(joined.sequence) = target.name
+        fin.loci = append(fin.loci, joined.sequence)
+        coverage.values = c(coverage.values, interval.width(target.hits$qStart,
+                                                            target.hits$qEnd))
+        target.lengths = c(target.lengths, max(target.hits$qLen))
+      }
+    }
 
-        #Collects new sequence fragments
-        spp.seq = contigs[names(contigs) %in% sub.data$tName]
-        new.seq = Biostrings::DNAStringSet()
-        for (k in 1:length(starts)){ new.seq = append(new.seq, Biostrings::subseq(x = spp.seq, start = starts[k], end = ends[k]) ) }
-
-        # #Sets up the new contig location
-        # #Cuts the node apart and saves separately
-        # sub.match$tEnd<-sub.match$tEnd+(sub.match$qSize-sub.match$qEnd)
-        # sub.contigs<-contigs[names(contigs) %in% sub.match$qName]
-        #
-        # join.contigs<-DNAStringSet()
-        # for (k in 1:(nrow(sub.match)-1)){
-        #   join.contigs<-append(join.contigs, sub.contigs[k])
-        #   n.pad<-sub.match$tStart[k+1]-sub.match$tEnd[k]
-        #   join.contigs<-append(join.contigs, DNAStringSet(paste(rep("N", n.pad), collapse = "", sep = "")) )
-        # }
-        # join.contigs<-append(join.contigs, sub.contigs[length(sub.contigs)])
-        # save.contig<-DNAStringSet(paste(as.character(join.contigs), collapse = "", sep = "") )
-
-        #renames and saves
-        names(new.seq) = sub.data$qName
-        fix.seq = append(fix.seq, new.seq)
-      } #end j loop
-    }#end if
-
-
-    #########################################################################
-    #Part E: Write the curated set
-    #########################################################################
-
-    # One sequence per target. The repaired sequences of Part C and the split
-    # sequences of Part D replace the plain contig for those targets.
-    fix.seq.final = append(fix.seq, fix.seq.para)
-    base.data = save.data[!save.data$qName %in% names(fix.seq.final),]
-    base.loci = contigs[names(contigs) %in% base.data$tName]
-    sort.data = base.data[match(names(base.loci), base.data$tName),]
-    names(base.loci) = sort.data$qName
-
-    fin.loci = append(base.loci, fix.seq.final)
-    fin.loci = fin.loci[.baseWidth(fin.loci) >= min.match.length]
-
-    # Coverage is summed over every hit of a target, and the test runs here, not
-    # in Part B. A target that is split across two contigs has two hits that are
-    # each too short on their own. A test before Part C drops both of them, and
-    # the joined sequence that Part C would have made is lost.
-    target.cover = tapply(filt.data$matches, filt.data$qName, sum)
-    target.len   = tapply(filt.data$qLen, filt.data$qName, max)
-    keep.targets = names(target.cover)[target.cover >=
-                                       ((min.match.coverage / 100) * target.len)]
-    fin.loci = fin.loci[names(fin.loci) %in% keep.targets]
+    keep = .baseWidth(fin.loci) >= min.match.length &
+           coverage.values >= ((min.match.coverage / 100) * target.lengths)
+    fin.loci = fin.loci[keep]
 
     if (length(fin.loci) == 0) {
       print(paste0(sample, " had no curated contigs. Skipping"))
@@ -465,10 +377,17 @@ curateTargetContigs = function(assembly.directory = NULL,
     names(fin.loci) = make.unique(names(fin.loci), sep = "_")
 
     final.loci = as.list(as.character(fin.loci))
+    out.file = paste0(output.directory, "/", sample, ".fa")
+    temp.file = paste0(out.file, ".tmp-", Sys.getpid())
     PhyloProcessR::writeFasta(
       sequences = final.loci, names = names(final.loci),
-      paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = T
+      temp.file, nbchar = 1000000, as.string = TRUE
     )
+    if (!file.exists(temp.file) || file.size(temp.file) == 0 ||
+        file.rename(temp.file, out.file) == FALSE) {
+      unlink(temp.file)
+      stop("Could not publish curated contigs for ", sample, ".")
+    }
 
     #------------------------------------------------------
     # Per-sample match log

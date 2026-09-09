@@ -259,10 +259,17 @@ removeOffTargetContigs = function(assembly.directory = NULL,
     names(save.contigs) = make.unique(new.data$tName, sep = "_")
 
     final.loci = as.list(as.character(save.contigs))
+    out.file = paste0(output.directory, "/", sample, ".fa")
+    temp.file = paste0(out.file, ".tmp-", Sys.getpid())
     writeFasta(
       sequences = final.loci, names = names(final.loci),
-      paste0(output.directory, "/", sample, ".fa"), nbchar = 1000000, as.string = TRUE
+      temp.file, nbchar = 1000000, as.string = TRUE
     )
+    if (!file.exists(temp.file) || file.size(temp.file) == 0 ||
+        file.rename(temp.file, out.file) == FALSE) {
+      unlink(temp.file)
+      stop("Could not publish target contigs for ", sample, ".")
+    }
 
     unlink(species.dir, recursive = TRUE)
   } # end iterations if

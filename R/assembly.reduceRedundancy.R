@@ -59,16 +59,6 @@ reduceRedundancy = function(assembly.directory = NULL,
   # threads = 5
   # memory = 30
 
-  # Adds trailing slash to cd-hit path
-  if (is.null(cdhit.path) == FALSE) {
-    b.string <- unlist(strsplit(cdhit.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      cdhit.path <- paste0(append(b.string, "/"), collapse = "")
-    }
-  } else {
-    cdhit.path <- ""
-  }
-
   # Quick checks
   if (is.null(assembly.directory) == TRUE) { stop("Please provide an assembly directory.") }
   if (is.null(output.directory) == TRUE)   { stop("Please provide an output directory.") }
@@ -95,6 +85,13 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   if (length(file.names) == 0) { return(invisible(NULL)) }
 
+  if (!is.numeric(threads) || length(threads) != 1 || !is.finite(threads) || threads < 1 ||
+      !is.numeric(memory) || length(memory) != 1 || !is.finite(memory) || memory <= 0) {
+    stop("threads and memory must be positive finite values.")
+  }
+  workers = min(floor(threads), length(file.names), max(1, floor(memory)))
+  cdhit.command = .toolCommand("cd-hit-est", cdhit.path)
+
   # Word length table from the cd-hit-est manual. cd-hit-est stops with a fatal
   # error below a threshold of 0.8.
   if (similarity >= 0.95) {
@@ -113,7 +110,7 @@ reduceRedundancy = function(assembly.directory = NULL,
 
   # Memory is split across the workers. A value of 0 means unlimited in cd-hit,
   # so the split is never allowed to reach 0.
-  mem.cl <- max(1, floor(memory / threads))
+  mem.cl = max(1, floor(memory / workers))
 
   if (dir.exists("logs/sample_logs") == FALSE) { dir.create("logs/sample_logs", recursive = TRUE) }
 
@@ -144,7 +141,7 @@ reduceRedundancy = function(assembly.directory = NULL,
       # Redirect cd-hit-est output to a per-sample log so we can inspect failures.
       # Parallel workers would otherwise interleave their screen output.
       exit.code = system(paste0(
-        cdhit.path, "cd-hit-est -i ", shQuote(in.file),
+        cdhit.command, " -i ", shQuote(in.file),
         " -o ", shQuote(tmp.file), " -p 0 -T 1",
         " -n ", n.val, " -c ", similarity, " -M ", mem.cl * 1000,
         " > ", shQuote(cdhit.log), " 2>&1"
@@ -181,11 +178,17 @@ reduceRedundancy = function(assembly.directory = NULL,
       names(all.data) = paste0("contig_", seq_along(all.data))
 
       final.loci = as.list(as.character(all.data))
+      publish.file = paste0(out.file, ".publish-", Sys.getpid())
       PhyloProcessR::writeFasta(
         sequences = final.loci, names = names(final.loci),
-        out.file,
+        publish.file,
         nbchar = 1000000, as.string = TRUE, open = "w"
       )
+      if (!file.exists(publish.file) || file.size(publish.file) == 0 ||
+          file.rename(publish.file, out.file) == FALSE) {
+        unlink(publish.file)
+        stop("Could not publish reduced contigs for ", sample.id, ".")
+      }
 
       unlink(c(tmp.file, paste0(tmp.file, ".clstr")))
 
@@ -202,13 +205,11 @@ reduceRedundancy = function(assembly.directory = NULL,
       warning(sample.id, ": unexpected error -- see ", log.file)
     })
 
-  }, mc.cores = threads)
+  }, mc.cores = workers)
 
   invisible(NULL)
 
 }#end function
-
-
 
 
 

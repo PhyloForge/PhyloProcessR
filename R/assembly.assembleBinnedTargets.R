@@ -374,10 +374,17 @@ assembleBinnedTargets = function(read.directory = NULL,
   # assembleSpades does. The per-bin allocation is unchanged by the split:
   # each megahit still gets floor(memory / threads), because both are divided by
   # parallel.samples. What changes is how many samples are in flight.
-  if (is.null(parallel.samples) == TRUE || parallel.samples < 1) { parallel.samples = 1 }
-  parallel.samples = min(parallel.samples, length(sample.names))
-  thread.cl = max(1, floor(threads / parallel.samples))
-  mem.cl    = max(1, floor(memory / parallel.samples))
+  if (!is.numeric(threads) || length(threads) != 1 || !is.finite(threads) || threads < 1 ||
+      !is.numeric(memory) || length(memory) != 1 || !is.finite(memory) || memory <= 0 ||
+      !is.numeric(parallel.samples) || length(parallel.samples) != 1 ||
+      !is.finite(parallel.samples) || parallel.samples < 1) {
+    stop("threads, memory, and parallel.samples must be positive finite values.")
+  }
+  threads = floor(threads)
+  parallel.samples = min(floor(parallel.samples), length(sample.names), threads,
+                         max(1, floor(memory / 2)))
+  thread.cl = floor(threads / parallel.samples)
+  mem.cl    = memory / parallel.samples
 
   if (parallel.samples > 1) {
     print(paste0("Assembling ", parallel.samples, " samples at a time with ",
@@ -388,7 +395,7 @@ assembleBinnedTargets = function(read.directory = NULL,
   # below and every inner step takes this sample's share without further change.
   assemble.one = function(i, threads, memory) {
 
-  assembly.memory = max(2, floor(memory / max(1, threads)))
+  assembly.memory = memory / max(1, threads)
   tryCatch({
 
     sample       = sample.names[i]
@@ -498,7 +505,7 @@ assembleBinnedTargets = function(read.directory = NULL,
     }
     if (length(target.names) == 0) {
       print(paste0(sample, ": no target needs binning. The previous assembly is saved unchanged."))
-      if (is.null(old.contigs) == FALSE) Biostrings::writeXStringSet(old.contigs, out.file)
+      if (is.null(old.contigs) == FALSE) .writeAtomicFasta(old.contigs, out.file)
       return(invisible(NULL))
     }
 
@@ -555,6 +562,48 @@ assembleBinnedTargets = function(read.directory = NULL,
     targets.per.round   = integer(0)
     divergent.pool      = 0
     divergent.recovered = 0
+
+    run.divergent.rescue = function(round) {
+      if (rescue.failed.divergent == FALSE || round != 1) return(FALSE)
+      recovered.names = if (is.null(best.contigs)) character(0) else names(best.contigs)
+      failed.names = target.names[target.names %in% recovered.names == FALSE &
+                                  target.names %in% rescue.names == FALSE]
+      if (length(failed.names) == 0) return(FALSE)
+
+      failed.contigs = .rescueMissingTargets(
+        missing.seqs = reference.seqs[failed.names],
+        read.files = c(read1, read2, read3),
+        work.dir = sample.dir,
+        lastdb.command = lastdb.command,
+        lastal.command = lastal.command,
+        mafconvert.command = mafconvert.command,
+        samtools.command = samtools.command,
+        cap3.command = cap3.command,
+        headers = headers,
+        min.match.percent = min.match.percent,
+        min.match.length = min.match.length,
+        min.match.coverage = min.match.coverage,
+        max.reads = max.pairs * 2,
+        threads = threads,
+        quiet = quiet)
+
+      best.contigs <<- .keepLonger(best.contigs, failed.contigs)
+      divergent.pool <<- length(failed.names)
+      divergent.recovered <<- if (is.null(failed.contigs)) 0 else length(failed.contigs)
+      print(paste0(sample, ": LAST recovered ", divergent.recovered,
+                   " of ", length(failed.names),
+                   " targets that no bin produced."))
+      divergent.recovered > 0
+    }
+
+    update.round.baits = function() {
+      bait.set <<- list(
+        seqs = stats::setNames(best.contigs,
+                               sprintf("bait%06d", seq_along(best.contigs))),
+        table = data.frame(bait = sprintf("bait%06d", seq_along(best.contigs)),
+                           locus = names(best.contigs), source = "round",
+                           stringsAsFactors = FALSE))
+    }
 
     for (round in seq_len(iterations)) {
 
@@ -653,7 +702,14 @@ assembleBinnedTargets = function(read.directory = NULL,
                    nrow(bait.set$table), " bins hold at least ", min.pairs,
                    " read pairs. Assembling."))
 
-      if (length(run.index) == 0) break
+      if (length(run.index) == 0) {
+        rescued = run.divergent.rescue(round)
+        if (rescued && round < iterations) {
+          update.round.baits()
+          next
+        }
+        break
+      }
 
       # One megahit job per bin, in parallel. A bin has a few hundred reads. Many
       # single-threaded jobs are therefore faster than one threaded job.
@@ -684,6 +740,11 @@ assembleBinnedTargets = function(read.directory = NULL,
 
       if (length(contig.list) == 0) {
         print(paste0(sample, " round ", round, ": the assembly produced no contig."))
+        rescued = run.divergent.rescue(round)
+        if (rescued && round < iterations) {
+          update.round.baits()
+          next
+        }
         break
       }
 
@@ -706,6 +767,11 @@ assembleBinnedTargets = function(read.directory = NULL,
 
       if (length(round.best) == 0) {
         print(paste0(sample, " round ", round, ": no contig passed the target filters."))
+        rescued = run.divergent.rescue(round)
+        if (rescued && round < iterations) {
+          update.round.baits()
+          next
+        }
         break
       }
 
@@ -721,46 +787,11 @@ assembleBinnedTargets = function(read.directory = NULL,
       # LAST recruits those reads instead. This runs after round 1, so a later
       # round can extend what it finds. The targets rescue.missing already
       # searched are skipped, because the same reads give the same answer.
-      if (rescue.failed.divergent == TRUE && round == 1) {
-        failed.names = target.names[target.names %in% names(best.contigs) == FALSE &
-                                    target.names %in% rescue.names == FALSE]
-        if (length(failed.names) > 0) {
-          failed.contigs = .rescueMissingTargets(
-            missing.seqs = reference.seqs[failed.names],
-            read.files = c(read1, read2, read3),
-            work.dir = sample.dir,
-            lastdb.command = lastdb.command,
-            lastal.command = lastal.command,
-            mafconvert.command = mafconvert.command,
-            samtools.command = samtools.command,
-            cap3.command = cap3.command,
-            headers = headers,
-            min.match.percent = min.match.percent,
-            min.match.length = min.match.length,
-            min.match.coverage = min.match.coverage,
-            max.reads = max.pairs * 2,
-            threads = threads,
-            quiet = quiet)
-
-          best.contigs = .keepLonger(best.contigs, failed.contigs)
-          divergent.pool      = length(failed.names)
-          divergent.recovered = if (is.null(failed.contigs)) 0 else length(failed.contigs)
-          print(paste0(sample, ": LAST recovered ",
-                       if (is.null(failed.contigs)) 0 else length(failed.contigs),
-                       " of ", length(failed.names),
-                       " targets that no bin produced."))
-        }
-      }
+      run.divergent.rescue(round)
 
       # Later rounds only extend. A target that gives no contig in one round also
       # gives no contig in the next round from the same bait.
-      bait.set = list(
-        seqs = stats::setNames(best.contigs,
-                               sprintf("bait%06d", seq_along(best.contigs))),
-        table = data.frame(bait = sprintf("bait%06d", seq_along(best.contigs)),
-                           locus = names(best.contigs),
-                           source = "round",
-                           stringsAsFactors = FALSE))
+      update.round.baits()
 
     } # end round loop
 
@@ -768,7 +799,7 @@ assembleBinnedTargets = function(read.directory = NULL,
 
     if (is.null(best.contigs) == TRUE || length(best.contigs) == 0) {
       print(paste0(sample, ": nothing was recovered. The previous assembly is saved unchanged."))
-      if (is.null(old.contigs) == FALSE) Biostrings::writeXStringSet(old.contigs, out.file)
+      if (is.null(old.contigs) == FALSE) .writeAtomicFasta(old.contigs, out.file)
       return(invisible(NULL))
     }
 
@@ -778,7 +809,7 @@ assembleBinnedTargets = function(read.directory = NULL,
                                          multi.copy = multi.copy)
 
     names(final.contigs) = make.unique(names(final.contigs), sep = "_")
-    Biostrings::writeXStringSet(final.contigs, out.file)
+    .writeAtomicFasta(final.contigs, out.file)
 
     locus.stats = .writeBinnedStats(sample = sample,
                                     sample.dir = sample.dir,

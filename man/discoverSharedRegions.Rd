@@ -49,8 +49,8 @@ covered in a sample. Default 5.}
 \item{min.region.length}{minimum length in bp for a candidate novel region to be retained.
 Default 200.}
 
-\item{max.merge.distance}{maximum distance in bp between adjacent covered intervals within
-a sample before they are merged into a single region. Default 500.}
+\item{max.merge.distance}{maximum distance in bp between adjacent covered intervals after
+the shared-coverage threshold is applied. Gaps can be included in the final region. Default 500.}
 
 \item{min.mapping.quality}{minimum MAPQ score for a read to be counted. Filters
 multi-mapping reads in repetitive regions. Default 20.}
@@ -59,7 +59,8 @@ multi-mapping reads in repetitive regions. Default 20.}
 
 \item{memory}{total RAM in GB available. Default 8.}
 
-\item{overwrite}{logical. If TRUE, deletes and recreates the output directory. Default FALSE.}
+\item{overwrite}{logical. If TRUE, rebuilds references and per-sample mapping outputs.
+Use TRUE after changing inputs or mapping/coverage settings. Default FALSE.}
 
 \item{quiet}{logical. If TRUE, suppresses stdout/stderr from external tools. Default FALSE.}
 

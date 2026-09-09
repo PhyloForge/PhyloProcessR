@@ -16,7 +16,7 @@ working.directory = "/Path/to/where/the/stuff/will/happen"
 # The read directory desired for mapping, recommended "decontaminated-reads". Default shown.
 read.directory = "processed-reads/decontaminated-reads"
 # The assembly directory desired to have variants called on. Default shown.
-assembly.directory = "data-analysis/contigs/3_target-contigs"
+assembly.directory = "data-analysis/contigs/3d_curated-contigs"
 # Optional. The directory of contigs recovered by the workflow 2 missing locus
 # step. Each sample reference becomes the union of its assembly.directory contigs
 # and the recovered contigs. Set this only if you ran workflow 2 with

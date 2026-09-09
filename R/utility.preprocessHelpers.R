@@ -54,11 +54,10 @@
   drop.stdout = quiet && keep.stdout == FALSE
   drop.stderr = quiet
 
-  # R appends its redirections to the end of the string, where a shell binds them
-  # to the last stage of a pipeline only. A subshell makes them cover every stage,
-  # which is what silences bwa in the "bwa mem | samtools view" pipes.
-  if ((drop.stdout || drop.stderr) && grepl("|", command, fixed = TRUE)) {
-    command = paste0("( ", command, " )")
+  # The default /bin/sh does not report a failed early pipeline stage. Run
+  # pipelines with pipefail so a mapper or converter failure reaches the caller.
+  if (grepl("|", command, fixed = TRUE)) {
+    command = paste0("bash -o pipefail -c ", shQuote(command))
   }
 
   status = system(command,

@@ -13,3 +13,4 @@
 *.tar.gz
 00_pkg_src/
 scratchpad/
+*.md

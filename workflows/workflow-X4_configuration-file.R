@@ -47,7 +47,8 @@ dataset.name = "Novel-Loci"
 threads = 8
 # Amount of memory to allocate in GB
 memory = 40
-# Whether to overwrite previous runs
+# Use TRUE after changing inputs, sample sets, or discovery/assembly settings.
+# This also regenerates downstream outputs. Use FALSE only to resume the same run.
 overwrite = FALSE
 # Hide verbose output for each function
 quiet = TRUE
@@ -60,21 +61,24 @@ min.samples = 4
 min.coverage = 5
 # Minimum length in bp for a candidate novel region
 min.region.length = 200
-# Adjacent covered intervals within this distance (bp) are merged into one region
+# Intervals that pass min.samples are merged across gaps up to this distance (bp).
+# These gaps need not meet min.coverage; use 0 for continuous shared coverage.
 max.merge.distance = 500
 # Minimum MAPQ score — filters reads mapping to repetitive/ambiguous regions
 min.mapping.quality = 20
 
 # Assembly settings
 #########################
-# Minimum reads required per region to attempt SPAdes assembly
+# Minimum reads per region for its assembled contigs to be retained
 min.reads.assemble = 5
 # K-mer values for SPAdes
 spades.kmer.values = c(33, 55, 77, 99, 127)
 
 # Heterozygosity filter settings
 #########################
-# TRUE = filter assembled contigs with excessive IUPAC ambiguity before annotation
+# TRUE = filter contigs with excessive IUPAC ambiguity before collection.
+# SPAdes contigs do not encode heterozygous variants as IUPAC codes. This filter
+# is not a heterozygosity or paralog test for these assemblies.
 heterozygote.filter = TRUE
 # Maximum allowed proportion of IUPAC ambiguity bases per contig (0-1)
 heterozygote.filter.threshold = 0.05
