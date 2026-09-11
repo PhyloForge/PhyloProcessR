@@ -20,8 +20,9 @@ The package and supplied workflows support:
 5. Mapping reads, calling variants, and generating IUPAC or haplotype consensuses.
 6. Aligning, filtering, and trimming recovered loci.
 7. Assessing capture, missing data, depth, paralogy, and alignment quality.
-8. Integrating legacy sequences and discovering shared novel loci.
-9. Concatenating loci by target or gene for downstream analyses.
+8. Separating supported two-copy marker groups for review and analysis.
+9. Integrating legacy sequences and discovering shared novel loci.
+10. Concatenating loci by target or gene for downstream analyses.
 
 The R package can be installed and tested without every external program.
 Individual workflow stages require only the command-line tools they invoke; the
@@ -189,6 +190,7 @@ workflow or compose the underlying functions in a custom R script.
 | **Workflow X2** | `workflow-X2_capture-assessment.R` | Assess raw reads, cleaned reads, and capture efficiency one sample at a time |
 | **Workflow X3** | `workflow-X3_legacy-integration.R` | Integrate Sanger/GenBank legacy alignments into the capture dataset; supports NEXUS conversion and mitochondrial loci |
 | **Workflow X4** | `workflow-X4_novel-loci.R` | Recover, assemble, and align novel shared genomic regions |
+| **Workflow X5** | `workflow-X5_paralog-analysis.R` | Assess saved copies, separate supported two-copy groups, and export filtered markers |
 
 Each workflow has a matching configuration file. Set all project parameters in
 that file before you run the script.

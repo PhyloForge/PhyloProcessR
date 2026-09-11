@@ -53,6 +53,24 @@ makeAlignmentSubset = function(alignment.directory = NULL,
 
   subset.reference = match.arg(subset.reference)
 
+  if (is.null(alignment.directory) || !dir.exists(alignment.directory)) {
+    stop("The alignment directory was not found: ", alignment.directory)
+  }
+  if (is.null(output.directory)) stop("An output directory is required.")
+  if (subset.reference == "fasta" &&
+      (is.null(subset.fasta.file) || !file.exists(subset.fasta.file))) {
+    stop("subset.fasta.file is required for fasta subsetting.")
+  }
+  if (subset.reference == "grep" &&
+      (is.null(subset.grep.string) || !nzchar(subset.grep.string))) {
+    stop("subset.grep.string is required for grep subsetting.")
+  }
+  if (subset.reference == "blast" &&
+      (is.null(subset.fasta.file) || !file.exists(subset.fasta.file) ||
+       is.null(subset.blast.targets) || !file.exists(subset.blast.targets))) {
+    stop("Existing subset.fasta.file and subset.blast.targets files are required for blast subsetting.")
+  }
+
   #Checks the program
   if (is.null(blast.path) == FALSE){
     b.string = unlist(strsplit(blast.path, ""))
@@ -65,20 +83,20 @@ makeAlignmentSubset = function(alignment.directory = NULL,
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
     }
-  } else { dir.create(output.directory) }
+  } else { dir.create(output.directory, recursive = TRUE) }
 
   #Gathers alignments
-  align.files = list.files(alignment.directory)
+  align.files = .alignmentFiles(alignment.directory, format = alignment.format)
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Uses the reference names to isolate
   if (subset.reference == "fasta"){
     fasta.loci = Biostrings::readDNAStringSet(file = subset.fasta.file, format = "fasta")
-    ref.names = gsub("\\..*$", "", names(fasta.loci) )
-    subset.files = align.files[gsub("\\..*$", "", align.files) %in% ref.names]
+    ref.names = names(fasta.loci)
+    subset.files = align.files[.alignmentId(align.files) %in% ref.names]
 
     if (length(subset.files) == 0){ stop("Reference fasta names could not be matched.")}
   }#end if
@@ -97,17 +115,28 @@ makeAlignmentSubset = function(alignment.directory = NULL,
                 "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
     #Make blast database for the probe loci
-    system(paste0(blast.path, "makeblastdb -in ", subset.fasta.file,
-                  " -parse_seqids -dbtype nucl -out subset_nucl-blast_db"), ignore.stdout = quiet)
+    blast.database = tempfile("subset_nucl-blast_db_")
+    blast.output = tempfile("subset-blast-match_", fileext = ".txt")
+    on.exit(unlink(c(blast.output, Sys.glob(paste0(blast.database, ".*")))), add = TRUE)
+    makeblastdb = file.path(blast.path, "makeblastdb")
+    blastn = file.path(blast.path, "blastn")
+    .runCommand(paste0(shQuote(makeblastdb), " -in ", shQuote(subset.fasta.file),
+                       " -parse_seqids -dbtype nucl -out ", shQuote(blast.database)),
+                quiet = quiet, task = "BLAST database creation")
 
     #Matches samples to loci
-    system(paste0(blast.path, "blastn -task dc-megablast -db subset_nucl-blast_db -evalue 0.001",
-                  " -query ", subset.blast.targets, " -out subset-blast-match.txt",
+    .runCommand(paste0(shQuote(blastn), " -task dc-megablast -db ", shQuote(blast.database),
+                  " -evalue 0.001 -query ", shQuote(subset.blast.targets), " -out ", shQuote(blast.output),
                   " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-                  " -num_threads ", threads))
+                  " -num_threads ", threads), quiet = quiet, task = "BLAST subset search")
+
+    if (!file.exists(blast.output) || file.info(blast.output)$size == 0) {
+      stop("The BLAST subset search completed but found no matches.")
+    }
 
     #Loads in match data
-    match.data = data.table::fread(paste0("subset-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+    match.data = data.table::fread(blast.output, sep = "\t", header = FALSE,
+                                   stringsAsFactors = FALSE)
     data.table::setnames(match.data, headers)
 
     filt.data = match.data[match.data$matches >= ( 0.5 * match.data$tLen),]
@@ -126,7 +155,7 @@ makeAlignmentSubset = function(alignment.directory = NULL,
     contig.names = unique(filt.data[duplicated(filt.data$tName) == T,]$tName)
 
     save.match = c()
-    for (j in 1:length(contig.names)){
+    for (j in seq_along(contig.names)){
 
       sub.match = filt.data[filt.data$tName %in% contig.names[j],]
       sub.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),][1]
@@ -142,7 +171,7 @@ makeAlignmentSubset = function(alignment.directory = NULL,
     contig.names = unique(good.data[duplicated(good.data$qName) == T,]$qName)
 
     save.match = c()
-    for (j in 1:length(contig.names)){
+    for (j in seq_along(contig.names)){
 
       sub.match = good.data[good.data$qName %in% contig.names[j],]
       sub.match = sub.match[sub.match$bitscore == max(sub.match$bitscore),][1]
@@ -154,17 +183,16 @@ makeAlignmentSubset = function(alignment.directory = NULL,
     final.data = rbind(final.data, save.match)
 
     #Gets final set of alignments
-    subset.files = align.files[gsub("\\..*$", "", align.files) %in% final.data$qName]
-
-    #Clean up BLAST temp files
-    system("rm -f subset-blast-match.txt subset_nucl-blast_db.*")
+    subset.files = align.files[.alignmentId(align.files) %in% final.data$qName]
 
   }#end blast if
 
   #save subset files separately
-  for (i in 1:length(subset.files)){
-    system(paste0("cp ", alignment.directory, "/", subset.files[i]," ",
-                  output.directory, "/", subset.files[i]))
+  if (length(subset.files) == 0) stop("No alignment files were selected.")
+  for (i in seq_along(subset.files)){
+    source = file.path(alignment.directory, subset.files[i])
+    destination = file.path(output.directory, subset.files[i])
+    .copyAlignment(source, destination, overwrite = overwrite)
   }#end loop
 
 } #end function

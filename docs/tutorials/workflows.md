@@ -134,8 +134,53 @@ Set `contig.directory` to the contig set that you want to analyze. Set
 `target.file` to the target-marker FASTA file.
 
 Workflow 4 can filter contigs with high IUPAC ambiguity. It then matches
-contigs to target loci and creates one alignment for each locus. The principal
-output is `data-analysis/alignments/untrimmed_all-markers/`.
+contigs to target loci without collapsing similar copies. A candidate must pass
+the configured identity, supported-length, and target-coverage filters. The
+default target-coverage floor remains 30 percent.
+
+`paralog.action = "exclude"` removes a sample-target assignment when another
+qualifying copy has at least 80 percent of the best score, at least 80 percent
+of its target coverage, and is within five identity percentage points. The
+`"best"` setting always keeps the top candidate. Both settings save all
+qualifying copies from multi-copy targets in
+`data-analysis/contigs/9_paralog-contigs/`. Candidate decisions and raw search
+hits are written under `logs/sample_logs/` for later review.
+
+The principal alignment output is
+`data-analysis/alignments/untrimmed_all-markers/`. A sample sequence with no
+comparable reference positions is removed before the final alignment is saved.
+
+To include legacy samples, first run workflow 4 for the capture-only alignments,
+and then run workflow X3 with `include.all.together = TRUE`. Run workflow 4
+again with `align.targets = FALSE` and `include.legacy = TRUE`. Set
+`legacy.alignment.directory` to the X3 `-all` output. Workflow 4 copies those
+alignments into `untrimmed_all-markers`, where they replace the capture-only
+version of each matching locus. Workflow 5 can then trim the capture and legacy
+samples together.
+
+Use `legacy.rename.file` when a legacy sample and its sequence-capture sample
+have different names. CSV, TSV, TXT, XLS, and XLSX files are accepted. Put the
+legacy name in the first column and the sequence-capture name in the second
+column. The preferred headings are `Legacy_Name` and `SeqCap_Name`; workflow 4
+uses the first two columns when the headings differ. When both names are present
+in an alignment, workflow 4 merges the rows and keeps the
+sequence-capture base at conflicting sites. When only the legacy name is
+present, workflow 4 renames that row.
+
+```r
+legacy.rename.file = "data-analysis/legacy-name-map.tsv"
+```
+
+To add target sequences extracted from genome assemblies, set
+`include.genomes = TRUE` and set `genome.target.directory` to the top-level
+output directory from `extractGenomeTarget()`. Workflow 4 finds each genome's
+`*_target-matches.fa` file recursively. It adds those sequences to the capture
+sequences before MAFFT aligns each locus.
+
+```r
+include.genomes = TRUE
+genome.target.directory = "data-analysis/genome-targets"
+```
 
 ```bash
 Rscript workflow-4_alignment.R
@@ -149,7 +194,7 @@ Workflow 5 can perform these operations:
 
 1. Trim alignments to target regions.
 2. Extract flanking regions.
-3. Refine coding alignments with MACSE.
+3. Optionally refine no-flank alignments with MACSE when all targets are coding.
 4. Concatenate exons from the same gene.
 5. Gather one unlinked alignment for each gene or marker.
 6. Remove poor samples, columns, edges, or alignments.
@@ -165,6 +210,37 @@ Common output directories include:
 | `trimmed_all-unlinked` | Trimmed unlinked dataset |
 | `untrimmed_no-flanks` | Target regions without flanks |
 | `untrimmed_only-flanks` | Flanking regions without targets |
+
+The `marker` and `gene` columns in the gene metadata file connect exon files to
+genes. The capitalized aliases `Marker` and `Gene` are also accepted. Workflow 5
+stops before replacing output when the metadata columns are missing, one marker
+maps to conflicting genes, or no alignment names match the table.
+
+When `include.novel.markers = TRUE`, the workflow requires the Workflow X4 novel
+alignment directory. It rejects marker-name collisions and builds genes from the
+combined ordinary and novel input. Novel markers that are absent from gene
+metadata remain separate in the unlinked dataset. These markers are not thereby
+shown to be biologically independent. Set `overwrite = TRUE` after changing
+dataset composition so that derived outputs are rebuilt.
+
+`trim.alignments` controls filtering of the full-marker dataset. The target-only
+and flank-only construction steps use `trim.to.targets` and `trim.to.flanks`.
+The subset step reads `subset.alignment.directory`. Its default directory exists
+only after a per-marker trimming run, so a gene-based dataset must be selected
+explicitly and matched with gene IDs.
+
+The configured minimum taxa and final minimum length rules are exclusive: an
+alignment at the configured value is rejected. Column trimming removes columns
+at or above the configured gap percentage. For example, a value of 30 removes a
+column with 30 percent gaps. Sample percentage coverage is measured against the
+longest sample. Ambiguity conversion uses a deterministic A/T-priority mapping.
+Some low-level helpers leave alignments with three or fewer taxa unchanged, but
+the final alignment assessment still applies its configured thresholds.
+
+MACSE runs only within `trim.to.targets` and receives every no-flank alignment.
+Enable it only for targets known to be coding and in frame. Its `trimmed_exons`
+and `trimmed_genes` directories are separate products and do not replace the
+standard no-flank unlinked dataset.
 
 ```bash
 Rscript workflow-5_trimming.R
@@ -223,6 +299,60 @@ Rscript workflow-X4_novel-loci.R
 
 After completion, set `include.novel.markers = TRUE` in the Workflow 5
 configuration.
+
+### Workflow X5: Assess and separate candidate copies
+
+Workflow X5 starts from workflow 4 alignments and candidate-copy records. It
+adds saved copies to the applicable untrimmed alignment. It also creates an
+alignment for a saved-copy target that has no workflow 4 alignment. Existing
+alignment rows stay fixed when MAFFT adds copies, and the workflow checks this
+condition before it accepts the expanded alignment.
+
+The workflow performs these operations:
+
+1. Match each alignment row and saved sequence to an exact workflow 4 candidate.
+2. Add recognizable copy labels and expand each untrimmed marker alignment.
+3. Trim with unique biological samples as the occupancy units.
+4. Infer one checked IQ-TREE gene tree for each informative marker.
+5. Retain a marker, separate one supported two-group split, or exclude it with a reason.
+6. Export reports and optional downstream gene and unlinked datasets.
+
+Use `workflow-X5_configuration-file.R` with
+`workflow-X5_paralog-analysis.R`. Test the proposed thresholds with a small
+target subset before you run the full target union.
+
+Locus directories, alignment files, and tree files use the locus name. Sequence
+labels keep the workflow 4 sample name. If a sample has multiple copies for one
+locus, the labels use `_1`, `_2`, and later consecutive suffixes. A sample with
+one copy keeps its original name.
+
+```bash
+Rscript workflow-X5_paralog-analysis.R
+```
+
+Accepted alignments occur in
+`data-analysis/paralog-analysis/trimmed_all-markers/`. A supported split writes
+both `Target_copyA` and `Target_copyB`. These names are local labels for putative
+loci. They do not confirm orthology or physical independence. Split markers do
+not enter an unlinked dataset unless curated metadata permits that use.
+
+The first version separates two groups only. It reports families with more
+complex copy patterns as unresolved. When a supported split is not available,
+the workflow keeps the best available copy for each sample. Candidate rank
+selects the best copy. Aligned coverage and stable sequence metadata resolve
+ties. It then trims the single-copy alignment again and applies the standard
+alignment thresholds. The locus is retained only when this final alignment
+passes. A tree split can also reflect species history, alleles, or assembly
+error. Repeated samples on both sides supply the automatic copy evidence. A
+split between disjoint sample sets is not automatic evidence of duplication.
+Long branches in a locus with one sequence per sample do not receive a paralog
+review flag. Reciprocal copy loss can be difficult to distinguish with these
+data.
+
+The main reports occur in `data-analysis/paralog-analysis/tables/`. They include
+the target and copy maps, quality decisions, split evidence, group membership,
+accepted markers, and one final outcome for each source target. Original
+workflow 4 and workflow 5 directories are not changed.
 
 ## Resume or replace output
 

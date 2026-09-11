@@ -83,33 +83,38 @@ concatenateGenes = function(alignment.folder = NULL,
 
   #Check if files exist or not
   if (dir.exists(alignment.folder) == F){
-    return(paste0("Directory of alignments could not be found. Exiting."))
+    stop("Directory of alignments could not be found: ", alignment.folder)
   }#end file check
 
-  #Checks output overwrite
+  exon.data = .readGeneMetadata(feature.gene.names)
+  align.files = .alignmentFiles(alignment.folder, format = input.format)
+  if (length(align.files) == 0) stop("No input alignments were found.")
+  if (!any(.alignmentId(align.files) %in% exon.data$marker)) {
+    stop("No alignment names match the gene metadata marker column.")
+  }
+
+  # Checks output overwrite after validating all inputs.
   if (overwrite == TRUE){
-    if (file.exists(paste0(output.folder)) == TRUE){ system(paste0("rm -r ", output.folder)) }
-    dir.create(output.folder)
+    if (dir.exists(output.folder)) unlink(output.folder, recursive = TRUE)
+    dir.create(output.folder, recursive = TRUE)
   } else {
     if (!dir.exists(output.folder)) { dir.create(output.folder) }
   }#end overwrite if
 
-  #Gets list of alignments
-  align.files = list.files(alignment.folder, full.names = FALSE, recursive = TRUE)
-  exon.data = data.table::fread(file = feature.gene.names, header = TRUE)
   gene.names = unique(exon.data$gene)
   gene.names = gene.names[is.na(gene.names) != TRUE]
 
   #Skips files done already if resume = TRUE
   if (overwrite == FALSE){
-    done.files = list.files(output.folder)
-    done.genes = gsub("\\..*$", "", done.files)
+    done.files = .alignmentFiles(output.folder, format = output.format)
+    done.files = done.files[file.info(file.path(output.folder, done.files))$size > 0]
+    done.genes = .alignmentId(done.files)
     gene.names = gene.names[!gene.names %in% done.genes]
   }
 
   mem.cl = floor(memory/threads)
 
-  parallel::mclapply(seq_along(gene.names), function(i) {
+  results = parallel::mclapply(seq_along(gene.names), function(i) {
   tryCatch({
     #Find exon data for this gene
     gene.data = exon.data[exon.data$gene %in% gene.names[i],]
@@ -118,7 +123,7 @@ concatenateGenes = function(alignment.folder = NULL,
 
     temp.dir = paste0(output.folder, "/temp-", gene.names[i])
     if (dir.exists(temp.dir) == TRUE){
-      system(paste0("rm -r ", temp.dir))
+      unlink(temp.dir, recursive = TRUE)
       dir.create(temp.dir)
     } else { dir.create(temp.dir) }
 
@@ -127,7 +132,7 @@ concatenateGenes = function(alignment.folder = NULL,
     exon.count = 0
     for (y in 1:length(gene.exons)){
       # Finds alignment name
-      temp.exon = align.files[gsub("\\..*", "", align.files) %in% gene.exons[y]]
+      temp.exon = align.files[.alignmentId(align.files) %in% gene.exons[y]]
 
       if (length(temp.exon) >= 2){
         stop("more than one exon matches to spreadsheet entry.")
@@ -170,8 +175,8 @@ concatenateGenes = function(alignment.folder = NULL,
 
     if (exon.count < minimum.exons){
       print(paste0("Below minimum exon count of ", minimum.exons, ". Skipped gene."))
-      system(paste0("rm -r ", temp.dir))
-      return(NULL)
+      unlink(temp.dir, recursive = TRUE)
+      return(list(status = "excluded", gene = gene.names[i]))
     }
 
     if (length(save.names) > 0) {
@@ -239,7 +244,7 @@ concatenateGenes = function(alignment.folder = NULL,
       ###################
       if (output.format == "fasta" || output.format == "fa" || output.format == "fas"){
         #Fasta easy
-        fileConn = file(paste0(output.name, ".fa"), open = "a")
+        fileConn = file(paste0(output.name, ".fa"), open = "w")
         #Saves each line
         for (x in 1:nrow(concat.data)){
           writeLines(paste0(">", concat.data$Sample[x]), con = fileConn, sep = "\n")
@@ -271,7 +276,7 @@ concatenateGenes = function(alignment.folder = NULL,
         }#end x
 
         #Start saving file
-        fileConn = file(paste0(output.name, ".nex"), open = "a")
+        fileConn = file(paste0(output.name, ".nex"), open = "w")
         writeLines("#NEXUS", con = fileConn, sep = "\n")
         writeLines("begin data;", con = fileConn, sep = "\n")
         writeLines(paste0("\t", nex.header), con = fileConn, sep = "\n")
@@ -311,7 +316,7 @@ concatenateGenes = function(alignment.folder = NULL,
           concat.data$Sample[x] = new.name
         }#end x
 
-        fileConn = file(paste0(output.name, ".phy"), open = "a")
+        fileConn = file(paste0(output.name, ".phy"), open = "w")
         writeLines(phy.header, con = fileConn, sep = "\n")
         #Saves each line
         for (x in 1:nrow(concat.data)){
@@ -323,14 +328,23 @@ concatenateGenes = function(alignment.folder = NULL,
       }#End phylip if
     }#end if way above
 
-    system(paste0("rm -r ", temp.dir))
+    unlink(temp.dir, recursive = TRUE)
 
     rm(align.list, concat.data, exon.align)
     gc()
+    list(status = "success", gene = gene.names[i])
 
   }, error = function(e) {
-    warning(gene.names[i], " failed: ", conditionMessage(e))
+    list(status = "error", gene = gene.names[i], message = conditionMessage(e))
   })
   }, mc.cores = threads) #end i loop
+
+  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
+  if (any(failures)) {
+    details = vapply(results[failures], function(x) {
+      paste0(x$gene, " (", x$message, ")")
+    }, character(1))
+    stop("Gene concatenation failed for: ", paste(details, collapse = "; "))
+  }
 
 }#end function

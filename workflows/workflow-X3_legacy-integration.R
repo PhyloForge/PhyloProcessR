@@ -9,6 +9,15 @@ if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
 library(PhyloProcessR)
 setwd(working.directory)
 
+legacy.output.base = file.path(output.directory, "untrimmed_legacy")
+legacy.only.directory = paste0(legacy.output.base, "-only")
+legacy.all.directory = paste0(legacy.output.base, "-all")
+legacy.trimmed.only.directory = file.path(output.directory, "trimmed_legacy-only")
+legacy.gene.directory = file.path(output.directory, "untrimmed_legacy-genes")
+legacy.unlinked.directory = file.path(output.directory, "untrimmed_legacy-unlinked")
+legacy.trimmed.unlinked.directory = file.path(output.directory, "trimmed_legacy-unlinked")
+legacy.trimmed.directory = file.path(output.directory, "trimmed_legacy")
+
 ##################################################################################################
 ##################################################################################################
 ## Step 0 (optional): Convert a concatenated NEXUS file into per-locus phylip files
@@ -44,11 +53,11 @@ if (convert.nexus == TRUE) {
 ## Step 1: Integrate legacy alignments into sequence-capture alignments
 ##################################################################################################
 
-if (length(list.files("data-analysis/legacy-integration/untrimmed_legacy-only")) == 0 || overwrite == TRUE) {
+if (length(list.files(legacy.only.directory)) == 0 || overwrite == TRUE) {
   integrateLegacy(
     alignment.directory = alignment.directory,
     alignment.format = alignment.format,
-    output.directory = "data-analysis/legacy-integration/untrimmed_legacy",
+    output.directory = legacy.output.base,
     legacy.directory = legacy.directory,
     legacy.format = legacy.format,
     target.markers = target.file,
@@ -67,15 +76,16 @@ if (length(list.files("data-analysis/legacy-integration/untrimmed_legacy-only"))
     blast.path = blast.path
   )
 } else {
-  print("Legacy integration output already exists and is non-empty, skipping: data-analysis/legacy-integration/untrimmed_legacy-only")
+  print(paste0("Legacy integration output already exists and is non-empty, skipping: ",
+               legacy.only.directory))
 }
 
 # Select working directory for downstream steps:
 # -all contains the full dataset (capture + legacy); -only contains only the integrated files
 if (include.all.together == TRUE) {
-  integrated.dir = "data-analysis/legacy-integration/untrimmed_legacy-all"
+  integrated.dir = legacy.all.directory
 } else {
-  integrated.dir = "data-analysis/legacy-integration/untrimmed_legacy-only"
+  integrated.dir = legacy.only.directory
 }
 
 ##################################################################################################
@@ -89,9 +99,9 @@ if (include.all.together == TRUE) {
 
 if (trim.alignments == TRUE) {
   superTrimmer(
-    alignment.dir          = "data-analysis/legacy-integration/untrimmed_legacy-only",
+    alignment.dir          = legacy.only.directory,
     alignment.format       = "phylip",
-    output.dir             = "data-analysis/legacy-integration/trimmed_legacy-only",
+    output.dir             = legacy.trimmed.only.directory,
     overwrite              = overwrite,
     TrimAl                 = run.TrimAl,
     TrimAl.path            = trimAl.path,
@@ -125,7 +135,7 @@ if (concatenate.genes == TRUE) {
     # Concatenate genes from the full integrated dataset (capture + legacy)
     concatenateGenes(
       alignment.folder = integrated.dir,
-      output.folder = "data-analysis/legacy-integration/untrimmed_legacy-genes",
+      output.folder = legacy.gene.directory,
       feature.gene.names = feature.gene.names,
       input.format = "phylip",
       output.format = "phylip",
@@ -140,7 +150,7 @@ if (concatenate.genes == TRUE) {
     # legacy loci remain as separate alignments and are picked up by gatherUnlinked
     concatenateGenes(
       alignment.folder = alignment.directory,
-      output.folder = "data-analysis/legacy-integration/untrimmed_legacy-genes",
+      output.folder = legacy.gene.directory,
       feature.gene.names = feature.gene.names,
       input.format = "phylip",
       output.format = "phylip",
@@ -156,9 +166,9 @@ if (concatenate.genes == TRUE) {
     # Exon directory is always the full integrated dataset so legacy stand-alone
     # loci are included regardless of whether they were concatenated
     gatherUnlinked(
-      gene.alignment.directory = "data-analysis/legacy-integration/untrimmed_legacy-genes",
+      gene.alignment.directory = legacy.gene.directory,
       exon.alignment.directory = integrated.dir,
-      output.directory = "data-analysis/legacy-integration/untrimmed_legacy-unlinked",
+      output.directory = legacy.unlinked.directory,
       feature.gene.names = feature.gene.names,
       overwrite = overwrite
     )
@@ -166,9 +176,9 @@ if (concatenate.genes == TRUE) {
 
   if (trim.alignments == TRUE) {
     superTrimmer(
-      alignment.dir = "data-analysis/legacy-integration/untrimmed_legacy-unlinked",
+      alignment.dir = legacy.unlinked.directory,
       alignment.format = "phylip",
-      output.dir = "data-analysis/legacy-integration/trimmed_legacy-unlinked",
+      output.dir = legacy.trimmed.unlinked.directory,
       overwrite = overwrite,
       TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,
@@ -203,7 +213,7 @@ if (concatenate.genes == FALSE) {
     superTrimmer(
       alignment.dir = integrated.dir,
       alignment.format = "phylip",
-      output.dir = "data-analysis/legacy-integration/trimmed_legacy",
+      output.dir = legacy.trimmed.directory,
       overwrite = overwrite,
       TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,

@@ -1,5 +1,35 @@
 # PhyloProcessR (development version)
 
+## Workflow X3 legacy integration
+
+- Workflow X3 now saves all results below the configurable
+  `output.directory`, which defaults to `data-analysis/legacy-integration`.
+- Workflow 4 can copy the complete integrated X3 alignment set into
+  `untrimmed_all-markers` when `include.legacy = TRUE`. These alignments are
+  then available to workflow 5 trimming and dataset construction.
+- Workflow 4 accepts an optional CSV, TSV, TXT, XLS, or XLSX legacy-name map.
+  It renames legacy samples and merges mapped legacy and sequence-capture rows.
+- Workflow 4 can add per-genome target sequences produced by
+  `extractGenomeTarget()` before it aligns each capture locus.
+
+## Workflow X5 paralog analysis
+
+- Workflow X5 collects saved workflow 4 candidates, expands untrimmed marker
+  alignments, applies copy-aware trimming, infers checked IQ-TREE gene trees,
+  and exports retained markers or both groups from one supported two-copy split.
+- The workflow writes complete target, copy, split, membership, and output
+  reports without changing workflow 4 or workflow 5 outputs. Split markers need
+  explicit biological metadata before they can enter an unlinked dataset.
+- X5 locus files and tree directories use locus names. Tree and diagnostic
+  alignment labels keep sample names and add `_1`, `_2`, and later suffixes
+  only when a sample has multiple copies at that locus.
+- X5 does not treat a deep branch as a paralog concern when every sample has one
+  sequence at the locus.
+- When X5 cannot support a two-copy split, it keeps the best available copy for
+  each sample. Candidate rank selects the best copy. Aligned coverage and stable
+  sequence metadata resolve ties. X5 re-trims the single-copy alignment and
+  retains the locus only when the standard final thresholds pass.
+
 ## Workflow 1 preprocessing
 
 ### Breaking changes

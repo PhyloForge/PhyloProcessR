@@ -83,26 +83,31 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
   if (is.null(iupac.directory))  { stop("Please provide the iupac.directory.") }
   if (is.null(output.directory)) { stop("Please provide an output.directory.") }
-  if (iupac.directory == output.directory)  { stop("iupac.directory and output.directory must differ.") }
-  if (!is.null(removed.directory) && iupac.directory == removed.directory) {
+  if (!dir.exists(iupac.directory)) stop("iupac.directory does not exist.")
+  input.path = normalizePath(iupac.directory, mustWork = TRUE)
+  output.path = normalizePath(output.directory, mustWork = FALSE)
+  removed.path = if (is.null(removed.directory)) NULL else
+    normalizePath(removed.directory, mustWork = FALSE)
+  if (input.path == output.path)  { stop("iupac.directory and output.directory must differ.") }
+  if (!is.null(removed.path) && input.path == removed.path) {
     stop("iupac.directory and removed.directory must differ.")
   }
 
   if (dir.exists(output.directory)) {
-    if (overwrite) { system(paste0("rm -r ", output.directory)); dir.create(output.directory) }
-  } else { dir.create(output.directory) }
+    if (overwrite) { unlink(output.directory, recursive = TRUE); dir.create(output.directory, recursive = TRUE) }
+  } else { dir.create(output.directory, recursive = TRUE) }
 
   if (!is.null(removed.directory)) {
     if (dir.exists(removed.directory)) {
-      if (overwrite) { system(paste0("rm -r ", removed.directory)); dir.create(removed.directory) }
-    } else { dir.create(removed.directory) }
+      if (overwrite) { unlink(removed.directory, recursive = TRUE); dir.create(removed.directory, recursive = TRUE) }
+    } else { dir.create(removed.directory, recursive = TRUE) }
   }
 
   if (!dir.exists("logs/sample_logs")) {
     dir.create("logs/sample_logs", recursive = TRUE, showWarnings = FALSE)
   }
 
-  file.names = list.files(iupac.directory)
+  file.names = list.files(iupac.directory, pattern = "\\.fa$", full.names = FALSE)
   if (length(file.names) == 0) { stop("No FASTA files found in iupac.directory.") }
 
   #################################################
@@ -115,7 +120,8 @@ filterHeterozygosity = function(iupac.directory = NULL,
       sample.name = gsub("\\.fa$", "", file.names[i])
 
       # Skip samples already processed when overwrite = FALSE
-      if (overwrite == FALSE && file.exists(paste0(output.directory, "/", file.names[i]))) {
+      completion.file = file.path(output.directory, paste0(sample.name, ".complete"))
+      if (overwrite == FALSE && file.exists(completion.file)) {
         print(paste0(sample.name, " already processed, skipping. Set overwrite = TRUE to redo."))
         return(NULL)
       }
@@ -126,6 +132,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
       if (length(contigs) == 0) {
         warning(file.names[i], ": empty FASTA -- skipping.")
+        file.create(completion.file)
         return(data.frame(Sample = sample.name, TotalContigs = 0L,
                           KeptContigs = 0L, RemovedContigs = 0L,
                           PctRemoved = NA_real_, MeanIUPACprop = NA_real_,
@@ -171,21 +178,29 @@ filterHeterozygosity = function(iupac.directory = NULL,
       #------------------------------------------------------
       if (length(low.contigs) > 0) {
         final.loci = as.list(as.character(low.contigs))
+        final.file = file.path(output.directory, file.names[i])
+        temp.file = tempfile(paste0(sample.name, "-"), tmpdir = output.directory)
         PhyloProcessR::writeFasta(
           sequences = final.loci, names = names(final.loci),
-          paste0(output.directory, "/", file.names[i]),
+          temp.file,
           nbchar = 1000000, as.string = TRUE
         )
+        if (!file.rename(temp.file, final.file)) stop("Could not publish filtered FASTA for ", sample.name)
       }
 
       if (length(high.contigs) > 0 && !is.null(removed.directory)) {
         final.loci = as.list(as.character(high.contigs))
+        removed.file = file.path(removed.directory, file.names[i])
+        temp.removed = tempfile(paste0(sample.name, "-"), tmpdir = removed.directory)
         PhyloProcessR::writeFasta(
           sequences = final.loci, names = names(final.loci),
-          paste0(removed.directory, "/", file.names[i]),
+          temp.removed,
           nbchar = 1000000, as.string = TRUE
         )
+        if (!file.rename(temp.removed, removed.file)) stop("Could not publish removed FASTA for ", sample.name)
       }
+
+      file.create(completion.file)
 
       #------------------------------------------------------
       # Return per-sample summary row
@@ -204,12 +219,7 @@ filterHeterozygosity = function(iupac.directory = NULL,
 
     }, error = function(e) {
       warning(file.names[i], " failed: ", conditionMessage(e))
-      data.frame(Sample = gsub("\\.fa$", "", file.names[i]),
-                 TotalContigs = NA_integer_, KeptContigs = NA_integer_,
-                 RemovedContigs = NA_integer_,
-                 PctRemoved = NA_real_, MeanIUPACprop = NA_real_,
-                 MaxIUPACprop = NA_real_, MeanContigLength = NA_real_,
-                 stringsAsFactors = FALSE)
+      structure("failed", sample = gsub("\\.fa$", "", file.names[i]))
     })
   }, mc.cores = threads)
 
@@ -218,14 +228,14 @@ filterHeterozygosity = function(iupac.directory = NULL,
   ### (done after the parallel loop to avoid race conditions)
   #################################################
 
-  summary.df = do.call(rbind, results[!sapply(results, is.null)])
+  summary.df = do.call(rbind, results[vapply(results, is.data.frame, logical(1))])
 
   if (!is.null(summary.df) && nrow(summary.df) > 0) {
 
     # Append-not-overwrite pattern: merge with any existing summary so that
     # partial re-runs (overwrite = FALSE) accumulate correctly
     out.csv = "logs/filterHeterozygosity_summary.csv"
-    if (file.exists(out.csv)) {
+    if (file.exists(out.csv) && !overwrite) {
       existing = read.csv(out.csv, stringsAsFactors = FALSE)
       existing = existing[!existing$Sample %in% summary.df$Sample, ]
       summary.df = rbind(existing, summary.df)
@@ -240,6 +250,13 @@ filterHeterozygosity = function(iupac.directory = NULL,
         "  across", nrow(good.rows), "samples.\n",
         "  Summary: logs/filterHeterozygosity_summary.csv\n",
         "  Per-contig detail: logs/sample_logs/<Sample>_heterozygosity.csv\n")
+  }
+
+  fail.count = sum(vapply(results, function(x) {
+    is.character(x) && length(x) == 1 && identical(x[[1]], "failed")
+  }, logical(1)))
+  if (fail.count > 0) {
+    stop(fail.count, " sample(s) failed during filterHeterozygosity; completed outputs were retained for resume.")
   }
 
   invisible(summary.df)

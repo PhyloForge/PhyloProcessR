@@ -99,7 +99,7 @@ the reads of both loci and gives wrong genotypes, and no later step can
 repair that. \code{annotateTargets} keeps the other half of the work: the
 paralog policy, the sample naming, and the alignment output.
 
-Run this step with \code{retain.paralogs} in mind. This function does not
-drop a paralog copy, because the reads of a dropped copy map to the copy
-that remains and make false heterozygosity.
+This function does not drop a possible paralog copy, because reads from a
+dropped copy can map to the copy that remains and create false
+heterozygosity. Workflow 4 evaluates the curated copies after variant calling.
 }

@@ -33,7 +33,7 @@ used to name the intended output format; PHYLIP output is supported.}
 
 \item{threads}{integer; number of threads to use.}
 
-\item{memory}{integer; memory allocated (in GB).}
+\item{memory}{integer; reserved for compatibility. This value does not set the JVM memory limit.}
 
 \item{overwrite}{logical; if TRUE, overwrite existing output files.}
 

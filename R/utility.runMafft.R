@@ -53,20 +53,23 @@ runMafft = function(sequence.data = NULL,
                     mafft.path = NULL,
                     quiet = TRUE){
 
+  algorithm = match.arg(algorithm)
+
   #save.name<-locus.save.name
   #algorithm = "localpair"
   # unaligned.contigs<-intron.align
 
-  #Same adds to bbmap path
-  if (is.null(mafft.path) == FALSE){
-    b.string = unlist(strsplit(mafft.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      mafft.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { mafft.path = "" }
+  mafft.command = if (is.null(mafft.path)) "mafft" else
+    file.path(mafft.path, "mafft")
 
   save.contigs = as.list(as.character(sequence.data))
   if (is.null(save.name) == T) { save.name = paste(sample(LETTERS, 5, replace = T), collapse = "")}
+  input.files = c(paste0(save.name, ".fa"), paste0(save.name, "_add_sequences.fa"))
+  alignment.file = paste0(save.name, "_align.fa")
+  on.exit({
+    unlink(input.files)
+    if (cleanup.files) unlink(alignment.file)
+  }, add = TRUE)
   if (adjust.direction == T){ adjust.direction = "--adjustdirection " } else { adjust.direction = "" }
 
   #Adds a sequence into the alignment. Saves much computation.
@@ -81,12 +84,18 @@ runMafft = function(sequence.data = NULL,
                paste0(save.name, "_add_sequences.fa"), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0(mafft.path, "mafft --",algorithm, " ", save.name,
-                  "_add_sequences.fa --maxiterate 1000 --", dna.type, " ",
-                  adjust.direction, save.name, ".fa > ",
-                  save.name, "_align.fa"), ignore.stderr = quiet)
+    alignment.file = paste0(save.name, "_align.fa")
+    unlink(alignment.file)
+    .runCommand(paste0(shQuote(mafft.command), " --", algorithm, " ",
+                       shQuote(paste0(save.name, "_add_sequences.fa")),
+                       " --maxiterate 1000 --", dna.type, " ", adjust.direction,
+                       shQuote(paste0(save.name, ".fa")), " > ",
+                       shQuote(alignment.file)), quiet = quiet,
+                task = "MAFFT alignment", keep.stdout = TRUE,
+                stderr.log = paste0(save.name, "_mafft.log"))
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
+    unlink(paste0(save.name, "_mafft.log"))
     unlink(paste0(save.name, ".fa"))
     unlink(paste0(save.name, "_add_sequences.fa"))
 
@@ -99,12 +108,18 @@ runMafft = function(sequence.data = NULL,
                paste(save.name, ".fa", sep = ""), nbchar = 1000000, as.string = T)
 
     #Runs MAFFT to align
-    system(paste0(mafft.path, "mafft --",algorithm, " --maxiterate 1000 --", dna.type, " ",
-                  adjust.direction, "--quiet --op 3 --ep 0.123",
-                  " --thread ", threads, " ", save.name, ".fa > ", save.name, "_align.fa"),
-           ignore.stderr = quiet)
+    alignment.file = paste0(save.name, "_align.fa")
+    unlink(alignment.file)
+    .runCommand(paste0(shQuote(mafft.command), " --", algorithm,
+                       " --maxiterate 1000 --", dna.type, " ", adjust.direction,
+                       "--quiet --op 3 --ep 0.123 --thread ", threads, " ",
+                       shQuote(paste0(save.name, ".fa")), " > ",
+                       shQuote(alignment.file)), quiet = quiet,
+                task = "MAFFT alignment", keep.stdout = TRUE,
+                stderr.log = paste0(save.name, "_mafft.log"))
 
     alignment = Biostrings::readDNAStringSet(paste0(save.name, "_align.fa"))   # loads up fasta file
+    unlink(paste0(save.name, "_mafft.log"))
     unlink(paste0(save.name, ".fa"))
   }#end local pair
 
@@ -113,5 +128,3 @@ runMafft = function(sequence.data = NULL,
     return(alignment)
   } else { return(alignment) }
 }#function end
-
-

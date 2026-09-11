@@ -6,7 +6,7 @@
 #'
 #' @param target either a DNAStringSet with a single reference sequence to append to the alignment, or a character string giving the name of a sequence already present in the alignment to use as the reference
 #'
-#' @return a named numeric vector of pairwise distances (proportion of differing sites) for every sequence in the alignment including the target; names correspond to sequence names
+#' @return a named numeric vector of pairwise distances (proportion of differing sites) for every sequence in the alignment including the target; names correspond to sequence names. A comparison with no overlapping, non-missing positions is returned as \code{NA}.
 #'
 #' @export
 
@@ -75,7 +75,7 @@ pairwiseDistanceTarget = function(alignment = NULL,
 
   #Summarizes and returns data
   summary.data = all.pars/all.over
-  summary.data[is.nan(summary.data)] = 0
+  summary.data[is.nan(summary.data)] = NA_real_
   names(summary.data) = names(new.align)
 
   #Returns the summary data

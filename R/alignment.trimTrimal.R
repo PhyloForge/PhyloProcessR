@@ -1,6 +1,6 @@
 #' @title trimTrimal
 #'
-#' @description Wrapper function for running TrimAl on a single alignment. The alignment is written to a temporary fasta file, TrimAl is called in automated mode (-automated1), and the trimmed alignment is read back. Sample names are restored from the original alignment to correct any truncation introduced by TrimAl. If TrimAl produces no output the original alignment is returned unchanged. Alignments with three or fewer sequences are returned unmodified. TrimAl must be installed and accessible.
+#' @description Wrapper function for running TrimAl on a single alignment. The alignment is written to a temporary fasta file, TrimAl is called in automated mode (-automated1), and the trimmed alignment is read back. Sample names are restored from the original alignment to correct any truncation introduced by TrimAl. Alignments with three or fewer sequences are returned unmodified. TrimAl must be installed and accessible.
 #'
 #' @param alignment a DNAStringSet containing the aligned sequences to trim
 #'
@@ -23,13 +23,8 @@ trimTrimal = function(alignment = NULL,
    # quiet = FALSE
    # trimal.path = "/Users/chutter/conda/PhyloCap/bin"
 
-  #Same adds to bbmap path
-  if (is.null(trimal.path) == FALSE){
-    b.string = unlist(strsplit(trimal.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      trimal.path = paste0(append(b.string, "/"), collapse = "")
-    }#end if
-  } else { trimal.path = "" }
+  trimal.command = if (is.null(trimal.path)) "trimal" else
+    file.path(trimal.path, "trimal")
 
   if (length(alignment) <= 3){ return(alignment) }
 
@@ -39,6 +34,9 @@ trimTrimal = function(alignment = NULL,
 
   #Creates random name and saves it
   input.file = paste0("temp_", sample(1:1000000, 1), ".fa")
+  output.file = paste0("tm-", input.file)
+  log.file = paste0(input.file, ".log")
+  on.exit(unlink(c(input.file, paste0(input.file, ".fai"), output.file)), add = TRUE)
   writeFasta(sequences = write.align,
              names = names(write.align),
              file.out = input.file,
@@ -46,14 +44,13 @@ trimTrimal = function(alignment = NULL,
              as.string = T)
 
   #Runs trimal command with input file
-  system(paste0(trimal.path, "trimal -in ", input.file, " -out tm-", input.file, " -automated1"),
-         ignore.stdout = quiet, ignore.stderr = quiet)
-
-  if (file.exists(paste0("tm-", input.file)) == F) {
-    system(paste0("rm ", input.file))
-    if (file.exists(paste0(input.file, ".fai"))) { system(paste0("rm ", input.file, ".fai")) }
-    return(alignment)
-  } else { system(paste0("mv tm-", input.file, " ", input.file)) }
+  .runCommand(paste0(shQuote(trimal.command), " -in ", shQuote(input.file),
+                     " -out ", shQuote(output.file), " -automated1"),
+              quiet = quiet, task = "trimAl trimming", stderr.log = log.file)
+  if (!file.exists(output.file) || file.info(output.file)$size == 0) {
+    stop("trimAl did not create a readable output alignment.")
+  }
+  if (!file.rename(output.file, input.file)) stop("Could not prepare trimAl output.")
 
   out.align = Rsamtools::scanFa(Rsamtools::FaFile(input.file))
 
@@ -74,8 +71,7 @@ trimTrimal = function(alignment = NULL,
   temp = names(out.align)[is.na(names(out.align)) == T]
   if (length(temp) > 0){ stop("there are NAs in the names") }
   names(out.align) = new.names
-  system(paste0("rm ", input.file))
-  if (file.exists(paste0(input.file, ".fai"))) { system(paste0("rm ", input.file, ".fai")) }
+  unlink(log.file)
   return(out.align)
 
 }#end function

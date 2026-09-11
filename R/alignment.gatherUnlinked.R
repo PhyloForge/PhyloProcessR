@@ -63,35 +63,43 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
     stop("exon.alignment.directory not found. Please check the path.")
   }
 
-  #Checks output overwrite
+  exon.data = .readGeneMetadata(feature.gene.names)
+  gene.files = .alignmentFiles(gene.alignment.directory)
+  exon.files = .alignmentFiles(exon.alignment.directory)
+  if (length(gene.files) == 0 && length(exon.files) == 0) {
+    stop("No alignment files were found in the gene or exon directory.")
+  }
+  matched.markers = .alignmentId(exon.files) %in% exon.data$marker
+  if (length(exon.files) > 0 && !any(matched.markers) && length(gene.files) == 0) {
+    stop("No alignment names match the gene metadata marker column.")
+  }
+
+  # Checks output overwrite after validating all inputs.
   if (overwrite == TRUE){
-    if (dir.exists(output.directory) == TRUE) { system(paste0("rm -r ", output.directory)) }
-    dir.create(output.directory)
+    if (dir.exists(output.directory) == TRUE) unlink(output.directory, recursive = TRUE)
+    dir.create(output.directory, recursive = TRUE)
   } else {
-    if (!dir.exists(output.directory)) { dir.create(output.directory) }
+    if (!dir.exists(output.directory)) dir.create(output.directory, recursive = TRUE)
   }#end overwrite if
 
-  # Gets list of alignments
-  gene.files = list.files(gene.alignment.directory, full.names = FALSE, recursive = TRUE)
-  exon.files = list.files(exon.alignment.directory, full.names = FALSE, recursive = TRUE)
-  exon.data = data.table::fread(file = feature.gene.names, header = TRUE)
-  
-  single.data = exon.data[!exon.data$gene %in% gsub("\\..*", "", gene.files),]
+  single.data = exon.data[!gene %in% .alignmentId(gene.files)]
   
   #Copies the genes over
   for (i in seq_along(gene.files)){
     dest = paste0(output.directory, "/", gene.files[i])
     if (overwrite == FALSE && file.exists(dest)) { next }
-    system(paste0("cp ", gene.alignment.directory, "/", gene.files[i], " ", dest))
+    .copyAlignment(file.path(gene.alignment.directory, gene.files[i]), dest,
+                   overwrite = overwrite)
   }
 
   #Copies the remaining single-exon loci over
-  exon.copy = exon.files[gsub("\\..*", "", exon.files) %in% single.data$marker]
+  exon.copy = exon.files[.alignmentId(exon.files) %in% single.data$marker]
 
   for (i in seq_along(exon.copy)) {
     dest = paste0(output.directory, "/", exon.copy[i])
     if (overwrite == FALSE && file.exists(dest)) { next }
-    system(paste0("cp ", exon.alignment.directory, "/", exon.copy[i], " ", dest))
+    .copyAlignment(file.path(exon.alignment.directory, exon.copy[i]), dest,
+                   overwrite = overwrite)
   }
 
 }#end function

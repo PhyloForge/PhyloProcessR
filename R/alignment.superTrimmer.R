@@ -142,20 +142,20 @@ superTrimmer = function(alignment.dir = NULL,
   } else { dir.create(output.dir, recursive = TRUE) }
 
   #Gathers alignments
-  align.files = list.files(alignment.dir)
+  align.files = .alignmentFiles(alignment.dir, format = alignment.format)
+  input.ids = .alignmentId(align.files)
 
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
   if (overwrite == FALSE){
-    done.files = list.files(output.dir)
-    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+    done.files = .alignmentFiles(output.dir, format = "phylip")
+    done.files = done.files[file.info(file.path(output.dir, done.files))$size > 0]
+    align.files = align.files[!.alignmentId(align.files) %in% .alignmentId(done.files)]
   }
 
-  if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
-
   #Data to collect
-  header.data = c("Alignment", "Pass", "startSamples", "trimalSamples",
+  header.data = c("Alignment", "Pass", "Status", "Reason", "startSamples", "trimalSamples",
                   "simSamples", "edgeSamples", "columnSamples", "covSamples",
                   "startLength", "trimalLength",
                   "simLength", "edgeLength", "columnLength", "covLength",
@@ -170,6 +170,21 @@ superTrimmer = function(alignment.dir = NULL,
   data.table::setnames(save.data, header.data)
   save.data[, Alignment:=as.character(Alignment)]
   save.data[, Pass:=as.logical(Pass)]
+  save.data[, Status:=as.character(Status)]
+  save.data[, Reason:=as.character(Reason)]
+
+  dir.create("logs", recursive = TRUE, showWarnings = FALSE)
+  log.base = paste0("logs/", basename(output.dir))
+  summary.file = paste0(log.base, "_trimming_summary.csv")
+  previous.data = NULL
+  if (!overwrite && file.exists(summary.file)) {
+    previous.data = data.table::fread(summary.file)
+    previous.data = previous.data[Alignment %in% input.ids]
+  }
+
+  if (length(align.files) == 0) {
+    return("All alignments have already been completed and overwrite = FALSE.")
+  }
 
   mem.cl = floor(memory/threads)
 
@@ -192,12 +207,6 @@ superTrimmer = function(alignment.dir = NULL,
       save.name = gsub(".fa$", "", align.files[i])
       save.name = gsub(".fasta$", "", save.name)
     }#end phylip
-
-    if (length(align) <= min.taxa.alignment) {
-      print("too few taxa in alignment, skipping")
-      #next
-      return(NULL)
-    }
 
     temp.data = save.data[1,]
 
@@ -222,6 +231,19 @@ superTrimmer = function(alignment.dir = NULL,
     data.table::set(temp.data, i = as.integer(1), j = match("startBasepairs", header.data), value = gap.count[2] - gap.count[1])
     data.table::set(temp.data, i = as.integer(1), j = match("startGaps", header.data), value = gap.count[1])
     data.table::set(temp.data, i = as.integer(1), j = match("startPerGaps", header.data), value = gap.count[3])
+    for (stage in c("trimal", "sim", "edge", "column", "cov")) {
+      for (metric in c("Samples", "Length", "Basepairs", "Gaps", "PerGaps")) {
+        start.column = paste0("start", metric)
+        stage.column = paste0(stage, metric)
+        data.table::set(temp.data, i = 1L, j = match(stage.column, header.data),
+                        value = temp.data[[start.column]])
+      }
+    }
+
+    if (length(align) <= min.taxa.alignment) {
+      temp.data[, `:=`(Status = "too-few-taxa", Reason = "Input has too few taxa")]
+      return(temp.data)
+    }
 
     #Step 3. Trimal trimming
     if (TrimAl == TRUE && length(non.align) != 0){
@@ -312,16 +334,27 @@ superTrimmer = function(alignment.dir = NULL,
       }
     }#end trim.external
 
+    if (length(non.align) > 0) {
+      gap.count = countAlignmentGaps(non.align)
+      temp.data[, `:=`(covSamples = length(non.align),
+                       covLength = Biostrings::width(non.align)[1],
+                       covBasepairs = gap.count[2] - gap.count[1],
+                       covGaps = gap.count[1], covPerGaps = gap.count[3])]
+    } else {
+      temp.data[, `:=`(covSamples = 0, covLength = 0, covBasepairs = 0,
+                       covGaps = 0, covPerGaps = 0)]
+    }
+
     if (length(non.align) <= min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
-      #next
-      return(NULL)
+      temp.data[, `:=`(Status = "too-few-taxa", Reason = "Too few taxa after trimming")]
+      return(temp.data)
     }
 
     if (length(non.align) == 0 || unique(Biostrings::width(non.align)) < min.alignment.length) {
       print("alignment below minimum length, skipping")
-      #next
-      return(NULL)
+      temp.data[, `:=`(Status = "too-short", Reason = "Alignment is below the minimum length")]
+      return(temp.data)
     }
 
     #Step 6
@@ -336,20 +369,27 @@ superTrimmer = function(alignment.dir = NULL,
         data.table::set(temp.data, i = as.integer(1), j = match("Pass", header.data), value = test.result)
 
         if (test.result == FALSE){
+          temp.data[, `:=`(Status = "filtered", Reason = "Final assessment failed")]
           print(paste0(align.files[i], " failed filtering and was discarded."))
         } else {
+          temp.data[, `:=`(Status = "saved", Reason = "")]
           print(paste0(align.files[i], " passed filters and was saved to file."))
           write.temp = strsplit(as.character(non.align), "")
           aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
           #readies for saving
-          PhyloProcessR::writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+          .writePhylipAtomic(aligned.set,
+                             destination = paste0(output.dir, "/", save.name, ".phy"),
+                             interleave = FALSE)
         }#end else test result
       } else {
+        temp.data[, `:=`(Pass = TRUE, Status = "saved", Reason = "Assessment disabled")]
         #If no alignment assessing is done, saves
         write.temp = strsplit(as.character(non.align), "")
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
         #readies for saving
-        PhyloProcessR::writePhylip(aligned.set, file= paste0(output.dir, "/", save.name, ".phy"), interleave = F)
+        .writePhylipAtomic(aligned.set,
+                           destination = paste0(output.dir, "/", save.name, ".phy"),
+                           interleave = FALSE)
       }#end else
     }#outer if
 
@@ -361,20 +401,23 @@ superTrimmer = function(alignment.dir = NULL,
     temp.data  # explicit return value for do.call(rbind, ...)
 
   }, error = function(e) {
-    warning(align.files[i], " failed: ", conditionMessage(e))
-    NULL
+    temp.data = save.data[1,]
+    temp.data[, `:=`(Alignment = .alignmentId(align.files[i]), Pass = FALSE,
+                     Status = "error", Reason = conditionMessage(e))]
+    temp.data
   })
   }, mc.cores = threads)) #end i loop
 
-  if (is.null(out.data) ==  TRUE){ return("No alignments were trimmed.") }
+  if (!is.null(previous.data)) {
+    previous.data = previous.data[!Alignment %in% out.data$Alignment]
+    out.data = data.table::rbindlist(list(previous.data, out.data), fill = TRUE)
+  }
 
   #Print and save summary table and log to the logs/ directory
-  dir.create("logs", recursive = TRUE, showWarnings = FALSE)
-  log.base = paste0("logs/", basename(output.dir))
-  write.csv(out.data, file = paste0(log.base, "_trimming_summary.csv"), row.names = F)
+  write.csv(out.data, file = summary.file, row.names = F)
 
   #Saves log file of things
-  if (file.exists(paste0(log.base, ".log")) == TRUE){ system(paste0("rm ", log.base, ".log")) }
+  if (file.exists(paste0(log.base, ".log"))) unlink(paste0(log.base, ".log"))
   fileConn = file(paste0(log.base, ".log"), open = "w")
   writeLines(paste0("Log file for ", output.dir), fileConn)
   writeLines(paste0("\n"), fileConn)
@@ -438,15 +481,15 @@ superTrimmer = function(alignment.dir = NULL,
   writeLines(paste0(""), fileConn)
   writeLines(paste0("External Trimming:"), fileConn)
   writeLines(paste0("Mean samples removed: ",
-                    mean(out.data$trimalSamples - out.data$edgeSamples)), fileConn)
+                    mean(out.data$simSamples - out.data$edgeSamples)), fileConn)
   writeLines(paste0("Mean alignment length reduction: ",
-                    mean(out.data$trimalLength - out.data$edgeLength)), fileConn)
+                    mean(out.data$simLength - out.data$edgeLength)), fileConn)
   writeLines(paste0("Mean basepairs trimmed: ",
-                    mean(out.data$trimalBasepairs - out.data$edgeBasepairs)), fileConn)
+                    mean(out.data$simBasepairs - out.data$edgeBasepairs)), fileConn)
   writeLines(paste0("Mean gap change: ",
-                    mean(out.data$trimalGaps - out.data$edgeGaps)), fileConn)
+                    mean(out.data$simGaps - out.data$edgeGaps)), fileConn)
   writeLines(paste0("Mean gap percent change: ",
-                    mean(out.data$trimalPerGaps - out.data$edgePerGaps)), fileConn)
+                    mean(out.data$simPerGaps - out.data$edgePerGaps)), fileConn)
   writeLines(paste0(""), fileConn)
   writeLines(paste0("Column Coverage Trimming:"), fileConn)
   writeLines(paste0("Mean samples removed: ",
@@ -472,5 +515,11 @@ superTrimmer = function(alignment.dir = NULL,
   writeLines(paste0("Mean gap percent change: ",
                     mean(out.data$columnPerGaps - out.data$covPerGaps)), fileConn)
   close(fileConn)
+
+  failed = out.data[Status == "error"]
+  if (nrow(failed) > 0) {
+    stop("Alignment trimming failed for: ",
+         paste(paste0(failed$Alignment, " (", failed$Reason, ")"), collapse = "; "))
+  }
 
 } #end function

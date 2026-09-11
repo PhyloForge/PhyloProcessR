@@ -72,15 +72,16 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   } else { dir.create(output.directory, recursive = TRUE) }
 
   #Gathers alignments
-  align.files = list.files(alignment.directory)
+  align.files = .alignmentFiles(alignment.directory, format = alignment.format)
   target.loci = Biostrings::readDNAStringSet(file = target.file, format = "fasta")
 
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
   if (overwrite == FALSE){
-    done.files = list.files(output.directory)
-    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+    done.files = .alignmentFiles(output.directory, format = "phylip")
+    done.files = done.files[file.info(file.path(output.directory, done.files))$size > 0]
+    align.files = align.files[!.alignmentId(align.files) %in% .alignmentId(done.files)]
   }
 
   if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
@@ -88,7 +89,7 @@ trimAlignmentTargets = function(alignment.directory = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  parallel::mclapply(seq_along(align.files), function(i) {
+  results = parallel::mclapply(seq_along(align.files), function(i) {
   tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
@@ -109,11 +110,11 @@ trimAlignmentTargets = function(alignment.directory = NULL,
     target.seq = target.loci[names(target.loci) %in% save.name]
     if (length(target.seq) == 0) {
       print(paste0(save.name, ": no matching reference found in target file -- skipping."))
-      return(NULL)
+      return(list(status = "excluded", locus = save.name))
     }
     if (length(target.seq) >= 2) {
       print(paste0(save.name, ": duplicate entries found in target file -- skipping."))
-      return(NULL)
+      return(list(status = "excluded", locus = save.name))
     }
 
     names(target.seq) = "Reference_Locus"
@@ -203,9 +204,9 @@ trimAlignmentTargets = function(alignment.directory = NULL,
       aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
       #readies for saving
-      PhyloProcessR::writePhylip(
+      .writePhylipAtomic(
         alignment = aligned.set,
-        file = paste0(output.directory, "/", align.files[i]),
+        destination = paste0(output.directory, "/", align.files[i]),
         interleave = F,
         strict = F
       )
@@ -216,10 +217,19 @@ trimAlignmentTargets = function(alignment.directory = NULL,
 
     rm(align, alignment, target.region, target.seq)
     gc()
+    list(status = if (skip.file) "excluded" else "success", locus = save.name)
 
   }, error = function(e) {
-    warning(align.files[i], " failed: ", conditionMessage(e))
+    list(status = "error", locus = .alignmentId(align.files[i]),
+         message = conditionMessage(e))
   })
   }, mc.cores = threads) #end i loop
+
+  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
+  if (any(failures)) {
+    details = vapply(results[failures], function(x) paste0(x$locus, " (", x$message, ")"),
+                     character(1))
+    stop("Target trimming failed for: ", paste(details, collapse = "; "))
+  }
 
 } #end function

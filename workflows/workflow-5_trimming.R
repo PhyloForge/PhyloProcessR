@@ -9,6 +9,68 @@ if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
 library(PhyloProcessR)
 setwd(working.directory)
 
+prepareCombinedAlignments = function(include.novel.markers = FALSE,
+                                     overwrite = FALSE) {
+  ordinary.directory = "data-analysis/alignments/untrimmed_all-markers"
+  if (!include.novel.markers) return(ordinary.directory)
+
+  novel.directory = "data-analysis/alignments/untrimmed_novel-markers"
+  if (!dir.exists(novel.directory)) {
+    stop("include.novel.markers is TRUE, but the novel-marker directory is missing: ",
+         novel.directory)
+  }
+  pattern = "\\.(phy|phylip|fa|fas|fasta|nex|nexus)$"
+  ordinary.files = list.files(ordinary.directory, pattern = pattern,
+                              full.names = TRUE, ignore.case = TRUE)
+  novel.files = list.files(novel.directory, pattern = pattern,
+                           full.names = TRUE, ignore.case = TRUE)
+  if (length(novel.files) == 0) stop("No novel-marker alignments were found.")
+  markerId = function(path = NULL) {
+    sub(pattern, "", basename(path), ignore.case = TRUE)
+  }
+  duplicate.ids = intersect(markerId(ordinary.files), markerId(novel.files))
+  if (length(duplicate.ids) > 0) {
+    stop("Duplicate marker IDs occur in ordinary and novel inputs: ",
+         paste(utils::head(duplicate.ids, 5), collapse = ", "), ".")
+  }
+
+  combined.directory = "data-analysis/alignments/untrimmed_all-plus-novel"
+  if (dir.exists(combined.directory)) unlink(combined.directory, recursive = TRUE)
+  dir.create(combined.directory, recursive = TRUE)
+  for (source in c(ordinary.files, novel.files)) {
+    copied = file.copy(source, file.path(combined.directory, basename(source)),
+                       overwrite = overwrite)
+    if (!isTRUE(copied)) stop("Could not stage alignment: ", source)
+  }
+  combined.directory
+}
+
+copyUnmappedNovelMarkers = function(output.directory = NULL,
+                                    metadata.file = NULL,
+                                    overwrite = FALSE) {
+  if (!include.novel.markers) return(invisible(NULL))
+  metadata = data.table::fread(metadata.file, header = TRUE)
+  if (!"marker" %in% names(metadata) && "Marker" %in% names(metadata)) {
+    data.table::setnames(metadata, "Marker", "marker")
+  }
+  novel.directory = "data-analysis/alignments/untrimmed_novel-markers"
+  pattern = "\\.(phy|phylip|fa|fas|fasta|nex|nexus)$"
+  novel.files = list.files(novel.directory, pattern = pattern,
+                           full.names = TRUE, ignore.case = TRUE)
+  markerId = function(path = NULL) {
+    sub(pattern, "", basename(path), ignore.case = TRUE)
+  }
+  unmapped = novel.files[!markerId(novel.files) %in% metadata$marker]
+  for (source in unmapped) {
+    destination = file.path(output.directory, basename(source))
+    copied = file.copy(source, destination, overwrite = overwrite)
+    if (!isTRUE(copied) && !(file.exists(destination) && !overwrite)) {
+      stop("Could not copy novel alignment: ", source)
+    }
+  }
+  message(length(unmapped), " unmapped novel marker(s) added individually.")
+}
+
 ##################################################################################################
 ##################################################################################################
 ## Trimming to targets
@@ -193,9 +255,10 @@ if (trim.to.flanks == TRUE) {
 ##################################################################################################
 
 if (concatenate.genes == TRUE) {
+  exon.dir = prepareCombinedAlignments(include.novel.markers, overwrite)
   # Concatenates genes from the untrimmed-markers original alignments
   concatenateGenes(
-    alignment.folder = "data-analysis/alignments/untrimmed_all-markers",
+    alignment.folder = exon.dir,
     output.folder = "data-analysis/alignments/untrimmed_genes",
     feature.gene.names = feature.gene.names,
     input.format = "phylip",
@@ -208,22 +271,6 @@ if (concatenate.genes == TRUE) {
   )
 
   if (gather.unlinked == TRUE){
-    # When novel markers are available, combine with all-markers as the exon source
-    # so gatherUnlinked handles gene vs single-exon assignment for all loci together
-    if (include.novel.markers == TRUE &&
-        dir.exists("data-analysis/alignments/untrimmed_novel-markers")) {
-      combined.exon.dir = "data-analysis/alignments/untrimmed_all-plus-novel"
-      if (dir.exists(combined.exon.dir) && overwrite == TRUE) {
-        system(paste0("rm -r ", combined.exon.dir))
-      }
-      dir.create(combined.exon.dir, showWarnings = FALSE)
-      system(paste0("cp data-analysis/alignments/untrimmed_all-markers/* ", combined.exon.dir, "/"))
-      system(paste0("cp data-analysis/alignments/untrimmed_novel-markers/* ", combined.exon.dir, "/"))
-      exon.dir = combined.exon.dir
-    } else {
-      exon.dir = "data-analysis/alignments/untrimmed_all-markers"
-    }# end novel markers
-
     # Gathers the unlinked markers (genes and single exons / UCEs)
     gatherUnlinked(
       gene.alignment.directory = "data-analysis/alignments/untrimmed_genes",
@@ -232,11 +279,14 @@ if (concatenate.genes == TRUE) {
       feature.gene.names = feature.gene.names,
       overwrite = overwrite
     )
+    copyUnmappedNovelMarkers("data-analysis/alignments/untrimmed_all-unlinked",
+                             feature.gene.names, overwrite)
   }#end if
 
   # Trims the unlinked
-  superTrimmer(
-    alignment.dir = "data-analysis/alignments/untrimmed_all-unlinked",
+  if (trim.alignments == TRUE && gather.unlinked == TRUE) {
+    superTrimmer(
+      alignment.dir = "data-analysis/alignments/untrimmed_all-unlinked",
     alignment.format = "phylip",
     output.dir = "data-analysis/alignments/trimmed_all-unlinked",
     overwrite = overwrite,
@@ -258,8 +308,9 @@ if (concatenate.genes == TRUE) {
     max.alignment.gap.percent = max.alignment.gap.percent,
     min.coverage.bp = min.coverage.bp,
     threads = threads,
-    memory = memory
-  )
+      memory = memory
+    )
+  }
 } # end concatenate genes
 
 
@@ -268,24 +319,12 @@ if (concatenate.genes == TRUE) {
 ##################################################################################################
 
 if (concatenate.genes == FALSE) {
-  # When novel markers are available, combine with all-markers before trimming
-  if (include.novel.markers == TRUE &&
-      dir.exists("data-analysis/alignments/untrimmed_novel-markers")) {
-    combined.exon.dir = "data-analysis/alignments/untrimmed_all-plus-novel"
-    if (dir.exists(combined.exon.dir) && overwrite == TRUE) {
-      system(paste0("rm -r ", combined.exon.dir))
-    }
-    dir.create(combined.exon.dir, showWarnings = FALSE)
-    system(paste0("cp data-analysis/alignments/untrimmed_all-markers/* ", combined.exon.dir, "/"))
-    system(paste0("cp data-analysis/alignments/untrimmed_novel-markers/* ", combined.exon.dir, "/"))
-    trim.input.dir = combined.exon.dir
-  } else {
-    trim.input.dir = "data-analysis/alignments/untrimmed_all-markers"
-  }# end novel markers
+  trim.input.dir = prepareCombinedAlignments(include.novel.markers, overwrite)
 
   # Trims the unlinked
-  superTrimmer(
-    alignment.dir = trim.input.dir,
+  if (trim.alignments == TRUE) {
+    superTrimmer(
+      alignment.dir = trim.input.dir,
     alignment.format = "phylip",
     output.dir = "data-analysis/alignments/trimmed_all-markers",
     overwrite = overwrite,
@@ -307,8 +346,9 @@ if (concatenate.genes == FALSE) {
     max.alignment.gap.percent = max.alignment.gap.percent,
     min.coverage.bp = min.coverage.bp,
     threads = threads,
-    memory = memory
-  )
+      memory = memory
+    )
+  }
 } # end concatenate genes
 
 
@@ -316,14 +356,19 @@ if (concatenate.genes == FALSE) {
 ## Alignment subset
 ##################################################################################################
 
-if (run.subset == TRUE && !is.null(subset.fasta)) {
+if (run.subset == TRUE) {
+  if (!dir.exists(subset.alignment.directory)) {
+    stop("The configured subset alignment directory does not exist: ",
+         subset.alignment.directory,
+         ". Check concatenate.genes and trim.alignments.")
+  }
   makeAlignmentSubset(
-    alignment.directory = "data-analysis/alignments/trimmed_all-markers",
+    alignment.directory = subset.alignment.directory,
     alignment.format = "phylip",
     output.directory = paste0("data-analysis/alignments/", subset.name),
     subset.reference = subset.reference,
     subset.fasta.file = subset.fasta,
-    subset.grep.string = NULL,
+    subset.grep.string = subset.grep.string,
     subset.blast.targets = target.file,
     blast.path = blast.path,
     threads = threads,

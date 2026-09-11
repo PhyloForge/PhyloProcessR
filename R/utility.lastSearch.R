@@ -14,7 +14,9 @@
                         threads = 1,
                         quiet = TRUE) {
 
-  .runCommand(paste0(lastdb.command, " -P ", threads, " ",
+  command = if (grepl("^['\"]", lastdb.command)) lastdb.command else
+    shQuote(lastdb.command)
+  .runCommand(paste0(command, " -P ", threads, " ",
                      shQuote(db.prefix), " ", shQuote(reference.file)),
               quiet = quiet, task = "LAST database")
 
@@ -44,7 +46,9 @@
 
   # Keep the LAST status separate from the header filtering status. A failed
   # executable must not be mistaken for a successful search with no hits.
-  .runCommand(paste0(lastal.command, " -P ", threads, " -f BlastTab+ ",
+  command = if (grepl("^['\"]", lastal.command)) lastal.command else
+    shQuote(lastal.command)
+  .runCommand(paste0(command, " -P ", threads, " -f BlastTab+ ",
                      shQuote(db.prefix), " ", shQuote(query.file),
                      " > ", shQuote(raw.file)),
               quiet = quiet, task = "LAST search", keep.stdout = TRUE)

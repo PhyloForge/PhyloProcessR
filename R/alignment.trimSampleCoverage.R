@@ -1,6 +1,6 @@
 #' @title trimSampleCoverage
 #'
-#' @description Removes samples from an alignment whose sequence coverage falls below minimum thresholds. Coverage can be measured relative to the total alignment length ("alignment") or relative to the longest sample in the alignment ("sample"). Samples are removed if they have fewer than min.coverage.bp non-gap base pairs or if their non-gap base pair count is less than min.coverage.percent of the reference width. Alignments with three or fewer sequences or where min.coverage.bp exceeds the alignment length are returned unmodified.
+#' @description Removes samples from an alignment whose sequence coverage falls below minimum thresholds. Coverage can be measured relative to the total alignment length ("alignment") or relative to the longest sample in the alignment ("sample"). Samples are removed if their base count is at or below either configured threshold. Alignments with three or fewer sequences are returned unmodified.
 #'
 #' @param alignment a DNAStringSet containing the aligned sequences to filter
 #'
@@ -31,8 +31,6 @@ trimSampleCoverage = function(alignment = NULL,
 
   if (length(alignment) <= 3){ return(alignment) }
 
-  if (min.coverage.bp >= Biostrings::width(alignment)[1]){ return(alignment) }
-
   #Remove gap only alignments
   c.align = strsplit(as.character(alignment), "")
   gap.align = lapply(c.align, function(x) gsub("N|n", "-", x) )
@@ -46,6 +44,8 @@ trimSampleCoverage = function(alignment = NULL,
   if (relative.width == "sample"){
     r.width = max(base.count)
   }
+
+  if (r.width == 0) return(alignment[FALSE])
 
   base.per = base.count/r.width
   base.rem = append(base.rem, base.per[base.per * 100 <= as.numeric(min.coverage.percent)])

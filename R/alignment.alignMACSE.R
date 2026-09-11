@@ -10,7 +10,7 @@
 #' @param macse.path character string; system path to the directory containing the macse executable. If NULL, searches the system PATH.
 #' @param genetic.code integer; the genetic code table to use (default: 1 for standard nuclear).
 #' @param threads integer; number of threads to use.
-#' @param memory integer; memory allocated (in GB).
+#' @param memory integer; reserved for compatibility. This value does not set the JVM memory limit.
 #' @param overwrite logical; if TRUE, overwrite existing output files.
 #' @param quiet logical; if TRUE, suppress output messages.
 #'
@@ -37,12 +37,8 @@ alignMACSE = function(alignment.folder = NULL,
     dir.create(output.folder, recursive = TRUE)
   }
 
-  if (is.null(macse.path) == FALSE){
-    b.string = unlist(strsplit(macse.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      macse.path = paste0(append(b.string, "/"), collapse = "")
-    }
-  } else { macse.path = "" }
+  macse.command = if (is.null(macse.path)) "macse" else
+    file.path(macse.path, "macse")
 
   # Gets all alignment files
   if (alignment.format == "phylip") {
@@ -57,19 +53,29 @@ alignMACSE = function(alignment.folder = NULL,
   
   cl = makeCluster(threads)
   registerDoParallel(cl)
+  on.exit({
+    stopCluster(cl)
+    foreach::registerDoSEQ()
+  }, add = TRUE)
 
   cat(paste0("Refining ", length(align.files), " alignments using MACSE...\n"))
 
-  foreach(i = 1:length(align.files), .packages = c("Biostrings", "ape", "seqinr")) %dopar% {
+  results = foreach(i = seq_along(align.files),
+                    .packages = c("Biostrings", "ape", "seqinr")) %dopar% {
     
     file.name = basename(align.files[i])
-    file.base = strsplit(file.name, "\\.")[[1]][1]
+    file.base = .alignmentId(file.name)
     
     out.file = paste0(output.folder, "/", file.base, ".fa")
     out.aa.file = paste0(output.folder, "/temp_", file.base, "_AA.fa")
     
-    if (file.exists(out.file) && overwrite == FALSE) {
-      return(NULL)
+    final.file = if (output.format == "phylip") {
+      file.path(output.folder, paste0(file.base, ".phy"))
+    } else {
+      out.file
+    }
+    if (file.exists(final.file) && file.info(final.file)$size > 0 && !overwrite) {
+      return(list(status = "skipped", locus = file.base))
     }
 
     # MACSE requires FASTA format. If input is phylip, we need to convert to a temp fasta file.
@@ -92,19 +98,25 @@ alignMACSE = function(alignment.folder = NULL,
 
     # MACSE command
     macse_cmd = paste0(
-      macse.path, "macse -prog alignSequences ",
-      "-seq ", macse_input, " ",
+      shQuote(macse.command), " -prog alignSequences ",
+      "-seq ", shQuote(macse_input), " ",
       "-gc_def ", genetic.code, " ",
-      "-out_NT ", out.file, " ",
-      "-out_AA ", out.aa.file
+      "-out_NT ", shQuote(out.file), " ",
+      "-out_AA ", shQuote(out.aa.file)
     )
     
-    log_file = paste0(output.folder, "/temp_macse_error_log.txt")
-    if (quiet == TRUE) {
-      macse_cmd = paste0(macse_cmd, " > ", log_file, " 2>&1")
+    log.directory = file.path(output.folder, "logs")
+    dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+    log_file = file.path(log.directory, paste0(file.base, "_macse.log"))
+    status = system(paste0(macse_cmd, " > ", shQuote(log_file), " 2>&1"))
+    if (status != 0) {
+      return(list(status = "error", locus = file.base,
+                  message = paste0("MACSE exited with status ", status, ".")))
     }
-    
-    system(macse_cmd)
+    if (!file.exists(out.file) || file.info(out.file)$size == 0) {
+      return(list(status = "error", locus = file.base,
+                  message = "MACSE did not create a nucleotide alignment."))
+    }
     
     # Format conversion if needed
     if (output.format == "phylip" && file.exists(out.file)) {
@@ -112,7 +124,7 @@ alignMACSE = function(alignment.folder = NULL,
       align_mat = as.matrix(align_macse)
       rownames(align_mat) = labels(align_macse)
       
-      out.phy = paste0(output.folder, "/", file.base, ".phy")
+      out.phy = final.file
       PhyloProcessR::writePhylip(align_mat, file = out.phy)
       
       # Delete the fasta output from MACSE
@@ -126,8 +138,15 @@ alignMACSE = function(alignment.folder = NULL,
     if (file.exists(out.aa.file)) {
       file.remove(out.aa.file)
     }
+    list(status = "success", locus = file.base)
   }
 
-  stopCluster(cl)
+  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
+  if (any(failures)) {
+    details = vapply(results[failures], function(x) {
+      paste0(x$locus, " (", x$message, ")")
+    }, character(1))
+    stop("MACSE failed for: ", paste(details, collapse = "; "))
+  }
   cat("MACSE refinement complete.\n")
 }

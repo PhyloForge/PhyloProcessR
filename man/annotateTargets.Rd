@@ -12,13 +12,16 @@ annotateTargets(
   min.match.percent = 60,
   min.match.length = 50,
   min.match.coverage = 30,
-  retain.paralogs = FALSE,
+  paralog.action = c("exclude", "best"),
+  paralog.score.ratio = 0.8,
+  paralog.coverage.ratio = 0.8,
+  paralog.identity.delta = 5,
+  paralog.directory = "paralog-contigs",
   threads = 1,
   memory = 1,
   blast.path = NULL,
   last.path = NULL,
   search.method = c("last", "blast"),
-  cdhit.path = NULL,
   overwrite = FALSE,
   quiet = TRUE
 )
@@ -45,9 +48,23 @@ The N padding that joins two fragments of one target is not counted. Default 50.
 \item{min.match.coverage}{minimum proportion of the target sequence length that must be
 covered by the hit (expressed as a percentage). Default 30.}
 
-\item{retain.paralogs}{logical. If TRUE, potential paralogs (multiple contigs matching
-the same target) are retained by keeping the highest-bitscore hit. If FALSE, the
-best-scoring contig is selected. Default FALSE.}
+\item{paralog.action}{how competing target copies are handled. \code{"exclude"}
+removes all copies when a second candidate is close to the best candidate.
+\code{"best"} always keeps the best candidate. Default \code{"exclude"}.}
+
+\item{paralog.score.ratio}{minimum total-score ratio between the second and
+best candidates for the second candidate to be considered competitive.
+Default 0.8.}
+
+\item{paralog.coverage.ratio}{minimum target-coverage ratio between the second
+and best candidates for the second candidate to be considered competitive.
+Default 0.8.}
+
+\item{paralog.identity.delta}{maximum weighted-identity difference, in
+percentage points, between the best and second candidates. Default 5.}
+
+\item{paralog.directory}{directory for all qualifying copies from targets
+with more than one candidate. Default \code{"paralog-contigs"}.}
 
 \item{threads}{number of parallel threads to use. Default 1.}
 
@@ -67,9 +84,6 @@ about 35 percent divergent from its target. \code{"blast"} uses the
 previous \code{blastn dc-megablast} search, which loses a contig past about
 25 percent divergence. Numbers in HANDOFF.md.}
 
-\item{cdhit.path}{path to the directory containing the CD-HIT-EST executable. If NULL,
-CD-HIT-EST is expected to be on the system PATH.}
-
 \item{overwrite}{logical. If TRUE, previously completed samples are reprocessed;
 if FALSE, they are skipped. Default FALSE.}
 
@@ -77,26 +91,27 @@ if FALSE, they are skipped. Default FALSE.}
 }
 \value{
 Writes per-sample annotated FASTA files to \code{output.directory}, a combined
-FASTA file for alignment, and a summary CSV to the working directory. Two log files are
-also written:
+FASTA file for alignment, qualifying multi-copy contigs to
+\code{paralog.directory}, and summary CSV files. These logs are also written:
 \itemize{
-\item \code{logs/sample_logs/<Sample>_blast-matches.csv} -- the filtered hit table
-for each sample (one row per hit: target, contig, pident, bitscore, evalue, lengths).
+\item \code{logs/sample_logs/<Sample>_target-candidates.csv} -- one row per
+target-contig candidate with absolute filters, relative evidence, and decision.
+\item \code{logs/sample_logs/<Sample>_target-hits-raw.csv} -- the original
+search-hit rows used to calculate candidate evidence.
 \item \code{logs/annotateTargets_summary.csv} -- one row per sample summarising
-deduplicated contig count, number of targets matched, annotated target count, and
-mean/max identity and bitscore.
+input contigs, retained targets, ambiguous targets, and paralog candidates.
 }
 No value is returned to R.
 }
 \description{
 Annotates assembly contigs. It matches them to a set of target
-marker sequences. For each sample, the function first removes redundant contigs
-with CD-HIT-EST. It then searches the contigs against the target file.
+marker sequences. It searches curated contigs against the target file without
+collapsing similar copies.
 \code{search.method} selects the program. The default is LAST. The function
-filters the hits by percent identity, match length, and coverage. Contigs
-that span multiple targets or targets that span multiple contigs are handled
-by trimming or joining with N padding. The annotated contigs for each sample
-are saved as a per-sample FASTA file in \code{output.directory}. A combined
+combines overlapping search hits into one candidate per target and contig,
+then filters candidates by identity, supported length, and coverage. It ranks
+candidates and applies \code{paralog.action}. The annotated contigs for each
+sample are saved as a per-sample FASTA file in \code{output.directory}. A combined
 FASTA file suitable for downstream alignment (named
 \code{alignment.contig.name_to-align.fa}) and a summary CSV are written to
 the working directory.
@@ -107,5 +122,7 @@ runs at the end of workflow 2. That function joins the fragments of one
 target and cuts apart a contig that spans more than one target, before the
 variant caller maps reads to the contigs. This function keeps the paralog
 policy, the sample naming, and the alignment output. Give it contigs that
-\code{curateTargetContigs} has already curated.
+\code{curateTargetContigs} has already curated. A secondary candidate is
+competitive only when it passes the absolute filters and the configured
+score, coverage, and identity comparisons with the best candidate.
 }

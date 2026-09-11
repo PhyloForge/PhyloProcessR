@@ -19,7 +19,8 @@ alignTargets(
   memory = 1,
   overwrite = FALSE,
   quiet = TRUE,
-  mafft.path = NULL
+  mafft.path = NULL,
+  additional.sequence.directory = NULL
 )
 }
 \arguments{
@@ -28,6 +29,11 @@ with names in the format \code{locusName_|_sampleName}.}
 
 \item{target.file}{path to a FASTA file of reference target sequences, one per locus,
 used as a guide during alignment and for divergence filtering.}
+
+\item{additional.sequence.directory}{optional path to an
+\code{extractGenomeTarget()} output directory. Genome target FASTA files are
+found recursively and added to \code{targets.to.align} before sequences are
+grouped and aligned by locus. Default NULL.}
 
 \item{output.directory}{path to the directory where phylip alignments will be saved.
 Default "alignments".}
@@ -42,11 +48,11 @@ Loci with this many or fewer sequences are skipped. Default 4.}
 for a sample sequence to be retained. Sequences exceeding this threshold are removed
 before a second alignment pass. Default 0.35.}
 
-\item{subset.start}{fractional position (0 to 1) in the sorted list of loci at which
-to begin processing. Default 0.}
+\item{subset.start}{lower fractional boundary (0 to 1) in the sorted complete
+locus list. The lower boundary is exclusive except at zero. Default 0.}
 
-\item{subset.end}{fractional position (0 to 1) in the sorted list of loci at which to
-stop processing. Default 1 (process all loci).}
+\item{subset.end}{upper fractional boundary (0 to 1) in the sorted complete
+locus list. The upper boundary is inclusive. Default 1 (process all loci).}
 
 \item{adjust.direction}{logical. If TRUE, MAFFT adjusts sequence direction before
 aligning. Default TRUE.}
@@ -58,8 +64,9 @@ to reverse-complemented sequences is stripped from sequence names. Default TRUE.
 
 \item{memory}{not currently used; reserved for future parallelisation. Default 1.}
 
-\item{overwrite}{logical. If TRUE, previously completed alignments are overwritten;
-if FALSE, they are skipped. Default FALSE.}
+\item{overwrite}{logical. If TRUE, previously completed alignments are overwritten.
+A partial subset replaces only that subset's alignment files. If FALSE, valid
+completed alignments are skipped. Default FALSE.}
 
 \item{quiet}{logical. If TRUE, suppresses MAFFT screen output. Default TRUE.}
 
@@ -67,7 +74,9 @@ if FALSE, they are skipped. Default FALSE.}
 is expected to be on the system PATH.}
 }
 \value{
-Writes phylip alignment files to \code{output.directory}. No value is returned to R.
+Writes phylip alignment files and dataset-scoped summary CSV files under
+\code{output.directory}. Partial subsets receive distinct summary-part files.
+No value is returned to R.
 }
 \description{
 Aligns per-locus sequences extracted from a combined FASTA file using MAFFT,

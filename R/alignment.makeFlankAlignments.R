@@ -67,28 +67,29 @@ makeFlankAlignments = function(alignment.directory = NULL,
 
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
     }
-  } else { dir.create(output.directory) }
+  } else { dir.create(output.directory, recursive = TRUE) }
 
   #Gathers alignments
-  align.files = list.files(alignment.directory)
+  align.files = .alignmentFiles(alignment.directory, format = alignment.format)
 
   if (reference.type == "target"){
     target.loci = Biostrings::readDNAStringSet(file = reference.path, format = "fasta")
   }#end if
 
   if (reference.type == "alignment"){
-    ref.align = list.files(reference.path)
+    ref.align = .alignmentFiles(reference.path, format = alignment.format)
   }#end if
 
   if (length(align.files) == 0) { stop("alignment files could not be found.") }
 
   #Skips files done already if resume = TRUE
   if (overwrite == FALSE){
-    done.files = list.files(output.directory)
-    align.files = align.files[!gsub("\\..*", "", align.files) %in% gsub("\\..*", "", done.files)]
+    done.files = .alignmentFiles(output.directory, format = "phylip")
+    done.files = done.files[file.info(file.path(output.directory, done.files))$size > 0]
+    align.files = align.files[!.alignmentId(align.files) %in% .alignmentId(done.files)]
   }
 
   if (length(align.files) == 0) { return("All alignments have already been completed and overwrite = FALSE.") }
@@ -96,7 +97,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
   mem.cl = floor(memory/threads)
 
   #Loops through each locus and does operations on them
-  parallel::mclapply(seq_along(align.files), function(i) {
+  results = parallel::mclapply(seq_along(align.files), function(i) {
   tryCatch({
     #Load in alignments
     if (alignment.format == "phylip"){
@@ -118,7 +119,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
       target.seq = target.loci[names(target.loci) %in% save.name]
       if (length(target.seq) == 0) {
         print(paste0(save.name, ": no matching reference found in target file -- skipping."))
-        return(NULL)
+        return(list(status = "excluded", locus = save.name))
       }
       names(target.seq) = "Reference_Locus"
 
@@ -127,7 +128,9 @@ makeFlankAlignments = function(alignment.directory = NULL,
     #If using the alignments
     if (reference.type == "alignment"){
 
-      if (file.exists(paste0(reference.path, "/", align.files[i])) == FALSE){ return(NULL) }
+      if (file.exists(paste0(reference.path, "/", align.files[i])) == FALSE){
+        return(list(status = "excluded", locus = save.name))
+      }
 
       ref.align = Biostrings::readDNAMultipleAlignment(file = paste0(reference.path, "/", align.files[i]), format = "phylip")
       ref.align = Biostrings::DNAStringSet(ref.align)
@@ -140,9 +143,11 @@ makeFlankAlignments = function(alignment.directory = NULL,
 
 
     #Checks for correct target sequence amount
-    if (length(target.seq) == 0){ return(NULL) }
-    if (length(target.seq) >= 2){ return(NULL) }
-    if (Biostrings::width(target.seq) <= 10) { return(NULL) }
+    if (length(target.seq) == 0){ return(list(status = "excluded", locus = save.name)) }
+    if (length(target.seq) >= 2){ return(list(status = "excluded", locus = save.name)) }
+    if (Biostrings::width(target.seq) <= 10) {
+      return(list(status = "excluded", locus = save.name))
+    }
 
     ##############
     #STEP 2: Runs MAFFT to add
@@ -161,7 +166,7 @@ makeFlankAlignments = function(alignment.directory = NULL,
     )
 
     #Checks for failed mafft run
-    if (length(alignment) == 0){ return(NULL) }
+    if (length(alignment) == 0){ return(list(status = "excluded", locus = save.name)) }
 
     #Checks if you want to keep to target direction or not
     if (target.direction == TRUE){
@@ -233,8 +238,8 @@ makeFlankAlignments = function(alignment.directory = NULL,
       save.name = gsub(".phy$", "", align.files[i])
 
       #readies for saving
-      PhyloProcessR::writePhylip(alignment = aligned.set,
-                  file=paste0(output.directory, "/", save.name, "_1.phy"),
+      .writePhylipAtomic(alignment = aligned.set,
+                  destination = paste0(output.directory, "/", save.name, "_1.phy"),
                   interleave = F,
                   strict = F)
 
@@ -243,8 +248,8 @@ makeFlankAlignments = function(alignment.directory = NULL,
       aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
       #readies for saving
-      PhyloProcessR::writePhylip(alignment = aligned.set,
-                  file=paste0(output.directory, "/", save.name, "_2.phy"),
+      .writePhylipAtomic(alignment = aligned.set,
+                  destination = paste0(output.directory, "/", save.name, "_2.phy"),
                   interleave = F,
                   strict = F)
 
@@ -274,9 +279,9 @@ makeFlankAlignments = function(alignment.directory = NULL,
         aligned.set = as.matrix(ape::as.DNAbin(write.temp) )
 
         # readies for saving
-        PhyloProcessR::writePhylip(
+        .writePhylipAtomic(
           alignment = aligned.set,
-          file = paste0(output.directory, "/", align.files[i]),
+          destination = paste0(output.directory, "/", align.files[i]),
           interleave = F,
           strict = F
         )
@@ -288,10 +293,19 @@ makeFlankAlignments = function(alignment.directory = NULL,
 
     rm(align, alignment, intron.align)
     gc()
+    list(status = "success", locus = save.name)
 
   }, error = function(e) {
-    warning(align.files[i], " failed: ", conditionMessage(e))
+    list(status = "error", locus = .alignmentId(align.files[i]),
+         message = conditionMessage(e))
   })
   }, mc.cores = threads) #end i loop
+
+  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
+  if (any(failures)) {
+    details = vapply(results[failures], function(x) paste0(x$locus, " (", x$message, ")"),
+                     character(1))
+    stop("Flank alignment creation failed for: ", paste(details, collapse = "; "))
+  }
 
 } #end function

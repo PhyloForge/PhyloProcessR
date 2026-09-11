@@ -12,7 +12,7 @@ pairwiseDistanceTarget(alignment = NULL, target = NULL)
 \item{target}{either a DNAStringSet with a single reference sequence to append to the alignment, or a character string giving the name of a sequence already present in the alignment to use as the reference}
 }
 \value{
-a named numeric vector of pairwise distances (proportion of differing sites) for every sequence in the alignment including the target; names correspond to sequence names
+a named numeric vector of pairwise distances (proportion of differing sites) for every sequence in the alignment including the target; names correspond to sequence names. A comparison with no overlapping, non-missing positions is returned as \code{NA}.
 }
 \description{
 Computes the pairwise genetic distance between each sequence in an alignment and a single target (reference) sequence. Distance is calculated as the proportion of sites that differ between the sample and the reference, counting only positions where both sequences have non-gap, non-N, non-? data.

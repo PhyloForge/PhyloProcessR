@@ -24,5 +24,5 @@ trimSampleCoverage(
 a DNAStringSet with low-coverage samples removed
 }
 \description{
-Removes samples from an alignment whose sequence coverage falls below minimum thresholds. Coverage can be measured relative to the total alignment length ("alignment") or relative to the longest sample in the alignment ("sample"). Samples are removed if they have fewer than min.coverage.bp non-gap base pairs or if their non-gap base pair count is less than min.coverage.percent of the reference width. Alignments with three or fewer sequences or where min.coverage.bp exceeds the alignment length are returned unmodified.
+Removes samples from an alignment whose sequence coverage falls below minimum thresholds. Coverage can be measured relative to the total alignment length ("alignment") or relative to the longest sample in the alignment ("sample"). Samples are removed if their base count is at or below either configured threshold. Alignments with three or fewer sequences are returned unmodified.
 }

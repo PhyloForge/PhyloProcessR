@@ -169,6 +169,7 @@ same gene:
 
 ```r
 feature.gene.names = "data-analysis/gene_metadata.txt"
+output.directory = "data-analysis/legacy-integration"
 concatenate.genes = TRUE
 minimum.exons = 2
 concatenate.legacy.genes = TRUE
@@ -176,6 +177,10 @@ gather.unlinked = TRUE
 ```
 
 The metadata file must contain the columns `Marker` and `Gene`.
+
+All workflow X3 results are saved under `output.directory`. The default is
+`data-analysis/legacy-integration`. You can set an absolute path or another
+project-relative path.
 
 Set `concatenate.legacy.genes = TRUE` to include integrated legacy loci in the
 gene alignments. Set it to `FALSE` to concatenate only capture exons.

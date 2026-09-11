@@ -1,5 +1,5 @@
 #################################################
-## Configuration file for workflow 6: legacy integration
+## Configuration file for workflow X3: legacy integration
 #################################################
 
 # Package version
@@ -17,6 +17,9 @@ working.directory = "/PATH/TO/PROJECT/DIRECTORY"
 target.file = "/PATH/TO/marker-seqs.fa"
 # Feature/gene name metadata file: column 1 "Marker", column 2 "Gene"
 feature.gene.names = "data-analysis/gene_metadata.txt"
+# Directory for all workflow X3 results. Change this value to save the results
+# in another location.
+output.directory = "data-analysis/legacy-integration"
 
 # Input alignment directory (default: untrimmed all-markers from workflow 4/5)
 alignment.directory = "data-analysis/alignments/untrimmed_all-markers"
@@ -31,7 +34,7 @@ convert.nexus = FALSE
 nexus.file = NULL
 # Directory to write the per-locus phylip files produced by the conversion.
 # When convert.nexus = TRUE this is used automatically as legacy.directory.
-nexus.output.directory = "data-analysis/legacy-integration/legacy-alignments"
+nexus.output.directory = file.path(output.directory, "legacy-alignments")
 # Maximum percent of missing/gap characters allowed per sample per locus.
 # Samples exceeding this are dropped from that locus. Default 100 = keep all.
 max.missing.percent = 100

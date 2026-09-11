@@ -60,13 +60,35 @@ min.match.percent = 60
 min.match.length = 50
 #The minimum match coverage, contig must overlap by X percent to target
 min.match.coverage = 30
-#retain rather than remove potential paralogs from the dataset. Only one is retained.
-retain.paralogs = FALSE
+# "exclude" removes a target when another qualifying copy is close to the best.
+# "best" always keeps the best candidate. Both save all qualifying copies for
+# multi-copy targets in data-analysis/contigs/9_paralog-contigs.
+paralog.action = "exclude"
+# A second copy is competitive when all three relative tests pass.
+paralog.score.ratio = 0.80
+paralog.coverage.ratio = 0.80
+paralog.identity.delta = 5
 
 # Alignment settings
 #########################
 # TRUE = to run alignments for the annotated targets from above
 align.targets = TRUE
+# TRUE = add the integrated legacy samples from workflow X3 to the untrimmed
+# sequence-capture alignments. Run workflow X3 before you enable this option.
+include.legacy = FALSE
+# The workflow X3 directory that contains the full capture and legacy dataset.
+# This must refer to the "-all" output made with include.all.together = TRUE.
+legacy.alignment.directory = "data-analysis/legacy-integration/untrimmed_legacy-all"
+# Optional table that maps legacy sample names to sequence-capture sample names.
+# CSV, TSV, TXT, XLS, and XLSX files are accepted. Use Legacy_Name in column 1
+# and SeqCap_Name in column 2. If the headings differ, the first two columns
+# are used. Set to NULL when the names do not need a supplied mapping.
+legacy.rename.file = NULL
+# TRUE = include genome target sequences made by extractGenomeTarget.
+include.genomes = FALSE
+# The top-level extractGenomeTarget output directory. Workflow 4 searches its
+# per-genome subdirectories for target-match FASTA files.
+genome.target.directory = "data-analysis/genome-targets"
 # localpair or globalpair, localpair slower but better
 alignment.algorithm = "localpair"
 # The minimum number of taxa to keep an alignment
@@ -84,7 +106,6 @@ subset.end = 1
 conda.env = "PATH/TO/miniconda3/envs/PhyloProcessR/bin"
 blast.path = conda.env
 last.path = conda.env
-cdhit.path = conda.env
 mafft.path = conda.env
 
 #### End configuration

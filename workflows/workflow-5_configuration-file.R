@@ -15,8 +15,9 @@ install.latest.github = FALSE
 working.directory = "/PATH/TO/PROJECT/DIRECTORY"
 # The sequence capture target marker file for extraction from contigs
 target.file = "marker-seqs.fa"
-#feature gene name metadata file, column one: "Marker"; column: "Gene"
-feature.gene.names = "/data-analysis/gene_metadata.txt"
+# Gene metadata file. Required columns are "marker" and "gene".
+# "Marker" and "Gene" are also accepted for compatibility.
+feature.gene.names = "data-analysis/gene_metadata.txt"
 
 # Global settings
 #########################
@@ -31,19 +32,26 @@ quiet = TRUE
 
 # MACSE Exon alignment refinement
 #########################
-# TRUE = run MACSE to refine alignments and ensure proper reading frames
+# TRUE = run MACSE on all no-flank alignments and save separate coding outputs.
+# Use this only when all input targets are coding and in the correct reading frame.
+# These outputs do not replace the standard no-flank unlinked dataset.
 run.macse = TRUE
 # The genetic code to use for MACSE (default: 1 for standard nuclear, 2 for vertebrate mitochondrial)
 macse.genetic.code = 1
 
 # Alignment subset
 #########################
-# TRUE = run makeAlignmentSubset to copy a named subset of trimmed_all-markers
+# TRUE = run makeAlignmentSubset on subset.alignment.directory
 run.subset = FALSE
+# Existing alignment directory to subset. The default is produced only when
+# concatenate.genes = FALSE and trim.alignments = TRUE.
+subset.alignment.directory = "data-analysis/alignments/trimmed_all-markers"
 # Name used for the output subdirectory: data-analysis/alignments/<subset.name>
 subset.name = "subset_markers"
 # Path to a fasta file whose sequence names identify the alignments to keep
 subset.fasta = NULL
+# Regular expression used when subset.reference = "grep".
+subset.grep.string = NULL
 # Method used to match alignments: "fasta" (name matching), "grep" (pattern), or "blast" (similarity)
 subset.reference = "fasta"
 
@@ -68,11 +76,12 @@ trim.to.flanks = TRUE
 
 # Trimming alignment settings
 #########################
-# TRUE = to run alignment trimming function batchTrimAlignments
+# TRUE = run superTrimmer on the full-marker dataset.
+# Target-only and flank-only dataset construction use their own switches.
 trim.alignments = TRUE
-# The minimum number of taxa to keep an alignment
+# The minimum number of taxa. An alignment at this value is rejected.
 min.taxa.alignment = 4
-#The minimum alignment basepairs to keep an alignment
+# The minimum alignment length. Final assessment rejects an alignment at this value.
 min.alignment.length = 100
 #The maximum gaps from throughout the entire alignment to keep an alignment
 max.alignment.gap.percent = 50
@@ -87,15 +96,17 @@ trim.similarity = TRUE
 similarity.threshold = 0.4
 #Whether to trim out columns below a certain threshold
 trim.column = TRUE
-#The percent of bases that must be present to keep a column
+# Gap percentage at which a column is removed. For example, 30 removes columns
+# with 30 percent gaps or more.
 min.column.gap.percent = 50
-#Resolves ambiguous sites to random base it could be
+# Resolves ambiguous IUPAC sites with the deterministic A/T-priority mapping.
 convert.ambiguous.sites = FALSE
 #TRUE = to externally trim alignment edges
 trim.external = TRUE
 #The minimum percent of bases that must be present to keep a column on the edges
 min.external.percent = 50
-#TRUE = to trim samples below a certain coverage (percent bases present out of total alignment) threshold
+# TRUE = remove samples below the coverage thresholds. Percentage coverage is
+# relative to the longest sample, not the full alignment width.
 trim.coverage = TRUE
 #The minimum percent of bases that must be present to keep a sample
 min.coverage.percent = 35
