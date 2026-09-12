@@ -276,10 +276,15 @@ assembleSpades = function(input.reads = NULL,
                       ignore.case = TRUE)] = 1L
     read.number[grepl("(_R2|-R2|_READ2|-READ2|READ2|_2|-2)([_.-]|$)", read.base,
                       ignore.case = TRUE)] = 2L
-    read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3|singleton)", read.base,
+    # The trailing boundary keeps the bare -3/_3 tokens from matching a digit
+    # inside a sample name.
+    read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3|singleton)([_.-]|$)", read.base,
                       ignore.case = TRUE)] = 3L
+    # Bare numeric tokens match only at a boundary, so a sample name digit does
+    # not truncate the lane key. Letter-bearing tokens keep the trailing .*$.
     key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]|",
-                         "_[123]|-[123]|_singleton|-singleton|READ.singleton).*$")
+                         "_singleton|-singleton|READ.singleton).*$",
+                         "|[_-][123]([_.-].*)?$")
     read.key = sub(key.pattern, "", read.base, ignore.case = TRUE)
     read.key = sub("\\.(fastq|fq)(\\.gz)?$", "", read.key, ignore.case = TRUE)
     read.key = sub("[_.-]+$", "", read.key)

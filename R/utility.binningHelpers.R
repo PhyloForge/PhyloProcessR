@@ -36,8 +36,10 @@
                     base.names, ignore.case = TRUE)] = 2L
   read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3)([_.-]|$)",
                     base.names, ignore.case = TRUE)] = 3L
-  key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]|",
-                       "_[123]|-[123]).*$")
+  # Bare numeric tokens end a lane key only at a boundary, so a sample name digit
+  # does not truncate the lane tag and merge lanes.
+  key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]).*$",
+                       "|[_-][123]([_.-].*)?$")
   lane.key = sub(key.pattern, "", base.names, ignore.case = TRUE)
 
   read1.keys = lane.key[read.number == 1]

@@ -219,8 +219,10 @@
 #' @param last.path path to the directory that holds \code{lastdb},
 #'   \code{lastal} and \code{maf-convert}. Default: \code{NULL}.
 #'
-#' @param overwrite logical. \code{TRUE} runs a sample again when its output
-#'   exists. Default: \code{FALSE}.
+#' @param overwrite logical. \code{TRUE} runs every sample again. \code{FALSE}
+#'   skips a sample only when its final binned FASTA in \code{binned.directory}
+#'   exists and is not empty; any other sample is assembled again from a clean
+#'   working directory. Default: \code{FALSE}.
 #'
 #' @param quiet logical. \code{TRUE} hides the output of the external programs.
 #'   Default: \code{TRUE}.
@@ -403,12 +405,14 @@ assembleBinnedTargets = function(read.directory = NULL,
     sample.dir   = paste0(output.directory, "/", sample)
     out.file   = paste0(binned.directory, "/", sample, ".fa")
 
-    if (overwrite == FALSE && file.exists(out.file) == TRUE) {
+    # overwrite = FALSE skips a sample only when its binned FASTA exists and is
+    # not empty. The working directory is created below, once the sample is known
+    # to be assembled.
+    if (overwrite == FALSE && file.exists(out.file) == TRUE &&
+        file.info(out.file)$size > 0) {
       print(paste0(sample, " already finished, skipping."))
       return(invisible(NULL))
     }
-    if (overwrite == TRUE) unlink(sample.dir, recursive = TRUE)
-    dir.create(sample.dir, recursive = TRUE, showWarnings = FALSE)
 
     read.pair = .pairSampleReads(paste0(actual.read.dir, "/", sample))
     if (is.null(read.pair) == TRUE) {
@@ -427,6 +431,10 @@ assembleBinnedTargets = function(read.directory = NULL,
               "Skipping. Assemble this sample before binning it.")
       return(invisible(NULL))
     }
+
+    # Give the sample a clean working directory before assembly.
+    unlink(sample.dir, recursive = TRUE)
+    dir.create(sample.dir, recursive = TRUE, showWarnings = FALSE)
 
     # bwa mem takes one file per mate, so several lanes are joined first
     read1 = read.pair$read1
