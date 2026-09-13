@@ -17,6 +17,16 @@ working.directory = "/Volumes/LaCie/Anax"
 read.directory = "/Volumes/LaCie/Anax/reads"
 # The alignment directory desired to have variants called on. Default shown.
 alignment.directory = "/Volumes/LaCie/Anax/data-analysis/alignments/untrimmed_all-markers"
+
+# Shared reference source. All samples map and are genotyped against one reference.
+#   "consensus" = one majority consensus per alignment in alignment.directory (default).
+#   "target"    = use the capture target markers file (target.file).
+#   "user"      = use a reference FASTA you supply (reference.file).
+reference.mode = "consensus"
+# The capture target markers FASTA, used only when reference.mode = "target".
+target.file = "/PATH/TO/marker-seqs.fa"
+# A user-supplied reference FASTA, used only when reference.mode = "user".
+reference.file = "/PATH/TO/reference.fa"
 # Temporary directory where temporary files are saved
 temp.directory = working.directory
 # The name for the dataset
@@ -39,12 +49,14 @@ clean.up = TRUE
 #########################
 # TRUE to determine and name read groups from Illumina headers. FALSE to give arbitrary names.
 auto.readgroup = TRUE
-# TRUE to stop  pipeline when read sets are missing corresponding assemblies; FALSE removes read sets without assemblies
-check.assemblies = FALSE
-# TRUE to run GATK4 base-recalibrator. Requires high depth. if you observe few SNPs, set use.base.recalibration = FALSE
-base.recalibration = FALSE
-# TRUE to use the GATK4 base-recalibrator results. Requires high depth. if you observe few SNPs, set this to false
+# TRUE runs GATK4 base recalibration (BQSR) and uses its recalibrated GVCFs. One
+# flag controls both steps. Requires high depth; keep FALSE if you observe few SNPs.
 use.base.recalibration = FALSE
+# Ploidy passed to both the initial and the recalibrated haplotype caller.
+ploidy = 2
+# Number of samples imported per GenomicsDB batch. Bounds import memory only;
+# every sample still enters every locus.
+batch.size = 50
 # TRUE to save unfiltered variant calling data (recommended)
 save.unfiltered = TRUE
 # TRUE to save SNPs vcf separately
@@ -56,7 +68,10 @@ save.combined = TRUE
 
 # Custom hard filtering thresholds
 #########################
-# Default GATK4 recommended values are shown here
+# Default GATK4 recommended values are shown here. These are cohort-level record
+# FILTER expressions on site annotations. A passing record does not guarantee that
+# every sample genotype at that site has adequate depth; this workflow applies no
+# per-sample genotype-depth filter and writes variant-only VCFs.
 # For filter explanations see:
 #   https://gatk.broadinstitute.org/hc/en-us/articles/360035890471-Hard-filtering-germline-short-variants
 # Quality score
@@ -81,15 +96,6 @@ custom.INDEL.QUAL = 30
 custom.INDEL.FS = 60
 # Indel Read position rank sum: tests for site position within reads
 custom.INDEL.ReadPosRankSum = -8
-
-# Output settings
-#########################
-#VCF file to use. Choices are "SNP", "Indel", "Both". SNP should be used in the majority of cases.
-vcf.file = "SNP"
-# TRUE to save contigs with ambiguity codes placed at heterozygous sites
-ambiguity.codes = TRUE
-# TRUE to save contigs using a consensus base (randomly selected) for each heterozygous site.
-consensus.sequences = TRUE
 
 #Program paths
 #########################

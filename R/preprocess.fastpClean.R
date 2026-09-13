@@ -36,7 +36,8 @@
 #'   below a complexity threshold of 30 percent.
 #'
 #' @param trim.poly.x logical; TRUE trims poly-X tails, for example the poly-G
-#'   tails of two-colour Illumina chemistry.
+#'   tails of two-colour Illumina chemistry. FALSE also disables fastp's
+#'   automatic poly-G trimming, so no poly tail trimming is performed.
 #'
 #' @param min.read.length minimum read length in bp. A shorter read is
 #'   discarded. Set to 0 or NULL to disable the length filter.
@@ -112,7 +113,14 @@ fastpClean = function(input.reads = NULL,
     fastp.args = c(fastp.args, "--low_complexity_filter --complexity_threshold 30")
   }
 
-  if (trim.poly.x == TRUE){ fastp.args = c(fastp.args, "--trim_poly_x") }
+  if (trim.poly.x == TRUE){
+    fastp.args = c(fastp.args, "--trim_poly_x")
+  } else {
+    # fastp trims poly-G tails automatically on NovaSeq and NextSeq data. The
+    # disable flag is needed when poly tail trimming must be off, because the
+    # absence of --trim_poly_x does not stop the automatic poly-G trimming.
+    fastp.args = c(fastp.args, "--disable_trim_poly_g")
+  }
 
   if (remove.duplicate.reads == TRUE){
     fastp.args = c(fastp.args, "--dedup")

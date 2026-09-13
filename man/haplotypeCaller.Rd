@@ -8,6 +8,7 @@ haplotypeCaller(
   mapping.directory = NULL,
   output.directory = "haplotype-caller",
   reference.type = c("sample", "consensus"),
+  reference.path = NULL,
   gatk4.path = NULL,
   temp.directory = NULL,
   ploidy = 2,
@@ -24,6 +25,9 @@ haplotypeCaller(
 \item{output.directory}{GVCF output directory.}
 
 \item{reference.type}{\code{sample} or \code{consensus}.}
+
+\item{reference.path}{optional explicit shared reference FASTA. When supplied
+it is used for every sample; otherwise reference.type resolves the reference.}
 
 \item{gatk4.path}{GATK executable directory/path or NULL.}
 

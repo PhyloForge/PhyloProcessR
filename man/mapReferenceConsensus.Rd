@@ -14,49 +14,64 @@ mapReferenceConsensus(
   threads = 1,
   memory = 1,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  reference.path = "index/reference.fa",
+  reference.mode = c("consensus", "target", "user"),
+  target.file = NULL,
+  reference.file = NULL,
+  sample.names = NULL
 )
 }
 \arguments{
 \item{mapping.directory}{path to the directory containing per-sample
-sub-directories with pre-processed BAM files (all_reads.bam) created by
+sub-directories with prepared lane BAM files (all_reads.bam) from
 prepareBAM().}
 
-\item{alignment.directory}{path to a directory of phylip-format multiple
-sequence alignments; one consensus sequence per file is extracted to
-build the shared reference.}
+\item{alignment.directory}{phylip alignment directory used to build the
+consensus reference when reference.mode is "consensus".}
 
-\item{samtools.path}{system path to the directory containing samtools; NULL
-searches the system PATH.}
+\item{samtools.path, bwa.path, gatk4.path}{tool directories, executable paths,
+or NULL to search the system PATH.}
 
-\item{bwa.path}{system path to the directory containing bwa; NULL searches
-the system PATH.}
-
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
-
-\item{temp.directory}{path to a GATK JVM temp directory; NULL uses the
-current working directory.}
+\item{temp.directory}{path to a GATK JVM temp directory; NULL uses a temporary
+directory.}
 
 \item{threads}{number of CPU threads for BWA and GATK operations.}
 
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
+\item{memory}{total JVM heap budget in GB across the two concurrent JVMs in a
+mapping pipe.}
 
-\item{overwrite}{logical; if FALSE samples that already have a
-final-mapped-all.bam are skipped.}
+\item{overwrite}{logical; if TRUE the reference and mapped outputs are rebuilt.}
 
-\item{quiet}{logical; if TRUE BWA and samtools stdout/stderr are suppressed.}
+\item{quiet}{logical; if TRUE tool stdout/stderr is suppressed while logs are
+retained.}
+
+\item{reference.path}{path to the shared reference FASTA to build and map
+against. Defaults to the legacy "index/reference.fa"; joint-genotyping
+workflows supply a dataset-owned path.}
+
+\item{reference.mode}{one of "consensus", "target", or "user"; see
+buildReference().}
+
+\item{target.file}{capture-target markers FASTA for reference.mode "target".}
+
+\item{reference.file}{user-supplied reference FASTA for reference.mode "user".}
+
+\item{sample.names}{optional retained sample set; NULL discovers every prepared
+sample directory.}
 }
 \value{
-invisibly; writes final-mapped-all.bam files to per-sample lane
-sub-directories in mapping.directory, and a shared BWA index to index/.
+invisibly the retained sample names; writes final-mapped-all.bam files
+to per-sample lane sub-directories.
 }
 \description{
-Builds a shared consensus reference from a directory of phylip
-alignments (one consensus sequence per locus), indexes it with BWA and
-GATK, then maps per-sample pre-processed BAM files (from prepareBAM())
-against this shared reference using the GATK best-practices pipeline
+Maps per-sample prepared BAM files (from prepareBAM()) against one
+shared reference for joint-genotyping workflows, where every sample must use
+the same reference, contig names, and coordinates. The reference is built
+once by buildReference() into a dataset-owned directory. The reference source
+is selected by reference.mode: a majority consensus of the sample alignments
+(the default), the capture-target markers FASTA, or a user-supplied FASTA.
+Each lane is mapped with the GATK best-practices pipeline
 (SamToFastq | bwa mem | MergeBamAlignment | SortSam | MarkDuplicates |
-SetNmAndUqTags). Used for joint genotyping workflows where all samples
-share the same reference.
+SetNmAndUqTags).
 }

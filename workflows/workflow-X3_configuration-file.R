@@ -28,7 +28,7 @@ alignment.format = "phylip"
 # Nexus conversion (optional — run before legacy integration)
 #########################
 # TRUE = split a concatenated NEXUS file into per-locus phylip files before integration.
-#        The converted files become the legacy alignments used in integrateLegacy.
+#        The converted files become the legacy alignments used in addLegacyAlignments.
 convert.nexus = FALSE
 # Full path to the concatenated NEXUS file containing a BEGIN SETS / charset block
 nexus.file = NULL
@@ -58,17 +58,17 @@ quiet = TRUE
 
 # Legacy integration settings
 #########################
-# TRUE = merge sequences from the same sample found in both datasets into one sequence
-combine.same.sample = TRUE
-# How to match sample names between legacy and capture alignments:
-#   "exact"   = names must be identical to merge; all others added as separate rows
-#   "species" = strip trailing voucher ID before matching; merged sequence named
-#               to species only (e.g. Genus_species); one legacy seq pre-selected per species
-#   "fuzzy"   = strip all separators (hyphens, underscores, dots, spaces) and lowercase
-#               before matching, so MZUTI-2436, MZUTI_2436, and MZUTI2436 all match;
-#               matched pairs merged retaining the capture name; unmatched legacy
-#               sequences added as separate rows
-name.match = "exact"
+# How a legacy sample that represents the same specimen as a capture sample is
+# matched and merged. One of:
+#   "None"    keep every legacy sequence as its own row (duplicate names get _2)
+#   "Exact"   merge rows with identical names
+#   "Fuzzy"   merge after removing separators and case (MZUTI-2436 = MZUTI2436)
+#   "Species" merge conspecific rows into one species row (drops the voucher)
+#   "Table"   rename legacy names with rename.file, then merge by name
+merge = "Exact"
+# Table used only when merge = "Table". CSV, TSV, TXT, XLS, and XLSX are accepted.
+# Legacy_Name in column 1, SeqCap_Name in column 2.
+rename.file = NULL
 # TRUE = also include legacy loci absent from the capture dataset as stand-alone alignments
 include.uncaptured.legacy = TRUE
 # TRUE = write a second output directory containing all capture alignments updated

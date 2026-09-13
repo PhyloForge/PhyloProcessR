@@ -73,17 +73,7 @@ paralog.identity.delta = 5
 #########################
 # TRUE = to run alignments for the annotated targets from above
 align.targets = TRUE
-# TRUE = add the integrated legacy samples from workflow X3 to the untrimmed
-# sequence-capture alignments. Run workflow X3 before you enable this option.
-include.legacy = FALSE
-# The workflow X3 directory that contains the full capture and legacy dataset.
-# This must refer to the "-all" output made with include.all.together = TRUE.
-legacy.alignment.directory = "data-analysis/legacy-integration/untrimmed_legacy-all"
-# Optional table that maps legacy sample names to sequence-capture sample names.
-# CSV, TSV, TXT, XLS, and XLSX files are accepted. Use Legacy_Name in column 1
-# and SeqCap_Name in column 2. If the headings differ, the first two columns
-# are used. Set to NULL when the names do not need a supplied mapping.
-legacy.rename.file = NULL
+# Legacy integration runs in workflow X3 (addLegacyAlignments), not here.
 # TRUE = include genome target sequences made by extractGenomeTarget.
 include.genomes = FALSE
 # The top-level extractGenomeTarget output directory. Workflow 4 searches its

@@ -53,7 +53,8 @@ FALSE disables the filter.}
 below a complexity threshold of 30 percent.}
 
 \item{trim.poly.x}{logical; TRUE trims poly-X tails, for example the poly-G
-tails of two-colour Illumina chemistry.}
+tails of two-colour Illumina chemistry. FALSE also disables fastp's
+automatic poly-G trimming, so no poly tail trimming is performed.}
 
 \item{min.read.length}{minimum read length in bp. A shorter read is
 discarded. Set to 0 or NULL to disable the length filter.}

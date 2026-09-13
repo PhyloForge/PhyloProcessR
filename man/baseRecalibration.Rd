@@ -15,7 +15,8 @@ baseRecalibration(
   overwrite = FALSE,
   quiet = TRUE,
   ploidy = 2,
-  sample.names = NULL
+  sample.names = NULL,
+  reference.path = NULL
 )
 }
 \arguments{
@@ -49,6 +50,10 @@ reprocessed.}
 \item{ploidy}{positive integer ploidy used for the recalibrated caller pass.}
 
 \item{sample.names}{optional retained sample set.}
+
+\item{reference.path}{optional explicit shared reference FASTA. When supplied
+it is used for every sample; otherwise each sample's per-sample reference is
+used.}
 }
 \value{
 invisibly; writes recalibrated GVCFs to haplotype.caller.directory

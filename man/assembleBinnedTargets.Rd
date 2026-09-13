@@ -219,8 +219,10 @@ need it. Default: \code{NULL}.}
 \item{last.path}{path to the directory that holds \code{lastdb},
 \code{lastal} and \code{maf-convert}. Default: \code{NULL}.}
 
-\item{overwrite}{logical. \code{TRUE} runs a sample again when its output
-exists. Default: \code{FALSE}.}
+\item{overwrite}{logical. \code{TRUE} runs every sample again. \code{FALSE}
+skips a sample only when its final binned FASTA in \code{binned.directory}
+exists and is not empty; any other sample is assembled again from a clean
+working directory. Default: \code{FALSE}.}
 
 \item{quiet}{logical. \code{TRUE} hides the output of the external programs.
 Default: \code{TRUE}.}

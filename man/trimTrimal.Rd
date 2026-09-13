@@ -19,5 +19,5 @@ trimTrimal(alignment = NULL, trimal.path = NULL, method = "auto", quiet = TRUE)
 a DNAStringSet of the TrimAl-trimmed alignment with original sample names restored; returns the original alignment unchanged if TrimAl produces no output
 }
 \description{
-Wrapper function for running TrimAl on a single alignment. The alignment is written to a temporary fasta file, TrimAl is called in automated mode (-automated1), and the trimmed alignment is read back. Sample names are restored from the original alignment to correct any truncation introduced by TrimAl. If TrimAl produces no output the original alignment is returned unchanged. Alignments with three or fewer sequences are returned unmodified. TrimAl must be installed and accessible.
+Wrapper function for running TrimAl on a single alignment. The alignment is written to a temporary fasta file, TrimAl is called in automated mode (-automated1), and the trimmed alignment is read back. Sample names are restored from the original alignment to correct any truncation introduced by TrimAl. Alignments with three or fewer sequences are returned unmodified. TrimAl must be installed and accessible.
 }

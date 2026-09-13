@@ -1,55 +1,55 @@
 #' @title jointGenotyping
 #'
-#' @description Performs joint genotyping across all samples at each locus
-#'   using GATK4. For each locus, all per-sample GVCFs are combined into a
-#'   GenomicsDB, then GenotypeGVCFs genotypes the combined data. SNPs and
-#'   indels are separated, hard-filtered with user-specified thresholds, merged
-#'   back, and written to per-locus VCF files in subdirectories. Loci are
-#'   processed in parallel. The function optionally removes unfiltered and/or
-#'   SNP/indel-specific VCF directories at the end.
+#' @description Performs joint genotyping across a fixed cohort of samples at each
+#'   locus using GATK4. Every expected sample must have exactly one GVCF (the
+#'   BQSR or the standard caller output, depending on use.base.recalibration) and
+#'   its index; a missing sample stops the run rather than silently genotyping a
+#'   subset. For each locus the cohort GVCFs are combined into an owned GenomicsDB
+#'   workspace, GenotypeGVCFs genotypes the combined data, SNPs and indels are
+#'   separated, hard-filtered, merged, and written to per-locus VCF files. Loci
+#'   are processed in parallel and every external command is checked. A cohort
+#'   record ties the results to the exact sample set, reference, BQSR selection,
+#'   and filter thresholds; a changed cohort or reference requires overwrite.
 #'
-#' @param haplotype.caller.directory path to the directory of per-sample
-#'   haplotype caller GVCF files (output of haplotypeCaller()).
-#'
-#' @param output.directory path where the genotype database and per-locus VCF
-#'   subdirectories (filtered-all, filtered-snps, filtered-indels, and their
-#'   unfiltered counterparts) will be created.
-#'
-#' @param use.base.recalibration logical; if TRUE the BQSR-recalibrated GVCFs
-#'   are used as input.
-#'
+#' @param haplotype.caller.directory path to the directory of per-sample GVCF
+#'   sub-directories (output of haplotypeCaller()).
+#' @param output.directory path where the GenomicsDB workspace and per-locus VCF
+#'   subdirectories are created.
+#' @param use.base.recalibration logical; if TRUE the BQSR-recalibrated GVCFs are
+#'   used as input.
 #' @param save.unfiltered logical; if FALSE unfiltered VCF subdirectories are
 #'   deleted after filtering.
-#' @param save.SNPs logical; if FALSE SNP-specific VCF subdirectories are
-#'   deleted.
+#' @param save.SNPs logical; if FALSE SNP-specific VCF subdirectories are deleted.
 #' @param save.indels logical; if FALSE indel-specific VCF subdirectories are
 #'   deleted.
 #' @param save.combined logical; if FALSE the combined (all variants) VCF
 #'   subdirectories are deleted.
-#'
 #' @param custom.SNP.QD,custom.SNP.QUAL,custom.SNP.SOR,custom.SNP.FS,custom.SNP.MQ,custom.SNP.MQRankSum,custom.SNP.ReadPosRankSum
-#'   numeric hard-filter thresholds for SNPs (see GATK VariantFiltration
-#'   documentation for field definitions).
+#'   numeric hard-filter thresholds for SNPs.
 #' @param custom.INDEL.QD,custom.INDEL.QUAL,custom.INDEL.FS,custom.INDEL.ReadPosRankSum
 #'   numeric hard-filter thresholds for indels.
-#'
-#' @param gatk4.path system path to the directory containing the gatk
-#'   executable; NULL searches the system PATH.
-#'
-#' @param temp.directory path to a GATK JVM temp directory; NULL uses the
-#'   current working directory.
-#'
+#' @param gatk4.path GATK executable directory/path or NULL to search the PATH.
+#' @param temp.directory GATK JVM temp directory; NULL uses a temporary directory.
 #' @param threads number of loci to process in parallel.
+#' @param memory total JVM heap budget in GB across concurrent loci.
+#' @param overwrite logical; if TRUE the output directory is rebuilt.
+#' @param quiet logical; if TRUE tool output is suppressed while logs are retained.
+#' @param reference.path shared reference FASTA used for genotyping and filtering.
+#' @param sample.names expected cohort sample IDs; NULL uses every GVCF
+#'   sub-directory.
+#' @param batch.size number of samples imported per GenomicsDB batch. Every
+#'   sample still enters every locus; this only bounds memory during import.
 #'
-#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
+#' @details The custom SNP and indel thresholds are cohort-level record FILTER
+#'   expressions (QUAL, QD, MQ, and related site annotations). A record that
+#'   passes these filters does not guarantee that every sample genotype at that
+#'   site has adequate depth. This function applies no per-sample genotype-depth
+#'   filter and produces variant-only VCFs, not per-sample FASTA or N-masked
+#'   sequences. Absence of a record is therefore not a measure of per-sample
+#'   coverage or callability.
 #'
-#' @param overwrite logical; if TRUE the output directory is deleted and
-#'   recreated before processing.
-#'
-#' @param quiet logical; currently unused.
-#'
-#' @return invisibly; writes per-locus VCF files to output.directory
-#'   subdirectories.
+#' @return invisibly the loci names; writes per-locus VCF files to
+#'   output.directory subdirectories.
 #'
 #' @export
 
@@ -60,105 +60,149 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
                           save.SNPs = TRUE,
                           save.indels = TRUE,
                           save.combined = TRUE,
-                          custom.SNP.QD =  NULL,
-                          custom.SNP.QUAL =  NULL,
-                          custom.SNP.SOR =  NULL,
-                          custom.SNP.FS =  NULL,
-                          custom.SNP.MQ =  NULL,
-                          custom.SNP.MQRankSum =  NULL,
-                          custom.SNP.ReadPosRankSum =  NULL,
-                          custom.INDEL.QD =  NULL,
-                          custom.INDEL.QUAL =  NULL,
-                          custom.INDEL.FS =  NULL,
-                          custom.INDEL.ReadPosRankSum =  NULL,
+                          custom.SNP.QD = 2,
+                          custom.SNP.QUAL = 30,
+                          custom.SNP.SOR = 3,
+                          custom.SNP.FS = 60,
+                          custom.SNP.MQ = 40,
+                          custom.SNP.MQRankSum = -12.5,
+                          custom.SNP.ReadPosRankSum = -8,
+                          custom.INDEL.QD = 2,
+                          custom.INDEL.QUAL = 30,
+                          custom.INDEL.FS = 60,
+                          custom.INDEL.ReadPosRankSum = -8,
                           gatk4.path = NULL,
                           temp.directory = NULL,
                           threads = 1,
                           memory = 1,
                           overwrite = FALSE,
-                          quiet = TRUE) {
+                          quiet = TRUE,
+                          reference.path = "index/reference.fa",
+                          sample.names = NULL,
+                          batch.size = 50) {
 
- #Debugging
-  # #Home directoroies
-  # library(PhyloProcessR)
-  # setwd("/Volumes/LaCie/Anax")
-
-  # custom.SNP.QD <- 2
-  # custom.SNP.QUAL <- 30
-  # custom.SNP.SOR <- 3
-  # custom.SNP.FS <- 60
-  # custom.SNP.MQ <- 40
-  # custom.SNP.MQRankSum <- -12.5
-  # custom.SNP.ReadPosRankSum <- -8
-  # custom.INDEL.QD <- 2
-  # custom.INDEL.QUAL <- 30
-  # custom.INDEL.FS <- 60
-  # custom.INDEL.ReadPosRankSum <- -8
-  # save.unfiltered = TRUE
-  # save.SNPs = TRUE
-  # save.indels = TRUE
-  # save.combined = TRUE
-
-  # dataset.name = "joint-genotyping"
-  # haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller")
-  # output.directory = paste0("data-analysis/", dataset.name, "/genotype-database")
-
-  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-  # use.base.recalibration = FALSE
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- FALSE
-
-  # Same adds to bbmap path
-  if (is.null(gatk4.path) == FALSE) {
-    b.string <- unlist(strsplit(gatk4.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      gatk4.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    gatk4.path <- ""
-  }
-
-  #Quick checks
-  if (is.null(haplotype.caller.directory) == TRUE) {
-    stop("Please provide the haplotype caller directory.")
-  }
-  if (file.exists(haplotype.caller.directory) == F) {
+  # Quick checks
+  if (is.null(haplotype.caller.directory) || !dir.exists(haplotype.caller.directory)) {
     stop("Haplotype caller directory not found.")
   }
-
-  if (is.null(temp.directory) == TRUE){
-    temp.directory = tempdir()
+  if (!file.exists(reference.path)) { stop("Reference not found: ", reference.path) }
+  reference.dict = sub("\\.fa$", ".dict", reference.path)
+  if (!all(file.exists(c(paste0(reference.path, ".fai"), reference.dict)))) {
+    stop("Reference index (.fai) and dictionary (.dict) are required next to ", reference.path)
   }
 
+  # At least one final variant product must be requested
+  if (save.SNPs == FALSE && save.indels == FALSE && save.combined == FALSE) {
+    stop("At least one of save.SNPs, save.indels, or save.combined must be TRUE.")
+  }
 
-  #Creates output directory
-  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
+  # Filter thresholds must be single finite numbers. Negative rank-sum values are
+  # allowed.
+  thresholds = list(custom.SNP.QD = custom.SNP.QD, custom.SNP.QUAL = custom.SNP.QUAL,
+                    custom.SNP.SOR = custom.SNP.SOR, custom.SNP.FS = custom.SNP.FS,
+                    custom.SNP.MQ = custom.SNP.MQ, custom.SNP.MQRankSum = custom.SNP.MQRankSum,
+                    custom.SNP.ReadPosRankSum = custom.SNP.ReadPosRankSum,
+                    custom.INDEL.QD = custom.INDEL.QD, custom.INDEL.QUAL = custom.INDEL.QUAL,
+                    custom.INDEL.FS = custom.INDEL.FS, custom.INDEL.ReadPosRankSum = custom.INDEL.ReadPosRankSum)
+  for (name in names(thresholds)) {
+    value = thresholds[[name]]
+    if (length(value) != 1 || !is.finite(value)) { stop(name, " must be a single finite number.") }
+  }
+  if (length(batch.size) != 1 || !is.finite(batch.size) || batch.size < 1 ||
+      batch.size != as.integer(batch.size)) {
+    stop("batch.size must be a positive integer.")
+  }
 
-  # Sets directory and reads in  if (is.null(output.dir) == TRUE){ stop("Please provide an output directory.") }
-  if (dir.exists(output.directory) == FALSE) {
-    dir.create(output.directory)
-    dir.create(paste0(output.directory, "/unfiltered-all"))
-    dir.create(paste0(output.directory, "/unfiltered-snps"))
-    dir.create(paste0(output.directory, "/unfiltered-indels"))
-    dir.create(paste0(output.directory, "/filtered-all"))
-    dir.create(paste0(output.directory, "/filtered-snps"))
-    dir.create(paste0(output.directory, "/filtered-indels"))
+  if (is.null(temp.directory)) { temp.directory = tempdir() }
+  .ensureDirectory(temp.directory, "temporary directory")
+  .ensureDirectory("logs/sample_logs", "sample log directory")
 
-  } else {
-    if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
-      dir.create(output.directory)
-      dir.create(paste0(output.directory, "/unfiltered-all"))
-      dir.create(paste0(output.directory, "/unfiltered-snps"))
-      dir.create(paste0(output.directory, "/unfiltered-indels"))
-      dir.create(paste0(output.directory, "/filtered-all"))
-      dir.create(paste0(output.directory, "/filtered-snps"))
-      dir.create(paste0(output.directory, "/filtered-indels"))
+  # Resolves exactly one GVCF and index for every expected sample
+  gvcf.name = if (use.base.recalibration) "gatk4-bqsr-haplotype-caller.g.vcf.gz" else "gatk4-haplotype-caller.g.vcf.gz"
+  discovered = list.dirs(haplotype.caller.directory, recursive = FALSE, full.names = FALSE)
+  discovered = discovered[nzchar(discovered)]
+  if (is.null(sample.names)) { sample.names = discovered }
+  if (length(sample.names) == 0) { stop("The cohort is empty; no samples to genotype.") }
+
+  gvcf.files = file.path(haplotype.caller.directory, sample.names, gvcf.name)
+  gvcf.index = paste0(gvcf.files, ".tbi")
+  missing = sample.names[!file.exists(gvcf.files) | !file.exists(gvcf.index)]
+  if (length(missing) > 0) {
+    stop("Missing ", gvcf.name, " or its index for sample(s): ", paste(missing, collapse = ", "))
+  }
+
+  # Confirms one unique sample per GVCF and compatible contigs against the reference
+  reference.seq = Biostrings::readDNAStringSet(reference.path)
+  loci.names = names(reference.seq)
+  vcf.sample.ids = character(length(sample.names))
+  for (i in seq_along(sample.names)) {
+    header = .vcfHeaderLines(gvcf.files[i])
+    ids = .vcfSamples(header)
+    if (length(ids) != 1) {
+      stop("Expected one sample in ", gvcf.files[i], " but found ", length(ids), ".")
     }
-  } # end else
+    contigs = .vcfContigs(header)
+    if (length(contigs) > 0 && !all(loci.names %in% contigs)) {
+      stop("The GVCF for ", sample.names[i], " is missing reference loci; it may use a different reference.")
+    }
+    vcf.sample.ids[i] = ids
+  }
+  if (anyDuplicated(vcf.sample.ids)) {
+    stop("Duplicate sample IDs across the cohort GVCFs: ",
+         paste(unique(vcf.sample.ids[duplicated(vcf.sample.ids)]), collapse = ", "))
+  }
 
+  # Describes the cohort so a changed request cannot mix versions across loci
+  filter.settings = list(SNP.QD = custom.SNP.QD, SNP.QUAL = custom.SNP.QUAL,
+                         SNP.SOR = custom.SNP.SOR, SNP.FS = custom.SNP.FS, SNP.MQ = custom.SNP.MQ,
+                         SNP.MQRankSum = custom.SNP.MQRankSum, SNP.ReadPosRankSum = custom.SNP.ReadPosRankSum,
+                         INDEL.QD = custom.INDEL.QD, INDEL.QUAL = custom.INDEL.QUAL,
+                         INDEL.FS = custom.INDEL.FS, INDEL.ReadPosRankSum = custom.INDEL.ReadPosRankSum)
+  info = file.info(gvcf.files)
+  current.cohort = list(samples = sort(vcf.sample.ids),
+                        reference = tools::md5sum(reference.path),
+                        use.base.recalibration = use.base.recalibration,
+                        gvcf.size = info$size[order(vcf.sample.ids)],
+                        gvcf.mtime = as.character(info$mtime[order(vcf.sample.ids)]),
+                        save = c(save.unfiltered, save.SNPs, save.indels, save.combined),
+                        filters = filter.settings)
+  cohort.path = file.path(output.directory, "cohort-record.rds")
+
+  if (overwrite == TRUE && dir.exists(output.directory)) {
+    unlink(output.directory, recursive = TRUE)
+  }
+  if (file.exists(cohort.path) && overwrite == FALSE) {
+    if (!identical(readRDS(cohort.path), current.cohort)) {
+      stop("The cohort, reference, GVCFs, or filter settings changed since the ",
+           "existing results in ", output.directory, ".\nRerun with overwrite = TRUE ",
+           "to regenerate all loci, or use a new output directory.")
+    }
+  }
+
+  # Creates every owned subdirectory recursively on each run
+  final.dirs = c("filtered-all", "filtered-snps", "filtered-indels")
+  work.dirs = c("unfiltered-all", "unfiltered-snps", "unfiltered-indels")
+  workspace.root = file.path(output.directory, "genomicsdb-workspace")
+  completion.root = file.path(output.directory, "completion")
+  for (d in c(final.dirs, work.dirs, "completion")) {
+    .ensureDirectory(file.path(output.directory, d))
+  }
+  .ensureDirectory(workspace.root)
+  saveRDS(current.cohort, cohort.path)
+
+  # Requested final products per locus, derived from the save flags
+  requested = character(0)
+  if (save.combined) requested = c(requested, "filtered-all")
+  if (save.SNPs) requested = c(requested, "filtered-snps")
+  if (save.indels) requested = c(requested, "filtered-indels")
+
+  # One validated sample-name map is reused for every locus import, instead of a
+  # long repeated -V argument string.
+  sample.map = file.path(output.directory, "cohort-sample-map.txt")
+  write.table(data.frame(vcf.sample.ids, normalizePath(gvcf.files)),
+              sample.map, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+  # Filter strings, unchanged thresholds
   SNP.QD.string <- paste0(" -filter \"QD<", format(custom.SNP.QD, nsmall = 1), "\" --filter-name \"QD\"")
   SNP.QUAL.string <- paste0(" -filter \"QUAL<", format(custom.SNP.QUAL, nsmall = 1), "\" --filter-name \"QUAL\"")
   SNP.SOR.string <- paste0(" -filter \"SOR>", format(custom.SNP.SOR, nsmall = 1), "\" --filter-name \"SOR\"")
@@ -166,190 +210,172 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
   SNP.MQ.string <- paste0(" -filter \"MQ<", format(custom.SNP.MQ, nsmall = 1), "\" --filter-name \"MQ\"")
   SNP.MQRankSum.string <- paste0(" -filter \"MQRankSum<", format(custom.SNP.MQRankSum, nsmall = 1), "\" --filter-name \"MQRankSum\"")
   SNP.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", format(custom.SNP.ReadPosRankSum, nsmall = 1), "\" --filter-name \"ReadPosRankSum\"")
-
   IN.QD.string <- paste0(" -filter \"QD<", format(custom.INDEL.QD, nsmall = 1), "\" --filter-name \"QD\"")
   IN.QUAL.string <- paste0(" -filter \"QUAL<", format(custom.INDEL.QUAL, nsmall = 1), "\" --filter-name \"QUAL\"")
   IN.FS.string <- paste0(" -filter \"FS>", format(custom.INDEL.FS, nsmall = 1), "\" --filter-name \"FS\"")
   IN.ReadPosRankSum.string <- paste0(" -filter \"ReadPosRankSum<", format(custom.INDEL.ReadPosRankSum, nsmall = 1), "\" --filter-name \"ReadPosRankSum\"")
 
-  # Get loci names I guess
-  reference.path = "index/reference.fa"
-  reference.seq = Biostrings::readDNAStringSet((paste0("index/reference.fa")))
-  loci.names = names(reference.seq)
+  # Selects loci that still need work
+  pending = loci.names[!vapply(loci.names, function(locus) {
+    outputs = file.path(output.directory, requested, paste0(locus, ".vcf"))
+    .stageComplete(file.path(completion.root, locus), "jointGenotyping", outputs)
+  }, logical(1))]
 
-  # Resumes file download
-  if (overwrite == FALSE) {
-    done.files <- list.files(paste0(output.directory, "/filtered-all"), full.names = T, recursive = T)
-    done.names <- gsub(".vcf$", "", done.files)
-    done.names <- gsub(".*\\/", "", done.names)
-    loci.names <- loci.names[!loci.names %in% done.names]
+  if (length(pending) == 0) {
+    .cleanupJointOutputs(output.directory, save.unfiltered, save.SNPs, save.indels, save.combined)
+    return(invisible(loci.names))
   }
 
-  # Get multifile databases together
-  sample.names <- list.files(haplotype.caller.directory, recursive = TRUE, full.names = TRUE)
+  resources = .validateResources(threads, memory, length(pending))
+  gatk = .toolCommand("gatk", gatk4.path)
+  gatk.command = .gatkCommand(gatk, temp.directory, resources$heap.mb)
 
-  if (length(sample.names) == 0) {
-    return("no samples available to analyze.")
-  }
+  results = parallel::mclapply(seq_along(pending), function(i) {
+    locus = pending[i]
+    log = file.path("logs/sample_logs", paste0("FAILURE_", locus, "_jointGenotyping.txt"))
+    tryCatch({
+      unfiltered.all = file.path(output.directory, "unfiltered-all", paste0(locus, ".vcf"))
+      unfiltered.snps = file.path(output.directory, "unfiltered-snps", paste0(locus, ".vcf"))
+      unfiltered.indels = file.path(output.directory, "unfiltered-indels", paste0(locus, ".vcf"))
+      workspace = file.path(workspace.root, locus)
 
-  if (use.base.recalibration == TRUE) {
-    sample.names = sample.names[grep("gatk4-bqsr-haplotype-caller.g.vcf.gz$", sample.names)]
-    if (length(sample.names) == 0) {
-      stop("the haplotype caller file for use.base.recalibration does not exist.")
-    }
-  }
+      # GenomicsDBImport requires an empty workspace path, so any leftover
+      # workspace is removed before the import.
+      if (dir.exists(workspace)) { unlink(workspace, recursive = TRUE) }
 
-  if (use.base.recalibration == FALSE) {
-    sample.names = sample.names[grep("gatk4-haplotype-caller.g.vcf.gz$", sample.names)]
-    if (length(sample.names) == 0) {
-      stop("the haplotype caller file does not exist.")
-    }
-  }
+      .runCommand(paste0(gatk.command, " GenomicsDBImport",
+                    " --sample-name-map ", shQuote(sample.map),
+                    " --genomicsdb-workspace-path ", shQuote(workspace),
+                    " --intervals ", shQuote(locus),
+                    " --batch-size ", batch.size,
+                    " --reader-threads 1"),
+                  quiet, "GenomicsDBImport", stderr.log = log)
 
-  #Gathers input file names together
-  sample.datasets = paste0("-V ", sample.names)
-  vcf.files = paste0(sample.datasets, collapse = " ")
+      .runCommand(paste0(gatk.command, " GenotypeGVCFs -R ", shQuote(reference.path),
+                    " -V gendb://", workspace,
+                    " --use-new-qual-calculator true",
+                    " -O ", shQuote(unfiltered.all)),
+                  quiet, "GenotypeGVCFs", stderr.log = log)
 
-  mem.cl = floor(memory / threads)
+      .runCommand(paste0(gatk.command, " SelectVariants -V ", shQuote(unfiltered.all),
+                    " -O ", shQuote(unfiltered.snps), " --select-type SNP"),
+                  quiet, "SNP selection", stderr.log = log)
+      .runCommand(paste0(gatk.command, " SelectVariants -V ", shQuote(unfiltered.all),
+                    " -O ", shQuote(unfiltered.indels), " --select-type INDEL"),
+                  quiet, "indel selection", stderr.log = log)
 
-  # Loops through each locus and does operations on them
-  parallel::mclapply(seq_along(loci.names), function(i) {
-  tryCatch({
+      snps.filter = sub("\\.vcf$", "_filter.vcf", unfiltered.snps)
+      indels.filter = sub("\\.vcf$", "_filter.vcf", unfiltered.indels)
+      all.filter = sub("\\.vcf$", "_filter.vcf", unfiltered.all)
 
-    # Genotype haplotype caller results
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " GenomicsDBImport ", vcf.files,
-      " --genomicsdb-workspace-path ", output.directory, "/", loci.names[i],
-      " --intervals ", loci.names[i]
-    ))
+      .runCommand(paste0(gatk.command, " VariantFiltration -R ", shQuote(reference.path),
+                    " -V ", shQuote(unfiltered.snps), " -O ", shQuote(snps.filter),
+                    SNP.QD.string, SNP.QUAL.string, SNP.SOR.string, SNP.FS.string,
+                    SNP.MQ.string, SNP.MQRankSum.string, SNP.ReadPosRankSum.string),
+                  quiet, "SNP filtering", stderr.log = log)
+      .runCommand(paste0(gatk.command, " VariantFiltration -R ", shQuote(reference.path),
+                    " -V ", shQuote(unfiltered.indels), " -O ", shQuote(indels.filter),
+                    IN.QD.string, IN.QUAL.string, IN.FS.string, IN.ReadPosRankSum.string),
+                  quiet, "indel filtering", stderr.log = log)
 
-    # Genotype haplotype caller results
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " GenotypeGVCFs -R ", reference.path,
-      " -V gendb://", output.directory, "/", loci.names[i],
-      " --use-new-qual-calculator true",
-      " -O ", output.directory, "/unfiltered-all/", loci.names[i], ".vcf"
-    ))
+      .runCommand(paste0(gatk.command, " SortVcf -I ", shQuote(snps.filter),
+                    " -I ", shQuote(indels.filter), " -O ", shQuote(all.filter)),
+                  quiet, "VCF merge", stderr.log = log)
 
-    # Selects only the SNPs from the VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", output.directory, "/unfiltered-all/", loci.names[i], ".vcf",
-      " -O ", output.directory, "/unfiltered-snps/", loci.names[i], ".vcf",
-      " --select-type SNP"
-    ))
+      # Publishes the requested final products
+      if (save.combined) {
+        .runCommand(paste0(gatk.command, " SelectVariants -V ", shQuote(all.filter),
+                      " -O ", shQuote(file.path(output.directory, "filtered-all", paste0(locus, ".vcf"))),
+                      " --exclude-filtered TRUE"),
+                    quiet, "combined passing selection", stderr.log = log)
+      }
+      if (save.SNPs) {
+        .runCommand(paste0(gatk.command, " SelectVariants -V ", shQuote(snps.filter),
+                      " -O ", shQuote(file.path(output.directory, "filtered-snps", paste0(locus, ".vcf"))),
+                      " --exclude-filtered TRUE"),
+                    quiet, "SNP passing selection", stderr.log = log)
+      }
+      if (save.indels) {
+        .runCommand(paste0(gatk.command, " SelectVariants -V ", shQuote(indels.filter),
+                      " -O ", shQuote(file.path(output.directory, "filtered-indels", paste0(locus, ".vcf"))),
+                      " --exclude-filtered TRUE"),
+                    quiet, "indel passing selection", stderr.log = log)
+      }
 
-    # Selects only the indels from the VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", output.directory, "/unfiltered-all/", loci.names[i], ".vcf",
-      " -O ", output.directory, "/unfiltered-indels/", loci.names[i], ".vcf",
-      " --select-type INDEL"
-    ))
+      outputs = file.path(output.directory, requested, paste0(locus, ".vcf"))
+      if (!all(file.exists(outputs) & file.info(outputs)$size > 0)) {
+        stop("Requested joint-genotyping products are incomplete for locus ", locus)
+      }
+      .ensureDirectory(file.path(completion.root, locus))
+      .markStageComplete(file.path(completion.root, locus), "jointGenotyping",
+                         paste0("cohort=", length(sample.names)))
+      # Removes only this completed locus's owned workspace
+      if (dir.exists(workspace)) { unlink(workspace, recursive = TRUE) }
+      list(success = TRUE)
+    }, error = function(e) {
+      cat("\n", conditionMessage(e), "\n", file = log, append = TRUE)
+      list(success = FALSE, message = conditionMessage(e))
+    })
+  }, mc.cores = resources$workers)
 
-    ###########################################################################################
-    ######### Filtering begineth
-    ###########################################################################################
+  .collectWorkers(results, pending, "Joint genotyping")
 
-    # Custom filtering
-    #########################
-    # Applies filters to SNPs
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " VariantFiltration -R ", reference.path,
-      " -V ", output.directory, "/unfiltered-snps/", loci.names[i], ".vcf",
-      " -O ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
-      SNP.QD.string,
-      SNP.QUAL.string,
-      SNP.SOR.string,
-      SNP.FS.string,
-      SNP.MQ.string,
-      SNP.MQRankSum.string,
-      SNP.ReadPosRankSum.string
-    ))
-
-    # Applies filters to indels
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " VariantFiltration -R ", reference.path,
-      " -V ", output.directory, "/unfiltered-indels/", loci.names[i], ".vcf",
-      " -O ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
-      IN.QD.string,
-      IN.QUAL.string,
-      IN.FS.string,
-      IN.ReadPosRankSum.string
-    ))
-
-    ###########################################################################################
-    ######### Filtering finished
-    ###########################################################################################
-
-    # Combine them into a single VCF
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SortVcf",
-      " -I ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
-      " -I ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
-      " -O ", output.directory, "/unfiltered-all/", loci.names[i], "_filter.vcf"
-    ))
-
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", output.directory, "/unfiltered-all/", loci.names[i], "_filter.vcf",
-      " -O ", output.directory, "/filtered-all/", loci.names[i], ".vcf",
-      " --exclude-filtered TRUE"
-    ))
-
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", output.directory, "/unfiltered-snps/", loci.names[i], "_filter.vcf",
-      " -O ", output.directory, "/filtered-snps/", loci.names[i], ".vcf",
-      " --exclude-filtered TRUE"
-    ))
-
-    system(paste0(
-      gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", mem.cl, "G\"",
-      " SelectVariants",
-      " -V ", output.directory, "/unfiltered-indels/", loci.names[i], "_filter.vcf",
-      " -O ", output.directory, "/filtered-indels/", loci.names[i], ".vcf",
-      " --exclude-filtered TRUE"
-    ))
-
-    print(paste0(loci.names[i], " completed GATK4 joint sample genotyping!"))
-    system(paste0("rm -r ", output.directory, "/", loci.names[i]))
-
-  }, error = function(e) {
-    warning(loci.names[i], " failed: ", conditionMessage(e))
-  })
-  }, mc.cores = threads) #end i loop
-
-  #Datasets to save
-  #Save SNPs
-  if (save.SNPs == FALSE) {
-    system(paste0("rm -r ", output.directory, "/unfiltered-snps ", output.directory, "/filtered-snps"))
-  }
-
-  #Save indels
-  if (save.indels == FALSE) {
-    system(paste0("rm -r ", output.directory, "/unfiltered-indels ", output.directory, "/filtered-indels"))
-  }
-
-  #Save all
-  if (save.combined == FALSE) {
-    system(paste0("rm -r ", output.directory, "/unfiltered-all ", output.directory, "/filtered-all"))
-  }
-
-  #Save unfiltered
-  if (save.unfiltered == FALSE) {
-    system(paste0("rm -r ", output.directory, "/unfiltered*"))
-  }
-
+  # Optional cleanup runs only after every requested product succeeded
+  .cleanupJointOutputs(output.directory, save.unfiltered, save.SNPs, save.indels, save.combined)
+  invisible(loci.names)
 }#end function
+
+
+# Removes optional VCF subdirectories after successful publication of every
+# requested final product.
+.cleanupJointOutputs = function(output.directory, save.unfiltered, save.SNPs,
+                                save.indels, save.combined) {
+  if (save.SNPs == FALSE) {
+    unlink(file.path(output.directory, c("unfiltered-snps", "filtered-snps")), recursive = TRUE)
+  }
+  if (save.indels == FALSE) {
+    unlink(file.path(output.directory, c("unfiltered-indels", "filtered-indels")), recursive = TRUE)
+  }
+  if (save.combined == FALSE) {
+    unlink(file.path(output.directory, c("unfiltered-all", "filtered-all")), recursive = TRUE)
+  }
+  if (save.unfiltered == FALSE) {
+    unlink(file.path(output.directory, c("unfiltered-all", "unfiltered-snps", "unfiltered-indels")),
+           recursive = TRUE)
+  }
+  invisible(NULL)
+}
+
+
+# Reads the header lines of a plain or gzipped VCF up to and including the
+# #CHROM line. Avoids loading records into memory.
+.vcfHeaderLines = function(path) {
+  con = if (grepl("\\.gz$", path)) gzfile(path, "rt") else file(path, "rt")
+  on.exit(close(con))
+  header = character(0)
+  repeat {
+    line = readLines(con, n = 1, warn = FALSE)
+    if (length(line) == 0) break
+    if (startsWith(line, "#CHROM")) { header = c(header, line); break }
+    if (startsWith(line, "##")) { header = c(header, line) }
+  }
+  header
+}
+
+# Sample IDs are the header columns after the fixed FORMAT column.
+.vcfSamples = function(header.lines) {
+  chrom = header.lines[startsWith(header.lines, "#CHROM")]
+  if (length(chrom) != 1) { return(character(0)) }
+  fields = strsplit(chrom, "\t")[[1]]
+  if (length(fields) <= 9) { return(character(0)) }
+  fields[10:length(fields)]
+}
+
+# Contig names declared in the header.
+.vcfContigs = function(header.lines) {
+  contig.lines = header.lines[startsWith(header.lines, "##contig=")]
+  if (length(contig.lines) == 0) { return(character(0)) }
+  sub(".*ID=([^,>]+).*", "\\1", contig.lines)
+}
 
 # END SCRIPT

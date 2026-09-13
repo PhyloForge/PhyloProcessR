@@ -7,7 +7,7 @@
 reduceRedundancy(
   assembly.directory = NULL,
   output.directory = "reduced-redundancy",
-  similarity = 0.95,
+  similarity = 0.98,
   cdhit.path = NULL,
   memory = 1,
   threads = 1,
@@ -24,7 +24,7 @@ will be written. Default: \code{"reduced-redundancy"}.}
 
 \item{similarity}{sequence identity threshold for cd-hit-est clustering
 (0.8-1.0). Must be >= 0.8, which is the lowest threshold cd-hit-est
-accepts. Default: \code{0.95}.}
+accepts. Default: \code{0.98}.}
 
 \item{cdhit.path}{path to the directory containing \code{cd-hit-est}. If
 \code{NULL} expected on the system PATH. Default: \code{NULL}.}

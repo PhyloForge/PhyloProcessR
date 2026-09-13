@@ -253,13 +253,22 @@ Set `include.novel.markers = TRUE` only after Workflow X4 produces
 
 ### Workflow X1: Joint genotyping
 
-Workflow X1 maps all samples to a common consensus reference and makes a joint
-VCF file. Use it when the analysis requires variants in a common coordinate
-system.
+Workflow X1 maps every sample to one shared reference and calls variants in a
+common coordinate system. The `reference.mode` setting selects the reference
+source: `consensus` builds one consensus sequence per alignment (the default),
+`target` uses the capture target markers file, and `user` uses a reference FASTA
+you supply.
 
 ```bash
 Rscript workflow-X1_joint-genotype_VCF.R
 ```
+
+The output is one multisample VCF per locus, written to `filtered-all`,
+`filtered-snps`, and `filtered-indels` subdirectories of the genotype database.
+The `save.unfiltered`, `save.SNPs`, `save.indels`, and `save.combined` settings
+control which subdirectories are kept. The hard-filter thresholds are
+cohort-level record filters; the workflow applies no per-sample genotype-depth
+filter and does not produce contig sequences.
 
 ### Workflow X2: Capture assessment
 

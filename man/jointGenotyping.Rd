@@ -12,41 +12,42 @@ jointGenotyping(
   save.SNPs = TRUE,
   save.indels = TRUE,
   save.combined = TRUE,
-  custom.SNP.QD = NULL,
-  custom.SNP.QUAL = NULL,
-  custom.SNP.SOR = NULL,
-  custom.SNP.FS = NULL,
-  custom.SNP.MQ = NULL,
-  custom.SNP.MQRankSum = NULL,
-  custom.SNP.ReadPosRankSum = NULL,
-  custom.INDEL.QD = NULL,
-  custom.INDEL.QUAL = NULL,
-  custom.INDEL.FS = NULL,
-  custom.INDEL.ReadPosRankSum = NULL,
+  custom.SNP.QD = 2,
+  custom.SNP.QUAL = 30,
+  custom.SNP.SOR = 3,
+  custom.SNP.FS = 60,
+  custom.SNP.MQ = 40,
+  custom.SNP.MQRankSum = -12.5,
+  custom.SNP.ReadPosRankSum = -8,
+  custom.INDEL.QD = 2,
+  custom.INDEL.QUAL = 30,
+  custom.INDEL.FS = 60,
+  custom.INDEL.ReadPosRankSum = -8,
   gatk4.path = NULL,
   temp.directory = NULL,
   threads = 1,
   memory = 1,
   overwrite = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  reference.path = "index/reference.fa",
+  sample.names = NULL,
+  batch.size = 50
 )
 }
 \arguments{
-\item{haplotype.caller.directory}{path to the directory of per-sample
-haplotype caller GVCF files (output of haplotypeCaller()).}
+\item{haplotype.caller.directory}{path to the directory of per-sample GVCF
+sub-directories (output of haplotypeCaller()).}
 
-\item{output.directory}{path where the genotype database and per-locus VCF
-subdirectories (filtered-all, filtered-snps, filtered-indels, and their
-unfiltered counterparts) will be created.}
+\item{output.directory}{path where the GenomicsDB workspace and per-locus VCF
+subdirectories are created.}
 
-\item{use.base.recalibration}{logical; if TRUE the BQSR-recalibrated GVCFs
-are used as input.}
+\item{use.base.recalibration}{logical; if TRUE the BQSR-recalibrated GVCFs are
+used as input.}
 
 \item{save.unfiltered}{logical; if FALSE unfiltered VCF subdirectories are
 deleted after filtering.}
 
-\item{save.SNPs}{logical; if FALSE SNP-specific VCF subdirectories are
-deleted.}
+\item{save.SNPs}{logical; if FALSE SNP-specific VCF subdirectories are deleted.}
 
 \item{save.indels}{logical; if FALSE indel-specific VCF subdirectories are
 deleted.}
@@ -54,36 +55,52 @@ deleted.}
 \item{save.combined}{logical; if FALSE the combined (all variants) VCF
 subdirectories are deleted.}
 
-\item{custom.SNP.QD, custom.SNP.QUAL, custom.SNP.SOR, custom.SNP.FS, custom.SNP.MQ, custom.SNP.MQRankSum, custom.SNP.ReadPosRankSum}{numeric hard-filter thresholds for SNPs (see GATK VariantFiltration
-documentation for field definitions).}
+\item{custom.SNP.QD, custom.SNP.QUAL, custom.SNP.SOR, custom.SNP.FS, custom.SNP.MQ, custom.SNP.MQRankSum, custom.SNP.ReadPosRankSum}{numeric hard-filter thresholds for SNPs.}
 
 \item{custom.INDEL.QD, custom.INDEL.QUAL, custom.INDEL.FS, custom.INDEL.ReadPosRankSum}{numeric hard-filter thresholds for indels.}
 
-\item{gatk4.path}{system path to the directory containing the gatk
-executable; NULL searches the system PATH.}
+\item{gatk4.path}{GATK executable directory/path or NULL to search the PATH.}
 
-\item{temp.directory}{path to a GATK JVM temp directory; NULL uses the
-current working directory.}
+\item{temp.directory}{GATK JVM temp directory; NULL uses a temporary directory.}
 
 \item{threads}{number of loci to process in parallel.}
 
-\item{memory}{total RAM in GB to allocate as the JVM heap (-Xmx).}
+\item{memory}{total JVM heap budget in GB across concurrent loci.}
 
-\item{overwrite}{logical; if TRUE the output directory is deleted and
-recreated before processing.}
+\item{overwrite}{logical; if TRUE the output directory is rebuilt.}
 
-\item{quiet}{logical; currently unused.}
+\item{quiet}{logical; if TRUE tool output is suppressed while logs are retained.}
+
+\item{reference.path}{shared reference FASTA used for genotyping and filtering.}
+
+\item{sample.names}{expected cohort sample IDs; NULL uses every GVCF
+sub-directory.}
+
+\item{batch.size}{number of samples imported per GenomicsDB batch. Every
+sample still enters every locus; this only bounds memory during import.}
 }
 \value{
-invisibly; writes per-locus VCF files to output.directory
-subdirectories.
+invisibly the loci names; writes per-locus VCF files to
+output.directory subdirectories.
 }
 \description{
-Performs joint genotyping across all samples at each locus
-using GATK4. For each locus, all per-sample GVCFs are combined into a
-GenomicsDB, then GenotypeGVCFs genotypes the combined data. SNPs and
-indels are separated, hard-filtered with user-specified thresholds, merged
-back, and written to per-locus VCF files in subdirectories. Loci are
-processed in parallel. The function optionally removes unfiltered and/or
-SNP/indel-specific VCF directories at the end.
+Performs joint genotyping across a fixed cohort of samples at each
+locus using GATK4. Every expected sample must have exactly one GVCF (the
+BQSR or the standard caller output, depending on use.base.recalibration) and
+its index; a missing sample stops the run rather than silently genotyping a
+subset. For each locus the cohort GVCFs are combined into an owned GenomicsDB
+workspace, GenotypeGVCFs genotypes the combined data, SNPs and indels are
+separated, hard-filtered, merged, and written to per-locus VCF files. Loci
+are processed in parallel and every external command is checked. A cohort
+record ties the results to the exact sample set, reference, BQSR selection,
+and filter thresholds; a changed cohort or reference requires overwrite.
+}
+\details{
+The custom SNP and indel thresholds are cohort-level record FILTER
+expressions (QUAL, QD, MQ, and related site annotations). A record that
+passes these filters does not guarantee that every sample genotype at that
+site has adequate depth. This function applies no per-sample genotype-depth
+filter and produces variant-only VCFs, not per-sample FASTA or N-masked
+sequences. Absence of a record is therefore not a measure of per-sample
+coverage or callability.
 }

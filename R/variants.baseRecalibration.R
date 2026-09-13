@@ -36,6 +36,9 @@
 #' @param quiet logical; currently unused.
 #' @param ploidy positive integer ploidy used for the recalibrated caller pass.
 #' @param sample.names optional retained sample set.
+#' @param reference.path optional explicit shared reference FASTA. When supplied
+#'   it is used for every sample; otherwise each sample's per-sample reference is
+#'   used.
 #'
 #' @return invisibly; writes recalibrated GVCFs to haplotype.caller.directory
 #'   and recalibrated BAMs to mapping.directory.
@@ -52,28 +55,15 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
                             overwrite = FALSE,
                             quiet = TRUE,
                             ploidy = 2,
-                            sample.names = NULL) {
-
-  #Debugging
-  #Home directoroies
-  # library(PhyloCap)
-  # setwd("/Volumes/LaCie/Mantellidae/data-analysis")
-  # haplotype.caller.directory <- "variant-calling/haplotype-caller"
-  # mapping.directory <- "variant-calling/sample-mapping"
-
-  # gatk4.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/anaconda3/envs/PhyloCap/bin"
-
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- TRUE
-  # clean.up = TRUE
-
-  if (length(ploidy) != 1 || !is.finite(ploidy) || ploidy < 1 || ploidy != as.integer(ploidy))
-    stop("ploidy must be a positive integer.")
+                            sample.names = NULL,
+                            reference.path = NULL) {
 
   #Quick checks
+  if (length(ploidy) != 1 || !is.finite(ploidy) || ploidy < 1 ||
+      ploidy != as.integer(ploidy)) {
+    stop("ploidy must be a positive integer.")
+  }
+
   if (is.null(haplotype.caller.directory) == TRUE) {
     stop("Please provide the haplotype caller directory.")
   }
@@ -117,7 +107,11 @@ baseRecalibration = function(haplotype.caller.directory = "haplotype-caller",
 
     sample.id      = sample.names[i]
     hap.dir        = paste0(haplotype.caller.directory, "/", sample.id)
-    reference.path = paste0(mapping.directory, "/", sample.id, "/index/reference.fa")
+    reference.path = if (!is.null(reference.path)) {
+      reference.path
+    } else {
+      paste0(mapping.directory, "/", sample.id, "/index/reference.fa")
+    }
     log.file       = paste0("logs/sample_logs/FAILURE_", sample.id, "_baseRecalibration.txt")
 
     tryCatch({

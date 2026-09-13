@@ -94,13 +94,23 @@ filterHeterozygosity = function(iupac.directory = NULL,
   }
 
   if (dir.exists(output.directory)) {
-    if (overwrite) { unlink(output.directory, recursive = TRUE); dir.create(output.directory, recursive = TRUE) }
-  } else { dir.create(output.directory, recursive = TRUE) }
+    if (overwrite) {
+      unlink(output.directory, recursive = TRUE)
+      dir.create(output.directory, recursive = TRUE)
+    }
+  } else {
+    dir.create(output.directory, recursive = TRUE)
+  }
 
   if (!is.null(removed.directory)) {
     if (dir.exists(removed.directory)) {
-      if (overwrite) { unlink(removed.directory, recursive = TRUE); dir.create(removed.directory, recursive = TRUE) }
-    } else { dir.create(removed.directory, recursive = TRUE) }
+      if (overwrite) {
+        unlink(removed.directory, recursive = TRUE)
+        dir.create(removed.directory, recursive = TRUE)
+      }
+    } else {
+      dir.create(removed.directory, recursive = TRUE)
+    }
   }
 
   if (!dir.exists("logs/sample_logs")) {

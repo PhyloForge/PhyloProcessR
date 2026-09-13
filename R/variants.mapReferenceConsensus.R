@@ -1,44 +1,42 @@
 #' @title mapReferenceConsensus
 #'
-#' @description Builds a shared consensus reference from a directory of phylip
-#'   alignments (one consensus sequence per locus), indexes it with BWA and
-#'   GATK, then maps per-sample pre-processed BAM files (from prepareBAM())
-#'   against this shared reference using the GATK best-practices pipeline
+#' @description Maps per-sample prepared BAM files (from prepareBAM()) against one
+#'   shared reference for joint-genotyping workflows, where every sample must use
+#'   the same reference, contig names, and coordinates. The reference is built
+#'   once by buildReference() into a dataset-owned directory. The reference source
+#'   is selected by reference.mode: a majority consensus of the sample alignments
+#'   (the default), the capture-target markers FASTA, or a user-supplied FASTA.
+#'   Each lane is mapped with the GATK best-practices pipeline
 #'   (SamToFastq | bwa mem | MergeBamAlignment | SortSam | MarkDuplicates |
-#'   SetNmAndUqTags). Used for joint genotyping workflows where all samples
-#'   share the same reference.
+#'   SetNmAndUqTags).
 #'
 #' @param mapping.directory path to the directory containing per-sample
-#'   sub-directories with pre-processed BAM files (all_reads.bam) created by
+#'   sub-directories with prepared lane BAM files (all_reads.bam) from
 #'   prepareBAM().
-#'
-#' @param alignment.directory path to a directory of phylip-format multiple
-#'   sequence alignments; one consensus sequence per file is extracted to
-#'   build the shared reference.
-#'
-#' @param samtools.path system path to the directory containing samtools; NULL
-#'   searches the system PATH.
-#'
-#' @param bwa.path system path to the directory containing bwa; NULL searches
-#'   the system PATH.
-#'
-#' @param gatk4.path system path to the directory containing the gatk
-#'   executable; NULL searches the system PATH.
-#'
-#' @param temp.directory path to a GATK JVM temp directory; NULL uses the
-#'   current working directory.
-#'
+#' @param alignment.directory phylip alignment directory used to build the
+#'   consensus reference when reference.mode is "consensus".
+#' @param samtools.path,bwa.path,gatk4.path tool directories, executable paths,
+#'   or NULL to search the system PATH.
+#' @param temp.directory path to a GATK JVM temp directory; NULL uses a temporary
+#'   directory.
 #' @param threads number of CPU threads for BWA and GATK operations.
+#' @param memory total JVM heap budget in GB across the two concurrent JVMs in a
+#'   mapping pipe.
+#' @param overwrite logical; if TRUE the reference and mapped outputs are rebuilt.
+#' @param quiet logical; if TRUE tool stdout/stderr is suppressed while logs are
+#'   retained.
+#' @param reference.path path to the shared reference FASTA to build and map
+#'   against. Defaults to the legacy "index/reference.fa"; joint-genotyping
+#'   workflows supply a dataset-owned path.
+#' @param reference.mode one of "consensus", "target", or "user"; see
+#'   buildReference().
+#' @param target.file capture-target markers FASTA for reference.mode "target".
+#' @param reference.file user-supplied reference FASTA for reference.mode "user".
+#' @param sample.names optional retained sample set; NULL discovers every prepared
+#'   sample directory.
 #'
-#' @param memory total RAM in GB to allocate as the JVM heap (-Xmx).
-#'
-#' @param overwrite logical; if FALSE samples that already have a
-#'   final-mapped-all.bam are skipped.
-#'
-#' @param quiet logical; if TRUE BWA and samtools stdout/stderr are suppressed.
-#'
-#' @return invisibly; writes final-mapped-all.bam files to per-sample lane
-#'   sub-directories in mapping.directory, and a shared BWA index to index/.
+#' @return invisibly the retained sample names; writes final-mapped-all.bam files
+#'   to per-sample lane sub-directories.
 #'
 #' @export
 
@@ -51,260 +49,128 @@ mapReferenceConsensus = function(mapping.directory = NULL,
                                 threads = 1,
                                 memory = 1,
                                 overwrite = FALSE,
-                                quiet = TRUE) {
-  # Debugging
-  # library(PhyloProcessR)
-  # setwd("/Volumes/LaCie/Anax/data-analysis")
-  # alignment.directory <- "/Volumes/LaCie/Anax/data-analysis/alignments/untrimmed_all-markers"
-  # mapping.directory <- "joint-genotyping/sample-mapping"
+                                quiet = TRUE,
+                                reference.path = "index/reference.fa",
+                                reference.mode = c("consensus", "target", "user"),
+                                target.file = NULL,
+                                reference.file = NULL,
+                                sample.names = NULL) {
 
-
-  # gatk4.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-  # samtools.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-  # bwa.path <- "/Users/chutter/Bioinformatics/miniconda3/envs/PhyloProcessR/bin"
-
-  # check.assemblies = FALSE
-  # threads <- 4
-  # memory <- 8
-  # quiet <- FALSE
-  # overwrite <- FALSE
-
-  # Same adds to bbmap path
-  if (is.null(samtools.path) == FALSE) {
-    b.string <- unlist(strsplit(samtools.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      samtools.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    samtools.path <- ""
-  }
-
-  # Same adds to bbmap path
-  if (is.null(bwa.path) == FALSE) {
-    b.string <- unlist(strsplit(bwa.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      bwa.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    bwa.path <- ""
-  }
-
-  # Same adds to bbmap path
-  if (is.null(gatk4.path) == FALSE) {
-    b.string <- unlist(strsplit(gatk4.path, ""))
-    if (b.string[length(b.string)] != "/") {
-      gatk4.path <- paste0(append(b.string, "/"), collapse = "")
-    } # end if
-  } else {
-    gatk4.path <- ""
-  }
-
+  reference.mode = match.arg(reference.mode)
 
   # Quick checks
-  if (is.null(mapping.directory) == TRUE) {
-    stop("Please provide the bam directory.")
-  }
-  if (file.exists(mapping.directory) == FALSE) {
+  if (is.null(mapping.directory) || !dir.exists(mapping.directory)) {
     stop("BAM folder not found.")
   }
 
-  if (is.null(temp.directory) == TRUE){
-    temp.directory = tempdir()
+  if (is.null(temp.directory)) { temp.directory = tempdir() }
+  .ensureDirectory(temp.directory, "temporary directory")
+  .ensureDirectory("logs/sample_logs", "sample log directory")
+
+  # Builds and validates the one shared reference before any sample work, so a
+  # fully resumed run still confirms the reference is present and unchanged.
+  buildReference(reference.path = reference.path,
+                 reference.mode = reference.mode,
+                 alignment.directory = alignment.directory,
+                 target.file = target.file,
+                 reference.file = reference.file,
+                 samtools.path = samtools.path,
+                 bwa.path = bwa.path,
+                 gatk4.path = gatk4.path,
+                 threads = threads,
+                 overwrite = overwrite,
+                 quiet = quiet)
+
+  # Discovers prepared samples
+  discovered = list.dirs(mapping.directory, recursive = FALSE, full.names = FALSE)
+  discovered = discovered[nzchar(discovered)]
+  if (is.null(sample.names)) {
+    sample.names = discovered
+  } else if (any(!sample.names %in% discovered)) {
+    stop("Selected sample directories are missing: ",
+         paste(setdiff(sample.names, discovered), collapse = ", "))
   }
+  if (length(sample.names) == 0) { stop("No prepared samples are available to map.") }
 
+  # Two GATK JVMs run at the same time in a mapping pipe, so the heap budget is
+  # split between them.
+  resources = .validateResources(threads, memory, 1, simultaneous.jvms = 2)
+  gatk = .toolCommand("gatk", gatk4.path)
+  bwa = .toolCommand("bwa", bwa.path)
+  gatk.command = .gatkCommand(gatk, temp.directory, resources$heap.mb)
 
-  # Creates output directory
-  if (dir.exists("logs/sample_logs") == F){ dir.create("logs/sample_logs", recursive = TRUE) }
-
-  # Read in sample data
-  bam.files <- list.files(mapping.directory, recursive = TRUE, full.names = TRUE)
-  bam.files <- bam.files[grep("all_reads.bam$", bam.files)]
-  sample.names <- list.dirs(mapping.directory, recursive = FALSE, full.names = FALSE)
-
-  # Resumes file download
-  if (overwrite == FALSE) {
-    done.files <- list.files(mapping.directory, full.names = TRUE, recursive = TRUE)
-    done.files <- done.files[grep("final-mapped-all.bam", done.files)]
-    done.names <- gsub("/Lane_.*", "", done.files)
-    done.names <- unique(gsub(".*\\/", "", done.names))
-    sample.names <- sample.names[!sample.names %in% done.names]
-  }
-
-  if (length(sample.names) == 0) {
-    return("no samples remain to analyze.")
-  }
-
-  ############################################################################################
-  ########### Step 1 #########################################################################
-  ##### Create reference from alignment consensus
-  ############################################################################################
-
-  ref.path <- paste0("index")
-  if (overwrite == TRUE) {
-    if (dir.exists(ref.path) == TRUE) { system(paste0("rm -r ", ref.path)) }
-    dir.create(ref.path)
-  } else {
-    if (!dir.exists(ref.path)) { dir.create(ref.path) }
-  }
-
-  #Gathers alignment locus names
-  locus.names = list.files(alignment.directory, full.names = TRUE)
-
-  # Loops through each locus and does operations on them
-  out.data = do.call(c, parallel::mclapply(seq_along(locus.names), function(i) {
-  tryCatch({
-    # Reads in files
-    red.align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(file = locus.names[i], format = "phylip"))
-
-    if (length(red.align) == 0) {
-      return(NULL)
+  for (sample in sample.names) {
+    sample.dir = file.path(mapping.directory, sample)
+    lanes = .laneDirectories(sample.dir)
+    input.bams = file.path(lanes, "all_reads.bam")
+    if (length(lanes) == 0 || any(!file.exists(input.bams))) {
+      stop("Incomplete prepared BAM inputs for sample ", sample)
     }
 
-    # Get and save consensus sequence
-    con.seq = makeConsensus(red.align)
-    names(con.seq) = gsub("\\..*", "", gsub(".*/", "", locus.names[i]))
-
-    as.list(as.character(con.seq))
-
-  }, error = function(e) {
-    warning(locus.names[i], " failed: ", conditionMessage(e))
-    NULL
-  })
-  }, mc.cores = threads)) # end i loop
-
-  # Saves final set
-  writeFasta(
-    sequences = out.data, names = names(out.data),
-    paste0(ref.path, "/reference.fa"), nbchar = 1000000, as.string = T
-  )
-
-  reference.location <- paste0("index/reference.fa")
-
-  # Indexes the reference
-  system(paste0(bwa.path, "bwa index -a bwtsw ", reference.location),
-    ignore.stderr = quiet, ignore.stdout = quiet
-  )
-
-  # Also creates a samtools index
-  system(paste0(samtools.path, "samtools faidx ", reference.location))
-
-  system(paste0(
-    gatk4.path, "gatk CreateSequenceDictionary --REFERENCE ", reference.location,
-    " --OUTPUT index/reference.dict",
-    " --USE_JDK_DEFLATER true --USE_JDK_INFLATER true"
-  ))
-
-  ############################################################################################
-  ########### Step 1 #########################################################################
-  ##### Start up loop for each sample
-  ############################################################################################
-
-  # Runs through each sample
-  for (i in seq_along(sample.names)) {
-    #################################################
-    ### Part A: prepare for loading and checks
-    #################################################
-    sample.dir <- paste0(mapping.directory, "/", sample.names[i])
-
-    # Gets the reads for the sample
-    sample.bams <- bam.files[grep(pattern = paste0(sample.names[i], "/"), x = bam.files)]
-
-    # Checks the Sample column in case already renamed
-    if (length(sample.bams) == 0) {
-      sample.bams <- bam.files[grep(pattern = sample.names[i], x = bam.files)]
-    }
-
-    # Returns an error if reads are not found
-    if (length(sample.bams) == 0) {
-      stop(sample.names[i], " does not have any reads present for files ")
-    } # end if statement
-
-    # CReates new directory
-    report.path <- paste0("logs/sample_logs/", sample.names[i])
-    if (file.exists(report.path) == FALSE) {
-      dir.create(report.path)
-    }
-
-    for (j in seq_along(sample.bams)) {
-
-      # Gets lane names
-      lane.name <- paste0("Lane_", j)
-      lane.dir <- paste0(sample.dir, "/", lane.name)
-
-      # Piped version
-      tmp.dir <- paste0(temp.directory, "/tmp_", sample.names[i], "_", lane.name)
-      dir.create(tmp.dir, showWarnings = FALSE)
-
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " SamToFastq -I ", lane.dir, "/all_reads.bam -FASTQ /dev/stdout -TMP_DIR ", tmp.dir,
-        " -CLIPPING_ATTRIBUTE XT -CLIPPING_ACTION 2 -INTERLEAVE true -NON_PF true",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true | ",
-        bwa.path, "bwa mem -M -p -t ", threads, " ",
-        reference.location, " /dev/stdin | ",
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " MergeBamAlignment -ALIGNED_BAM /dev/stdin -UNMAPPED_BAM ", lane.dir, "/all_reads.bam",
-        " -OUTPUT ", lane.dir, "/cleaned_final.bam",
-        " -R ", reference.location, " -CREATE_INDEX true -ADD_MATE_CIGAR true",
-        " -CLIP_ADAPTERS false -CLIP_OVERLAPPING_READS true -INCLUDE_SECONDARY_ALIGNMENTS true",
-        " -MAX_INSERTIONS_OR_DELETIONS -1 -PRIMARY_ALIGNMENT_STRATEGY MostDistant -ATTRIBUTES_TO_RETAIN XS",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true",
-        " -TMP_DIR ", tmp.dir
-      ))
-
-      system(paste0("rm -r ", tmp.dir))
-      #system(paste0(samtools.path, "samtools view -H ", lane.dir, "/cleaned_final.bam | grep '@RG'"))
-
-      ############################################################################################
-      ########### Step 4 #########################################################################
-      ##### Sort Sam, Mark duplicates, Sort Sam again, finalize mapped set ofreads
-      ############################################################################################
-
-      if (file.exists(paste0(lane.dir, "/cleaned_final.bam")) != TRUE) {
-        stop("Stopped. Something failed after mapping before sorting.")
+    for (j in seq_along(lanes)) {
+      lane.dir = lanes[j]
+      output = file.path(lane.dir, "final-mapped-all.bam")
+      index = sub("\\.bam$", ".bai", output)
+      if (overwrite == FALSE && .stageComplete(lane.dir, "mapReferenceConsensus", c(output, index))) {
+        next
       }
+      .invalidateStage(lane.dir, "mapReferenceConsensus")
+      unlink(c(output, index))
+
+      tmp = file.path(temp.directory, paste0("tmp_", sample, "_", basename(lane.dir)))
+      .ensureDirectory(tmp)
+      log = file.path("logs/sample_logs", sample, paste0(basename(lane.dir), "_mapping.stderr.log"))
+      .ensureDirectory(dirname(log))
+      cleaned = file.path(lane.dir, "cleaned_final.bam")
+      sorted = file.path(lane.dir, "cleaned_final_sort.bam")
+      marked = file.path(lane.dir, "cleaned_final_md.bam")
+
+      # Extracts reads, maps with BWA, and merges the alignment with the unmapped
+      # BAM in one streaming pipe.
+      pipeline = paste(gatk.command, "SamToFastq -I", shQuote(input.bams[j]),
+                       "-FASTQ /dev/stdout -TMP_DIR", shQuote(tmp),
+                       "-CLIPPING_ATTRIBUTE XT -CLIPPING_ACTION 2 -INTERLEAVE true -NON_PF true",
+                       "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true |",
+                       bwa, "mem -M -p -t", threads, shQuote(reference.path), "/dev/stdin |",
+                       gatk.command, "MergeBamAlignment -ALIGNED_BAM /dev/stdin -UNMAPPED_BAM",
+                       shQuote(input.bams[j]), "-OUTPUT", shQuote(cleaned), "-R", shQuote(reference.path),
+                       "-CREATE_INDEX true -ADD_MATE_CIGAR true -CLIP_ADAPTERS false",
+                       "-CLIP_OVERLAPPING_READS true -INCLUDE_SECONDARY_ALIGNMENTS true",
+                       "-MAX_INSERTIONS_OR_DELETIONS -1 -PRIMARY_ALIGNMENT_STRATEGY MostDistant",
+                       "-ATTRIBUTES_TO_RETAIN XS -USE_JDK_DEFLATER true -USE_JDK_INFLATER true",
+                       "-TMP_DIR", shQuote(tmp))
+      .runPipeline(pipeline, quiet, "read mapping", log)
 
       # Sort by coordinate for input into MarkDuplicates
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " SortSam -INPUT ", lane.dir, "/cleaned_final.bam",
-        " -OUTPUT ", lane.dir, "/cleaned_final_sort.bam",
-        " -CREATE_INDEX true -SORT_ORDER coordinate",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
+      .runCommand(paste(gatk.command, "SortSam -INPUT", shQuote(cleaned), "-OUTPUT", shQuote(sorted),
+                        "-CREATE_INDEX true -SORT_ORDER coordinate",
+                        "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
+                  quiet, "mapping sort", stderr.log = log)
+      .runCommand(paste(gatk.command, "MarkDuplicates -INPUT", shQuote(sorted), "-OUTPUT", shQuote(marked),
+                        "-CREATE_INDEX true -METRICS_FILE",
+                        shQuote(file.path("logs/sample_logs", sample, "duplicate_metrics.txt")),
+                        "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true"),
+                  quiet, "duplicate marking", stderr.log = log)
+      final.pipe = paste(gatk.command, "SortSam -INPUT", shQuote(marked),
+                         "-OUTPUT /dev/stdout -SORT_ORDER coordinate |",
+                         gatk.command, "SetNmAndUqTags -INPUT /dev/stdin -OUTPUT", shQuote(output),
+                         "-CREATE_INDEX true -R", shQuote(reference.path),
+                         "-USE_JDK_DEFLATER true -USE_JDK_INFLATER true")
+      .runPipeline(final.pipe, quiet, "mapping finalization", log)
 
-      # Marks duplicate reads
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " MarkDuplicates -INPUT ", lane.dir, "/cleaned_final_sort.bam",
-        " -OUTPUT ", lane.dir, "/cleaned_final_md.bam",
-        " -CREATE_INDEX true -METRICS_FILE ", report.path, "/duplicate_metrics.txt",
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      # Sorts and stuff
-      system(paste0(
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " SortSam -INPUT ", lane.dir, "/cleaned_final_md.bam",
-        " -OUTPUT /dev/stdout -SORT_ORDER coordinate | ",
-        gatk4.path, "gatk --java-options \"-Djava.io.tmpdir=", temp.directory, " -Xmx", memory, "G\"",
-        " SetNmAndUqTags -INPUT /dev/stdin -OUTPUT ", lane.dir, "/final-mapped-all.bam",
-        " -CREATE_INDEX true -R ", reference.location,
-        " -USE_JDK_DEFLATER true -USE_JDK_INFLATER true"
-      ))
-
-      if (file.exists(paste0(lane.dir, "/final-mapped-all.bam")) != TRUE) {
-        stop("Stopped. Something failed after mapping during sorting.")
+      if (!all(file.exists(c(output, index)))) {
+        stop("Mapping did not produce BAM and index for ", sample, " ", basename(lane.dir))
       }
+      unlink(tmp, recursive = TRUE)
+      # GATK -CREATE_INDEX writes <base>.bai, replacing the .bam extension.
+      file.remove(c(cleaned, sorted, marked,
+                    sub("\\.bam$", ".bai", c(cleaned, sorted, marked))))
+      .markStageComplete(lane.dir, "mapReferenceConsensus", paste0("reference=", reference.path))
+      if (quiet == FALSE) { message(sample, " ", basename(lane.dir), " completed read mapping to reference.") }
+    }#end lane j loop
+  }#end sample loop
 
-      # Intermediate files are deleted
-      system(paste0("rm ", lane.dir, "/cleaned_final_sort*"))
-      system(paste0("rm ", lane.dir, "/cleaned_final*"))
+  invisible(sample.names)
+}#end function
 
-      print(paste0(sample.names[i], " ", lane.name, " completed read mapping to reference!"))
-    } # end j loop
-
-    print(paste0(sample.names[i], " completed read mapping to reference!"))
-  } # end i loop
-
-} # end function
+# END SCRIPT

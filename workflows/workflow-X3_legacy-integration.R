@@ -54,15 +54,15 @@ if (convert.nexus == TRUE) {
 ##################################################################################################
 
 if (length(list.files(legacy.only.directory)) == 0 || overwrite == TRUE) {
-  integrateLegacy(
+  addLegacyAlignments(
     alignment.directory = alignment.directory,
     alignment.format = alignment.format,
     output.directory = legacy.output.base,
     legacy.directory = legacy.directory,
     legacy.format = legacy.format,
     target.markers = target.file,
-    combine.same.sample = combine.same.sample,
-    name.match = name.match,
+    merge = merge,
+    rename.file = rename.file,
     include.uncaptured.legacy = include.uncaptured.legacy,
     include.all.together = include.all.together,
     include.mitochondrial = include.mitochondrial,

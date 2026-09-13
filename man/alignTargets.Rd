@@ -30,11 +30,6 @@ with names in the format \code{locusName_|_sampleName}.}
 \item{target.file}{path to a FASTA file of reference target sequences, one per locus,
 used as a guide during alignment and for divergence filtering.}
 
-\item{additional.sequence.directory}{optional path to an
-\code{extractGenomeTarget()} output directory. Genome target FASTA files are
-found recursively and added to \code{targets.to.align} before sequences are
-grouped and aligned by locus. Default NULL.}
-
 \item{output.directory}{path to the directory where phylip alignments will be saved.
 Default "alignments".}
 
@@ -72,6 +67,11 @@ completed alignments are skipped. Default FALSE.}
 
 \item{mafft.path}{path to the directory containing the MAFFT executable. If NULL, MAFFT
 is expected to be on the system PATH.}
+
+\item{additional.sequence.directory}{optional path to an
+code{extractGenomeTarget()} output directory. Genome target FASTA files are
+found recursively and added to code{targets.to.align} before sequences are
+grouped and aligned by locus. Default NULL.}
 }
 \value{
 Writes phylip alignment files and dataset-scoped summary CSV files under

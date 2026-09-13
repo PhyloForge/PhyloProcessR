@@ -163,8 +163,9 @@ save.corrected.reads = FALSE
 #TRUE to delete the entire SPAdes working directory for each sample after assembly, keeping only the final .fa file
 clean.up.spades = FALSE
 # The similarity threshold for redundancy reduction. cd-hit-est needs a value of
-# 0.8 or greater.
-similarity = 0.95
+# 0.8 or greater. 0.98 collapses near-identical copies but keeps divergent
+# paralogs (< ~95% identity) for the paralog workflow.
+similarity = 0.98
 
 #Target contig filtering settings
 #########################

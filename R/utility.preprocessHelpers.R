@@ -820,20 +820,6 @@
   return(invisible(summary.data))
 }#end .runFastpStep
 
-
-# Runs a shell pipeline and stops when any stage fails. A plain pipeline returns
-# the status of its last command only, so a failure in an earlier stage, for
-# example bwa, would otherwise pass unnoticed.
-.runPipeline = function(command = NULL,
-                        quiet = TRUE,
-                        task = "external command",
-                        keep.stdout = FALSE) {
-
-  wrapped = paste0("bash -c ", shQuote(paste0("set -o pipefail; ", command)))
-  return(.runCommand(wrapped, quiet = quiet, task = task, keep.stdout = keep.stdout))
-}#end .runPipeline
-
-
 # Writes the awk program that splits a mapped read stream into contaminant pairs
 # and clean pairs. The program reads collated SAM records, so both mates of a
 # pair arrive together. A pair is a contaminant when either mate aligns at or

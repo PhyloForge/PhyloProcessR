@@ -36,4 +36,4 @@ results_directory <- file.path(example_directory, "results")
 
 spades_kmers <- c(21, 33, 55)
 spades_mismatch_corrector <- FALSE
-reduce_redundancy_similarity <- 0.95
+reduce_redundancy_similarity <- 0.98

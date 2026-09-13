@@ -1,13 +1,32 @@
-#' @title integrateLegacy
+#' @title addLegacyAlignments
 #'
-#' @description Integrates legacy (e.g. Sanger or GenBank) sequence alignments into a set
-#' of sequence-capture alignments. For each legacy alignment, a consensus sequence is
-#' generated and BLASTed against a reference target file to identify the corresponding
-#' capture locus. The legacy sequences are then added to the matching capture alignment
-#' using MAFFT. Optionally, legacy alignments for loci absent from the capture dataset can
-#' be included as stand-alone alignments. When \code{combine.same.sample} is TRUE, samples
-#' appearing in both the legacy and capture alignments are merged column-by-column,
-#' preferring non-gap characters. Results are written to two output directories:
+#' @description Adds legacy (e.g. Sanger or GenBank) sequence alignments to a set
+#' of sequence-capture alignments. \code{legacy.directory} holds one alignment per
+#' legacy locus, each of legacy sequences only. For each legacy alignment a
+#' representative sequence is BLASTed against \code{target.markers} to find the
+#' matching capture locus, and the legacy sequences are added to that capture
+#' alignment with MAFFT so the two share one coordinate frame. Legacy loci absent
+#' from the capture dataset are written on their own when
+#' \code{include.uncaptured.legacy} is TRUE, and mitochondrial loci are matched
+#' against a second database when \code{include.mitochondrial} is TRUE. The
+#' \code{merge} argument controls how a legacy sample that represents the same
+#' specimen as a capture sample is handled, because the two datasets rarely use
+#' identical names:
+#' \describe{
+#'   \item{\code{"None"}}{No samples are merged. Every legacy sequence is kept as
+#'   its own row; a name that already exists is made unique with a \code{_2},
+#'   \code{_3}, ... suffix.}
+#'   \item{\code{"Exact"}}{Legacy and capture rows with identical names merge.}
+#'   \item{\code{"Fuzzy"}}{Names are normalised (separators removed, lower case)
+#'   before matching, so \code{MZUTI-2436}, \code{MZUTI_2436}, and \code{MZUTI2436}
+#'   match.}
+#'   \item{\code{"Species"}}{The trailing voucher field is removed before matching,
+#'   so conspecific rows merge into one species row.}
+#'   \item{\code{"Table"}}{Legacy names are renamed to capture names with
+#'   \code{rename.file}, then merged by exact name.}
+#' }
+#' Merged rows are combined column by column, keeping the non-missing base at each
+#' site. Results are written to two output directories:
 #' \code{output.directory-only} (legacy-integrated alignments only) and, if
 #' \code{include.all.together} is TRUE, \code{output.directory-all} (full merged dataset).
 #'
@@ -29,32 +48,12 @@
 #' @param target.markers path to the FASTA file of reference target sequences used to
 #' match each legacy alignment to the correct capture locus via BLAST.
 #'
-#' @param combine.same.sample logical. If TRUE, sequences from the same sample present in
-#' both the legacy and capture alignments are merged into a single sequence, preferring
-#' non-gap and non-N characters at each site. Default TRUE.
+#' @param merge sample-matching mode, one of \code{"None"}, \code{"Exact"},
+#' \code{"Fuzzy"}, \code{"Species"}, or \code{"Table"}. Default \code{"None"}.
 #'
-#' @param name.match character. Controls how samples are matched between the legacy and
-#' capture alignments when \code{combine.same.sample} is TRUE. Three options:
-#' \describe{
-#'   \item{\code{"exact"}}{Names must be identical to merge. All legacy sequences are added
-#'   to the alignment; those whose names exactly match a capture sequence are merged
-#'   column-by-column.}
-#'   \item{\code{"species"}}{Strips the trailing specimen/voucher ID (the last
-#'   underscore-delimited field) before matching, so that e.g.
-#'   \code{Centrolene_bacatum_MZUTI-2436} and \code{Centrolene_bacatum_KU12345} are
-#'   treated as the same taxon and merged into a single sequence named
-#'   \code{Centrolene_bacatum}. When multiple legacy sequences exist for the same species,
-#'   one is pre-selected: the sequence whose full name matches a capture specimen is
-#'   preferred; otherwise the most informative (fewest gaps/Ns) sequence is used.}
-#'   \item{\code{"fuzzy"}}{Strips all separator characters (hyphens, underscores, dots,
-#'   and spaces) and lowercases names before matching, then merges sequences whose
-#'   normalised names are identical. This handles common formatting differences including
-#'   \code{MZUTI-2436} vs \code{MZUTI_2436} vs \code{MZUTI2436} (separator present,
-#'   different separator, or no separator). All legacy sequences that do not match any
-#'   capture sequence are added to the alignment as separate rows with their original
-#'   names preserved. The merged sequence retains the original capture alignment name.}
-#' }
-#' Default \code{"exact"}.
+#' @param rename.file path to a legacy-to-capture name table, used only when
+#' \code{merge = "Table"}. CSV, TSV, TXT, XLS, or XLSX with \code{Legacy_Name} in
+#' column 1 and \code{SeqCap_Name} in column 2. Default \code{NULL}.
 #'
 #' @param include.uncaptured.legacy logical. If TRUE, legacy alignments for loci not found
 #' in the capture dataset are saved to the output as stand-alone alignments. Default FALSE.
@@ -99,14 +98,14 @@
 #'
 #' @export
 
-integrateLegacy = function(alignment.directory = NULL,
+addLegacyAlignments = function(alignment.directory = NULL,
                            alignment.format = "phylip",
                            output.directory = NULL,
                            legacy.directory = NULL,
                            legacy.format = "phylip",
                            target.markers = NULL,
-                           combine.same.sample = TRUE,
-                           name.match = c("exact", "species", "fuzzy"),
+                           merge = c("None", "Exact", "Fuzzy", "Species", "Table"),
+                           rename.file = NULL,
                            include.uncaptured.legacy = FALSE,
                            include.all.together = FALSE,
                            include.mitochondrial = FALSE,
@@ -125,7 +124,7 @@ integrateLegacy = function(alignment.directory = NULL,
   # legacy.directory = "/Volumes/LaCie/mitocap_2/genbank-legacy"
   # legacy.format = "phylip"
   # target.markers = "/Volumes/LaCie/mitocap_2/reference/refMarkers.fa"
-  # combine.same.sample = FALSE
+  # merge = "None"
   # include.uncaptured.legacy = FALSE
   # include.all.together = TRUE
   # threads = 10
@@ -151,7 +150,18 @@ integrateLegacy = function(alignment.directory = NULL,
     }#end if
   } else { blast.path = "" }
 
-  name.match = match.arg(name.match)
+  # The merge mode sets the internal matching behaviour: whether same-sample rows
+  # are combined, and which name key is used. "Table" renames legacy names to
+  # capture names first (below) and then matches exactly.
+  merge = match.arg(merge)
+  combine.same.sample = merge != "None"
+  name.match = switch(merge, Fuzzy = "fuzzy", Species = "species", "exact")
+
+  rename.table = NULL
+  if (merge == "Table") {
+    if (is.null(rename.file)) { stop("merge = \"Table\" requires a rename.file.") }
+    rename.table = .readLegacyRenameTable(rename.file)
+  }
 
   # Validate mitochondrial inputs
   if (include.mitochondrial == TRUE) {
@@ -335,6 +345,13 @@ integrateLegacy = function(alignment.directory = NULL,
       save.name = gsub("\\..*$", "", legacy.files[i])
     }#end fasta
     if (san$tmp) { file.remove(san$path) }
+
+    # Table mode: rename legacy samples to their capture names before matching.
+    if (merge == "Table") {
+      hit = match(names(align), rename.table$Legacy_Name)
+      renamed = !is.na(hit)
+      names(align)[renamed] = rename.table$SeqCap_Name[hit[renamed]]
+    }
 
     ##############
     #STEP 1: Blast to targets
@@ -697,20 +714,24 @@ integrateLegacy = function(alignment.directory = NULL,
 
     }#end combine.same.sample if
 
-    # Final duplicate-name guard: if any taxon name appears more than once after
-    # all the merging logic, keep the most informative copy.  This catches edge
-    # cases (e.g. two legacy specimens of the same species that didn't trigger
-    # name.match merging) before they reach writePhylip / IQ-TREE.
-    dup.final = duplicated(names(combo.align))
-    if (any(dup.final)) {
-      dup.nms = unique(names(combo.align)[dup.final])
-      print(paste0(found.name, ": removing ", length(dup.nms),
-                   " duplicate taxon name(s) from integrated alignment."))
-      for (dn in dup.nms) {
-        idx = which(names(combo.align) == dn)
-        n.inf = sapply(as.character(combo.align[idx]), function(s)
-          nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
-        combo.align = combo.align[-idx[order(n.inf)[-length(n.inf)]]]
+    # Final duplicate-name handling. merge = "None" keeps every sequence and makes
+    # a repeated name unique with a _2, _3, ... suffix. The merge modes instead
+    # keep the most informative copy, catching any duplicate the matching above
+    # did not resolve, before writePhylip / IQ-TREE.
+    if (merge == "None") {
+      names(combo.align) = .makeUniqueSuffix(names(combo.align))
+    } else {
+      dup.final = duplicated(names(combo.align))
+      if (any(dup.final)) {
+        dup.nms = unique(names(combo.align)[dup.final])
+        print(paste0(found.name, ": removing ", length(dup.nms),
+                     " duplicate taxon name(s) from integrated alignment."))
+        for (dn in dup.nms) {
+          idx = which(names(combo.align) == dn)
+          n.inf = sapply(as.character(combo.align[idx]), function(s)
+            nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+          combo.align = combo.align[-idx[order(n.inf)[-length(n.inf)]]]
+        }
       }
     }
 
@@ -891,5 +912,59 @@ integrateLegacy = function(alignment.directory = NULL,
   ####################################################################################
 
 }#end fuction
+
+
+# Appends _2, _3, ... to duplicate names so every name is unique.
+.makeUniqueSuffix = function(x) {
+  for (name in unique(x[duplicated(x)])) {
+    index = which(x == name)
+    x[index[-1]] = paste0(name, "_", seq_len(length(index) - 1) + 1)
+  }
+  x
+}
+
+
+# Reads a legacy-to-capture rename table and returns a two-column data frame with
+# the columns Legacy_Name and SeqCap_Name. The separator follows the extension.
+.readLegacyRenameTable = function(path) {
+  if (!file.exists(path)) { stop("Rename file not found: ", path) }
+
+  extension = tolower(tools::file_ext(path))
+  if (extension %in% c("xls", "xlsx")) {
+    if (!requireNamespace("readxl", quietly = TRUE)) {
+      stop("Install the readxl package to use an XLS or XLSX rename file.")
+    }
+    rename.data = as.data.frame(readxl::read_excel(path, col_names = TRUE),
+                                stringsAsFactors = FALSE)
+  } else {
+    separator = switch(extension,
+                       csv = ",",
+                       tsv = "\t",
+                       txt = if (grepl("\t", readLines(path, n = 1, warn = FALSE))) "\t" else ",",
+                       stop("rename.file must be a CSV, TSV, TXT, XLS, or XLSX file."))
+    rename.data = utils::read.table(path, header = TRUE, sep = separator,
+                                    quote = "\"", comment.char = "",
+                                    stringsAsFactors = FALSE, fill = TRUE)
+  }
+
+  if (ncol(rename.data) < 2 || nrow(rename.data) == 0) {
+    stop("Rename file must contain at least two columns and one mapping.")
+  }
+  if (all(c("Legacy_Name", "SeqCap_Name") %in% names(rename.data))) {
+    rename.data = rename.data[, c("Legacy_Name", "SeqCap_Name"), drop = FALSE]
+  } else {
+    rename.data = rename.data[, 1:2, drop = FALSE]
+  }
+  names(rename.data) = c("Legacy_Name", "SeqCap_Name")
+  rename.data[] = lapply(rename.data, function(values) trimws(as.character(values)))
+
+  blank = is.na(rename.data$Legacy_Name) | is.na(rename.data$SeqCap_Name) |
+    rename.data$Legacy_Name == "" | rename.data$SeqCap_Name == ""
+  if (any(blank)) { stop("Rename file contains a blank legacy or sequence-capture name.") }
+  if (anyDuplicated(rename.data$Legacy_Name)) {
+    stop("Each Legacy_Name must occur only once in the rename file.")
+  }
+  rename.data
+}
 
 #END SCRIPT

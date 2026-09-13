@@ -299,16 +299,47 @@ assessCaptureEfficiency = function(input.reads = NULL,
   # empty table.
   if (nrow(lane.data) == 0) { return("No samples remain to analyze.") }
 
-  # Aggregate lane.data to one row per sample:
-  #   readPairs and mappedReads are summed across lanes.
-  #   targetsHit uses max across lanes (summing would double-count loci
-  #   captured in multiple lanes; per-target CSVs in output.directory can
-  #   be used for an exact union if needed).
+  # Aggregate lane.data to one row per sample. readPairs and mappedReads are
+  # summed across lanes. targetsHit is the union of targets captured across the
+  # lanes: a target hit in more than one lane is one captured target. The union
+  # is counted from the per-target CSVs, because the maximum across lanes is only
+  # a lower bound and the sum would double-count a target found in two lanes.
   sum.agg = aggregate(cbind(readPairs, mappedReads) ~ Sample, data = lane.data, FUN = sum)
-  max.agg = aggregate(cbind(targetsHit, totalTargets) ~ Sample, data = lane.data, FUN = max)
-  summary.data = merge(sum.agg, max.agg, by = "Sample")
-  summary.data$pctTargetsHit    = round(summary.data$targetsHit / summary.data$totalTargets * 100, 2)
-  summary.data$pctReadsOnTarget = round(summary.data$mappedReads / (summary.data$readPairs * 2) * 100, 2)
+
+  union.data = data.frame(Sample = character(),
+                          targetsHit = numeric(),
+                          totalTargets = numeric(),
+                          stringsAsFactors = FALSE)
+  for (sample.name in unique(lane.data$Sample)) {
+    sample.dir = paste0(output.directory, "/", sample.name)
+    target.files = list.files(sample.dir, pattern = "_per-target-counts\\.csv$",
+                              full.names = TRUE)
+
+    #Combines the per-lane target counts and sums the mapped reads per target
+    combined.targets = data.frame(target = character(), mapped = numeric(),
+                                  stringsAsFactors = FALSE)
+    for (target.file in target.files) {
+      target.data = read.csv(target.file, stringsAsFactors = FALSE)
+      combined.targets = rbind(combined.targets,
+                               target.data[, c("target", "mapped")])
+    }
+    per.target = aggregate(mapped ~ target, data = combined.targets, FUN = sum)
+
+    union.data = rbind(union.data,
+                       data.frame(Sample = sample.name,
+                                  targetsHit = sum(per.target$mapped > 0),
+                                  totalTargets = nrow(per.target),
+                                  stringsAsFactors = FALSE))
+  }#end sample loop
+
+  summary.data = merge(sum.agg, union.data, by = "Sample")
+
+  # Guards the percentages so a sample with no targets or no reads gives NA
+  # rather than a NaN from dividing by zero.
+  summary.data$pctTargetsHit = ifelse(summary.data$totalTargets > 0,
+    round(summary.data$targetsHit / summary.data$totalTargets * 100, 2), NA)
+  summary.data$pctReadsOnTarget = ifelse(summary.data$readPairs > 0,
+    round(summary.data$mappedReads / (summary.data$readPairs * 2) * 100, 2), NA)
 
   .appendSummary(summary.data, "logs/sample-capture-assessment_summary.csv")
 
