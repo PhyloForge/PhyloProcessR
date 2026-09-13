@@ -169,14 +169,6 @@ collectParalogCopies = function(
     }
   }
 
-  input.files = c(alignment.files, candidate.files, sequence.files,
-                   reference.file, reference.table)
-  settings = list(
-    alignment.format = alignment.format,
-    target.names = sort(target.names),
-    manifest = .x5FileManifest(input.files)
-  )
-  .x5StageSettings(output.directory, "collect", settings, overwrite)
   .x5InvalidateDownstream(output.directory, "collect", overwrite)
   collected.directory = file.path(output.directory, "1_collected")
   .x5ClearDirectory(collected.directory, overwrite)
@@ -382,8 +374,6 @@ collectParalogCopies = function(
   utils::write.table(data.frame(Target = outside.targets),
                      file.path(tables.directory, "candidate-targets-outside-union.tsv"),
                      sep = "\t", row.names = FALSE, quote = FALSE)
-  saveRDS(list(stage = "collect", complete = TRUE, target.map = target.map),
-          file.path(collected.directory, ".complete.rds"))
   message(nrow(target.map), " targets collected. Tables: ", tables.directory)
   invisible(target.map)
 }

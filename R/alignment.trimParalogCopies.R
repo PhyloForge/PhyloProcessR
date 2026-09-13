@@ -47,18 +47,6 @@ trimParalogCopies = function(
   alignment.files = list.files(expanded.directory,
                                pattern = "^[^.].*\\.fa$", full.names = TRUE)
   if (length(alignment.files) == 0) stop("No expanded X5 alignments were found.")
-  settings = list(
-    run.TrimAl = run.TrimAl, trimAl.path = trimAl.path,
-    min.external.percent = min.external.percent,
-    min.column.gap.percent = min.column.gap.percent,
-    min.coverage.percent = min.coverage.percent,
-    min.coverage.bp = min.coverage.bp,
-    min.alignment.length = min.alignment.length,
-    min.taxa.alignment = min.taxa.alignment,
-    max.alignment.gap.percent = max.alignment.gap.percent,
-    manifest = .x5FileManifest(alignment.files)
-  )
-  .x5StageSettings(output.directory, "trim", settings, overwrite)
   .x5InvalidateDownstream(output.directory, "trim", overwrite)
   trimmed.directory = file.path(output.directory, "3_tree-alignments")
   excluded.directory = file.path(output.directory, "excluded", "trimmed")

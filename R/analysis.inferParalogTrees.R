@@ -40,19 +40,6 @@ inferParalogTrees = function(
   trim.records = list.files(trimmed.directory, pattern = "^[^.].*\\.rds$",
                             full.names = TRUE)
   if (length(trim.records) == 0) stop("No X5 trimming records were found.")
-  trimmed.alignments = vapply(trim.records, function(file) {
-    result = readRDS(file)
-    if (is.null(result$alignment.file)) "" else result$alignment.file
-  }, character(1))
-  settings = list(
-    tree.model = tree.model,
-    bootstrap.replicates = as.integer(bootstrap.replicates),
-    tree.seed = as.integer(tree.seed), threads = as.integer(threads),
-    memory = memory, iqtree.path = iqtree.path,
-    iqtree.executable = iqtree.executable,
-    manifest = .x5FileManifest(c(trim.records, trimmed.alignments))
-  )
-  .x5StageSettings(output.directory, "trees", settings, overwrite)
   .x5InvalidateDownstream(output.directory, "trees", overwrite)
   tree.directory = file.path(output.directory, "4_trees")
   .x5ClearDirectory(tree.directory, overwrite)

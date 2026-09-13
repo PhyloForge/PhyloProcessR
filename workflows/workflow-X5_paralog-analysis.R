@@ -10,54 +10,6 @@ library(PhyloProcessR)
 setwd(working.directory)
 
 dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
-source.files = c(
-  if (dir.exists(alignment.directory)) {
-    list.files(alignment.directory, full.names = TRUE)
-  } else character(),
-  if (dir.exists(paralog.directory)) {
-    list.files(paralog.directory, full.names = TRUE)
-  } else character(),
-  if (dir.exists(primary.directory)) {
-    list.files(primary.directory, full.names = TRUE)
-  } else character(),
-  if (dir.exists(candidate.directory)) {
-    list.files(candidate.directory, pattern = "_target-candidates\\.csv$",
-               full.names = TRUE)
-  } else character(),
-  target.file, reference.file, reference.table, feature.gene.names,
-  verified.copy.mapping
-)
-source.files = sort(unique(source.files[
-  !is.na(source.files) & nzchar(source.files) & file.exists(source.files)
-]))
-source.manifest = data.frame(
-  Path = normalizePath(source.files),
-  MD5 = unname(tools::md5sum(source.files)), stringsAsFactors = FALSE
-)
-run.settings = list(
-  target.names = sort(target.names), alignment.format = alignment.format,
-  alignment.algorithm = alignment.algorithm, run.TrimAl = run.TrimAl,
-  min.external.percent = min.external.percent,
-  min.column.gap.percent = min.column.gap.percent,
-  min.coverage.percent = min.coverage.percent,
-  min.coverage.bp = min.coverage.bp,
-  min.alignment.length = min.alignment.length,
-  min.taxa.alignment = min.taxa.alignment,
-  max.alignment.gap.percent = max.alignment.gap.percent,
-  tree.model = tree.model, bootstrap.replicates = bootstrap.replicates,
-  tree.seed = tree.seed, min.branch.support = min.branch.support,
-  min.shared.samples = min.shared.samples,
-  min.shared.sample.fraction = min.shared.sample.fraction,
-  min.split.branch.length = min.split.branch.length,
-  min.split.branch.ratio = min.split.branch.ratio,
-  review.action = review.action, source.manifest = source.manifest
-)
-settings.file = file.path(output.directory, "run-settings.rds")
-if (file.exists(settings.file) && !overwrite &&
-    !identical(readRDS(settings.file), run.settings)) {
-  stop("X5 settings changed. Use overwrite = TRUE or a new output directory.")
-}
-saveRDS(run.settings, settings.file)
 
 ##################################################################################################
 ## Step 1: Collect base alignments and candidate copies

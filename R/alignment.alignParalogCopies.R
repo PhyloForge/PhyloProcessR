@@ -34,12 +34,6 @@ alignParalogCopies = function(
       stop("target.file is required when a target has no base alignment.")
     }
   }
-  manifest.paths = c(records, target.file)
-  settings = list(
-    alignment.algorithm = alignment.algorithm, threads = as.integer(threads),
-    mafft.path = mafft.path, manifest = .x5FileManifest(manifest.paths)
-  )
-  .x5StageSettings(output.directory, "align", settings, overwrite)
   .x5InvalidateDownstream(output.directory, "align", overwrite)
   expanded.directory = file.path(output.directory, "2_expanded")
   work.root = file.path(output.directory, "logs", "alignment")

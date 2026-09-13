@@ -124,30 +124,6 @@
   invisible(output)
 }
 
-.x5FileManifest = function(paths) {
-  paths = sort(unique(paths[file.exists(paths)]))
-  data.frame(
-    Path = normalizePath(paths),
-    MD5 = unname(tools::md5sum(paths)),
-    stringsAsFactors = FALSE
-  )
-}
-
-.x5StageSettings = function(output.directory, stage, settings,
-                            overwrite = FALSE) {
-  dir.create(output.directory, recursive = TRUE, showWarnings = FALSE)
-  file = file.path(output.directory, paste0(".", stage, "-settings.rds"))
-  if (file.exists(file)) {
-    previous = readRDS(file)
-    if (!identical(previous, settings) && !overwrite) {
-      stop("Inputs or settings changed for X5 stage ", stage,
-           ". Use overwrite = TRUE or a new output directory.")
-    }
-  }
-  saveRDS(settings, file)
-  invisible(file)
-}
-
 .x5ClearDirectory = function(directory, overwrite = FALSE) {
   if (overwrite && dir.exists(directory)) unlink(directory, recursive = TRUE)
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
@@ -162,23 +138,17 @@
     collect = c("2_expanded", "3_tree-alignments", "4_trees", "5_separated",
                 "trimmed_all-markers", "retained-fasta", "excluded",
                 "provisional-groups", "trimmed_genes", "trimmed_unlinked_genes",
-                "trimmed_all-unlinked",
-                ".align-settings.rds", ".trim-settings.rds",
-                ".trees-settings.rds", ".separate-settings.rds"),
+                "trimmed_all-unlinked"),
     align = c("3_tree-alignments", "4_trees", "5_separated",
               "trimmed_all-markers", "retained-fasta", "excluded",
               "provisional-groups", "trimmed_genes", "trimmed_unlinked_genes",
-              "trimmed_all-unlinked",
-              ".trim-settings.rds", ".trees-settings.rds",
-              ".separate-settings.rds"),
+              "trimmed_all-unlinked"),
     trim = c("4_trees", "5_separated", "trimmed_all-markers",
              "retained-fasta", "excluded", "provisional-groups",
-             "trimmed_genes", "trimmed_unlinked_genes", "trimmed_all-unlinked",
-             ".trees-settings.rds", ".separate-settings.rds"),
+             "trimmed_genes", "trimmed_unlinked_genes", "trimmed_all-unlinked"),
     trees = c("5_separated", "trimmed_all-markers", "retained-fasta",
               file.path("excluded", "untrimmed"), "provisional-groups",
-              "trimmed_genes", "trimmed_unlinked_genes", "trimmed_all-unlinked",
-              ".separate-settings.rds"),
+              "trimmed_genes", "trimmed_unlinked_genes", "trimmed_all-unlinked"),
     separate = c("trimmed_genes", "trimmed_unlinked_genes",
                  "trimmed_all-unlinked"),
     character()

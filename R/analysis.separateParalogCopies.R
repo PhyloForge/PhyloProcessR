@@ -62,36 +62,6 @@ separateParalogCopies = function(
   collected.files = list.files(collected.directory,
                                 pattern = "^[^.].*\\.rds$", full.names = TRUE)
   if (length(collected.files) == 0) stop("No collected X5 targets were found.")
-  dependency.files = c(
-    collected.files,
-    list.files(trimmed.directory, pattern = "^[^.].*\\.rds$", full.names = TRUE),
-    list.files(tree.directory, pattern = "result\\.rds$", recursive = TRUE,
-               full.names = TRUE),
-    list.files(expanded.directory, pattern = "^[^.].*\\.fa$", full.names = TRUE),
-    list.files(trimmed.directory, pattern = "^[^.].*\\.fa$", full.names = TRUE),
-    list.files(tree.directory, pattern = "\\.treefile$", recursive = TRUE,
-               full.names = TRUE)
-  )
-  settings = list(
-    min.branch.support = min.branch.support,
-    min.shared.samples = min.shared.samples,
-    min.shared.sample.fraction = min.shared.sample.fraction,
-    min.split.branch.length = min.split.branch.length,
-    min.split.branch.ratio = min.split.branch.ratio,
-    review.action = review.action, run.TrimAl = run.TrimAl,
-    trimAl.path = trimAl.path,
-    trim = list(
-      min.external.percent = min.external.percent,
-      min.column.gap.percent = min.column.gap.percent,
-      min.coverage.percent = min.coverage.percent,
-      min.coverage.bp = min.coverage.bp,
-      min.alignment.length = min.alignment.length,
-      min.taxa.alignment = min.taxa.alignment,
-      max.alignment.gap.percent = max.alignment.gap.percent
-    ),
-    manifest = .x5FileManifest(dependency.files)
-  )
-  .x5StageSettings(output.directory, "separate", settings, overwrite)
   .x5InvalidateDownstream(output.directory, "separate", overwrite)
   accepted.directory = file.path(output.directory, "trimmed_all-markers")
   fasta.directory = file.path(output.directory, "retained-fasta")
