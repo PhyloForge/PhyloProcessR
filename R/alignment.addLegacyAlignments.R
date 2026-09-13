@@ -134,15 +134,15 @@ addLegacyAlignments = function(alignment.directory = NULL,
   # mafft.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
   # blast.path = "/Users/chutter/miniconda3/envs/PhyloProcessR/bin"
 
-  #Same adds to bbmap path
+  # Normalise a provided MAFFT directory to end with "/"; NULL means use PATH.
   if (is.null(mafft.path) == FALSE){
     b.string = unlist(strsplit(mafft.path, ""))
     if (b.string[length(b.string)] != "/") {
       mafft.path = paste0(append(b.string, "/"), collapse = "")
     }#end if
-  } else { mafft.path = "" }
+  }
 
-  #Same adds to bbmap path
+  # Normalise a provided BLAST directory to end with "/"; "" means use PATH.
   if (is.null(blast.path) == FALSE){
     b.string = unlist(strsplit(blast.path, ""))
     if (b.string[length(b.string)] != "/") {
@@ -176,19 +176,50 @@ addLegacyAlignments = function(alignment.directory = NULL,
   #Checks this
   if (alignment.directory == output.directory){ stop("You should not overwrite the original alignments.") }
 
+  # The integration summary is written only after a complete run, so its presence
+  # marks a finished dataset for resume checks.
+  integration.summary = paste0(output.directory, "-integration_summary.txt")
+
+  # Reject an output directory that is, or contains, an input directory so cleanup
+  # can never remove source alignments.
+  .insideDir = function(child, parent) {
+    child = normalizePath(child, mustWork = FALSE)
+    parent = normalizePath(parent, mustWork = FALSE)
+    child == parent || startsWith(child, paste0(parent, .Platform$file.sep))
+  }
+  input.dirs = c(alignment.directory, legacy.directory)
+  if (include.mitochondrial == TRUE) { input.dirs = c(input.dirs, mito.alignment.directory) }
+  for (out.dir in c(paste0(output.directory, "-only"), paste0(output.directory, "-all"))) {
+    for (in.dir in input.dirs) {
+      if (.insideDir(in.dir, out.dir)) {
+        stop("Output directory ", out.dir, " overlaps input directory ", in.dir, ".")
+      }
+    }
+  }
+
   #Overwrite -- check for non-empty directories only; empty dirs are left by interrupted runs
   only.has.files = length(list.files(paste0(output.directory, "-only"))) > 0
   all.has.files  = length(list.files(paste0(output.directory, "-all")))  > 0
   if (only.has.files || all.has.files) {
     if (overwrite == TRUE){
-      system(paste0("rm -r ", output.directory, "-only"))
-      system(paste0("rm -r ", output.directory, "-all"))
+      unlink(paste0(output.directory, "-only"), recursive = TRUE)
+      unlink(paste0(output.directory, "-all"), recursive = TRUE)
+      if (file.exists(integration.summary)) { file.remove(integration.summary) }
     } else {
-      stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
+      stop("Overwrite = FALSE and the output directory already holds files without an ",
+           "integration summary, so the previous run is incomplete or unverified. ",
+           "Rerun with overwrite = TRUE to recompute: ", output.directory, "-only")
     }
   }
   dir.create(paste0(output.directory, "-only"), recursive = TRUE, showWarnings = FALSE)
   if (include.all.together == TRUE) { dir.create(paste0(output.directory, "-all"), recursive = TRUE, showWarnings = FALSE) }
+
+  # All per-locus BLAST queries, hit tables, logs, and BLAST databases are written
+  # in one owned temporary directory that is removed on exit. No shell globs ever
+  # touch the working directory.
+  scratch.dir = tempfile("legacy_scratch_")
+  dir.create(scratch.dir, recursive = TRUE, showWarnings = FALSE)
+  on.exit(unlink(scratch.dir, recursive = TRUE), add = TRUE)
 
   #Gathers alignments
   align.files = list.files(alignment.directory)
@@ -202,8 +233,12 @@ addLegacyAlignments = function(alignment.directory = NULL,
               "qStart", "qEnd", "tStart", "tEnd", "evalue", "bitscore", "qLen", "tLen", "gaps")
 
   #Make blast database for the nuclear probe loci
-  system(paste0(blast.path, "makeblastdb -in ", target.markers,
-                " -parse_seqids -dbtype nucl -out target_nucl-blast_db"), ignore.stdout = quiet)
+  target.db = file.path(scratch.dir, "target_nucl-blast_db")
+  .runCommand(paste0(shQuote(paste0(blast.path, "makeblastdb")), " -in ",
+                     shQuote(target.markers), " -parse_seqids -dbtype nucl -out ",
+                     shQuote(target.db)),
+              quiet = quiet, task = "BLAST makeblastdb (nuclear)",
+              stderr.log = file.path(scratch.dir, "makeblastdb.log"))
 
   # Helper: return a sanitized copy of an alignment file if it contains '?' (a valid
   # NEXUS/Sanger missing-data character that Biostrings does not accept).  '?' is
@@ -221,6 +256,7 @@ addLegacyAlignments = function(alignment.directory = NULL,
   # Build mitochondrial BLAST DB from consensus sequences of mito alignments
   ##########################################################################
   mito.align.files = character(0)
+  mito.db = file.path(scratch.dir, "mito_nucl-blast_db")
   if (include.mitochondrial == TRUE) {
     print("Building mitochondrial BLAST database from consensus sequences...")
     mito.align.files = list.files(mito.alignment.directory)
@@ -230,7 +266,7 @@ addLegacyAlignments = function(alignment.directory = NULL,
 
     mito.cons.list = Biostrings::DNAStringSet()
     for (mf in mito.align.files) {
-      mito.locus.name = gsub("\\..*$", "", mf)
+      mito.locus.name = .alignmentId(mf)
       mito.san = sanitize.align.file(paste0(mito.alignment.directory, "/", mf))
       if (mito.alignment.format == "phylip") {
         mito.aln = Biostrings::readDNAMultipleAlignment(file = mito.san$path, format = "phylip")
@@ -249,9 +285,12 @@ addLegacyAlignments = function(alignment.directory = NULL,
       rm(mito.aln, mito.con)
     }#end mito files loop
 
-    Biostrings::writeXStringSet(mito.cons.list, filepath = "mito_consensus_references.fa")
-    system(paste0(blast.path, "makeblastdb -in mito_consensus_references.fa",
-                  " -dbtype nucl -out mito_nucl-blast_db"), ignore.stdout = quiet)
+    mito.ref.fa = file.path(scratch.dir, "mito_consensus_references.fa")
+    Biostrings::writeXStringSet(mito.cons.list, filepath = mito.ref.fa)
+    .runCommand(paste0(shQuote(paste0(blast.path, "makeblastdb")), " -in ",
+                       shQuote(mito.ref.fa), " -dbtype nucl -out ", shQuote(mito.db)),
+                quiet = quiet, task = "BLAST makeblastdb (mitochondrial)",
+                stderr.log = file.path(scratch.dir, "makeblastdb-mito.log"))
     rm(mito.cons.list)
     print(paste0("Mitochondrial BLAST database built from ", length(mito.align.files), " loci."))
   }#end include.mitochondrial
@@ -263,6 +302,9 @@ addLegacyAlignments = function(alignment.directory = NULL,
   # Vectors for summary log: track which output loci carried legacy / mito data
   legacy.loci = character(0)
   mito.loci   = character(0)
+
+  # BLAST outfmt 6 column specification shared by the nuclear and mito searches.
+  blast.outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps"
 
   # Build the key function once here (outside the per-locus loop) so it is
   # available both in the uncaptured-legacy save paths and in the MAFFT
@@ -337,12 +379,12 @@ addLegacyAlignments = function(alignment.directory = NULL,
     if (legacy.format == "phylip"){
       align = Biostrings::readDNAMultipleAlignment(file = san$path, format = "phylip")
       align = Biostrings::DNAStringSet(align)
-      save.name = gsub("\\..*$", "", legacy.files[i])
+      save.name = .alignmentId(legacy.files[i])
     }#end phylip
 
     if (legacy.format == "fasta"){
       align = Biostrings::readDNAStringSet(san$path)
-      save.name = gsub("\\..*$", "", legacy.files[i])
+      save.name = .alignmentId(legacy.files[i])
     }#end fasta
     if (san$tmp) { file.remove(san$path) }
 
@@ -352,6 +394,12 @@ addLegacyAlignments = function(alignment.directory = NULL,
       renamed = !is.na(hit)
       names(align)[renamed] = rename.table$SeqCap_Name[hit[renamed]]
     }
+
+    # Per-locus scratch file paths (owned, removed with the scratch directory).
+    query.file        = file.path(scratch.dir, paste0(save.name, "_query.fa"))
+    target.match.file = file.path(scratch.dir, paste0(save.name, "_target-blast-match.txt"))
+    mito.match.file   = file.path(scratch.dir, paste0(save.name, "_mito-blast-match.txt"))
+    blast.log         = file.path(scratch.dir, paste0(save.name, "_blast.log"))
 
     ##############
     #STEP 1: Blast to targets
@@ -367,45 +415,47 @@ addLegacyAlignments = function(alignment.directory = NULL,
     blast.seq = align[which.max(n.informative)]
 
     #Writes representative sequence to temp file for BLAST
-    Biostrings::writeXStringSet(blast.seq, filepath = paste0(save.name, "_query.fa"))
+    Biostrings::writeXStringSet(blast.seq, filepath = query.file)
 
     #Matches samples to loci -- use standard blastn for full sensitivity across divergent taxa
-    system(paste0(blast.path, "blastn -task blastn -db target_nucl-blast_db -evalue 0.001",
-                  " -query ", save.name, "_query.fa -out ", save.name, "_target-blast-match.txt",
-                  " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-                  " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
+    .runCommand(paste0(shQuote(paste0(blast.path, "blastn")),
+                       " -task blastn -db ", shQuote(target.db), " -evalue 0.001",
+                       " -query ", shQuote(query.file), " -out ", shQuote(target.match.file),
+                       " -outfmt ", shQuote(blast.outfmt),
+                       " -num_threads ", threads),
+                quiet = quiet, task = paste0("BLAST blastn (nuclear) for ", save.name),
+                stderr.log = blast.log)
 
-    #Loads in match data
-    match.data = data.table::fread(paste0(save.name, "_target-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+    #Loads in match data. An empty hit file after a zero-status search is a valid
+    #no-hit result, so read it only when it has content.
+    match.data = if (file.exists(target.match.file) && file.size(target.match.file) > 0) {
+      data.table::fread(target.match.file, sep = "\t", header = F, stringsAsFactors = FALSE)
+    } else { data.table::data.table() }
     if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
     if (nrow(match.data) == 0) {
       # Nuclear BLAST failed -- try mitochondrial DB if enabled
       if (include.mitochondrial == TRUE) {
-        system(paste0(blast.path, "blastn -task blastn -db mito_nucl-blast_db -evalue 0.001",
-                      " -query ", save.name, "_query.fa -out ", save.name, "_mito-blast-match.txt",
-                      " -outfmt \"6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen gaps\" ",
-                      " -num_threads ", threads), ignore.stdout = quiet, ignore.stderr = quiet)
+        .runCommand(paste0(shQuote(paste0(blast.path, "blastn")),
+                           " -task blastn -db ", shQuote(mito.db), " -evalue 0.001",
+                           " -query ", shQuote(query.file), " -out ", shQuote(mito.match.file),
+                           " -outfmt ", shQuote(blast.outfmt),
+                           " -num_threads ", threads),
+                    quiet = quiet, task = paste0("BLAST blastn (mitochondrial) for ", save.name),
+                    stderr.log = blast.log)
 
-        match.data = data.table::fread(paste0(save.name, "_mito-blast-match.txt"), sep = "\t", header = F, stringsAsFactors = FALSE)
+        match.data = if (file.exists(mito.match.file) && file.size(mito.match.file) > 0) {
+          data.table::fread(mito.match.file, sep = "\t", header = F, stringsAsFactors = FALSE)
+        } else { data.table::data.table() }
         if (nrow(match.data) > 0) { data.table::setnames(match.data, headers) }
 
         if (nrow(match.data) == 0) {
           if (include.uncaptured.legacy == TRUE) {
-            dup.in.source = duplicated(names(align))
-            if (any(dup.in.source)) {
-              dup.nms = unique(names(align)[dup.in.source])
-              print(paste0(save.name, ": removing ", length(dup.nms),
-                           " duplicate taxon name(s) from uncaptured legacy alignment."))
-              keep.idx = sapply(dup.nms, function(nm) {
-                idx   = which(names(align) == nm)
-                n.inf = sapply(as.character(align[idx]), function(s)
-                  nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
-                idx[which.max(n.inf)]
-              })
-              drop.idx = which(dup.in.source)
-              drop.idx = drop.idx[!drop.idx %in% keep.idx]
-              align = align[-drop.idx]
+            n.before = length(align)
+            align = .keepMostInformativeRows(align)
+            if (length(align) < n.before) {
+              print(paste0(save.name, ": removed ", n.before - length(align),
+                           " duplicate taxon row(s) from uncaptured legacy alignment."))
             }
             align = rename.to.capture.names(align)
             write.temp  = strsplit(as.character(align), "")
@@ -414,11 +464,11 @@ addLegacyAlignments = function(alignment.directory = NULL,
                                        file = paste0(output.directory, "-only/", save.name, ".phy"),
                                        interleave = F, strict = F)
             print(paste0("No BLAST match to nuclear or mito panel. Included uncaptured ", save.name, " successfully!"))
-            system(paste0("rm ", save.name, "*"))
+            unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
             next
           }
           print(paste0(save.name, " had no BLAST matches to nuclear or mitochondrial markers. Skipping."))
-          system(paste0("rm ", save.name, "*"))
+          unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
           next
         }
         use.mito = TRUE
@@ -428,20 +478,11 @@ addLegacyAlignments = function(alignment.directory = NULL,
         # only fires when BLAST found a tName but no matching capture file; it never runs when
         # BLAST returns zero rows (which is the case for genes absent from the capture panel).
         if (include.uncaptured.legacy == TRUE) {
-          dup.in.source = duplicated(names(align))
-          if (any(dup.in.source)) {
-            dup.nms = unique(names(align)[dup.in.source])
-            print(paste0(save.name, ": removing ", length(dup.nms),
-                         " duplicate taxon name(s) from uncaptured legacy alignment."))
-            keep.idx = sapply(dup.nms, function(nm) {
-              idx   = which(names(align) == nm)
-              n.inf = sapply(as.character(align[idx]), function(s)
-                nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
-              idx[which.max(n.inf)]
-            })
-            drop.idx = which(dup.in.source)
-            drop.idx = drop.idx[!drop.idx %in% keep.idx]
-            align = align[-drop.idx]
+          n.before = length(align)
+          align = .keepMostInformativeRows(align)
+          if (length(align) < n.before) {
+            print(paste0(save.name, ": removed ", n.before - length(align),
+                         " duplicate taxon row(s) from uncaptured legacy alignment."))
           }
           align = rename.to.capture.names(align)
           write.temp  = strsplit(as.character(align), "")
@@ -450,33 +491,41 @@ addLegacyAlignments = function(alignment.directory = NULL,
                                      file = paste0(output.directory, "-only/", save.name, ".phy"),
                                      interleave = F, strict = F)
           print(paste0("No BLAST match to capture panel. Included uncaptured ", save.name, " successfully!"))
-          system(paste0("rm ", save.name, "*"))
+          unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
           next
         }
         print(paste0(save.name, " had no BLAST matches to target markers. Skipping."))
-        system(paste0("rm ", save.name, "*"))
+        unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
         next
       }
     }
 
+    # Keep the best-scoring hits, then require a single target subject. Tied HSP
+    # rows for one subject are one candidate; tied distinct subjects are ambiguous.
     if (nrow(match.data) >= 2){
       match.data = match.data[match.data$bitscore == max(match.data$bitscore),]
     }
 
-    if (nrow(match.data) >= 2){
+    if (length(unique(match.data$tName)) >= 2){
       stop(paste0(save.name, " matched multiple targets after bitscore filter. Check target file for duplicates."))
     }
+    match.target = match.data$tName[1]
 
-    # Search the correct file list depending on whether the match came from mito or nuclear DB
+    # Resolve the target to its alignment file by exact locus ID, not a substring
+    # or regular-expression match, so locus1 cannot select locus10.
     if (use.mito == TRUE) {
-      found.align = mito.align.files[grep(match.data$tName, mito.align.files)]
+      found.align = mito.align.files[.alignmentId(mito.align.files) == match.target]
     } else {
-      found.align = align.files[grep(match.data$tName, align.files)]
+      found.align = align.files[.alignmentId(align.files) == match.target]
+    }
+    if (length(found.align) > 1) {
+      stop(save.name, " resolves to multiple alignment files for target ", match.target, ".")
     }
 
     if (include.uncaptured.legacy == FALSE){
       if (length(found.align) == 0){
         print(paste0(save.name, " not found in the alignments. Moving to next."))
+        unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
         next
       }
     }#end if
@@ -486,20 +535,11 @@ addLegacyAlignments = function(alignment.directory = NULL,
         # Remove any duplicate taxon names present in the source legacy alignment
         # (e.g. a specimen appearing twice in the original NEXUS/phylip file).
         # Keeping the most informative (fewest gaps/Ns) copy.
-        dup.in.source = duplicated(names(align))
-        if (any(dup.in.source)) {
-          dup.nms = unique(names(align)[dup.in.source])
-          print(paste0(save.name, ": removing ", length(dup.nms),
-                       " duplicate taxon name(s) from uncaptured legacy alignment."))
-          keep.idx = sapply(dup.nms, function(nm) {
-            idx = which(names(align) == nm)
-            n.inf = sapply(as.character(align[idx]), function(s)
-              nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
-            idx[which.max(n.inf)]
-          })
-          drop.idx = which(dup.in.source)
-          drop.idx = drop.idx[!drop.idx %in% keep.idx]
-          align = align[-drop.idx]
+        n.before = length(align)
+        align = .keepMostInformativeRows(align)
+        if (length(align) < n.before) {
+          print(paste0(save.name, ": removed ", n.before - length(align),
+                       " duplicate taxon row(s) from uncaptured legacy alignment."))
         }
 
         #Saves them -- rename legacy taxa to capture names first so the same
@@ -515,7 +555,7 @@ addLegacyAlignments = function(alignment.directory = NULL,
                                    strict = F)
 
         print(paste0("No sequence capture alignment found. Included uncaptured ", save.name, " successfully!"))
-        system(paste0("rm ", save.name, "*"))
+        unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
         next
       }
     }#end if
@@ -532,14 +572,21 @@ addLegacyAlignments = function(alignment.directory = NULL,
     if (src.format == "phylip"){
       old.align = Biostrings::readDNAMultipleAlignment(file = old.san$path, format = "phylip")
       old.align = Biostrings::DNAStringSet(old.align)
-      found.name = gsub("\\..*$", "", found.align)
+      found.name = .alignmentId(found.align)
     }#end phylip
 
     if (src.format == "fasta"){
       old.align = Biostrings::readDNAStringSet(old.san$path)
-      found.name = gsub("\\..*$", "", found.align)
+      found.name = .alignmentId(found.align)
     }#end fasta
     if (old.san$tmp) { file.remove(old.san$path) }
+
+    # A legacy alignment that resolves to a capture locus already produced cannot
+    # be merged into that same output without overwriting the first result.
+    if (found.name %in% legacy.loci) {
+      stop("Two legacy alignments resolve to the same output locus ", found.name,
+           ". Provide one legacy alignment per locus.")
+    }
 
     # When matching by species, reduce the legacy alignment to one sequence per species
     # before passing to MAFFT to avoid creating multiple duplicates that complicate merging.
@@ -614,7 +661,9 @@ addLegacyAlignments = function(alignment.directory = NULL,
                              mafft.path = mafft.path)
 
       #Checks for failed mafft run
-      if (length(combo.align) == 0){ next }
+      if (length(combo.align) == 0){
+        stop("MAFFT returned an empty alignment for ", save.name, " -> ", found.name, ".")
+      }
 
       # Strip MAFFT reverse-complement prefix, then derive provenance from our tags
       names(combo.align) = gsub(pattern = "^_R_", replacement = "", x = names(combo.align))
@@ -721,17 +770,11 @@ addLegacyAlignments = function(alignment.directory = NULL,
     if (merge == "None") {
       names(combo.align) = .makeUniqueSuffix(names(combo.align))
     } else {
-      dup.final = duplicated(names(combo.align))
-      if (any(dup.final)) {
-        dup.nms = unique(names(combo.align)[dup.final])
-        print(paste0(found.name, ": removing ", length(dup.nms),
-                     " duplicate taxon name(s) from integrated alignment."))
-        for (dn in dup.nms) {
-          idx = which(names(combo.align) == dn)
-          n.inf = sapply(as.character(combo.align[idx]), function(s)
-            nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
-          combo.align = combo.align[-idx[order(n.inf)[-length(n.inf)]]]
-        }
+      n.before = length(combo.align)
+      combo.align = .keepMostInformativeRows(combo.align)
+      if (length(combo.align) < n.before) {
+        print(paste0(found.name, ": removed ", n.before - length(combo.align),
+                     " duplicate taxon row(s) from integrated alignment."))
       }
     }
 
@@ -750,6 +793,7 @@ addLegacyAlignments = function(alignment.directory = NULL,
         if (!key.fn(gap.nm) %in% present.keys) {
           gap.seq = Biostrings::DNAStringSet(setNames(gap.row, gap.nm))
           combo.align = append(combo.align, gap.seq)
+          present.keys = c(present.keys, key.fn(gap.nm))
         }
       }
     }
@@ -772,17 +816,12 @@ addLegacyAlignments = function(alignment.directory = NULL,
     print(paste0("Finished ", save.name, " -> ", found.name, " legacy integration successfully!"))
     legacy.loci = c(legacy.loci, found.name)
     if (use.mito == TRUE) { mito.loci = c(mito.loci, found.name) }
-    system(paste0("rm ", save.name, "*"))
+    unlink(Sys.glob(file.path(scratch.dir, paste0(save.name, "*"))))
     rm(align, old.align, combo.align, aligned.set, blast.seq, match.data)
     gc()
 
 
   }#end loop
-
-  system(paste0("rm target_nucl-blast_db*"))
-  if (include.mitochondrial == TRUE) {
-    system(paste0("rm mito_nucl-blast_db* mito_consensus_references.fa"))
-  }
 
   ####################################################################################
   if (include.all.together == TRUE){
@@ -790,25 +829,31 @@ addLegacyAlignments = function(alignment.directory = NULL,
     # When name.match = "species", rename sequences to collapsed species names
     # so they are consistent with the integrated alignments.
 
-    # Helper: copy/rename a single alignment to the -all directory
+    # Helper: read a single capture alignment and write it to the -all directory
+    # as PHYLIP. A FASTA source is converted to PHYLIP (not copied byte for byte)
+    # so every file downstream stages read is valid PHYLIP.
     copy.align.to.all = function(src.file, src.directory, src.fmt) {
-      out.name = paste0(output.directory, "-all/", gsub("\\..*$", "", src.file), ".phy")
-      if (name.match == "species") {
-        if (src.fmt == "phylip") {
-          cap.align = Biostrings::readDNAMultipleAlignment(
-            file = paste0(src.directory, "/", src.file), format = "phylip")
-          cap.align = Biostrings::DNAStringSet(cap.align)
-        } else {
-          cap.align = Biostrings::readDNAStringSet(paste0(src.directory, "/", src.file))
-        }
-        names(cap.align) = gsub("_[^_]+$", "", names(cap.align))
-        write.temp = strsplit(as.character(cap.align), "")
-        aligned.set = as.matrix(ape::as.DNAbin(write.temp))
-        PhyloProcessR::writePhylip(alignment = aligned.set, file = out.name,
-                                   interleave = F, strict = F)
+      out.name = paste0(output.directory, "-all/", .alignmentId(src.file), ".phy")
+      san = sanitize.align.file(paste0(src.directory, "/", src.file))
+      if (src.fmt == "phylip") {
+        cap.align = Biostrings::readDNAMultipleAlignment(file = san$path, format = "phylip")
+        cap.align = Biostrings::DNAStringSet(cap.align)
       } else {
-        system(paste0("cp ", src.directory, "/", src.file, " ", out.name))
+        cap.align = Biostrings::readDNAStringSet(san$path)
       }
+      if (san$tmp) { file.remove(san$path) }
+      if (name.match == "species") {
+        names(cap.align) = gsub("_[^_]+$", "", names(cap.align))
+        if (anyDuplicated(names(cap.align))) {
+          dup.sp = unique(names(cap.align)[duplicated(names(cap.align))])
+          stop("Multiple capture specimens map to one species in ", src.file, ": ",
+               paste(dup.sp, collapse = ", "), ". Resolve before using merge = \"Species\".")
+        }
+      }
+      write.temp = strsplit(as.character(cap.align), "")
+      aligned.set = as.matrix(ape::as.DNAbin(write.temp))
+      PhyloProcessR::writePhylip(alignment = aligned.set, file = out.name,
+                                 interleave = F, strict = F)
     }#end helper
 
     # Copy nuclear capture alignments
@@ -823,11 +868,11 @@ addLegacyAlignments = function(alignment.directory = NULL,
       }#end i
     }
 
-    # Overwrite with legacy-integrated versions where available (cp overwrites existing)
+    # Overwrite with legacy-integrated versions where available
     new.files = list.files(paste0(output.directory, "-only"))
-    for (i in 1:length(new.files)){
-      system(paste0("cp ", output.directory, "-only/", new.files[i], " ",
-                    output.directory, "-all/", new.files[i]))
+    for (i in seq_along(new.files)){
+      file.copy(paste0(output.directory, "-only/", new.files[i]),
+                paste0(output.directory, "-all/", new.files[i]), overwrite = TRUE)
     }#end i loop
   }#end if
 
@@ -847,13 +892,31 @@ addLegacyAlignments = function(alignment.directory = NULL,
   }
 
   scan.files = list.files(scan.dir)
-  only.names = gsub("\\..*$", "", list.files(paste0(output.directory, "-only")))
+  only.names = .alignmentId(list.files(paste0(output.directory, "-only")))
 
-  # Build per-taxon counts by reading each output alignment
+  # Typed columns for the summary, used for both populated and empty runs.
+  summary.columns = c("Taxon", "Total_Loci", "Capture_Loci", "Legacy_Nuclear_Loci",
+                      "Legacy_Mito_Loci", "Legacy_Total", "Total_BP", "Pct_Loci")
+
+  # A completed run that retained no loci writes a valid header-only summary
+  # instead of failing while assembling an empty table.
+  if (length(scan.files) == 0) {
+    empty.df = stats::setNames(
+      data.frame(matrix(nrow = 0, ncol = length(summary.columns))), summary.columns)
+    write.table(empty.df, file = integration.summary, sep = "\t",
+                row.names = FALSE, quote = FALSE)
+    print(paste0("No integrated alignments were produced. Wrote an empty summary: ",
+                 integration.summary))
+    return(invisible(NULL))
+  }
+
+  # Build per-taxon counts by reading each output alignment.
+  # Note: gap-only rows still count toward Total_Loci and Pct_Loci; these columns
+  # measure row presence and locus category, not contributed legacy bases.
   taxa.counts = list()
 
   for (sf in scan.files) {
-    locus.name = gsub("\\..*$", "", sf)
+    locus.name = .alignmentId(sf)
     aln = Biostrings::readDNAMultipleAlignment(
       file   = paste0(scan.dir, "/", sf),
       format = "phylip")
@@ -905,9 +968,8 @@ addLegacyAlignments = function(alignment.directory = NULL,
   summary.df = summary.df[order(-summary.df$Total_Loci, summary.df$Taxon), ]
   rownames(summary.df) = NULL
 
-  log.file = paste0(output.directory, "-integration_summary.txt")
-  write.table(summary.df, file = log.file, sep = "\t", row.names = FALSE, quote = FALSE)
-  print(paste0("Integration summary written to: ", log.file))
+  write.table(summary.df, file = integration.summary, sep = "\t", row.names = FALSE, quote = FALSE)
+  print(paste0("Integration summary written to: ", integration.summary))
 
   ####################################################################################
 
@@ -921,6 +983,23 @@ addLegacyAlignments = function(alignment.directory = NULL,
     x[index[-1]] = paste0(name, "_", seq_len(length(index) - 1) + 1)
   }
   x
+}
+
+
+# Keeps one most-informative row per duplicated name. Builds a positive keep
+# vector so an empty drop set can never empty the whole alignment, and the first
+# maximum wins on a tie for stable results.
+.keepMostInformativeRows = function(aln) {
+  nms = names(aln)
+  keep = logical(length(aln))
+  for (nm in unique(nms)) {
+    idx = which(nms == nm)
+    if (length(idx) == 1L) { keep[idx] = TRUE; next }
+    n.inf = sapply(as.character(aln[idx]), function(s)
+      nchar(gsub("[-nN?]", "", s, ignore.case = TRUE)))
+    keep[idx[which.max(n.inf)]] = TRUE
+  }
+  aln[keep]
 }
 
 

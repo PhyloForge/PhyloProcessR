@@ -83,7 +83,22 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
   }#end overwrite if
 
   single.data = exon.data[!gene %in% .alignmentId(gene.files)]
-  
+
+  # Exon files to copy: single-exon loci listed in the metadata, plus loci absent
+  # from the metadata entirely (e.g. unmatched legacy or mitochondrial loci), so
+  # they are not dropped from the unlinked dataset.
+  single.exon.copy = exon.files[.alignmentId(exon.files) %in% single.data$marker]
+  unmatched.copy   = exon.files[!.alignmentId(exon.files) %in% exon.data$marker]
+  exon.copy = unique(c(single.exon.copy, unmatched.copy))
+
+  # Detect output-name collisions before copying anything.
+  copy.ids = c(.alignmentId(gene.files), .alignmentId(exon.copy))
+  if (anyDuplicated(copy.ids)) {
+    clashes = unique(copy.ids[duplicated(copy.ids)])
+    stop("gatherUnlinked output names collide between gene and exon alignments: ",
+         paste(clashes, collapse = ", "), ".")
+  }
+
   #Copies the genes over
   for (i in seq_along(gene.files)){
     dest = paste0(output.directory, "/", gene.files[i])
@@ -92,9 +107,7 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
                    overwrite = overwrite)
   }
 
-  #Copies the remaining single-exon loci over
-  exon.copy = exon.files[.alignmentId(exon.files) %in% single.data$marker]
-
+  #Copies the remaining single-exon and unmatched loci over
   for (i in seq_along(exon.copy)) {
     dest = paste0(output.directory, "/", exon.copy[i])
     if (overwrite == FALSE && file.exists(dest)) { next }

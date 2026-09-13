@@ -240,7 +240,7 @@ superTrimmer = function(alignment.dir = NULL,
       }
     }
 
-    if (length(align) <= min.taxa.alignment) {
+    if (length(align) < min.taxa.alignment) {
       temp.data[, `:=`(Status = "too-few-taxa", Reason = "Input has too few taxa")]
       return(temp.data)
     }
@@ -345,7 +345,7 @@ superTrimmer = function(alignment.dir = NULL,
                        covGaps = 0, covPerGaps = 0)]
     }
 
-    if (length(non.align) <= min.taxa.alignment) {
+    if (length(non.align) < min.taxa.alignment) {
       print("too few taxa in alignment, skipping")
       temp.data[, `:=`(Status = "too-few-taxa", Reason = "Too few taxa after trimming")]
       return(temp.data)

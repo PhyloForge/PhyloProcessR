@@ -252,7 +252,7 @@ jointGenotyping = function(haplotype.caller.directory = "haplotype-caller",
                   quiet, "GenomicsDBImport", stderr.log = log)
 
       .runCommand(paste0(gatk.command, " GenotypeGVCFs -R ", shQuote(reference.path),
-                    " -V gendb://", workspace,
+                    " -V ", shQuote(paste0("gendb://", workspace)),
                     " --use-new-qual-calculator true",
                     " -O ", shQuote(unfiltered.all)),
                   quiet, "GenotypeGVCFs", stderr.log = log)

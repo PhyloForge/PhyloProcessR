@@ -62,7 +62,7 @@ convertNexusPartitions = function(nexus.file = NULL,
   #Overwrite
   if (dir.exists(output.directory) == TRUE) {
     if (overwrite == TRUE) {
-      system(paste0("rm -r ", output.directory))
+      unlink(output.directory, recursive = TRUE)
     } else {
       stop("Overwrite = FALSE and output directory exists. Either change to TRUE or overwrite manually.")
     }
@@ -94,12 +94,18 @@ convertNexusPartitions = function(nexus.file = NULL,
   ##################################################################################################
   nex.lines = readLines(nexus.file)
 
-  # Try to read an explicit MATCHCHAR value from the FORMAT statement
-  format.line = nex.lines[grepl("\\bformat\\b", nex.lines, ignore.case = TRUE)]
+  # Work on comment-stripped statements. NEXUS statements end at ';' and can span
+  # several lines, so join the file, remove [...] comments, and split on ';'.
+  full.text = gsub("\\[[^]]*\\]", " ", paste(nex.lines, collapse = "\n"))
+  statements = trimws(unlist(strsplit(full.text, ";", fixed = TRUE)))
+  statements = statements[nzchar(statements)]
+
+  # Try to read an explicit MATCHCHAR value from the complete FORMAT statement.
+  format.stmt = statements[grepl("\\bformat\\b", statements, ignore.case = TRUE)]
   matchchar = NULL
-  if (length(format.line) > 0) {
-    mc.match = regmatches(format.line[1],
-                          regexpr("(?i)matchchar\\s*=\\s*(.)", format.line[1], perl = TRUE))
+  if (length(format.stmt) > 0) {
+    mc.match = regmatches(format.stmt[1],
+                          regexpr("(?i)matchchar\\s*=\\s*'?(.)", format.stmt[1], perl = TRUE))
     if (length(mc.match) > 0 && nchar(mc.match) > 0) {
       matchchar = substr(mc.match, nchar(mc.match), nchar(mc.match))
     }
@@ -129,52 +135,91 @@ convertNexusPartitions = function(nexus.file = NULL,
   }
   ##################################################################################################
   ## Step 2: Parse charset partitions from the SETS block
-  ## (nex.lines already read in Step 1b)
   ##################################################################################################
-  charset.lines = nex.lines[grepl("charset", nex.lines, ignore.case = TRUE)]
+  charset.statements = statements[grepl("(?i)\\bcharset\\b", statements, perl = TRUE)]
 
-  if (length(charset.lines) == 0) {
+  if (length(charset.statements) == 0) {
     print("No charset definitions found in the NEXUS file. Verify the BEGIN SETS block exists.")
     return(NULL)
   }
 
-  # Extract gene/locus names: everything between 'charset' and '='
-  gene.names = trimws(gsub("(?i)^[[:space:]]*charset[[:space:]]+([^=]+)=.*$",
-                           "\\1", charset.lines, perl = TRUE))
+  # Parse one charset token into 1-based column indices. Supports a single
+  # position, an inclusive range, and a stepped range (start-end\step). A '.'
+  # means the last matrix column. Returns NULL for unsupported syntax.
+  parse.charset.token = function(token, last.col) {
+    token = gsub("\\.", as.character(last.col), token)
+    if (grepl("^[0-9]+$", token)) { return(as.integer(token)) }
+    step.match = regmatches(token, regexec("^([0-9]+)-([0-9]+)\\\\([0-9]+)$", token))[[1]]
+    if (length(step.match) == 4) {
+      start = as.integer(step.match[2]); end = as.integer(step.match[3]); step = as.integer(step.match[4])
+      if (step < 1 || start > end) { return(NULL) }
+      return(seq(start, end, by = step))
+    }
+    range.match = regmatches(token, regexec("^([0-9]+)-([0-9]+)$", token))[[1]]
+    if (length(range.match) == 3) {
+      start = as.integer(range.match[2]); end = as.integer(range.match[3])
+      if (start > end) { return(NULL) }
+      return(start:end)
+    }
+    NULL
+  }
 
-  # Extract all start-end ranges per charset (supports multi-range charsets)
-  ranges.list = lapply(charset.lines, function(line) {
-    raw = regmatches(line, gregexpr("[0-9]+[[:space:]]*-[[:space:]]*[0-9]+", line))[[1]]
-    if (length(raw) == 0) { return(NULL) }
-    do.call(rbind, lapply(raw, function(r) {
-      parts = as.integer(strsplit(trimws(r), "[[:space:]]*-[[:space:]]*")[[1]])
-      c(start = parts[1], end = parts[2])
-    }))
-  })
+  # Build a column-index vector for every usable charset. Reject (skip) a charset
+  # with unsupported syntax or out-of-range coordinates rather than writing a
+  # wrong partition.
+  gene.names = character(0)
+  cols.list  = list()
+  n.rejected = 0L
+  for (stmt in charset.statements) {
+    stmt = substring(stmt, regexpr("(?i)charset", stmt, perl = TRUE))
+    eq = regexpr("=", stmt, fixed = TRUE)
+    if (eq < 1) {
+      print(paste0("Skipping malformed charset statement (no '='): ", trimws(stmt)))
+      n.rejected = n.rejected + 1L
+      next
+    }
+    set.name = trimws(sub("(?i)^charset[[:space:]]+", "", substr(stmt, 1, eq - 1)))
+    rhs = trimws(substring(stmt, eq + 1))
+    tokens = strsplit(rhs, "[[:space:]]+")[[1]]
+    tokens = tokens[nzchar(tokens)]
 
-  # Drop any lines that failed to parse
-  valid = !sapply(ranges.list, is.null) & nchar(gene.names) > 0
-  gene.names  = gene.names[valid]
-  ranges.list = ranges.list[valid]
+    cols = integer(0)
+    ok = nzchar(set.name) && length(tokens) > 0
+    for (token in tokens) {
+      parsed = if (ok) parse.charset.token(token, n.chars) else NULL
+      if (is.null(parsed)) { ok = FALSE; break }
+      cols = c(cols, parsed)
+    }
+    if (!ok || any(cols < 1) || any(cols > n.chars)) {
+      print(paste0("Skipping unsupported or out-of-range charset '", set.name, "' = ", rhs))
+      n.rejected = n.rejected + 1L
+      next
+    }
+    gene.names = c(gene.names, set.name)
+    cols.list[[length(cols.list) + 1]] = cols
+  }
 
-  print(paste0("Found ", length(gene.names), " charset partitions."))
+  if (anyDuplicated(gene.names)) {
+    stop("Duplicate charset names in the NEXUS file: ",
+         paste(unique(gene.names[duplicated(gene.names)]), collapse = ", "), ".")
+  }
+
+  print(paste0("Found ", length(gene.names), " usable charset partitions; ",
+               n.rejected, " rejected."))
 
   ##################################################################################################
   ## Step 3: Extract, filter, and write each partition
   ##################################################################################################
+  n.written = 0L
   for (i in seq_along(gene.names)) {
 
-    gene    = gene.names[i]
-    ranges  = ranges.list[[i]]
+    gene = gene.names[i]
+    cols = cols.list[[i]]
 
-    # Concatenate columns across all ranges for this charset
-    gene.seqs = lapply(nex.data, function(seq) {
-      unlist(lapply(seq_len(nrow(ranges)), function(r) {
-        seq[ranges[r, "start"]:ranges[r, "end"]]
-      }))
-    })
+    # Extract this charset's columns, in stated order, from every taxon.
+    gene.seqs = lapply(nex.data, function(seq) seq[cols])
 
-    gene.len = sum(ranges[, "end"] - ranges[, "start"] + 1)
+    gene.len = length(cols)
 
     # Remove samples exceeding max.missing.percent
     if (max.missing.percent < 100) {
@@ -188,8 +233,8 @@ convertNexusPartitions = function(nexus.file = NULL,
     # recognised IUPAC code and will cause Biostrings to error downstream.
     gene.seqs = lapply(gene.seqs, function(seq) { seq[seq == "?"] = "n"; seq })
 
-    # Skip if too few taxa
-    if (length(gene.seqs) <= min.taxa.alignment) {
+    # Skip if too few taxa (exactly the minimum passes)
+    if (length(gene.seqs) < min.taxa.alignment) {
       if (quiet == FALSE) {
         print(paste0(gene, ": only ", length(gene.seqs),
                      " taxa after filtering. Skipping (min.taxa.alignment = ",
@@ -215,6 +260,7 @@ convertNexusPartitions = function(nexus.file = NULL,
                                    filepath = paste0(output.directory, "/", gene, ".fa"))
     }
 
+    n.written = n.written + 1L
     if (quiet == FALSE) {
       print(paste0("Written: ", gene, " (", length(gene.seqs), " taxa, ", gene.len, " bp)"))
     }
@@ -224,7 +270,7 @@ convertNexusPartitions = function(nexus.file = NULL,
 
   }#end gene loop
 
-  print(paste0("Done. ", length(gene.names), " loci written to: ", output.directory))
+  print(paste0("Done. ", n.written, " loci written to: ", output.directory))
 
 }#end function
 

@@ -14,9 +14,13 @@ legacy.only.directory = paste0(legacy.output.base, "-only")
 legacy.all.directory = paste0(legacy.output.base, "-all")
 legacy.trimmed.only.directory = file.path(output.directory, "trimmed_legacy-only")
 legacy.gene.directory = file.path(output.directory, "untrimmed_legacy-genes")
+legacy.trimmed.gene.directory = file.path(output.directory, "trimmed_legacy-genes")
 legacy.unlinked.directory = file.path(output.directory, "untrimmed_legacy-unlinked")
 legacy.trimmed.unlinked.directory = file.path(output.directory, "trimmed_legacy-unlinked")
 legacy.trimmed.directory = file.path(output.directory, "trimmed_legacy")
+# The integration summary is written only after a complete run, so its presence
+# marks a finished integration for resume.
+integration.summary = paste0(legacy.output.base, "-integration_summary.txt")
 
 ##################################################################################################
 ##################################################################################################
@@ -53,7 +57,7 @@ if (convert.nexus == TRUE) {
 ## Step 1: Integrate legacy alignments into sequence-capture alignments
 ##################################################################################################
 
-if (length(list.files(legacy.only.directory)) == 0 || overwrite == TRUE) {
+if (!file.exists(integration.summary) || overwrite == TRUE) {
   addLegacyAlignments(
     alignment.directory = alignment.directory,
     alignment.format = alignment.format,
@@ -76,8 +80,8 @@ if (length(list.files(legacy.only.directory)) == 0 || overwrite == TRUE) {
     blast.path = blast.path
   )
 } else {
-  print(paste0("Legacy integration output already exists and is non-empty, skipping: ",
-               legacy.only.directory))
+  print(paste0("Legacy integration already completed (summary present), skipping: ",
+               integration.summary))
 }
 
 # Select working directory for downstream steps:
@@ -98,30 +102,34 @@ if (include.all.together == TRUE) {
 ##################################################################################################
 
 if (trim.alignments == TRUE) {
-  superTrimmer(
-    alignment.dir = legacy.only.directory,
-    alignment.format = "phylip",
-    output.dir = legacy.trimmed.only.directory,
-    overwrite = overwrite,
-    TrimAl = run.TrimAl,
-    TrimAl.path = trimAl.path,
-    trim.similarity = trim.similarity,
-    similarity.threshold = similarity.threshold,
-    mafft.path = mafft.path,
-    trim.column = trim.column,
-    convert.ambiguous.sites = convert.ambiguous.sites,
-    alignment.assess = FALSE,
-    trim.external = trim.external,
-    trim.coverage = trim.coverage,
-    min.coverage.percent = min.coverage.percent,
-    min.external.percent = min.external.percent,
-    min.column.gap.percent = min.column.gap.percent,
-    min.alignment.length = min.alignment.length,
-    min.taxa.alignment = min.taxa.alignment,
-    min.coverage.bp = min.coverage.bp,
-    threads = threads,
-    memory = memory
-  )
+  if (length(list.files(legacy.only.directory)) == 0) {
+    print("Integration retained no legacy-only alignments; skipping the legacy-only trim step.")
+  } else {
+    superTrimmer(
+      alignment.dir = legacy.only.directory,
+      alignment.format = "phylip",
+      output.dir = legacy.trimmed.only.directory,
+      overwrite = overwrite,
+      TrimAl = run.TrimAl,
+      TrimAl.path = trimAl.path,
+      trim.similarity = trim.similarity,
+      similarity.threshold = similarity.threshold,
+      mafft.path = mafft.path,
+      trim.column = trim.column,
+      convert.ambiguous.sites = convert.ambiguous.sites,
+      alignment.assess = FALSE,
+      trim.external = trim.external,
+      trim.coverage = trim.coverage,
+      min.coverage.percent = min.coverage.percent,
+      min.external.percent = min.external.percent,
+      min.column.gap.percent = min.column.gap.percent,
+      min.alignment.length = min.alignment.length,
+      min.taxa.alignment = min.taxa.alignment,
+      min.coverage.bp = min.coverage.bp,
+      threads = threads,
+      memory = memory
+    )
+  }
 }# end trim.alignments
 
 ##################################################################################################
@@ -147,8 +155,14 @@ if (concatenate.genes == TRUE) {
       memory = memory
     )
   } else {
-    # Concatenate genes from the original capture alignments only;
-    # legacy loci remain as separate alignments and are picked up by gatherUnlinked
+    # Concatenate genes from the original capture alignments only; legacy loci
+    # remain as separate alignments and are picked up by gatherUnlinked.
+    # Legacy sequences added to a locus whose gene is a multi-exon gene are
+    # represented only by the capture-only gene here, so that legacy data does
+    # not enter the gene dataset. Set concatenate.legacy.genes = TRUE to include
+    # legacy sequences in the gene concatenation.
+    print(paste0("concatenate.legacy.genes = FALSE: legacy sequences in multi-exon ",
+                 "genes are not in the gene dataset; set TRUE to include them."))
     concatenateGenes(
       alignment.folder = alignment.directory,
       output.folder = legacy.gene.directory,
@@ -177,10 +191,23 @@ if (concatenate.genes == TRUE) {
   }# end gather.unlinked
 
   if (trim.alignments == TRUE) {
+    # Trim the dataset the enabled stages actually produced: the unlinked set when
+    # gathering is on, otherwise the concatenated gene set.
+    if (gather.unlinked == TRUE) {
+      trim.input  = legacy.unlinked.directory
+      trim.output = legacy.trimmed.unlinked.directory
+    } else {
+      trim.input  = legacy.gene.directory
+      trim.output = legacy.trimmed.gene.directory
+    }
+    if (length(list.files(trim.input)) == 0) {
+      stop("No alignments to trim in ", trim.input,
+           ". Check the output of the preceding concatenation/gathering stage.")
+    }
     superTrimmer(
-      alignment.dir = legacy.unlinked.directory,
+      alignment.dir = trim.input,
       alignment.format = "phylip",
-      output.dir = legacy.trimmed.unlinked.directory,
+      output.dir = trim.output,
       overwrite = overwrite,
       TrimAl = run.TrimAl,
       TrimAl.path = trimAl.path,
@@ -212,6 +239,10 @@ if (concatenate.genes == TRUE) {
 if (concatenate.genes == FALSE) {
 
   if (trim.alignments == TRUE) {
+    if (length(list.files(integrated.dir)) == 0) {
+      stop("No alignments to trim in ", integrated.dir,
+           ". The integration stage produced no usable output.")
+    }
     superTrimmer(
       alignment.dir = integrated.dir,
       alignment.format = "phylip",
