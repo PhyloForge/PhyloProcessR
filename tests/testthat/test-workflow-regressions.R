@@ -199,72 +199,20 @@ test_that("Workflow 5 forwards alignment assessment configuration", {
   }
 })
 
-test_that("Workflow 4 can publish workflow X3 alignments", {
-  workflow_file <- find_workflow_file("workflow-4_alignment.R")
-  expect_gt(length(workflow_file), 0)
-  if (length(workflow_file) == 0) {
-    return(invisible(NULL))
-  }
+# Legacy integration moved to workflow X3 (addLegacyAlignments). Workflow 4 no
+# longer publishes legacy alignments, so the former "Workflow 4 can publish
+# workflow X3 alignments" test was removed.
 
-  root <- tempfile("workflow4-legacy-")
-  legacy_directory <- file.path(root, "x3-output")
-  output_directory <- file.path(
-    root, "data-analysis", "alignments", "untrimmed_all-markers"
-  )
-  dir.create(legacy_directory, recursive = TRUE)
-  dir.create(output_directory, recursive = TRUE)
-
-  write_test_phylip(
-    file.path(output_directory, "shared.phy"),
-    c(capture = "AAAA")
-  )
-  write_test_phylip(
-    file.path(legacy_directory, "shared.phy"),
-    c(capture = "A-NC", legacy_old = "GTTA")
-  )
-  write_test_phylip(
-    file.path(legacy_directory, "legacy-only.phy"),
-    c(legacy = "CCCC")
-  )
-  rename_file <- file.path(root, "legacy-names.tsv")
-  writeLines(c("old_name\tnew_name", "legacy_old\tcapture"), rename_file)
-
-  file.copy(workflow_file, file.path(root, basename(workflow_file)))
-  writeLines(c(
-    "install.latest.github = FALSE",
-    paste0("working.directory = ", deparse(root)),
-    "heterozygote.filter = FALSE",
-    "contig.directory = 'unused'",
-    "annotate.targets = FALSE",
-    "align.targets = FALSE",
-    "include.legacy = TRUE",
-    paste0("legacy.alignment.directory = ", deparse(legacy_directory)),
-    paste0("legacy.rename.file = ", deparse(rename_file))
-  ), file.path(root, "workflow-4_configuration-file.R"))
-
-  with_test_working_directory(root, {
-    source(file.path(root, basename(workflow_file)), local = new.env())
-  })
-
-  shared <- ape::read.dna(file.path(output_directory, "shared.phy"),
-                          format = "sequential")
-  expect_equal(rownames(as.matrix(shared)), "capture")
-  expect_equal(paste(as.character(as.matrix(shared)), collapse = ""), "attc")
-  expect_true(file.exists(file.path(output_directory, "legacy-only.phy")))
-})
-
-test_that("workflow legacy integration settings have safe defaults", {
+test_that("legacy integration lives in workflow X3, not workflow 4", {
   workflow_directory <- dirname(find_workflow_file("workflow-4_alignment.R"))
   workflow4_configuration <- new.env(parent = baseenv())
   sys.source(
     file.path(workflow_directory, "workflow-4_configuration-file.R"),
     envir = workflow4_configuration
   )
-  expect_false(workflow4_configuration$include.legacy)
-  expect_identical(
-    workflow4_configuration$legacy.alignment.directory,
-    "data-analysis/legacy-integration/untrimmed_legacy-all"
-  )
+  # Workflow 4 no longer defines any legacy-integration settings.
+  expect_null(workflow4_configuration$include.legacy)
+  expect_null(workflow4_configuration$legacy.alignment.directory)
   expect_null(workflow4_configuration$legacy.rename.file)
   expect_false(workflow4_configuration$include.genomes)
   expect_identical(

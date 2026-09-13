@@ -255,7 +255,7 @@ discoverSharedRegions = function(alignment.directory = NULL,
       .runPipeline(paste0(bedtools.command, " genomecov -ibam ", shQuote(bam.out),
                            " -bg | awk '$4 >= ", min.coverage, "' | ",
                            bedtools.command, " merge -i stdin > ", shQuote(bed.temp)),
-                   quiet = quiet, keep.stdout = TRUE, task = "coverage intervals")
+                   quiet = quiet, task = "coverage intervals")
       if (!file.rename(bed.temp, bed.out)) stop("Cannot save coverage BED.")
       file.create(done.file)
       unlink(tmp, recursive = TRUE)

@@ -234,7 +234,7 @@ assembleSharedRegions = function(discover.directory = NULL,
 
       .runPipeline(paste0(samtools.command, " collate -u -O ", shQuote(novel.bam),
                            " | ", samtools.command, " fastq -N - > ", shQuote(novel.fq)),
-                   quiet = quiet, keep.stdout = TRUE, task = "assembly FASTQ conversion")
+                   quiet = quiet, task = "assembly FASTQ conversion")
       unlink(c(novel.bam, paste0(novel.bam, ".bai")))
 
       .runCommand(paste0(spades.command, " -s ", shQuote(novel.fq),

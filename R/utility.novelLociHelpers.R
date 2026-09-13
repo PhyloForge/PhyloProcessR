@@ -35,7 +35,7 @@
                        " {print $1,$2,$3,$4}' | ", bedtools.command,
                        " merge -i stdin -d ", max.merge.distance, " -c 4 -o min",
                        " | awk '($3-$2) >= ", min.region.length, "' > ", shQuote(temp.bed)),
-               quiet = quiet, keep.stdout = TRUE, task = "shared region selection")
+               quiet = quiet, task = "shared region selection")
   if (!file.rename(temp.bed, shared.bed)) stop("Cannot save shared region BED.")
   invisible(NULL)
 }#end .sharedCoveredRegions

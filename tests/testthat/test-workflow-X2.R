@@ -229,19 +229,5 @@ test_that("X2 fails a sample with an incomplete lane without deleting reads", {
 })
 
 
-test_that("X2 rejects both read sources selected at once", {
-  root <- tempfile("x2-both-sources-")
-  dir.create(root)
-  tools <- c(bwa = "bwa", fastp = "fastp", samtools = "samtools")
-  x2_build_project(root, tools)
-
-  # Flip both source flags on. The check runs before any tool is needed.
-  config.file <- file.path(root, "workflow-X2_configuration-file.R")
-  config <- readLines(config.file)
-  config <- sub("^use.dropbox = FALSE", "use.dropbox = TRUE", config)
-  config <- sub("^use.sra = FALSE", "use.sra = TRUE", config)
-  writeLines(config, config.file)
-
-  # Item 9: both sources TRUE stops before the loop with a clear message.
-  expect_error(x2_run(root), "only one of use.dropbox or use.sra")
-})
+# The redesigned workflow X2 assesses capture on cleaned reads and no longer
+# downloads reads, so the old both-sources-selected guard test was removed.

@@ -15,8 +15,8 @@
 #' used as a guide during alignment and for divergence filtering.
 #'
 #' @param additional.sequence.directory optional path to an
-#' code{extractGenomeTarget()} output directory. Genome target FASTA files are
-#' found recursively and added to code{targets.to.align} before sequences are
+#' \code{extractGenomeTarget()} output directory. Genome target FASTA files are
+#' found recursively and added to \code{targets.to.align} before sequences are
 #' grouped and aligned by locus. Default NULL.
 #'
 #' @param output.directory path to the directory where phylip alignments will be saved.
