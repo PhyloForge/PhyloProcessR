@@ -130,6 +130,11 @@ contaminant.genome.list = "decontamination_database.csv"
 decontamination.path = NULL
 #Include the univec contaminant database?
 include.univec = TRUE
+# Optional extra GenBank accessions to add to the contaminant database
+# (character vector, e.g. c("NC_001422")); NULL skips them.
+contaminant.genbank.accessions = NULL
+# Optional local FASTA copied directly into the contaminant database; NULL skips it.
+contaminant.fasta = NULL
 # Minimum alignment identity (0-1) that makes a read a contaminant; 0.90 = 90% identity.
 # A read pair at or above this value is removed and counted. A read pair below
 # it is kept.

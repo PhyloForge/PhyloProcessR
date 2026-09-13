@@ -402,3 +402,87 @@ test_that("active contaminant references exclude cached extras", {
   expect_identical(active$File, "manually-included-data.fa")
   expect_true(file.exists(file.path(output.directory, "old.fa")))
 })
+
+
+test_that("capture targetsHit counts the union of targets across lanes", {
+  root = tempfile("preprocess-capture-union-")
+  dir.create(root)
+  sample.dir = file.path(root, "input", "SampleA")
+  dir.create(sample.dir, recursive = TRUE)
+
+  # Two lanes of paired reads. The reuse path is exercised, so the read content
+  # is not mapped; it only needs to exist and be a valid pair.
+  lane.tags = c("L001", "L002")
+  read.files = list()
+  for (lane in lane.tags) {
+    r1 = file.path(sample.dir, paste0("SampleA_", lane, "_READ1.fastq.gz"))
+    r2 = file.path(sample.dir, paste0("SampleA_", lane, "_READ2.fastq.gz"))
+    write_test_fastq(r1)
+    write_test_fastq(r2)
+    read.files[[lane]] = c(r1, r2)
+  }
+
+  target.file = file.path(root, "targets.fa")
+  writeLines(c(">a", "ACGT", ">b", "ACGT", ">c", "ACGT"), target.file)
+  target.manifest = paste0(normalizePath(target.file), "\t",
+                           unname(tools::md5sum(target.file)))
+
+  fake.bwa = file.path(root, "bwa")
+  writeLines(c(
+    "#!/bin/sh",
+    "shift",
+    "prefix=\"$1\"",
+    "for suffix in amb ann bwt pac sa; do : > \"${prefix}.${suffix}\"; done"
+  ), fake.bwa)
+  Sys.chmod(fake.bwa, mode = "0755")
+  fake.samtools = file.path(root, "samtools")
+  writeLines("#!/bin/sh", fake.samtools)
+  Sys.chmod(fake.samtools, mode = "0755")
+
+  # Lane 1 captures target a; lane 2 captures target b. The union is 2 of 3.
+  lane.hits = list(L001 = "a", L002 = "b")
+
+  with_preprocess_test_directory(root, {
+    out.sample = file.path("sample-capture-assessment", "SampleA")
+    dir.create(out.sample, recursive = TRUE)
+
+    for (lane in lane.tags) {
+      lane.name = paste0("SampleA_", lane)
+      per.target = data.frame(
+        target = c("a", "b", "c"),
+        length = c(4, 4, 4),
+        mapped = ifelse(c("a", "b", "c") == lane.hits[[lane]], 5, 0),
+        unmapped = 0,
+        stringsAsFactors = FALSE)
+      write.csv(per.target,
+                file.path(out.sample, paste0(lane.name, "_per-target-counts.csv")),
+                row.names = FALSE)
+
+      lane.summary = data.frame(
+        Sample = "SampleA", readPairs = 10, mappedReads = 5,
+        targetsHit = 1, totalTargets = 3, stringsAsFactors = FALSE)
+      write.csv(lane.summary,
+                file.path(out.sample, paste0(lane.name, "_capture-summary.csv")),
+                row.names = FALSE)
+
+      # Matching completion metadata so the finished lane is reused, not remapped.
+      ordered.reads = PhyloProcessR:::.orderReadPair(read.files[[lane]])
+      metadata = PhyloProcessR:::.laneMetadata(ordered.reads,
+                                               list(target = target.manifest))
+      PhyloProcessR:::.writeLaneMetadata(
+        metadata,
+        file.path("logs", "sample_logs", "SampleA",
+                  paste0(lane.name, "_capture-metadata.csv")))
+    }
+
+    result = assessCaptureEfficiency(
+      input.reads = "input",
+      output.directory = "sample-capture-assessment",
+      target.fasta = target.file,
+      bwa.path = fake.bwa, samtools.path = fake.samtools)
+
+    expect_equal(result$targetsHit[result$Sample == "SampleA"], 2)
+    expect_equal(result$totalTargets[result$Sample == "SampleA"], 3)
+    expect_equal(result$pctTargetsHit[result$Sample == "SampleA"], 66.67)
+  })
+})

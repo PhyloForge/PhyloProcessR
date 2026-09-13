@@ -118,6 +118,8 @@ if (decontamination == TRUE){
     createContaminantDB(decontamination.list = contaminant.genome.list,
                         output.directory = "contaminant-references",
                         include.univec = include.univec,
+                        include.genbank = contaminant.genbank.accessions,
+                        include.fasta = contaminant.fasta,
                         overwrite = overwrite.contaminant.database)
     contaminant.references = "contaminant-references"
   } else {

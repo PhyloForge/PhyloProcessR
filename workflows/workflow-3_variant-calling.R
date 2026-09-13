@@ -63,8 +63,8 @@ haplotypeCaller(
   threads = threads,
   memory = memory,
   overwrite = overwrite,
-  quiet = quiet
-  ,sample.names = retained.samples
+  quiet = quiet,
+  sample.names = retained.samples
 )
 
 # Function that recalibrates bases and calls haplotypes again.
@@ -80,9 +80,9 @@ if (use.base.recalibration == TRUE) {
     memory = memory,
     clean.up = clean.up,
     overwrite = overwrite,
-    quiet = quiet
-    ,ploidy = ploidy
-    ,sample.names = retained.samples
+    quiet = quiet,
+    ploidy = ploidy,
+    sample.names = retained.samples
   )
 }#end if
 
@@ -93,23 +93,23 @@ genotypeSamples(
   output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
   use.base.recalibration = use.base.recalibration,
   temp.directory = temp.directory,
-  custom.SNP.QD =  custom.SNP.QD,
-  custom.SNP.QUAL =  custom.SNP.QUAL,
-  custom.SNP.SOR =  custom.SNP.SOR,
-  custom.SNP.FS =  custom.SNP.FS,
-  custom.SNP.MQ =  custom.SNP.MQ,
-  custom.SNP.MQRankSum =  custom.SNP.MQRankSum,
-  custom.SNP.ReadPosRankSum =  custom.SNP.ReadPosRankSum,
-  custom.INDEL.QD =  custom.INDEL.QD,
-  custom.INDEL.QUAL =  custom.INDEL.QUAL,
-  custom.INDEL.FS =  custom.INDEL.FS,
-  custom.INDEL.ReadPosRankSum =  custom.INDEL.ReadPosRankSum,
+  custom.SNP.QD = custom.SNP.QD,
+  custom.SNP.QUAL = custom.SNP.QUAL,
+  custom.SNP.SOR = custom.SNP.SOR,
+  custom.SNP.FS = custom.SNP.FS,
+  custom.SNP.MQ = custom.SNP.MQ,
+  custom.SNP.MQRankSum = custom.SNP.MQRankSum,
+  custom.SNP.ReadPosRankSum = custom.SNP.ReadPosRankSum,
+  custom.INDEL.QD = custom.INDEL.QD,
+  custom.INDEL.QUAL = custom.INDEL.QUAL,
+  custom.INDEL.FS = custom.INDEL.FS,
+  custom.INDEL.ReadPosRankSum = custom.INDEL.ReadPosRankSum,
   gatk4.path = gatk4.path,
   threads = threads,
   memory = memory,
   overwrite = overwrite,
-  quiet = quiet
-  ,sample.names = retained.samples
+  quiet = quiet,
+  sample.names = retained.samples
 )
 
 depth.files = NULL
@@ -139,16 +139,16 @@ if (consensus.sequences == TRUE) {
     threads = threads,
     memory = memory,
     overwrite = overwrite,
-    quiet = quiet
-    ,sample.names = retained.samples
-    ,depth.files = depth.files
-    ,depth.filter.mode = depth.filter.mode
-    ,min.site.depth = min.site.depth
-    ,min.mean.depth = min.mean.depth
-    ,max.n.proportion = max.n.proportion
-    ,use.base.recalibration = use.base.recalibration
-    ,samtools.path = samtools.path
-    ,ploidy = ploidy
+    quiet = quiet,
+    sample.names = retained.samples,
+    depth.files = depth.files,
+    depth.filter.mode = depth.filter.mode,
+    min.site.depth = min.site.depth,
+    min.mean.depth = min.mean.depth,
+    max.n.proportion = max.n.proportion,
+    use.base.recalibration = use.base.recalibration,
+    samtools.path = samtools.path,
+    ploidy = ploidy
   )
 }
 
@@ -166,16 +166,16 @@ if (ambiguity.codes == TRUE) {
     threads = threads,
     memory = memory,
     overwrite = overwrite,
-    quiet = quiet
-    ,sample.names = retained.samples
-    ,depth.files = depth.files
-    ,depth.filter.mode = depth.filter.mode
-    ,min.site.depth = min.site.depth
-    ,min.mean.depth = min.mean.depth
-    ,max.n.proportion = max.n.proportion
-    ,use.base.recalibration = use.base.recalibration
-    ,samtools.path = samtools.path
-    ,ploidy = ploidy
+    quiet = quiet,
+    sample.names = retained.samples,
+    depth.files = depth.files,
+    depth.filter.mode = depth.filter.mode,
+    min.site.depth = min.site.depth,
+    min.mean.depth = min.mean.depth,
+    max.n.proportion = max.n.proportion,
+    use.base.recalibration = use.base.recalibration,
+    samtools.path = samtools.path,
+    ploidy = ploidy
   )
 }
 

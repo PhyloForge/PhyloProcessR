@@ -98,6 +98,8 @@ binned.multi.copy = "keep"
 binned.match.length = 50
 binned.match.percent = 60
 binned.match.coverage = 30
+# Minimum length in basepairs for a binned contig to be kept.
+binned.min.contig.length = 100
 # The k-mer values for the per-bin SPAdes runs. Every value must be below the
 # read length. Fewer values is faster.
 binned.kmer.values = c(21, 33, 55, 77, 99)
@@ -162,6 +164,9 @@ spades.isolate = FALSE
 save.corrected.reads = FALSE
 #TRUE to delete the entire SPAdes working directory for each sample after assembly, keeping only the final .fa file
 clean.up.spades = FALSE
+#TRUE reassembles any failed sample one at a time with all threads and memory
+#after a parallel pass. Only runs when spades.parallel.samples > 1.
+spades.retry.failed = TRUE
 # The similarity threshold for redundancy reduction. cd-hit-est needs a value of
 # 0.8 or greater. 0.98 collapses near-identical copies but keeps divergent
 # paralogs (< ~95% identity) for the paralog workflow.

@@ -34,6 +34,7 @@ assembleSpades(
   overwrite = overwrite,
   save.corrected.reads = save.corrected.reads,
   clean.up.spades = clean.up.spades,
+  retry.failed = spades.retry.failed,
   quiet = quiet,
   spades.path = spades.path
 )
@@ -79,29 +80,26 @@ final.contig.directory = "data-analysis/contigs/3_target-contigs"
 ## across that fragment.
 ##################
 
-if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
+if (curate.contigs == TRUE) {
   curateTargetContigs(
     assembly.directory = "data-analysis/contigs/3_target-contigs",
-    target.file        = target.markers,
-    output.directory   = "data-analysis/contigs/3a_curated-contigs",
-    min.match.percent  = curate.match.percent,
-    min.match.length   = curate.match.length,
+    target.file = target.markers,
+    output.directory = "data-analysis/contigs/3a_curated-contigs",
+    min.match.percent = curate.match.percent,
+    min.match.length = curate.match.length,
     min.match.coverage = curate.match.coverage,
-    similarity         = get0("curate.similarity", ifnotfound = 0.9),
-    search.method      = curate.search.method,
-    threads            = threads,
-    memory             = memory,
-    blast.path         = blast.path,
-    last.path          = last.path,
-    cdhit.path         = cdhit.path,
-    overwrite          = overwrite,
-    quiet              = quiet
+    similarity = curate.similarity,
+    search.method = curate.search.method,
+    threads = threads,
+    memory = memory,
+    blast.path = blast.path,
+    last.path = last.path,
+    cdhit.path = cdhit.path,
+    overwrite = overwrite,
+    quiet = quiet
   )
   final.contig.directory = "data-analysis/contigs/3a_curated-contigs"
 }#end curate.contigs
-
-# The steps below start from the curated contigs when that step ran
-contig.start = final.contig.directory
 
 ##################################################################################################
 ##################################################################################################
@@ -116,47 +114,46 @@ contig.start = final.contig.directory
 ## final curation when that step is enabled.
 ##################
 
-if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
+if (binned.assembly == TRUE) {
 
-  binned.input = final.contig.directory
-
-  # An empty setting turns off the LAST search of the draft assembly
-  binned.draft = get0("binned.draft.directory", ifnotfound = "")
+  # An empty binned.draft.directory turns off the LAST search of the draft assembly
+  binned.draft = binned.draft.directory
   if (is.null(binned.draft) || nchar(binned.draft) == 0) binned.draft = NULL
 
   assembleBinnedTargets(
-    read.directory     = processed.reads,
-    mapping.reads      = binning.reads,
-    target.markers     = target.markers,
-    assembly.directory = binned.input,
+    read.directory = processed.reads,
+    mapping.reads = binning.reads,
+    target.markers = target.markers,
+    assembly.directory = final.contig.directory,
     draft.assembly.directory = binned.draft,
-    output.directory   = "data-analysis/binned-target-assembly",
-    binned.directory   = "data-analysis/contigs/3c_binned-contigs",
-    locus.set          = binned.locus.set,
-    bait.source        = binned.bait.source,
-    min.bait.coverage  = binned.min.bait.coverage,
-    rescue.missing     = binned.rescue.missing,
+    output.directory = "data-analysis/binned-target-assembly",
+    binned.directory = "data-analysis/contigs/3c_binned-contigs",
+    locus.set = binned.locus.set,
+    bait.source = binned.bait.source,
+    min.bait.coverage = binned.min.bait.coverage,
+    rescue.missing = binned.rescue.missing,
     rescue.failed.divergent = binned.rescue.failed.divergent,
-    iterations         = binned.iterations,
-    min.pairs          = binned.min.pairs,
-    max.pairs          = binned.max.pairs,
-    min.match.length   = binned.match.length,
-    min.match.percent  = binned.match.percent,
+    iterations = binned.iterations,
+    min.pairs = binned.min.pairs,
+    max.pairs = binned.max.pairs,
+    min.match.length = binned.match.length,
+    min.match.percent = binned.match.percent,
     min.match.coverage = binned.match.coverage,
-    max.extension      = binned.max.extension,
-    max.target.hits    = binned.max.target.hits,
-    multi.copy         = binned.multi.copy,
-    kmer.values        = binned.kmer.values,
-    memory             = memory,
-    threads            = threads,
-    parallel.samples   = get0("binned.parallel.samples", ifnotfound = 1),
-    bwa.path           = bwa.path,
-    samtools.path      = samtools.path,
-    megahit.path       = megahit.path,
-    cap3.path          = cap3.path,
-    last.path          = last.path,
-    overwrite          = overwrite,
-    quiet              = quiet
+    min.contig.length = binned.min.contig.length,
+    max.extension = binned.max.extension,
+    max.target.hits = binned.max.target.hits,
+    multi.copy = binned.multi.copy,
+    kmer.values = binned.kmer.values,
+    memory = memory,
+    threads = threads,
+    parallel.samples = binned.parallel.samples,
+    bwa.path = bwa.path,
+    samtools.path = samtools.path,
+    megahit.path = megahit.path,
+    cap3.path = cap3.path,
+    last.path = last.path,
+    overwrite = overwrite,
+    quiet = quiet
   )
   final.contig.directory = "data-analysis/contigs/3c_binned-contigs"
 } # end binned.assembly
@@ -174,27 +171,23 @@ if (isTRUE(get0("binned.assembly", ifnotfound = FALSE))) {
 ## The curated contigs are saved to 3d_curated-contigs. Use them in workflow 3.
 ##################
 
-if (isTRUE(get0("curate.contigs", ifnotfound = TRUE))) {
-
-  # Takes the last contig set that the steps above produced
-  curate.input = final.contig.directory
-
+if (curate.contigs == TRUE) {
   curateTargetContigs(
-    assembly.directory = curate.input,
-    target.file        = target.markers,
-    output.directory   = "data-analysis/contigs/3d_curated-contigs",
-    min.match.percent  = curate.match.percent,
-    min.match.length   = curate.match.length,
+    assembly.directory = final.contig.directory,
+    target.file = target.markers,
+    output.directory = "data-analysis/contigs/3d_curated-contigs",
+    min.match.percent = curate.match.percent,
+    min.match.length = curate.match.length,
     min.match.coverage = curate.match.coverage,
-    similarity         = get0("curate.similarity", ifnotfound = 0.9),
-    search.method      = curate.search.method,
-    threads            = threads,
-    memory             = memory,
-    blast.path         = blast.path,
-    last.path          = last.path,
-    cdhit.path         = cdhit.path,
-    overwrite          = overwrite,
-    quiet              = quiet
+    similarity = curate.similarity,
+    search.method = curate.search.method,
+    threads = threads,
+    memory = memory,
+    blast.path = blast.path,
+    last.path = last.path,
+    cdhit.path = cdhit.path,
+    overwrite = overwrite,
+    quiet = quiet
   )
   final.contig.directory = "data-analysis/contigs/3d_curated-contigs"
 } # end curate.contigs

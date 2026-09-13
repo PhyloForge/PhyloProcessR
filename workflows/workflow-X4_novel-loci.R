@@ -91,6 +91,7 @@ if (heterozygote.filter == TRUE) {
   filterHeterozygosity(
     iupac.directory    = "data-analysis/contigs/9_genome-contigs",
     output.directory   = "data-analysis/contigs/10_genome-filtered",
+    removed.directory  = "data-analysis/contigs/10a_removed-genome-contigs",
     threshold          = heterozygote.filter.threshold,
     min.length         = heterozygote.min.length,
     threads            = threads,

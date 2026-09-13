@@ -29,7 +29,9 @@
 #'
 #' @param threads number of CPU threads to pass to BWA and samtools.
 #'
-#' @param mem amount of RAM in GB, passed to the samtools sort buffer.
+#' @param mem approximate samtools sort buffer in GB. The value is split across
+#'   the sort threads and passed to \code{samtools sort -m}. It controls the sort
+#'   buffer only and does not cap the BWA process or every allocation.
 #'
 #' @param overwrite logical; if TRUE the output directory is deleted and
 #'   recreated before processing. FALSE resumes and skips only the lanes that
@@ -235,12 +237,24 @@ assessCaptureEfficiency = function(input.reads = NULL,
       bam.file = tempfile(pattern = paste0(lane.name, "-capture-"),
                           tmpdir = out.path, fileext = ".bam")
       on.exit(unlink(c(bam.file, paste0(bam.file, ".bai"))), add = TRUE)
+
+      # samtools sort -m is the approximate buffer per sort thread. Divide the
+      # mem budget (GB) across the sort threads in MiB, so a small or fractional
+      # budget is honored instead of flooring each thread to a whole GiB. Reduce
+      # the sort thread count when the budget cannot give each thread the 1M
+      # minimum. mem controls the sort buffer only; it does not cap BWA.
+      sort.threads = max(1, threads)
+      sort.buffer.mb = floor(mem * 1024 / sort.threads)
+      if (sort.buffer.mb < 1) {
+        sort.threads = max(1, floor(mem * 1024))
+        sort.buffer.mb = max(1, floor(mem * 1024 / sort.threads))
+      }
       .runPipeline(paste0(bwa.command, " mem -M -t ", threads, " ",
                           shQuote(target.copy), " ",
                           shQuote(read1[1]), " ", shQuote(read2[1]),
                           " | ", samtools.command, " view -b -F 0x900 - ",
-                          " | ", samtools.command, " sort -@ ", threads,
-                          " -m ", max(1, floor(mem / max(1, threads))), "G -O BAM",
+                          " | ", samtools.command, " sort -@ ", sort.threads,
+                          " -m ", sort.buffer.mb, "M -O BAM",
                           " -o ", shQuote(bam.file), " -"),
                    quiet = quiet, task = "bwa capture mapping")
 

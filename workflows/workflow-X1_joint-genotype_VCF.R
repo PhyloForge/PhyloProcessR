@@ -9,19 +9,6 @@ if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
 library(PhyloProcessR)
 setwd(working.directory)
 
-# One flag controls both running base recalibration and using its results. This
-# also accepts the older split flags base.recalibration and use.base.recalibration.
-old.recalibration = get0("base.recalibration", ifnotfound = NULL)
-if (!is.null(old.recalibration)) {
-  if (exists("use.base.recalibration") &&
-      !identical(as.logical(old.recalibration), as.logical(use.base.recalibration))) {
-    stop("base.recalibration and use.base.recalibration disagree. Set only use.base.recalibration.")
-  }
-  if (!exists("use.base.recalibration")) { use.base.recalibration = old.recalibration }
-}
-if (!exists("use.base.recalibration")) { use.base.recalibration = FALSE }
-if (!exists("ploidy")) { ploidy = 2 }
-
 ##################################################################################################
 ##################################################################################################
 ## Runs series of functions and organizes results
@@ -125,17 +112,17 @@ jointGenotyping(
   save.SNPs = save.SNPs,
   save.indels = save.indels,
   save.combined = save.combined,
-  custom.SNP.QD =  custom.SNP.QD,
-  custom.SNP.QUAL =  custom.SNP.QUAL,
-  custom.SNP.SOR =  custom.SNP.SOR,
-  custom.SNP.FS =  custom.SNP.FS,
-  custom.SNP.MQ =  custom.SNP.MQ,
-  custom.SNP.MQRankSum =  custom.SNP.MQRankSum,
-  custom.SNP.ReadPosRankSum =  custom.SNP.ReadPosRankSum,
-  custom.INDEL.QD =  custom.INDEL.QD,
-  custom.INDEL.QUAL =  custom.INDEL.QUAL,
-  custom.INDEL.FS =  custom.INDEL.FS,
-  custom.INDEL.ReadPosRankSum =  custom.INDEL.ReadPosRankSum,
+  custom.SNP.QD = custom.SNP.QD,
+  custom.SNP.QUAL = custom.SNP.QUAL,
+  custom.SNP.SOR = custom.SNP.SOR,
+  custom.SNP.FS = custom.SNP.FS,
+  custom.SNP.MQ = custom.SNP.MQ,
+  custom.SNP.MQRankSum = custom.SNP.MQRankSum,
+  custom.SNP.ReadPosRankSum = custom.SNP.ReadPosRankSum,
+  custom.INDEL.QD = custom.INDEL.QD,
+  custom.INDEL.QUAL = custom.INDEL.QUAL,
+  custom.INDEL.FS = custom.INDEL.FS,
+  custom.INDEL.ReadPosRankSum = custom.INDEL.ReadPosRankSum,
   gatk4.path = gatk4.path,
   temp.directory = temp.directory,
   threads = threads,

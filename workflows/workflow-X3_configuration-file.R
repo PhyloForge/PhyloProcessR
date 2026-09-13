@@ -95,6 +95,8 @@ mito.alignment.format = "phylip"
 concatenate.genes = TRUE
 # Minimum number of exons needed to produce a concatenated gene alignment
 minimum.exons = 2
+# TRUE skips exon alignments with duplicate sample names instead of stopping
+remove.duplicates = FALSE
 # TRUE  = include legacy-only loci in the gene concatenation step. 
 # Note if the legacy are too short they could get dropped
 # FALSE = concatenate only capture-derived exons; legacy loci remain as separate alignments

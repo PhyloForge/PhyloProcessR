@@ -67,6 +67,8 @@ include.novel.markers = FALSE
 concatenate.genes = TRUE
 # minimum number of exons needed to make a concatenated gene
 minimum.exons = 2
+# TRUE skips exon alignments with duplicate sample names instead of stopping
+remove.duplicates = FALSE
 # Gathers all unlinked alignments i.e. concatenated genes and single exon genes and UCEs
 gather.unlinked = TRUE
 # Trims each alignment to the target marker, leaving out the flanks

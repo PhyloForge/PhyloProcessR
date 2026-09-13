@@ -31,13 +31,13 @@ legacy.trimmed.directory = file.path(output.directory, "trimmed_legacy")
 if (convert.nexus == TRUE) {
   if (!dir.exists(nexus.output.directory) || overwrite == TRUE) {
     convertNexusPartitions(
-      nexus.file          = nexus.file,
-      output.directory    = nexus.output.directory,
-      output.format       = "phylip",
-      min.taxa.alignment  = min.taxa.alignment,
+      nexus.file = nexus.file,
+      output.directory = nexus.output.directory,
+      output.format = "phylip",
+      min.taxa.alignment = min.taxa.alignment,
       max.missing.percent = max.missing.percent,
-      overwrite           = overwrite,
-      quiet               = quiet
+      overwrite = overwrite,
+      quiet = quiet
     )
   } else {
     print(paste0("Nexus output directory already exists, skipping conversion: ",
@@ -99,28 +99,28 @@ if (include.all.together == TRUE) {
 
 if (trim.alignments == TRUE) {
   superTrimmer(
-    alignment.dir          = legacy.only.directory,
-    alignment.format       = "phylip",
-    output.dir             = legacy.trimmed.only.directory,
-    overwrite              = overwrite,
-    TrimAl                 = run.TrimAl,
-    TrimAl.path            = trimAl.path,
-    trim.similarity        = trim.similarity,
-    similarity.threshold   = similarity.threshold,
-    mafft.path             = mafft.path,
-    trim.column            = trim.column,
+    alignment.dir = legacy.only.directory,
+    alignment.format = "phylip",
+    output.dir = legacy.trimmed.only.directory,
+    overwrite = overwrite,
+    TrimAl = run.TrimAl,
+    TrimAl.path = trimAl.path,
+    trim.similarity = trim.similarity,
+    similarity.threshold = similarity.threshold,
+    mafft.path = mafft.path,
+    trim.column = trim.column,
     convert.ambiguous.sites = convert.ambiguous.sites,
-    alignment.assess       = FALSE,
-    trim.external          = trim.external,
-    trim.coverage          = trim.coverage,
-    min.coverage.percent   = min.coverage.percent,
-    min.external.percent   = min.external.percent,
+    alignment.assess = FALSE,
+    trim.external = trim.external,
+    trim.coverage = trim.coverage,
+    min.coverage.percent = min.coverage.percent,
+    min.external.percent = min.external.percent,
     min.column.gap.percent = min.column.gap.percent,
-    min.alignment.length   = min.alignment.length,
-    min.taxa.alignment     = min.taxa.alignment,
-    min.coverage.bp        = min.coverage.bp,
-    threads                = threads,
-    memory                 = memory
+    min.alignment.length = min.alignment.length,
+    min.taxa.alignment = min.taxa.alignment,
+    min.coverage.bp = min.coverage.bp,
+    threads = threads,
+    memory = memory
   )
 }# end trim.alignments
 
@@ -141,6 +141,7 @@ if (concatenate.genes == TRUE) {
       output.format = "phylip",
       minimum.exons = minimum.exons,
       remove.reverse = FALSE,
+      remove.duplicates = remove.duplicates,
       overwrite = overwrite,
       threads = threads,
       memory = memory
@@ -156,6 +157,7 @@ if (concatenate.genes == TRUE) {
       output.format = "phylip",
       minimum.exons = minimum.exons,
       remove.reverse = FALSE,
+      remove.duplicates = remove.duplicates,
       overwrite = overwrite,
       threads = threads,
       memory = memory
