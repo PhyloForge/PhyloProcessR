@@ -56,8 +56,8 @@
 
 ### Deprecations
 
-- `expandMissingAssembly()` is deprecated. It warns and still runs. Use
-  `assembleBinnedTargets()` instead. The new function recovers the same missing
+- `expandMissingAssembly()` was removed. Use `assembleBinnedTargets()` instead.
+  The new function recovers missing
   targets, extends the targets a sample already has, assembles one target at a
   time so a low-coverage locus keeps its own coverage distribution, and can run
   more than one round.

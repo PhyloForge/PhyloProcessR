@@ -32,9 +32,9 @@ provided container and Conda environment install the complete environment.
 
 PhyloProcessR requires R 4.0 or later. Its R package dependencies are declared
 in `DESCRIPTION` and installed by standard R package installers. Depending on
-the workflow, external tools can include fastp, BWA, HISAT2, SPAdes, BLAST,
-MAFFT, trimAl, IQ-TREE, GATK, and Samtools. See the workflow configuration files
-for the programs used by each stage.
+the workflow, external tools can include fastp, BWA, HISAT2, SPAdes, MEGAHIT,
+CAP3, BLAST, LAST, MAFFT, trimAl, IQ-TREE, GATK, and Samtools. See the workflow
+configuration files for the programs used by each stage.
 
 ## Complete workflow environment
 
@@ -182,7 +182,7 @@ workflow or compose the underlying functions in a custom R script.
 | Workflow | Script | Description |
 |---|---|---|
 | **Workflow 1** | `workflow-1_preprocess.R` | Organize, clean, assess, decontaminate, and merge raw reads |
-| **Workflow 2** | `workflow-2_assembly.R` | De novo assembly with SPAdes; match contigs to target markers |
+| **Workflow 2** | `workflow-2_assembly.R` | De novo assembly and target matching; optional additive per-locus recovery and contig curation |
 | **Workflow 3** | `workflow-3_variant-calling.R` | Call variants and make IUPAC or haplotype consensus contigs |
 | **Workflow 4** | `workflow-4_alignment.R` | Annotate contigs and align target markers |
 | **Workflow 5** | `workflow-5_trimming.R` | Trim alignments, concatenate genes, build unlinked dataset; optionally include novel markers from Workflow X4 |

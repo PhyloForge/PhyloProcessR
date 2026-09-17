@@ -147,9 +147,9 @@
 #
 # This is the step that handles divergence. A target locus assembles in the
 # draft assembly whatever its divergence, because assembly needs no reference.
-# The locus is then lost at the identification step, where blastn cannot match a
-# contig that is 35 percent divergent from the probe. LAST trains a scoring
-# matrix on this sample and finds those contigs. Numbers in HANDOFF.md.
+# The locus is then lost at the identification step, where blastn can miss a
+# highly divergent probe match. LAST uses its sensitive default scoring to find
+# those contigs. Numbers in HANDOFF.md.
 .identifyDraftContigs = function(draft.file = NULL,
                                  last.db = NULL,
                                  work.dir = NULL,

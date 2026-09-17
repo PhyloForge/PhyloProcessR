@@ -41,9 +41,9 @@ binned.assembly = FALSE
 # (non-merged) reads, because the mate of an anchored read supplies the flank.
 binning.reads = "decontaminated-reads"
 # The draft assembly directory that LAST searches for divergent contigs. A target
-# assembles in the draft assembly whatever its divergence, but blastn cannot
-# match the contig to a probe past about 25 percent divergence. LAST trains on
-# the sample and finds those contigs, which then become the baits.
+# assembles in the draft assembly whatever its divergence, but blastn can miss
+# a highly divergent match. LAST uses a more sensitive nucleotide search to
+# find those contigs, which then become the baits.
 # Set to "" to skip the LAST search and use only the target contigs.
 binned.draft.directory = "data-analysis/contigs/2_reduced-redundancy"
 # Least part of the target length that a sample sequence must cover to be used as
@@ -100,8 +100,8 @@ binned.match.percent = 60
 binned.match.coverage = 30
 # Minimum length in basepairs for a binned contig to be kept.
 binned.min.contig.length = 100
-# The k-mer values for the per-bin SPAdes runs. Every value must be below the
-# read length. Fewer values is faster.
+# The k-mer values for the per-bin MEGAHIT runs. Every value must be below the
+# read length. Fewer values are faster.
 binned.kmer.values = c(21, 33, 55, 77, 99)
 # Number of samples to bin at the same time. threads and memory are divided
 # between them, the way spades.parallel.samples divides them. One sample already
@@ -135,7 +135,7 @@ curate.match.coverage = 30
 # remove more redundancy but can collapse recently duplicated paralogous copies;
 # higher values preserve more copies but may retain redundant assembly fragments.
 # Values from 0.8 through 1 are supported; 0.9 preserves previous behavior.
-curate.similarity = 0.9
+curate.similarity = 0.98
 
 #Assembly settings
 #########################

@@ -21,7 +21,7 @@ test_that("LAST failures are distinct from successful searches with no hits", {
   expect_equal(file.size(out), 0)
 })
 
-test_that("curation orders, orients, gaps, and retains copies independently", {
+test_that("curation orders, orients, gaps, retains flanks, and keeps copies", {
   root = tempfile("curation-known-answer-")
   input = file.path(root, "input")
   output = file.path(root, "output")
@@ -33,12 +33,16 @@ test_that("curation orders, orients, gaps, and retains copies independently", {
   contigs = Biostrings::DNAStringSet(c(
     strrep("C", 60), strrep("A", 60),
     strrep("A", 120), strrep("C", 110),
-    strrep("G", 60), strrep("T", 60)))
+    strrep("G", 60), strrep("T", 60),
+    paste0(strrep("C", 30), strrep("A", 100), strrep("G", 30)),
+    strrep("A", 300), strrep("A", 200)))
   names(contigs) = paste0("source", seq_along(contigs))
   Biostrings::writeXStringSet(contigs, file.path(input, "sample.fasta"))
 
-  targets = Biostrings::DNAStringSet(rep(strrep("A", 200), 3))
-  names(targets) = c("joined", "copies", "short")
+  targets = Biostrings::DNAStringSet(rep(strrep("A", 200), 8))
+  names(targets) = c("joined", "copies", "short", "flanked",
+                     "left-target", "right-target", "overlap-one",
+                     "overlap-two")
   target.file = file.path(root, "targets.fa")
   Biostrings::writeXStringSet(targets, target.file)
 
@@ -56,7 +60,12 @@ test_that("curation orders, orients, gaps, and retains copies independently", {
     "copies\tcontig_3\t99\t120\t0\t0\t1\t120\t1\t120\t0\t120\t200\t120\t0",
     "copies\tcontig_4\t98\t110\t0\t0\t1\t110\t1\t110\t0\t110\t200\t110\t0",
     "short\tcontig_5\t99\t60\t0\t0\t1\t60\t1\t60\t0\t90\t200\t60\t0",
-    "short\tcontig_6\t98\t60\t0\t0\t1\t60\t1\t60\t0\t80\t200\t60\t0")
+    "short\tcontig_6\t98\t60\t0\t0\t1\t60\t1\t60\t0\t80\t200\t60\t0",
+    "flanked\tcontig_7\t99\t100\t0\t0\t51\t150\t31\t130\t0\t100\t200\t160\t0",
+    "left-target\tcontig_8\t99\t100\t0\t0\t1\t100\t31\t130\t0\t100\t200\t300\t0",
+    "right-target\tcontig_8\t99\t100\t0\t0\t1\t100\t171\t270\t0\t100\t200\t300\t0",
+    "overlap-one\tcontig_9\t99\t100\t0\t0\t1\t100\t31\t130\t0\t100\t200\t200\t0",
+    "overlap-two\tcontig_9\t99\t100\t0\t0\t1\t100\t71\t170\t0\t100\t200\t200\t0")
   writeLines(c("#!/bin/sh", paste0("printf '%s\\n' ", shQuote(hits))), lastal)
   Sys.chmod(c(cdhit, lastdb, lastal), "0755")
 
@@ -74,6 +83,11 @@ test_that("curation orders, orients, gaps, and retains copies independently", {
                paste0(strrep("A", 60), strrep("N", 80), strrep("G", 60)))
   expect_equal(sum(sub("_.*$", "", names(result)) == "copies"), 2)
   expect_false(any(sub("_.*$", "", names(result)) == "short"))
+  expect_equal(Biostrings::width(result["flanked"]), 160)
+  expect_equal(Biostrings::width(result["left-target"]), 150)
+  expect_equal(Biostrings::width(result["right-target"]), 150)
+  expect_equal(Biostrings::width(result["overlap-one"]), 200)
+  expect_equal(Biostrings::width(result["overlap-two"]), 200)
 })
 
 test_that("curation similarity is configurable and validated", {
@@ -88,7 +102,7 @@ test_that("curation similarity is configurable and validated", {
 
   function.body = paste(deparse(body(curateTargetContigs)), collapse = "\n")
   expect_match(function.body, '" -c ", similarity', fixed = TRUE)
-  expect_equal(formals(curateTargetContigs)$similarity, 0.9)
+  expect_equal(formals(curateTargetContigs)$similarity, 0.98)
 })
 
 test_that("SPAdes restart accepts valid completed outputs", {

@@ -281,8 +281,8 @@ target locus assembles in the draft assembly whatever its divergence,
 because de novo assembly needs no reference. The locus is then lost when
 \code{blastn} cannot match the contig to a probe. Give
 \code{draft.assembly.directory} and LAST searches the draft assembly of the
-sample against the targets. LAST trains a scoring matrix on the sample, so
-it finds contigs at 35 percent divergence that \code{blastn} misses. Those
+sample against the targets with its sensitive default scoring. It can find
+highly divergent contigs that \code{blastn} misses. Those
 contigs then become the baits, and bwa maps the reads to sequence of their
 own sample at full identity.
 }

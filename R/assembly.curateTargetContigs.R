@@ -3,8 +3,9 @@
 #' @description Curates the contigs of each sample against the target markers.
 #'   The function reduces redundancy with cd-hit-est, matches the targets to the
 #'   contigs with LAST, joins the fragments of one target that sit on separate
-#'   contigs, and cuts apart a contig that spans more than one target. It writes
-#'   one sequence per target for each sample, named after the target.
+#'   contigs, and cuts apart a contig that spans more than one target. A contig
+#'   that matches one target keeps its assembled flanks. It writes one sequence
+#'   per target for each sample, named after the target.
 #'
 #' @details This is the structural half of \code{annotateTargets}. It runs at the
 #'   end of workflow 2, before variant calling, because the variant caller maps
@@ -43,7 +44,7 @@
 #' @param similarity sequence-identity threshold used by \code{cd-hit-est} to
 #'   remove redundant contigs before target matching. Lower values collapse
 #'   more similar contigs and can merge recent paralogous copies. Must be from
-#'   \code{0.8} through \code{1}. Default: \code{0.9}.
+#'   \code{0.8} through \code{1}. Default: \code{0.98}.
 #'
 #' @param search.method which program matches the target markers to the contigs.
 #'   \code{"last"} (default) uses LAST, which matches a contig that is up to
@@ -85,7 +86,7 @@ curateTargetContigs = function(assembly.directory = NULL,
                                min.match.percent = 60,
                                min.match.length = 50,
                                min.match.coverage = 30,
-                               similarity = 0.9,
+                               similarity = 0.98,
                                search.method = c("last", "blast"),
                                threads = 1,
                                memory = 1,
@@ -293,16 +294,53 @@ curateTargetContigs = function(assembly.directory = NULL,
       total + current.end - current.start + 1
     }
 
-    fin.loci = Biostrings::DNAStringSet()
-    coverage.values = numeric(0)
-    target.lengths = numeric(0)
+    # Assign every base of a contig to one target. A contig that matches one
+    # target keeps both flanks. When non-overlapping targets share a contig, cut
+    # halfway across the gap between them. Overlapping matches do not cut one
+    # another because they can be alternative matches to homologous targets.
+    contig.target.bounds = list()
+    target.spans = filt.data[, .(
+      target.start = min(pmin(tStart, tEnd)),
+      target.end = max(pmax(tStart, tEnd)),
+      contig.length = tLen[1]
+    ), by = .(tName, qName)]
+    spans.by.contig = split(target.spans, by = "tName", keep.by = TRUE)
 
-    for (target.name in unique(filt.data$qName)) {
-      target.hits = filt.data[filt.data$qName == target.name, ]
+    for (contig.name in names(spans.by.contig)) {
+      spans = spans.by.contig[[contig.name]]
+
+      for (target.index in seq_len(nrow(spans))) {
+        current.start = spans$target.start[target.index]
+        current.end = spans$target.end[target.index]
+        left.ends = spans$target.end[spans$target.end < current.start]
+        right.starts = spans$target.start[spans$target.start > current.end]
+
+        assigned.start = 1
+        if (length(left.ends) > 0) {
+          assigned.start = floor((max(left.ends) + current.start) / 2) + 1
+        }
+        assigned.end = spans$contig.length[target.index]
+        if (length(right.starts) > 0) {
+          assigned.end = floor((current.end + min(right.starts)) / 2)
+        }
+        key = paste(contig.name, spans$qName[target.index], sep = "\r")
+        contig.target.bounds[[key]] = c(start = assigned.start, end = assigned.end)
+      }
+    }
+
+    final.sequences = list()
+    final.names = list()
+    coverage.values = list()
+    target.lengths = list()
+    hits.by.target = split(filt.data, by = "qName", keep.by = TRUE)
+
+    for (target.name in names(hits.by.target)) {
+      target.hits = hits.by.target[[target.name]]
+      hits.by.contig = split(target.hits, by = "tName", keep.by = TRUE)
       pieces = list()
 
-      for (contig.name in unique(target.hits$tName)) {
-        hits = target.hits[target.hits$tName == contig.name, ]
+      for (contig.name in names(hits.by.contig)) {
+        hits = hits.by.contig[[contig.name]]
         strand.row = which.max(hits$bitscore)
         same.strand = sign(hits$qEnd[strand.row] - hits$qStart[strand.row]) ==
                       sign(hits$tEnd[strand.row] - hits$tStart[strand.row])
@@ -311,19 +349,37 @@ curateTargetContigs = function(assembly.directory = NULL,
         target.end = max(hits$qStart, hits$qEnd)
         contig.start = min(hits$tStart, hits$tEnd)
         contig.end = max(hits$tStart, hits$tEnd)
+        bounds.key = paste(contig.name, target.name, sep = "\r")
+        assigned.start = contig.target.bounds[[bounds.key]]["start"]
+        assigned.end = contig.target.bounds[[bounds.key]]["end"]
 
         if (!same.strand) {
           sequence = Biostrings::reverseComplement(sequence)
           old.start = contig.start
           contig.start = hits$tLen[1] - contig.end + 1
           contig.end = hits$tLen[1] - old.start + 1
+          old.start = assigned.start
+          assigned.start = hits$tLen[1] - assigned.end + 1
+          assigned.end = hits$tLen[1] - old.start + 1
         }
 
-        extract.start = max(1, contig.start - (target.start - 1))
-        extract.end = min(hits$tLen[1], contig.end + (hits$qLen[1] - target.end))
+        extract.start = max(assigned.start, contig.start - (target.start - 1))
+        extract.end = min(assigned.end, contig.end + (hits$qLen[1] - target.end))
         pieces[[length(pieces) + 1]] = list(
           sequence = Biostrings::subseq(sequence, start = extract.start,
                                         end = extract.end),
+          left.flank = if (assigned.start < extract.start) {
+            Biostrings::subseq(sequence, start = assigned.start,
+                              end = extract.start - 1)
+          } else {
+            Biostrings::DNAStringSet("")
+          },
+          right.flank = if (extract.end < assigned.end) {
+            Biostrings::subseq(sequence, start = extract.end + 1,
+                              end = assigned.end)
+          } else {
+            Biostrings::DNAStringSet("")
+          },
           q.start = target.start,
           q.end = target.end,
           coverage = interval.width(hits$qStart, hits$qEnd),
@@ -340,13 +396,17 @@ curateTargetContigs = function(assembly.directory = NULL,
 
       if (distinct.copies) {
         for (piece in pieces) {
-          names(piece$sequence) = target.name
-          fin.loci = append(fin.loci, piece$sequence)
-          coverage.values = c(coverage.values, piece$coverage)
-          target.lengths = c(target.lengths, piece$target.length)
+          full.sequence = Biostrings::DNAStringSet(paste0(
+            as.character(piece$left.flank), as.character(piece$sequence),
+            as.character(piece$right.flank)))
+          locus.index = length(final.sequences) + 1
+          final.sequences[[locus.index]] = as.character(full.sequence)
+          final.names[[locus.index]] = target.name
+          coverage.values[[locus.index]] = piece$coverage
+          target.lengths[[locus.index]] = piece$target.length
         }
       } else {
-        joined = character(0)
+        joined = as.character(pieces[[1]]$left.flank)
         for (piece.index in seq_along(pieces)) {
           joined = c(joined, as.character(pieces[[piece.index]]$sequence))
           if (piece.index < length(pieces)) {
@@ -354,14 +414,21 @@ curateTargetContigs = function(assembly.directory = NULL,
             if (gap > 0) joined = c(joined, paste(rep("N", gap), collapse = ""))
           }
         }
+        joined = c(joined, as.character(pieces[[length(pieces)]]$right.flank))
         joined.sequence = Biostrings::DNAStringSet(paste(joined, collapse = ""))
-        names(joined.sequence) = target.name
-        fin.loci = append(fin.loci, joined.sequence)
-        coverage.values = c(coverage.values, interval.width(target.hits$qStart,
-                                                            target.hits$qEnd))
-        target.lengths = c(target.lengths, max(target.hits$qLen))
+        locus.index = length(final.sequences) + 1
+        final.sequences[[locus.index]] = as.character(joined.sequence)
+        final.names[[locus.index]] = target.name
+        coverage.values[[locus.index]] = interval.width(target.hits$qStart,
+                                                        target.hits$qEnd)
+        target.lengths[[locus.index]] = max(target.hits$qLen)
       }
     }
+
+    fin.loci = Biostrings::DNAStringSet(unlist(final.sequences, use.names = FALSE))
+    names(fin.loci) = unlist(final.names, use.names = FALSE)
+    coverage.values = unlist(coverage.values, use.names = FALSE)
+    target.lengths = unlist(target.lengths, use.names = FALSE)
 
     keep = .baseWidth(fin.loci) >= min.match.length &
            coverage.values >= ((min.match.coverage / 100) * target.lengths)

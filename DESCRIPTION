@@ -1,7 +1,7 @@
 Package: PhyloProcessR
 Type: Package
 Title: A Modular Toolkit for Targeted Sequence-Capture Phylogenomics
-Version: 1.0.0
+Version: 1.0.0.9000
 Authors@R:
     person("Carl", "Hutter", role = c("aut", "cre"),
            email = "carl.hutter@gmail.com",

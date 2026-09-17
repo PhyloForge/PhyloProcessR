@@ -26,7 +26,7 @@ function calls.
 | Workflow | Purpose | Principal functions |
 |---|---|---|
 | 1 | Process raw reads | `organizeReads`, `fastqStats`, `fastpClean`, `removeContamination`, `mergePairedEndReads` |
-| 2 | Assemble reads and recover targets | `assembleSpades`, `reduceRedundancy`, `removeOffTargetContigs`, `expandMissingAssembly` |
+| 2 | Assemble reads and recover targets | `assembleSpades`, `reduceRedundancy`, `removeOffTargetContigs`, `curateTargetContigs`, `assembleBinnedTargets` |
 | 3 | Call variants and make consensus contigs | `prepareBAM`, `mapReferenceSample`, `haplotypeCaller`, `genotypeSamples`, `VCFtoContigs` |
 | 4 | Annotate contigs and align targets | `filterHeterozygosity`, `annotateTargets`, `alignTargets` |
 | 5 | Trim and construct datasets | `trimAlignmentTargets`, `alignMACSE`, `concatenateGenes`, `gatherUnlinked`, `superTrimmer` |
@@ -70,12 +70,18 @@ Workflow 2 performs these operations:
 1. Assemble each sample with SPAdes.
 2. Reduce redundant contigs with CD-HIT-EST.
 3. Keep contigs that match the target markers.
-4. Optionally recover missing loci with `expandMissingAssembly`.
+4. Optionally curate target contigs before they are used as baits.
+5. Optionally run additive per-locus assembly with `assembleBinnedTargets()` to
+   recover missing targets and extend targets already present.
+6. Optionally curate the final contigs before variant calling.
 
 The main contig outputs occur under `data-analysis/contigs/`.
 
-If `expand.missing = TRUE`, use paired, unmerged reads for `mapping.reads`.
-Do not use `pe-merged-reads` for this parameter.
+If `binned.assembly = TRUE`, set `binning.reads` to paired, unmerged reads.
+The default `decontaminated-reads` value preserves mate information used to
+recover flanking sequence. Keep `binned.draft.directory` set when LAST should
+search the draft assembly for divergent target contigs that the initial target
+filter did not assign.
 
 ```bash
 Rscript workflow-2_assembly.R
