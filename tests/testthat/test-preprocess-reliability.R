@@ -374,6 +374,21 @@ test_that("temporary reference indexes are removed when preprocessing exits", {
 })
 
 
+test_that("capture sorting bounds threads and per-thread memory", {
+  large = PhyloProcessR:::.samtoolsSortResources(threads = 32, memory = 225)
+  expect_identical(large$threads, 8L)
+  expect_identical(large$buffer.mb, 1024L)
+
+  allocated = PhyloProcessR:::.samtoolsSortResources(threads = 16, memory = 64)
+  expect_identical(allocated$threads, 8L)
+  expect_identical(allocated$buffer.mb, 1024L)
+
+  small = PhyloProcessR:::.samtoolsSortResources(threads = 8, memory = 0.002)
+  expect_identical(small$threads, 2L)
+  expect_identical(small$buffer.mb, 1L)
+})
+
+
 test_that("zero contaminant counts retain typed report columns", {
   result = PhyloProcessR:::.readContaminantCounts(tempfile(),
                                                   data.frame(Contig = character()))

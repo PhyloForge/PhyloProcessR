@@ -137,6 +137,19 @@ x0_tools <- function() {
 }
 
 
+test_that("X0 keeps processing code inside screenReads", {
+  workflow.file <- find_x0_workflow()
+  workflow.lines <- readLines(workflow.file, warn = FALSE)
+
+  expect_true(any(grepl("screenReads\\(", workflow.lines)))
+  expect_false(any(grepl("for \\(", workflow.lines)))
+  expect_false(any(grepl("write.csv\\(", workflow.lines)))
+  expect_false(any(grepl("fastqStats\\(", workflow.lines)))
+  expect_false(any(grepl("fastpClean\\(", workflow.lines)))
+  expect_false(any(grepl("assessCaptureEfficiency\\(", workflow.lines)))
+})
+
+
 test_that("X0 processes each sample separately and reports the target union", {
   tools <- x0_tools()
   skip_if(any(tools == ""), "bwa, fastp, or samtools is not on the PATH")

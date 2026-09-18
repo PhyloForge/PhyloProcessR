@@ -38,9 +38,9 @@ searches the system PATH.}
 
 \item{threads}{number of CPU threads to pass to BWA and samtools.}
 
-\item{mem}{approximate samtools sort buffer in GB. The value is split across
-the sort threads and passed to \code{samtools sort -m}. It controls the sort
-buffer only and does not cap the BWA process or every allocation.}
+\item{mem}{total samtools sort memory budget in GB. Capture assessment uses
+at most eight sort threads and caps each thread's \code{samtools sort -m}
+buffer at 1 GB. It does not cap the BWA process or every allocation.}
 
 \item{overwrite}{logical; if TRUE the output directory is deleted and
 recreated before processing. FALSE resumes and skips only the lanes that

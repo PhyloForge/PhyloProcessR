@@ -29,9 +29,9 @@
 #'
 #' @param threads number of CPU threads to pass to BWA and samtools.
 #'
-#' @param mem approximate samtools sort buffer in GB. The value is split across
-#'   the sort threads and passed to \code{samtools sort -m}. It controls the sort
-#'   buffer only and does not cap the BWA process or every allocation.
+#' @param mem total samtools sort memory budget in GB. Capture assessment uses
+#'   at most eight sort threads and caps each thread's \code{samtools sort -m}
+#'   buffer at 1 GB. It does not cap the BWA process or every allocation.
 #'
 #' @param overwrite logical; if TRUE the output directory is deleted and
 #'   recreated before processing. FALSE resumes and skips only the lanes that
@@ -238,17 +238,12 @@ assessCaptureEfficiency = function(input.reads = NULL,
                           tmpdir = out.path, fileext = ".bam")
       on.exit(unlink(c(bam.file, paste0(bam.file, ".bai"))), add = TRUE)
 
-      # samtools sort -m is the approximate buffer per sort thread. Divide the
-      # mem budget (GB) across the sort threads in MiB, so a small or fractional
-      # budget is honored instead of flooring each thread to a whole GiB. Reduce
-      # the sort thread count when the budget cannot give each thread the 1M
-      # minimum. mem controls the sort buffer only; it does not cap BWA.
-      sort.threads = max(1, threads)
-      sort.buffer.mb = floor(mem * 1024 / sort.threads)
-      if (sort.buffer.mb < 1) {
-        sort.threads = max(1, floor(mem * 1024))
-        sort.buffer.mb = max(1, floor(mem * 1024 / sort.threads))
-      }
+      # samtools sort -m is allocated once for each sort thread. Keep the
+      # temporary capture-assessment sort below a safe per-thread limit even
+      # when the workflow receives the total memory of a large cluster node.
+      sort.resources = .samtoolsSortResources(threads = threads, memory = mem)
+      sort.threads = sort.resources$threads
+      sort.buffer.mb = sort.resources$buffer.mb
       .runPipeline(paste0(bwa.command, " mem -M -t ", threads, " ",
                           shQuote(target.copy), " ",
                           shQuote(read1[1]), " ", shQuote(read2[1]),

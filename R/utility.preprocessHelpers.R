@@ -98,6 +98,21 @@
 }
 
 
+# Selects conservative samtools sort resources. The -m value is allocated for
+# each sort thread, so a large workflow memory value must not become one large
+# allocation per thread. Capture screening does not benefit from many sort
+# threads, and a 1 GiB buffer per thread is sufficient for these temporary BAMs.
+.samtoolsSortResources = function(threads = 1,
+                                  memory = 8) {
+
+  total.mb = max(1L, floor(memory * 1024))
+  sort.threads = as.integer(min(max(1L, as.integer(threads)), 8L, total.mb))
+  buffer.mb = as.integer(min(1024L, max(1L, floor(total.mb / sort.threads))))
+
+  return(list(threads = sort.threads, buffer.mb = buffer.mb))
+}
+
+
 .ensureDirectory = function(path, label = "directory") {
   if (!dir.exists(path)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   if (!dir.exists(path)) stop("Could not create ", label, ": ", path)
