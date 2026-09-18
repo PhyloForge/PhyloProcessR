@@ -276,41 +276,46 @@ control which subdirectories are kept. The hard-filter thresholds are
 cohort-level record filters; the workflow applies no per-sample genotype-depth
 filter and does not produce contig sequences.
 
+### Workflow X0: Rapid read screening
+
+Workflow X0 processes one sample at a time. It calculates raw-read,
+cleaned-read, and target-mapping statistics to give a rapid estimate of sample
+success. This design limits temporary disk use for a large sample set.
+
+```bash
+Rscript workflow-X0_read-screening.R
+```
+
+Set `use.dropbox = TRUE` to download reads from Dropbox. When it is FALSE, the
+workflow reads a local directory. A local directory can hold one sub-directory
+per sample or flat files with a shared filename prefix.
+
+Each step receives an isolated single-sample directory. Reads left by a stopped
+run cannot enter the next sample's cleaning or mapping steps. Flat local input
+uses file-system links, so the workflow does not copy the source reads.
+
+The workflow is resumable. It writes a completion record for each sample after
+all results are saved. A later run skips a sample when the saved target identity
+matches the current target FASTA. A changed target causes the sample to run
+again. An interrupted sample resumes the missing work.
+
+The raw counts are in `logs/X0_fastq-stats_rolling.csv`. The per-target counts
+are in `sample-capture-assessment/<Sample>/`. The barcode summary, when the scan
+is enabled, is in `barcode-assessment/logs/barcodeSampleScan_summary.csv`. The
+final merged table is `logs/X0_read-screening_FINAL.csv`. The final table
+has one row per selected sample with a Status column. A missing measurement stays
+NA. The `targetsHit` value is the number of unique targets captured across the
+lanes of a sample.
+
 ### Workflow X2: Capture assessment
 
-Workflow X2 processes one sample at a time. It calculates raw-read, cleaned-read,
-and target-mapping statistics. This design limits temporary disk use for a
-large sample set.
+Workflow X2 assesses cleaned reads produced by workflow 1. It calculates read
+statistics and maps the reads to the target FASTA without downloading or
+cleaning raw reads.
 
 ```bash
 Rscript workflow-X2_capture-assessment.R
 ```
-
-The read source is one of three options. Set `use.dropbox = TRUE` or
-`use.sra = TRUE`, but not both. When both are FALSE, the workflow reads a local
-directory. A local directory holds either one sub-directory per sample or flat
-files with a shared filename prefix, but not both layouts together. The workflow
-maps paired reads only, so a single-end SRA row is reported and skipped.
-
-The workflow builds the sample identities and the expected lanes before the loop.
-Each step receives a single-sample view of the read directories, so one sample's
-work never processes or deletes another sample's reads. The workflow saves the
-raw counts and the per-sample results before it deletes any read files.
-
-The workflow is resumable. It writes a completion record for each sample after
-all results are saved. A later run skips a sample only when this record matches
-the current request, which includes the target FASTA, the read length, the
-lanes, and the barcode settings. A changed target, an added lane, or a newly
-enabled barcode scan causes the sample to run again. An interrupted sample
-resumes the missing work.
-
-The raw counts are in `logs/X2_fastq-stats_rolling.csv`. The per-target counts
-are in `sample-capture-assessment/<Sample>/`. The barcode summary, when the scan
-is enabled, is in `barcode-assessment/logs/barcodeSampleScan_summary.csv`. The
-final merged table is `logs/X2_capture-assessment_FINAL.csv`. The final table
-has one row per selected sample with a Status column. A missing measurement stays
-NA. The `targetsHit` value is the number of unique targets captured across the
-lanes of a sample.
 
 ### Workflow X3: Legacy-data integration
 

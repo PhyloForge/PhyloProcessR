@@ -181,13 +181,14 @@ workflow or compose the underlying functions in a custom R script.
 
 | Workflow | Script | Description |
 |---|---|---|
+| **Workflow X0** | `workflow-X0_read-screening.R` | Quickly screen raw reads, cleaning loss, and capture success one sample at a time |
 | **Workflow 1** | `workflow-1_preprocess.R` | Organize, clean, assess, decontaminate, and merge raw reads |
 | **Workflow 2** | `workflow-2_assembly.R` | De novo assembly and target matching; optional additive per-locus recovery and contig curation |
 | **Workflow 3** | `workflow-3_variant-calling.R` | Call variants and make IUPAC or haplotype consensus contigs |
 | **Workflow 4** | `workflow-4_alignment.R` | Annotate contigs and align target markers |
 | **Workflow 5** | `workflow-5_trimming.R` | Trim alignments, concatenate genes, build unlinked dataset; optionally include novel markers from Workflow X4 |
 | **Workflow X1** | `workflow-X1_joint-genotype_VCF.R` | Map samples to a common reference and make a joint VCF file |
-| **Workflow X2** | `workflow-X2_capture-assessment.R` | Assess raw reads, cleaned reads, and capture efficiency one sample at a time |
+| **Workflow X2** | `workflow-X2_capture-assessment.R` | Assess capture efficiency for cleaned reads from workflow 1 |
 | **Workflow X3** | `workflow-X3_legacy-integration.R` | Integrate Sanger/GenBank legacy alignments into the capture dataset; supports NEXUS conversion and mitochondrial loci |
 | **Workflow X4** | `workflow-X4_novel-loci.R` | Recover, assemble, and align novel shared genomic regions |
 | **Workflow X5** | `workflow-X5_paralog-analysis.R` | Assess saved copies, separate supported two-copy groups, and export filtered markers |
