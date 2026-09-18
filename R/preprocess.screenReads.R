@@ -147,6 +147,69 @@
 }
 
 
+.screenRemoveSummarySample = function(summary.file = NULL,
+                                       sample.name = NULL) {
+
+  if (file.exists(summary.file) == FALSE) {
+    return(invisible(NULL))
+  }
+
+  summary.data = tryCatch(read.csv(summary.file, stringsAsFactors = FALSE),
+                          error = function(e) NULL)
+
+  if (is.null(summary.data) == TRUE ||
+      "Sample" %in% colnames(summary.data) == FALSE) {
+    return(invisible(NULL))
+  }
+
+  summary.data = summary.data[summary.data$Sample != sample.name, , drop = FALSE]
+  write.csv(summary.data, summary.file, row.names = FALSE)
+
+  return(invisible(NULL))
+}
+
+
+.screenResetIncompleteSample = function(sample.name = NULL,
+                                         cleaned.directory = NULL,
+                                         log.directory = NULL,
+                                         completion.file = NULL) {
+
+  cleaned.sample.directory = file.path(cleaned.directory, sample.name)
+  if (dir.exists(cleaned.sample.directory) == TRUE) {
+    unlink(cleaned.sample.directory, recursive = TRUE)
+  }
+
+  fastp.files = list.files(log.directory,
+                           pattern = "_fastp-clean",
+                           full.names = TRUE)
+  if (length(fastp.files) > 0) {
+    unlink(fastp.files)
+  }
+
+  capture.metadata = list.files(log.directory,
+                                pattern = "_capture-metadata\\.csv$",
+                                full.names = TRUE)
+  if (length(capture.metadata) > 0) {
+    unlink(capture.metadata)
+  }
+
+  if (file.exists(completion.file) == TRUE) {
+    unlink(completion.file)
+  }
+
+  summary.files = c("logs/fastp_summary.csv",
+                    "logs/sample-capture-assessment_summary.csv",
+                    "logs/barcodeSampleScan_summary.csv",
+                    "logs/X0_fastq-stats_rolling.csv")
+
+  for (summary.file in summary.files) {
+    .screenRemoveSummarySample(summary.file, sample.name)
+  }
+
+  return(invisible(NULL))
+}
+
+
 .screenAggregateFastq = function(fastq.data = NULL) {
 
   if (nrow(fastq.data) == 0) {
@@ -408,6 +471,14 @@ screenReads = function(read.directory = NULL,
         unlink(metadata.files)
       }
     }
+
+    # A sample without a valid X0 completion file is incomplete. Remove only
+    # that sample's temporary cleaning results before the retry. This prevents
+    # stale fastp metadata from stopping a resumed workflow.
+    .screenResetIncompleteSample(sample.name = sample.name,
+                                 cleaned.directory = cleaned.directory,
+                                 log.directory = log.directory,
+                                 completion.file = completion.file)
 
     if (use.dropbox == TRUE) {
       input.data = .screenDropboxReads(sample.data = sample.data,

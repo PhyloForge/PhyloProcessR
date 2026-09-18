@@ -226,6 +226,39 @@ test_that("X0 reprocesses a sample when the target reference changes", {
 })
 
 
+test_that("X0 replaces stale fastp results for an incomplete sample", {
+  tools <- x0_tools()
+  skip_if(any(tools == ""), "bwa, fastp, or samtools is not on the PATH")
+
+  root <- tempfile("x0-fastp-retry-")
+  dir.create(root)
+  project <- x0_build_project(root, tools)
+  x0_run(root)
+
+  completion.file <- file.path(root,
+                               "logs",
+                               "sample_logs",
+                               "Sample1",
+                               "Sample1_X0-complete.csv")
+  assessment.directory <- file.path(root,
+                                    "sample-capture-assessment",
+                                    "Sample1")
+  file.remove(completion.file)
+  unlink(assessment.directory, recursive = TRUE)
+
+  input.file <- file.path(project$read.directory,
+                          "Sample1_L001_READ1.fastq.gz")
+  Sys.setFileTime(input.file, Sys.time() + 1)
+
+  expect_no_error(x0_run(root))
+  expect_true(file.exists(completion.file))
+
+  final <- read.csv(file.path(root, "logs", "X0_read-screening_FINAL.csv"),
+                    stringsAsFactors = FALSE)
+  expect_equal(final$Status[final$Sample == "Sample1"], "complete")
+})
+
+
 test_that("X0 fails a sample with an incomplete lane without deleting reads", {
   tools <- x0_tools()
   skip_if(any(tools == ""), "bwa, fastp, or samtools is not on the PATH")
