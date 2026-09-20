@@ -111,28 +111,16 @@ if (clean.reads == TRUE) {
   input.reads = paste0(processed.reads, "/cleaned-reads")
 }
 
-#Runs decontamination of reads
+# Remove contaminant reads. The function creates references when a list is set.
 if (decontamination == TRUE){
-  #Downloads the contaminant genomes, or uses a local set of genomes
-  if (download.contaminant.genomes == TRUE){
-    createContaminantDB(decontamination.list = contaminant.genome.list,
-                        output.directory = "contaminant-references",
-                        include.univec = include.univec,
-                        include.genbank = contaminant.genbank.accessions,
-                        include.fasta = contaminant.fasta,
-                        overwrite = overwrite.contaminant.database)
-    contaminant.references = "contaminant-references"
-  } else {
-    if (is.null(decontamination.path) == TRUE){
-      stop("Set decontamination.path to a local set of contaminant genomes, or set download.contaminant.genomes = TRUE.")
-    }
-    contaminant.references = decontamination.path
-  }
-
-  ## remove external contamination
   removeContamination(input.reads = input.reads,
                       output.directory = paste0(processed.reads, "/decontaminated-reads"),
-                      decontamination.path = contaminant.references,
+                      decontamination.path = if (download.contaminant.genomes) NULL else decontamination.path,
+                      decontamination.list = if (download.contaminant.genomes) contaminant.genome.list else NULL,
+                      contaminant.directory = "contaminant-references",
+                      include.univec = include.univec,
+                      include.genbank = contaminant.genbank.accessions,
+                      include.fasta = contaminant.fasta,
                       map.match = decontamination.match,
                       samtools.path = samtools.path,
                       bwa.path = bwa.path,
@@ -140,14 +128,8 @@ if (decontamination == TRUE){
                       mem = memory,
                       overwrite = overwrite,
                       overwrite.reference = overwrite.contaminant.database,
+                      overwrite.contaminants = overwrite.contaminant.database,
                       quiet = quiet)
-
-  # References downloaded for this run are temporary. User-provided reference
-  # directories are left unchanged.
-  if (download.contaminant.genomes == TRUE &&
-      dir.exists("contaminant-references") == TRUE) {
-    unlink("contaminant-references", recursive = TRUE)
-  }
   input.reads = paste0(processed.reads, "/decontaminated-reads")
 }
 

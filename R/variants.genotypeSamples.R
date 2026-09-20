@@ -53,6 +53,8 @@ genotypeSamples = function(mapping.directory = NULL,
     length(x) == 1 && is.numeric(x) && is.finite(x)
   }, logical(1))]
   if (length(bad) > 0) { stop(bad[1], " must be one finite numeric value.") }
+  filter.thresholds = lapply(thresholds, format, nsmall = 1, scientific = FALSE,
+                             trim = TRUE)
 
   if (is.null(mapping.directory) || !dir.exists(mapping.directory)) {
     stop("Mapping directory not found.")
@@ -121,17 +123,17 @@ genotypeSamples = function(mapping.directory = NULL,
       filtered.genotypes = file.path(sample.dir, "gatk4-filtered-genotypes.vcf")
 
       #Hard-filter expressions: a record failing any test is labeled and removed
-      snp.expr = paste0("QD < ", custom.SNP.QD,
-                        " || QUAL < ", custom.SNP.QUAL,
-                        " || SOR > ", custom.SNP.SOR,
-                        " || FS > ", custom.SNP.FS,
-                        " || MQ < ", custom.SNP.MQ,
-                        " || MQRankSum < ", custom.SNP.MQRankSum,
-                        " || ReadPosRankSum < ", custom.SNP.ReadPosRankSum)
-      indel.expr = paste0("QD < ", custom.INDEL.QD,
-                          " || QUAL < ", custom.INDEL.QUAL,
-                          " || FS > ", custom.INDEL.FS,
-                          " || ReadPosRankSum < ", custom.INDEL.ReadPosRankSum)
+      snp.expr = paste0("QD < ", filter.thresholds$custom.SNP.QD,
+                        " || QUAL < ", filter.thresholds$custom.SNP.QUAL,
+                        " || SOR > ", filter.thresholds$custom.SNP.SOR,
+                        " || FS > ", filter.thresholds$custom.SNP.FS,
+                        " || MQ < ", filter.thresholds$custom.SNP.MQ,
+                        " || MQRankSum < ", filter.thresholds$custom.SNP.MQRankSum,
+                        " || ReadPosRankSum < ", filter.thresholds$custom.SNP.ReadPosRankSum)
+      indel.expr = paste0("QD < ", filter.thresholds$custom.INDEL.QD,
+                          " || QUAL < ", filter.thresholds$custom.INDEL.QUAL,
+                          " || FS > ", filter.thresholds$custom.INDEL.FS,
+                          " || ReadPosRankSum < ", filter.thresholds$custom.INDEL.ReadPosRankSum)
 
       #The genotyping steps run in order: genotype, split SNPs and indels, hard
       #filter each, merge, then keep only the passing records.

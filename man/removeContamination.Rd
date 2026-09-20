@@ -15,7 +15,13 @@ removeContamination(
   mem = 1,
   overwrite = FALSE,
   overwrite.reference = FALSE,
-  quiet = TRUE
+  quiet = TRUE,
+  decontamination.list = NULL,
+  contaminant.directory = "contaminant-references",
+  include.univec = TRUE,
+  include.genbank = NULL,
+  include.fasta = NULL,
+  overwrite.contaminants = FALSE
 )
 }
 \arguments{
@@ -25,8 +31,8 @@ in fastq.gz format, organised in per-sample sub-directories.}
 \item{output.directory}{path to the directory where decontaminated reads
 will be saved (one sub-directory per sample).}
 
-\item{decontamination.path}{path to a directory of contaminant reference
-genome FASTA files (e.g. produced by createContaminantDB()).}
+\item{decontamination.path}{path to an existing directory of contaminant
+genome FASTA files. Set this or decontamination.list, but not both.}
 
 \item{map.match}{numeric between 0 and 1; the minimum alignment identity that
 makes a read a contaminant. 0.90 means 90 percent identity. Identity is
@@ -58,6 +64,22 @@ when the contaminant reference files have changed. The index is removed
 when the function exits.}
 
 \item{quiet}{logical; if TRUE BWA and samtools stdout/stderr are suppressed.}
+
+\item{decontamination.list}{path to a CSV file with Genome and
+GenBank_Accession columns. When set, the function creates references in
+contaminant.directory before it removes contaminant reads.}
+
+\item{contaminant.directory}{path to the directory for generated contaminant
+references. References stay in this directory for later runs.}
+
+\item{include.univec}{logical; include NCBI UniVec in generated references.}
+
+\item{include.genbank}{additional GenBank accessions for generated references.}
+
+\item{include.fasta}{path to a local FASTA file for generated references.}
+
+\item{overwrite.contaminants}{logical; download generated references again
+when TRUE. This does not control read output replacement.}
 }
 \value{
 invisibly returns the summary data frame; writes decontaminated
@@ -68,8 +90,9 @@ and logs/removeContamination_contaminants.csv.
 \description{
 Removes reads that map to a set of contaminant genomes (e.g.
 human, mouse, or vector sequences) using BWA-MEM and samtools. A combined
-BWA index is built from all FASTA files in decontamination.path and the
-reads are mapped against it. A read pair is a contaminant when either mate
+BWA index is built from the reference files in decontamination.path. If
+decontamination.list is set, the function first creates the reference
+directory with createContaminantDB(). A read pair is a contaminant when either mate
 aligns at or above the map.match identity threshold. Contaminant pairs are
 removed from the read set and counted per contaminant genome. Every other
 pair is kept, including a pair that aligns below the threshold.

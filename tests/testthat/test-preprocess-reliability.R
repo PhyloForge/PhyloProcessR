@@ -422,6 +422,37 @@ test_that("active contaminant references exclude cached extras", {
 })
 
 
+test_that("removeContamination creates references from a list", {
+  root = tempfile("preprocess-standalone-decontamination-")
+  dir.create(root)
+  dir.create(file.path(root, "reads"))
+  writeLines("Genome,GenBank_Accession", file.path(root, "references.csv"))
+  writeLines(c(">local", "ACGT"), file.path(root, "local.fa"))
+
+  for (program in c("bwa", "samtools")) {
+    path = file.path(root, program)
+    writeLines("#!/bin/sh", path)
+    Sys.chmod(path, mode = "0755")
+  }
+
+  with_preprocess_test_directory(root, {
+    expect_error(removeContamination(input.reads = "reads",
+                                     decontamination.path = "reads",
+                                     decontamination.list = "references.csv"),
+                 "either decontamination.path or decontamination.list")
+    removeContamination(input.reads = "reads",
+                        output.directory = "clean-reads",
+                        decontamination.list = "references.csv",
+                        include.univec = FALSE,
+                        include.fasta = "local.fa",
+                        bwa.path = file.path(root, "bwa"),
+                        samtools.path = file.path(root, "samtools"))
+    expect_true(file.exists("contaminant-references/active-references.csv"))
+    expect_true(file.exists("contaminant-references/manually-included-data.fa"))
+  })
+})
+
+
 test_that("capture targetsHit counts the union of targets across lanes", {
   root = tempfile("preprocess-capture-union-")
   dir.create(root)

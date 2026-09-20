@@ -2,8 +2,9 @@
 #'
 #' @description Removes reads that map to a set of contaminant genomes (e.g.
 #'   human, mouse, or vector sequences) using BWA-MEM and samtools. A combined
-#'   BWA index is built from all FASTA files in decontamination.path and the
-#'   reads are mapped against it. A read pair is a contaminant when either mate
+#'   BWA index is built from the reference files in decontamination.path. If
+#'   decontamination.list is set, the function first creates the reference
+#'   directory with createContaminantDB(). A read pair is a contaminant when either mate
 #'   aligns at or above the map.match identity threshold. Contaminant pairs are
 #'   removed from the read set and counted per contaminant genome. Every other
 #'   pair is kept, including a pair that aligns below the threshold.
@@ -14,8 +15,24 @@
 #' @param output.directory path to the directory where decontaminated reads
 #'   will be saved (one sub-directory per sample).
 #'
-#' @param decontamination.path path to a directory of contaminant reference
-#'   genome FASTA files (e.g. produced by createContaminantDB()).
+#' @param decontamination.path path to an existing directory of contaminant
+#'   genome FASTA files. Set this or decontamination.list, but not both.
+#'
+#' @param decontamination.list path to a CSV file with Genome and
+#'   GenBank_Accession columns. When set, the function creates references in
+#'   contaminant.directory before it removes contaminant reads.
+#'
+#' @param contaminant.directory path to the directory for generated contaminant
+#'   references. References stay in this directory for later runs.
+#'
+#' @param include.univec logical; include NCBI UniVec in generated references.
+#'
+#' @param include.genbank additional GenBank accessions for generated references.
+#'
+#' @param include.fasta path to a local FASTA file for generated references.
+#'
+#' @param overwrite.contaminants logical; download generated references again
+#'   when TRUE. This does not control read output replacement.
 #'
 #' @param map.match numeric between 0 and 1; the minimum alignment identity that
 #'   makes a read a contaminant. 0.90 means 90 percent identity. Identity is
@@ -65,14 +82,24 @@ removeContamination = function(input.reads = "cleaned-reads",
                                mem = 1,
                                overwrite = FALSE,
                                overwrite.reference = FALSE,
-                               quiet = TRUE) {
+                               quiet = TRUE,
+                               decontamination.list = NULL,
+                               contaminant.directory = "contaminant-references",
+                               include.univec = TRUE,
+                               include.genbank = NULL,
+                               include.fasta = NULL,
+                               overwrite.contaminants = FALSE) {
 
   #Quick checks
   options(stringsAsFactors = FALSE)
   if (is.null(input.reads) == TRUE){ stop("Please provide input reads.") }
   if (file.exists(input.reads) == F){ stop("Input reads not found.") }
-  if (is.null(decontamination.path) == TRUE){ stop("Please provide decontamination genomes / sequences.") }
-  if (dir.exists(decontamination.path) == F){ stop("Decontamination directory not found.") }
+  if (is.null(decontamination.path) == is.null(decontamination.list)) {
+    stop("Set either decontamination.path or decontamination.list.")
+  }
+  if (is.null(decontamination.path) == FALSE && dir.exists(decontamination.path) == FALSE) {
+    stop("Decontamination directory not found.")
+  }
   if (length(map.match) != 1 || is.numeric(map.match) == FALSE ||
       is.finite(map.match) == FALSE || map.match < 0 || map.match > 1){
     stop("map.match must be a number between 0 and 1.")
@@ -83,14 +110,33 @@ removeContamination = function(input.reads = "cleaned-reads",
   }
   if (length(overwrite) != 1 || is.logical(overwrite) == FALSE || is.na(overwrite) ||
       length(overwrite.reference) != 1 || is.logical(overwrite.reference) == FALSE ||
-      is.na(overwrite.reference)) {
-    stop("overwrite and overwrite.reference must be TRUE or FALSE.")
+      is.na(overwrite.reference) || length(overwrite.contaminants) != 1 ||
+      is.logical(overwrite.contaminants) == FALSE || is.na(overwrite.contaminants)) {
+    stop("overwrite, overwrite.reference, and overwrite.contaminants must be TRUE or FALSE.")
   }
   .checkDirectoryOverlap(input.reads, output.directory)
+  if (is.null(decontamination.list) == FALSE) {
+    if (is.null(contaminant.directory) || length(contaminant.directory) != 1 ||
+        !is.character(contaminant.directory) || !nzchar(contaminant.directory)) {
+      stop("Set contaminant.directory for generated references.")
+    }
+    .checkDirectoryOverlap(input.reads, contaminant.directory)
+    .checkDirectoryOverlap(output.directory, contaminant.directory)
+  }
 
   #Checks that both programs are installed before any sample is processed
   bwa.command = .toolCommand("bwa", bwa.path)
   samtools.command = .toolCommand("samtools", samtools.path)
+
+  if (is.null(decontamination.list) == FALSE) {
+    createContaminantDB(decontamination.list = decontamination.list,
+                        output.directory = contaminant.directory,
+                        include.univec = include.univec,
+                        include.genbank = include.genbank,
+                        include.fasta = include.fasta,
+                        overwrite = overwrite.contaminants)
+    decontamination.path = contaminant.directory
+  }
 
   # The combined reference index is temporary and is removed when this step exits.
   on.exit(unlink("ref-index", recursive = TRUE), add = TRUE)

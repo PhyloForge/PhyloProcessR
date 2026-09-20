@@ -121,8 +121,8 @@ merge.pe.reads = TRUE
 #########################
 #Remove contamination
 decontamination = TRUE
-# TRUE downloads the contaminant genomes from NCBI into contaminant-references.
-# FALSE uses the local genomes in decontamination.path below.
+# TRUE makes removeContamination download references into contaminant-references.
+# FALSE makes it use the local genomes in decontamination.path.
 download.contaminant.genomes = TRUE
 #The file for the contaminant genomes (Genome, GenBank_Accession columns); only used if download.contaminant.genomes = TRUE
 contaminant.genome.list = "decontamination_database.csv"
@@ -139,10 +139,9 @@ contaminant.fasta = NULL
 # A read pair at or above this value is removed and counted. A read pair below
 # it is kept.
 decontamination.match = 0.90
-# TRUE downloads the contaminant genomes again and rebuilds the BWA index. This
-# is separate from overwrite so that a new read run does not download every
-# contaminant genome again. The index is also rebuilt on its own when the
-# contaminant files change.
+# TRUE downloads the contaminant genomes again and rebuilds the BWA index.
+# FALSE keeps generated references for later runs. The index is also rebuilt
+# when the contaminant files change.
 overwrite.contaminant.database = FALSE
 
 #Program paths
