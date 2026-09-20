@@ -37,6 +37,17 @@ test_that("GATK full-contig headers match reference depth names", {
   expect_error(.referenceContigNames(seqs), "partial contig interval")
 })
 
+test_that("site depth filtering accepts contigs with no low-depth sites", {
+  seqs = Biostrings::DNAStringSet(c(locus = "ACGT"))
+  depth = tempfile(fileext = ".tsv")
+  writeLines(paste("locus", 1:4, rep(1, 4), sep = "\t"), depth)
+  report = tempfile(fileext = ".tsv")
+  result = .filterDepthSequences(seqs, depth,
+                                 .validateDepthSettings("site", 1, 1, NULL), report)
+  expect_equal(as.character(result), as.character(seqs))
+  expect_equal(data.table::fread(report)$newly_masked, 0)
+})
+
 test_that("public scalar defaults and invalid depth combinations are explicit", {
   expect_equal(formals(VCFtoContigs)$vcf.file, "SNP")
   expect_equal(formals(genotypeSamples)$custom.SNP.QD, 2)

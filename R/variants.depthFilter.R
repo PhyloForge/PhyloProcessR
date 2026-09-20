@@ -171,8 +171,8 @@ calculateSampleDepth = function(mapping.directory,
       if (length(pos)) {
         seqs[i] = Biostrings::replaceAt(seqs[i], IRanges::IRanges(pos, width = 1),
                                         Biostrings::DNAStringSet(rep("N", length(pos))))
+        newly = sum(substring(before, pos, pos) != "N")
       }
-      newly = sum(substring(before, pos, pos) != "N")
     }
 
     final.n = as.integer(Biostrings::letterFrequency(seqs[i], "N"))
