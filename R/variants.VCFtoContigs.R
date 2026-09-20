@@ -6,7 +6,8 @@
 #'
 #' @param genotype.directory Per-sample genotype directory.
 #' @param mapping.directory Per-sample mapping/reference directory.
-#' @param output.directory FASTA output directory.
+#' @param output.directory FASTA output directory. When both sequence modes are
+#'   selected, this is the parent of `4_consensus-contigs` and `5_iupac-contigs`.
 #' @param vcf.file One of `SNP`, `Indel`, or `Both`.
 #' @param consensus.sequences Produce ordinary alternate-reference output.
 #' @param ambiguity.codes Produce IUPAC output.
@@ -55,8 +56,8 @@ VCFtoContigs = function(genotype.directory = NULL,
   choice = match.arg(tolower(vcf.file), c("snp", "indel", "both"))
   vcf.file = c(snp = "SNP", indel = "Indel", both = "Both")[[choice]]
 
-  if (xor(isTRUE(consensus.sequences), isTRUE(ambiguity.codes)) == FALSE) {
-    stop("Exactly one of consensus.sequences and ambiguity.codes must be TRUE.")
+  if (!isTRUE(consensus.sequences) && !isTRUE(ambiguity.codes)) {
+    stop("At least one of consensus.sequences and ambiguity.codes must be TRUE.")
   }
 
   settings = .validateDepthSettings(depth.filter.mode, min.site.depth,
@@ -97,6 +98,45 @@ VCFtoContigs = function(genotype.directory = NULL,
   if (any(!file.exists(ref.paths))) {
     stop("Missing reference for sample(s): ",
          paste(sample.names[!file.exists(ref.paths)], collapse = ", "))
+  }
+
+  #Write both formats to separate directories. Reuse the same depth tables so
+  #the two outputs apply the same depth rules to each sample.
+  if (isTRUE(consensus.sequences) && isTRUE(ambiguity.codes)) {
+    need.depth = settings$mode != "none" || !is.null(max.n.proportion)
+    if (need.depth && is.null(depth.files)) {
+      depth.files = calculateSampleDepth(mapping.directory,
+                                         file.path(output.directory, "depth"),
+                                         sample.names, use.base.recalibration,
+                                         samtools.path, overwrite, quiet)
+    }
+    for (mode in c("consensus", "iupac")) {
+      VCFtoContigs(
+        genotype.directory = genotype.directory,
+        mapping.directory = mapping.directory,
+        output.directory = file.path(output.directory,
+                                     if (mode == "consensus") "4_consensus-contigs" else "5_iupac-contigs"),
+        vcf.file = vcf.file,
+        consensus.sequences = mode == "consensus",
+        ambiguity.codes = mode == "iupac",
+        threads = threads,
+        memory = memory,
+        temp.directory = temp.directory,
+        gatk4.path = gatk4.path,
+        overwrite = overwrite,
+        quiet = quiet,
+        sample.names = sample.names,
+        depth.files = depth.files,
+        depth.filter.mode = depth.filter.mode,
+        min.site.depth = min.site.depth,
+        min.mean.depth = min.mean.depth,
+        max.n.proportion = max.n.proportion,
+        use.base.recalibration = use.base.recalibration,
+        samtools.path = samtools.path,
+        ploidy = ploidy
+      )
+    }
+    return(invisible(sample.names))
   }
 
   #################################################

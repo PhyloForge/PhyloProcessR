@@ -33,7 +33,7 @@ VCFtoContigs(
 
 \item{mapping.directory}{Per-sample mapping/reference directory.}
 
-\item{output.directory}{FASTA output directory.}
+\item{output.directory}{FASTA output directory. When both sequence modes are selected, this is the parent of \code{4_consensus-contigs} and \code{5_iupac-contigs}.}
 
 \item{vcf.file}{One of \code{SNP}, \code{Indel}, or \code{Both}.}
 
