@@ -29,6 +29,14 @@ test_that("depth rules use strict cutoffs and preserve ambiguity semantics", {
   expect_equal(row$final_N_proportion, 1)
 })
 
+test_that("GATK full-contig headers match reference depth names", {
+  seqs = Biostrings::DNAStringSet(c("1 AHE_M00001:1-4" = "ACGT",
+                                   "2 AHE_M00001_1:1-3" = "GTA"))
+  expect_equal(.referenceContigNames(seqs), c("AHE_M00001", "AHE_M00001_1"))
+  names(seqs)[1] = "1 AHE_M00001:2-5"
+  expect_error(.referenceContigNames(seqs), "partial contig interval")
+})
+
 test_that("public scalar defaults and invalid depth combinations are explicit", {
   expect_equal(formals(VCFtoContigs)$vcf.file, "SNP")
   expect_equal(formals(genotypeSamples)$custom.SNP.QD, 2)

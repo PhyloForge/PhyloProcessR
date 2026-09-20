@@ -203,9 +203,9 @@ VCFtoContigs = function(genotype.directory = NULL,
                   quiet, "FASTA conversion", stderr.log = log)
       if (!file.exists(temp.raw)) { stop("GATK did not create its temporary FASTA") }
 
-      #GATK names each contig with a leading index number, which is removed here
+      #GATK adds an index and full-contig interval to each reference name.
       sequences = Biostrings::readDNAStringSet(temp.raw)
-      names(sequences) = sub("^[0-9]+ ", "", names(sequences))
+      names(sequences) = .referenceContigNames(sequences)
 
       if (need.depth == TRUE) {
         depth.file = depth.files[[sample]]

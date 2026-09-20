@@ -114,6 +114,26 @@ calculateSampleDepth = function(mapping.directory,
   paths
 }
 
+# Restores reference names from full-contig GATK FASTA headers.
+.referenceContigNames = function(seqs) {
+  headers = sub("^[0-9]+ ", "", names(seqs))
+  intervals = regexec(":([0-9]+)-([0-9]+)$", headers)
+  parts = regmatches(headers, intervals)
+  has.interval = lengths(parts) == 3
+  if (any(has.interval)) {
+    starts = as.numeric(vapply(parts[has.interval], `[`, character(1), 2))
+    ends = as.numeric(vapply(parts[has.interval], `[`, character(1), 3))
+    if (any(starts != 1 | ends != Biostrings::width(seqs)[has.interval])) {
+      stop("GATK FASTA has a partial contig interval.")
+    }
+    headers[has.interval] = sub(":1-[0-9]+$", "", headers[has.interval])
+  }
+  if (anyDuplicated(headers)) {
+    stop("GATK FASTA has duplicate contig names.")
+  }
+  headers
+}
+
 # Masks low-depth sites, removes contigs that fail the depth or N rules, and
 # writes a per-contig report. Returns the retained sequences.
 .filterDepthSequences = function(seqs, depth.file, settings, report.file) {
@@ -122,9 +142,8 @@ calculateSampleDepth = function(mapping.directory,
                                   col.names = c("contig", "position", "depth"),
                                   showProgress = FALSE)
 
-  #GATK prefixes contig names with an index number, which is removed here so the
-  #FASTA and depth contig names can be compared.
-  normalized = sub("^[0-9]+ ", "", names(seqs))
+  #Use the reference names to match each sequence to its depth records.
+  normalized = .referenceContigNames(seqs)
   if (anyDuplicated(normalized) || !setequal(normalized, unique(depth.table$contig))) {
     stop("FASTA and depth contig names do not agree.")
   }
