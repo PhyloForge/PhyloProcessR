@@ -188,7 +188,7 @@ VCFtoContigs = function(genotype.directory = NULL,
           identical(readLines(marker, warn = FALSE), c("complete=true", details))) {
         return(list(success = TRUE))
       }
-      file.remove(marker)
+      if (file.exists(marker)) { file.remove(marker) }
 
       #Writes to temporary files first, then renames, so an interrupted run
       #cannot leave a partial FASTA at the final path.
@@ -215,7 +215,7 @@ VCFtoContigs = function(genotype.directory = NULL,
         sequences = .filterDepthSequences(sequences, depth.file, settings, report)
       }
 
-      Biostrings::writeXStringSet(sequences, temp.done, format = "fasta", width = 1000000)
+      Biostrings::writeXStringSet(sequences, temp.done, format = "fasta", width = 80)
       if (!file.rename(temp.done, final.file)) {
         stop("Could not publish final FASTA for ", sample)
       }
