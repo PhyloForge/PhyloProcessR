@@ -45,10 +45,6 @@ processed.reads = "processed-reads"
 summary.fastq = TRUE
 # The sequencing read length in base pairs. Used for the megabase pair total.
 read.length = 150
-# TRUE to map reads to the target probe set and estimate capture efficiency per sample
-assess.capture = TRUE
-# Path to the target probe/marker FASTA used for sequence capture
-target.fasta = "/Path/to/probe-set.fa"
 
 # For downloading reads from dropbox
 #########################

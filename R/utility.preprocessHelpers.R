@@ -770,8 +770,18 @@
         next
       }
       if (overwrite == FALSE && .metadataConflicts(metadata.file, metadata) == TRUE) {
-        stop(lane.name, " was completed with different inputs or settings. ",
-             "Use overwrite = TRUE to replace it.")
+        x0.completion = file.path(report.path,
+                                  paste0(sample.names[i], "_X0-complete.csv"))
+        x0.metadata = file.exists(x0.completion) == TRUE &&
+                      file.info(metadata.file)$mtime <= file.info(x0.completion)$mtime
+        if (isTRUE(x0.metadata)) {
+          # X0 uses this output area for temporary cleaning. Workflow 1 can
+          # rebuild metadata that predates the separate X0 completion record.
+          unlink(metadata.file)
+        } else {
+          stop(lane.name, " was completed with different inputs or settings. ",
+               "Use overwrite = TRUE to replace it.")
+        }
       }
 
       unlink(c(expected.files, html.report, json.report, metadata.file))

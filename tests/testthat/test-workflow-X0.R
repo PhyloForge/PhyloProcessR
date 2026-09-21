@@ -195,11 +195,27 @@ test_that("X0 keeps local reads and resumes completed samples", {
   # Completion records were written after the results.
   expect_true(file.exists(file.path(root, "logs", "sample_logs", "Sample1",
                                     "Sample1_X0-complete.csv")))
+  expect_length(list.files(file.path(root, "logs", "sample_logs", "Sample1"),
+                           pattern = "_fastp-clean-metadata\\.csv$"), 0)
 
   # Item 4: a second run recognizes both samples as complete and does not remap.
   messages <- capture.output(x0_run(root))
   expect_equal(sum(grepl("Already complete", messages)), 2)
   expect_false(any(grepl("capture assessment complete", messages)))
+})
+
+
+test_that("X0 removes old fastp metadata when it resumes a sample", {
+  root <- tempfile("x0-metadata-resume-")
+  log.directory <- file.path(root, "logs", "sample_logs", "Sample1")
+  dir.create(log.directory, recursive = TRUE)
+  metadata.file <- file.path(log.directory,
+                             "Sample1_L001_fastp-clean-metadata.csv")
+  writeLines("stale", metadata.file)
+
+  PhyloProcessR:::.screenRemoveFastpMetadata(log.directory)
+
+  expect_false(file.exists(metadata.file))
 })
 
 

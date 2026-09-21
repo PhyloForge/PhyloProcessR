@@ -169,6 +169,19 @@
 }
 
 
+.screenRemoveFastpMetadata = function(log.directory = NULL) {
+
+  metadata.files = list.files(log.directory,
+                              pattern = "_fastp-clean-metadata\\.csv$",
+                              full.names = TRUE)
+  if (length(metadata.files) > 0) {
+    unlink(metadata.files)
+  }
+
+  return(invisible(NULL))
+}
+
+
 .screenResetIncompleteSample = function(sample.name = NULL,
                                          cleaned.directory = NULL,
                                          log.directory = NULL,
@@ -447,6 +460,9 @@ screenReads = function(read.directory = NULL,
                               full.names = TRUE)
 
     if (completion.matches == TRUE && length(target.files) > 0) {
+      # X0 and workflow 1 use different read sources and can use different
+      # cleaning settings. Do not leave an X0 marker for workflow 1 to read.
+      .screenRemoveFastpMetadata(log.directory)
       cat("Already complete. Skipping sample.\n")
       sample.status$Status[sample.status$Sample == sample.name] = "complete"
 
@@ -623,6 +639,10 @@ screenReads = function(read.directory = NULL,
                                  stringsAsFactors = FALSE)
     write.csv(completion.data, completion.file, row.names = FALSE)
     sample.status$Status[sample.status$Sample == sample.name] = "complete"
+
+    # The X0 completion file controls X0 resume. The fastp metadata belongs to
+    # this temporary X0 cleaning step and must not block workflow 1.
+    .screenRemoveFastpMetadata(log.directory)
 
     if (delete.cleaned.reads == TRUE) {
       unlink(cleaned.sample.directory, recursive = TRUE)
