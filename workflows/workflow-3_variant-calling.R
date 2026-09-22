@@ -9,23 +9,42 @@ if (isTRUE(get0("install.latest.github", ifnotfound = FALSE))) {
 library(PhyloProcessR)
 setwd(working.directory)
 
+variant.directory = file.path("data-analysis", dataset.name)
+contig.directory = file.path("data-analysis", "contigs")
+depth.directory = file.path("data-analysis", "depth")
+
 ##################################################################################################
 ##################################################################################################
 ## Runs series of functions and organizes results
 ##################################################################################################
 
-# Begins by creating processed read directory
-if (file.exists(paste0("data-analysis/", dataset.name)) == FALSE) {
-  dir.create(paste0("data-analysis/", dataset.name), recursive = TRUE)
+# Create the directory for variant-calling intermediate files.
+if (dir.exists(variant.directory) == FALSE) {
+  dir.create(variant.directory, recursive = TRUE)
 }#end if
 
-# Dedicated GATK temp directory — must exist before any GATK call is made
+# The GATK temporary directory must not be a general data directory because the
+# workflow removes it after a successful run.
+if (length(temp.directory) != 1 || is.na(temp.directory) ||
+    nchar(temp.directory) == 0) {
+  stop("temp.directory must name one dedicated temporary directory.")
+}
+temp.path = normalizePath(temp.directory, mustWork = FALSE)
+working.path = normalizePath(working.directory, mustWork = TRUE)
+unsafe.temp.paths = c(normalizePath("/", mustWork = TRUE),
+                      normalizePath(path.expand("~"), mustWork = TRUE),
+                      working.path)
+if (temp.path %in% unsafe.temp.paths) {
+  stop("temp.directory must not be the filesystem root, home directory, or working.directory.")
+}
+
+# The dedicated GATK temporary directory must exist before any GATK call.
 dir.create(temp.directory, showWarnings = FALSE, recursive = TRUE)
 
 #Function that prepares the BAM files and sets the metadata correctly for GATK4
 prepareBAM(
   read.directory = read.directory,
-  output.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+  output.directory = file.path(variant.directory, "sample-mapping"),
   auto.readgroup = auto.readgroup,
   samtools.path = samtools.path,
   bwa.path = bwa.path,
@@ -39,7 +58,7 @@ prepareBAM(
 
 #Function that maps each sample to its own assembly
 retained.samples = mapReferenceSample(
-  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+  mapping.directory = file.path(variant.directory, "sample-mapping"),
   assembly.directory = assembly.directory,
   check.assemblies = check.assemblies,
   samtools.path = samtools.path,
@@ -54,8 +73,8 @@ retained.samples = mapReferenceSample(
 
 # Function that calls the haplotypes using GATK4
 haplotypeCaller(
-  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-  output.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
+  mapping.directory = file.path(variant.directory, "sample-mapping"),
+  output.directory = file.path(variant.directory, "haplotype-caller"),
   reference.type = "sample",
   ploidy = ploidy,
   gatk4.path = gatk4.path,
@@ -72,8 +91,8 @@ haplotypeCaller(
 # genotypeSamples below via the same flag.
 if (use.base.recalibration == TRUE) {
   baseRecalibration(
-    haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
+    haplotype.caller.directory = file.path(variant.directory, "haplotype-caller"),
+    mapping.directory = file.path(variant.directory, "sample-mapping"),
     gatk4.path = gatk4.path,
     temp.directory = temp.directory,
     threads = threads,
@@ -88,9 +107,9 @@ if (use.base.recalibration == TRUE) {
 
 # Function that uses GATK4 to genotype and filter samples creating a final VCF of supported SNPs
 genotypeSamples(
-  mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-  haplotype.caller.directory = paste0("data-analysis/", dataset.name, "/haplotype-caller"),
-  output.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
+  mapping.directory = file.path(variant.directory, "sample-mapping"),
+  haplotype.caller.directory = file.path(variant.directory, "haplotype-caller"),
+  output.directory = file.path(variant.directory, "sample-genotypes"),
   use.base.recalibration = use.base.recalibration,
   temp.directory = temp.directory,
   custom.SNP.QD = custom.SNP.QD,
@@ -115,8 +134,8 @@ genotypeSamples(
 depth.files = NULL
 if (depth.filter.mode != "none" || !is.null(max.n.proportion)) {
   depth.files = calculateSampleDepth(
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/", dataset.name, "/depth"),
+    mapping.directory = file.path(variant.directory, "sample-mapping"),
+    output.directory = depth.directory,
     sample.names = retained.samples,
     use.base.recalibration = use.base.recalibration,
     samtools.path = samtools.path,
@@ -128,9 +147,9 @@ if (depth.filter.mode != "none" || !is.null(max.n.proportion)) {
 if (consensus.sequences == TRUE) {
   # Function that converts SNP files back into finished and SNP called contigs, choose format
   VCFtoContigs(
-    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/contigs/4_consensus-contigs"),
+    genotype.directory = file.path(variant.directory, "sample-genotypes"),
+    mapping.directory = file.path(variant.directory, "sample-mapping"),
+    output.directory = file.path(contig.directory, "4_consensus-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = TRUE,
     ambiguity.codes = FALSE,
@@ -155,9 +174,9 @@ if (consensus.sequences == TRUE) {
 if (ambiguity.codes == TRUE) {
   # Function that converts SNP files back into finished and SNP called contigs, choose format
   VCFtoContigs(
-    genotype.directory = paste0("data-analysis/", dataset.name, "/sample-genotypes"),
-    mapping.directory = paste0("data-analysis/", dataset.name, "/sample-mapping"),
-    output.directory = paste0("data-analysis/contigs/5_iupac-contigs"),
+    genotype.directory = file.path(variant.directory, "sample-genotypes"),
+    mapping.directory = file.path(variant.directory, "sample-mapping"),
+    output.directory = file.path(contig.directory, "5_iupac-contigs"),
     vcf.file = vcf.file,
     consensus.sequences = FALSE,
     ambiguity.codes = TRUE,
@@ -177,6 +196,16 @@ if (ambiguity.codes == TRUE) {
     samtools.path = samtools.path,
     ploidy = ploidy
   )
+}
+
+# Keep temporary files after a failure for diagnosis. Remove them only after
+# every requested workflow step finishes successfully.
+if (dir.exists(temp.directory) == TRUE) {
+  unlink(temp.directory, recursive = TRUE, force = TRUE)
+}
+if (dir.exists(temp.directory) == TRUE) {
+  warning("Workflow 3 completed, but could not remove temp.directory: ",
+          temp.directory)
 }
 
 #END Workflow 3

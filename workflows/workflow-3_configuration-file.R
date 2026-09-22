@@ -20,11 +20,11 @@ assembly.directory = "data-analysis/contigs/3d_curated-contigs"
 # Use the curated contigs when curate.contigs was TRUE in workflow 2. The
 # variant caller maps reads to these, so a curated set gives better genotypes.
 # assembly.directory = "data-analysis/contigs/3d_curated-contigs"
-# Temporary directory where GATK JVM and Picard sorting temp files are saved.
-# Must be a dedicated subdirectory — do NOT set this to working.directory itself
-# or temp files will accumulate in the project root.
+# Temporary directory where GATK JVM and Picard sorting temporary files are saved.
+# The workflow removes this directory after a successful run and keeps it after
+# a failure. It must be a dedicated directory. Do not use working.directory.
 temp.directory = paste0(working.directory, "/gatk-temp")
-# The name for the dataset
+# Directory name for variant-calling intermediates under data-analysis.
 dataset.name = "variant-calling"
 
 # Global settings
