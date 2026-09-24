@@ -59,11 +59,11 @@ combineMarkerAlignments = function(alignment.directories = NULL,
     if (!dir.exists(output.directory)) dir.create(output.directory, recursive = TRUE)
   }#end overwrite if
 
-  for (source in all.files) {
-    dest = file.path(output.directory, basename(source))
-    if (overwrite == FALSE && file.exists(dest)) { next }
-    .copyAlignment(source, dest, overwrite = overwrite)
-  }
+  .copyAlignmentsWithLogs(
+    all.files, output.directory, overwrite,
+    file.path("logs", "combine_marker_logs", basename(output.directory)),
+    "_combine_markers.log"
+  )
 
   invisible(output.directory)
 

@@ -77,7 +77,7 @@ test_that("alignMACSE aligns only markers with a gene in the metadata", {
   expect_false(file.exists(file.path(output, "UCE_1.phy")))
 })
 
-test_that("alignMACSE keeps only the log when MACSE fails", {
+test_that("alignMACSE logs and skips a MACSE failure", {
   skip_on_os("windows")
 
   root <- tempfile()
@@ -95,13 +95,14 @@ test_that("alignMACSE keeps only the log when MACSE fails", {
 
   old_directory <- setwd(root)
   on.exit(setwd(old_directory), add = TRUE)
-  expect_error(
+  expect_no_error(
     alignMACSE(alignment.folder = input, output.folder = output,
-               macse.path = bin, threads = 1),
-    "locus1"
+               macse.path = bin, threads = 1)
   )
   expect_length(list.files(output, all.files = TRUE, no.. = TRUE), 0)
-  expect_true(file.exists(file.path(root, "logs", "macse_logs", "locus1_macse.log")))
+  log.file <- file.path(root, "logs", "macse_logs", "locus1_macse.log")
+  expect_true(file.exists(log.file))
+  expect_match(paste(readLines(log.file), collapse = "\n"), "MACSE exited with status 1")
 })
 
 test_that("alignMACSE removes sequences with no definite nucleotides", {

@@ -339,12 +339,10 @@ concatenateGenes = function(alignment.folder = NULL,
   })
   }, mc.cores = threads) #end i loop
 
-  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
-  if (any(failures)) {
-    details = vapply(results[failures], function(x) {
-      paste0(x$gene, " (", x$message, ")")
-    }, character(1))
-    stop("Gene concatenation failed for: ", paste(details, collapse = "; "))
-  }
+  .writeAlignmentFailureLogs(
+    results, "gene",
+    file.path("logs", "gene_concatenation_logs", basename(output.folder)),
+    "_gene_concatenation.log"
+  )
 
 }#end function

@@ -189,10 +189,10 @@ makeAlignmentSubset = function(alignment.directory = NULL,
 
   #save subset files separately
   if (length(subset.files) == 0) stop("No alignment files were selected.")
-  for (i in seq_along(subset.files)){
-    source = file.path(alignment.directory, subset.files[i])
-    destination = file.path(output.directory, subset.files[i])
-    .copyAlignment(source, destination, overwrite = overwrite)
-  }#end loop
+  .copyAlignmentsWithLogs(
+    file.path(alignment.directory, subset.files), output.directory, overwrite,
+    file.path("logs", "alignment_subset_logs", basename(output.directory)),
+    "_alignment_subset.log"
+  )
 
 } #end function

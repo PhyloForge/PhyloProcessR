@@ -33,6 +33,42 @@
   TRUE
 }
 
+.writeAlignmentFailureLogs = function(results, id.field, log.directory, suffix) {
+  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
+  if (!any(failures)) return(invisible(0L))
+
+  dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+  for (result in results[failures]) {
+    alignment.id = gsub("[/\\\\]", "_", as.character(result[[id.field]]))
+    log.file = file.path(log.directory, paste0(alignment.id, suffix))
+    writeLines(result$message, log.file)
+  }
+  invisible(sum(failures))
+}
+
+.copyAlignmentsWithLogs = function(sources, output.directory, overwrite,
+                                   log.directory, suffix) {
+  copied = logical(length(sources))
+  for (i in seq_along(sources)) {
+    destination = file.path(output.directory, basename(sources[i]))
+    if (!overwrite && file.exists(destination)) {
+      copied[i] = TRUE
+      next
+    }
+    copied[i] = tryCatch(
+      .copyAlignment(sources[i], destination, overwrite = overwrite),
+      error = function(e) {
+        dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+        alignment.id = gsub("[/\\\\]", "_", .alignmentId(sources[i]))
+        writeLines(conditionMessage(e),
+                   file.path(log.directory, paste0(alignment.id, suffix)))
+        FALSE
+      }
+    )
+  }
+  invisible(copied)
+}
+
 .writePhylipAtomic = function(alignment, destination, interleave = FALSE,
                               strict = FALSE) {
   temporary = tempfile(paste0(".", basename(destination), "-"),

@@ -518,8 +518,17 @@ superTrimmer = function(alignment.dir = NULL,
 
   failed = out.data[Status == "error"]
   if (nrow(failed) > 0) {
-    stop("Alignment trimming failed for: ",
-         paste(paste0(failed$Alignment, " (", failed$Reason, ")"), collapse = "; "))
+    failure.directory = file.path(
+      "logs", "alignment_trimming_logs", basename(output.dir)
+    )
+    dir.create(failure.directory, recursive = TRUE, showWarnings = FALSE)
+    for (i in seq_len(nrow(failed))) {
+      alignment.id = gsub("[/\\\\]", "_", failed$Alignment[i])
+      writeLines(
+        failed$Reason[i],
+        file.path(failure.directory, paste0(alignment.id, "_alignment_trimming.log"))
+      )
+    }
   }
 
 } #end function

@@ -48,13 +48,13 @@ copyUnmatchedMarkers = function(alignment.directory = NULL,
   align.files = .alignmentFiles(alignment.directory, full.names = TRUE)
   unmatched = align.files[!.alignmentId(align.files) %in% metadata$marker]
 
-  for (source in unmatched) {
-    dest = file.path(output.directory, basename(source))
-    if (overwrite == FALSE && file.exists(dest)) { next }
-    .copyAlignment(source, dest, overwrite = overwrite)
-  }
+  copied = .copyAlignmentsWithLogs(
+    unmatched, output.directory, overwrite,
+    file.path("logs", "unmatched_marker_logs", basename(output.directory)),
+    "_unmatched_marker.log"
+  )
 
-  message(length(unmatched), " unmatched marker(s) added individually.")
-  invisible(length(unmatched))
+  message(sum(copied), " unmatched marker(s) added individually.")
+  invisible(sum(copied))
 
 }#end function

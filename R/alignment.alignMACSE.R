@@ -99,10 +99,12 @@ alignMACSE = function(alignment.folder = NULL,
     fail = function(message) {
       log.directory = file.path("logs", "macse_logs")
       dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+      saved.log = file.path(log.directory, paste0(file.base, "_macse.log"))
       if (file.exists(log.file)) {
-        file.copy(log.file, file.path(log.directory, paste0(file.base, "_macse.log")),
-                  overwrite = TRUE)
+        file.copy(log.file, saved.log, overwrite = TRUE)
       }
+      cat(paste0("\nPhyloProcessR: ", message, "\n"), file = saved.log,
+          append = file.exists(saved.log))
       list(status = "error", locus = file.base, message = message)
     }
 
@@ -177,12 +179,5 @@ alignMACSE = function(alignment.folder = NULL,
     alignOne(align.files[i], align.bases[i])
   }
 
-  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
-  if (any(failures)) {
-    details = vapply(results[failures], function(x) {
-      paste0(x$locus, " (", x$message, ")")
-    }, character(1))
-    stop("MACSE failed for: ", paste(details, collapse = "; "))
-  }
   cat("MACSE refinement complete.\n")
 }

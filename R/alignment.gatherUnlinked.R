@@ -99,20 +99,14 @@ gatherUnlinked = function(gene.alignment.directory = NULL,
          paste(clashes, collapse = ", "), ".")
   }
 
-  #Copies the genes over
-  for (i in seq_along(gene.files)){
-    dest = paste0(output.directory, "/", gene.files[i])
-    if (overwrite == FALSE && file.exists(dest)) { next }
-    .copyAlignment(file.path(gene.alignment.directory, gene.files[i]), dest,
-                   overwrite = overwrite)
-  }
-
-  #Copies the remaining single-exon and unmatched loci over
-  for (i in seq_along(exon.copy)) {
-    dest = paste0(output.directory, "/", exon.copy[i])
-    if (overwrite == FALSE && file.exists(dest)) { next }
-    .copyAlignment(file.path(exon.alignment.directory, exon.copy[i]), dest,
-                   overwrite = overwrite)
-  }
+  log.directory = file.path("logs", "gather_unlinked_logs", basename(output.directory))
+  .copyAlignmentsWithLogs(
+    file.path(gene.alignment.directory, gene.files), output.directory, overwrite,
+    log.directory, "_gather_unlinked.log"
+  )
+  .copyAlignmentsWithLogs(
+    file.path(exon.alignment.directory, exon.copy), output.directory, overwrite,
+    log.directory, "_gather_unlinked.log"
+  )
 
 }#end function

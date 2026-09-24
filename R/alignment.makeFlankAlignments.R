@@ -301,11 +301,10 @@ makeFlankAlignments = function(alignment.directory = NULL,
   })
   }, mc.cores = threads) #end i loop
 
-  failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
-  if (any(failures)) {
-    details = vapply(results[failures], function(x) paste0(x$locus, " (", x$message, ")"),
-                     character(1))
-    stop("Flank alignment creation failed for: ", paste(details, collapse = "; "))
-  }
+  .writeAlignmentFailureLogs(
+    results, "locus",
+    file.path("logs", "flank_alignment_logs", basename(output.directory)),
+    "_flank_alignment.log"
+  )
 
 } #end function
