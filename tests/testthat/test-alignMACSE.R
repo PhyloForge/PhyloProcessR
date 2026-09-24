@@ -103,3 +103,75 @@ test_that("alignMACSE keeps only the log when MACSE fails", {
   expect_length(list.files(output, all.files = TRUE, no.. = TRUE), 0)
   expect_true(file.exists(file.path(root, "logs", "macse_logs", "locus1_macse.log")))
 })
+
+test_that("alignMACSE removes sequences with no definite nucleotides", {
+  skip_on_os("windows")
+
+  root <- tempfile()
+  dir.create(root)
+  input <- file.path(root, "input")
+  output <- file.path(root, "output")
+  bin <- file.path(root, "bin")
+  dir.create(input)
+  dir.create(bin)
+
+  writeLines(c(
+    "4 6",
+    "s1 ATGAAC",
+    "s2 ATGACC",
+    "gaps ------",
+    "unknown NNNNNN"
+  ), file.path(input, "locus1.phy"))
+
+  fake.macse <- file.path(bin, "macse")
+  writeLines(c(
+    "#!/bin/sh",
+    "seq=''",
+    "while [ $# -gt 0 ]; do",
+    "  case \"$1\" in",
+    "    -seq) seq=\"$2\"; shift ;;",
+    "    -out_NT) nt=\"$2\"; shift ;;",
+    "  esac",
+    "  shift",
+    "done",
+    "grep -q '^>gaps$' \"$seq\" && exit 2",
+    "grep -q '^>unknown$' \"$seq\" && exit 2",
+    "printf '>s1\\nATGAAC\\n>s2\\nATGACC\\n' > \"$nt\""
+  ), fake.macse)
+  Sys.chmod(fake.macse, "755")
+
+  alignMACSE(alignment.folder = input, output.folder = output,
+             macse.path = bin, threads = 1)
+
+  result <- ape::read.dna(file.path(output, "locus1.phy"), format = "sequential")
+  expect_identical(rownames(as.matrix(result)), c("s1", "s2"))
+})
+
+test_that("alignMACSE logs and skips loci with fewer than two usable sequences", {
+  skip_on_os("windows")
+
+  root <- tempfile()
+  dir.create(root)
+  input <- file.path(root, "input")
+  output <- file.path(root, "output")
+  bin <- file.path(root, "bin")
+  dir.create(input)
+  dir.create(bin)
+
+  writeLines(c("2 6", "s1 ATGAAC", "gaps ------"),
+             file.path(input, "locus1.phy"))
+  fake.macse <- file.path(bin, "macse")
+  writeLines(c("#!/bin/sh", "exit 0"), fake.macse)
+  Sys.chmod(fake.macse, "755")
+
+  old_directory <- setwd(root)
+  on.exit(setwd(old_directory), add = TRUE)
+  expect_no_error(
+    alignMACSE(alignment.folder = input, output.folder = output,
+               macse.path = bin, threads = 1)
+  )
+  expect_false(file.exists(file.path(output, "locus1.phy")))
+  log.file <- file.path(root, "logs", "macse_logs", "locus1_macse.log")
+  expect_true(file.exists(log.file))
+  expect_match(readLines(log.file), "Only 1 sequence")
+})

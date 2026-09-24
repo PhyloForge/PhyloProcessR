@@ -77,8 +77,8 @@ alignMACSE = function(alignment.folder = NULL,
 
   # Aligns one locus. MACSE input, output and log files go to a scratch folder
   # that is always deleted, so the output folder holds only the final alignments.
-  alignOne = function(align.file) {
-    file.base = .alignmentId(basename(align.file))
+  align.bases = .alignmentId(align.files)
+  alignOne = function(align.file, file.base) {
     final.file = if (output.format == "phylip") {
       file.path(output.folder, paste0(file.base, ".phy"))
     } else {
@@ -106,13 +106,34 @@ alignMACSE = function(alignment.folder = NULL,
       list(status = "error", locus = file.base, message = message)
     }
 
-    # MACSE requires FASTA format, so phylip input is converted first
-    macse.input = align.file
-    if (alignment.format == "phylip") {
-      align = ape::read.dna(align.file, format = "sequential")
-      macse.input = file.path(work.dir, "input.fa")
-      ape::write.FASTA(as.list(align), macse.input)
+    # Records a locus that cannot be aligned, without stopping the other loci.
+    skip = function(message) {
+      log.directory = file.path("logs", "macse_logs")
+      dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+      writeLines(message, file.path(log.directory, paste0(file.base, "_macse.log")))
+      list(status = "excluded", locus = file.base, message = message)
     }
+
+    # MACSE cannot align a sequence that contains only gaps or ambiguous bases.
+    # Target trimming can create these rows when a taxon has no target data.
+    if (alignment.format == "phylip") {
+      align = Biostrings::DNAStringSet(Biostrings::readDNAMultipleAlignment(
+        align.file, format = "phylip"
+      ))
+    } else {
+      align = Biostrings::readDNAStringSet(align.file, format = "fasta")
+    }
+    sequence.strings = as.character(align)
+    usable = grepl("[ACGT]", sequence.strings, ignore.case = TRUE)
+    align = align[usable]
+    if (length(align) < 2) {
+      return(skip(paste0(
+        "Only ", length(align),
+        " sequence(s) contain a definite nucleotide after missing-data rows were removed."
+      )))
+    }
+    macse.input = file.path(work.dir, "input.fa")
+    Biostrings::writeXStringSet(align, macse.input, format = "fasta")
 
     macse.cmd = paste0(
       shQuote(macse.command), " -prog alignSequences ",
@@ -151,8 +172,9 @@ alignMACSE = function(alignment.folder = NULL,
   }
 
   results = foreach(i = seq_along(align.files),
-                    .packages = c("Biostrings", "ape")) %dopar% {
-    alignOne(align.files[i])
+                    .packages = c("Biostrings", "ape"),
+                    .export = ".writePhylipAtomic") %dopar% {
+    alignOne(align.files[i], align.bases[i])
   }
 
   failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
