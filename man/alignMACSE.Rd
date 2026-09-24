@@ -45,7 +45,8 @@ so UCEs and other non-coding markers are skipped.}
 \item{quiet}{logical; if TRUE, suppress output messages.}
 }
 \value{
-A folder of MACSE-refined codon alignments.
+A folder of MACSE-refined codon alignments. The MACSE log of each
+failed alignment is saved in logs/macse_logs.
 }
 \description{
 Refines and aligns exon sequences using MACSE to ensure proper reading frames and codon alignment.

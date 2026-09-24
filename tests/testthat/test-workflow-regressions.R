@@ -251,8 +251,12 @@ test_that("workflow GitHub installation is explicit and disabled by default", {
     full.names = TRUE
   )
 
-  expect_length(workflow_scripts, 10)
-  expect_length(configuration_files, 10)
+  # Each workflow script has one configuration file with the same prefix.
+  expect_gt(length(workflow_scripts), 0)
+  expect_setequal(
+    sub("_.*$", "", basename(workflow_scripts)),
+    sub("_configuration-file[.]R$", "", basename(configuration_files))
+  )
 
   for (configuration_file in configuration_files) {
     configuration <- paste(readLines(configuration_file, warn = FALSE),

@@ -8,6 +8,9 @@
 - `alignMACSE()` accepts `feature.gene.names`. Workflow 5 uses it so that MACSE
   aligns only the markers that have a gene. UCEs and other markers without a
   gene are skipped.
+- `alignMACSE()` deletes its temporary files and leaves only the final
+  alignments in the output folder. It saves the MACSE log of a failed
+  alignment only, in `logs/macse_logs`.
 
 ## Workflow X3 legacy integration
 

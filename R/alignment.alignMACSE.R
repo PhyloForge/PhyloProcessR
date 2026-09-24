@@ -17,7 +17,8 @@
 #' @param overwrite logical; if TRUE, overwrite existing output files.
 #' @param quiet logical; if TRUE, suppress output messages.
 #'
-#' @return A folder of MACSE-refined codon alignments.
+#' @return A folder of MACSE-refined codon alignments. The MACSE log of each
+#'   failed alignment is saved in logs/macse_logs.
 #'
 #' @export
 
@@ -74,64 +75,60 @@ alignMACSE = function(alignment.folder = NULL,
 
   cat(paste0("Refining ", length(align.files), " alignments using MACSE...\n"))
 
-  results = foreach(i = seq_along(align.files),
-                    .packages = c("Biostrings", "ape", "seqinr")) %dopar% {
-    
-    file.name = basename(align.files[i])
-    file.base = .alignmentId(file.name)
-    
-    out.file = paste0(output.folder, "/", file.base, ".fa")
-    out.aa.file = paste0(output.folder, "/temp_", file.base, "_AA.fa")
-    
+  # Aligns one locus. MACSE input, output and log files go to a scratch folder
+  # that is always deleted, so the output folder holds only the final alignments.
+  alignOne = function(align.file) {
+    file.base = .alignmentId(basename(align.file))
     final.file = if (output.format == "phylip") {
       file.path(output.folder, paste0(file.base, ".phy"))
     } else {
-      out.file
+      file.path(output.folder, paste0(file.base, ".fa"))
     }
     if (file.exists(final.file) && file.info(final.file)$size > 0 && !overwrite) {
       return(list(status = "skipped", locus = file.base))
     }
 
-    # MACSE requires FASTA format. If input is phylip, we need to convert to a temp fasta file.
-    macse_input = align.files[i]
-    
-    if (alignment.format == "phylip") {
-      align = ape::read.dna(align.files[i], format = "sequential")
-      temp.align = as.character(as.list(align))
-      temp.align2 = lapply(temp.align, FUN = function(x) paste(x, collapse = ""))
-      align.out = Biostrings::DNAStringSet(unlist(temp.align2))
-      
-      temp.fa = paste0(output.folder, "/temp_", file.base, ".fa")
-      
-      write.loci = as.list(as.character(align.out))
-      seqinr::write.fasta(sequences = write.loci, names = names(write.loci),
-                          file.out = temp.fa, nbchar = 1000000, as.string = TRUE)
-                          
-      macse_input = temp.fa
+    work.dir = tempfile(paste0("macse_", file.base, "_"))
+    dir.create(work.dir)
+    on.exit(unlink(work.dir, recursive = TRUE), add = TRUE)
+    out.file = file.path(work.dir, "out_NT.fa")
+    out.aa.file = file.path(work.dir, "out_AA.fa")
+    log.file = file.path(work.dir, "macse.log")
+
+    # Keeps the MACSE log in logs/macse_logs only when the alignment fails
+    fail = function(message) {
+      log.directory = file.path("logs", "macse_logs")
+      dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
+      if (file.exists(log.file)) {
+        file.copy(log.file, file.path(log.directory, paste0(file.base, "_macse.log")),
+                  overwrite = TRUE)
+      }
+      list(status = "error", locus = file.base, message = message)
     }
 
-    # MACSE command
-    macse_cmd = paste0(
+    # MACSE requires FASTA format, so phylip input is converted first
+    macse.input = align.file
+    if (alignment.format == "phylip") {
+      align = ape::read.dna(align.file, format = "sequential")
+      macse.input = file.path(work.dir, "input.fa")
+      ape::write.FASTA(as.list(align), macse.input)
+    }
+
+    macse.cmd = paste0(
       shQuote(macse.command), " -prog alignSequences ",
-      "-seq ", shQuote(macse_input), " ",
+      "-seq ", shQuote(macse.input), " ",
       "-gc_def ", genetic.code, " ",
       "-out_NT ", shQuote(out.file), " ",
       "-out_AA ", shQuote(out.aa.file)
     )
-    
-    log.directory = file.path(output.folder, "logs")
-    dir.create(log.directory, recursive = TRUE, showWarnings = FALSE)
-    log_file = file.path(log.directory, paste0(file.base, "_macse.log"))
-    status = system(paste0(macse_cmd, " > ", shQuote(log_file), " 2>&1"))
+    status = system(paste0(macse.cmd, " > ", shQuote(log.file), " 2>&1"))
     if (status != 0) {
-      return(list(status = "error", locus = file.base,
-                  message = paste0("MACSE exited with status ", status, ".")))
+      return(fail(paste0("MACSE exited with status ", status, ".")))
     }
     if (!file.exists(out.file) || file.info(out.file)$size == 0) {
-      return(list(status = "error", locus = file.base,
-                  message = "MACSE did not create a nucleotide alignment."))
+      return(fail("MACSE did not create a nucleotide alignment."))
     }
-    
+
     # MACSE marks frameshifts with "!". ape drops that character, which gives
     # rows of different length, so change it to a gap.
     macse.lines = readLines(out.file)
@@ -139,27 +136,23 @@ alignMACSE = function(alignment.folder = NULL,
     macse.lines[seq.lines] = gsub("!", "-", macse.lines[seq.lines], fixed = TRUE)
     writeLines(macse.lines, out.file)
 
-    # Format conversion if needed
-    if (output.format == "phylip" && file.exists(out.file)) {
-      align_macse = ape::read.FASTA(out.file, type = "DNA")
-      align_mat = as.matrix(align_macse)
-      rownames(align_mat) = labels(align_macse)
-      
-      out.phy = final.file
-      PhyloProcessR::writePhylip(align_mat, file = out.phy)
-      
-      # Delete the fasta output from MACSE
-      file.remove(out.file)
-    }
-    
-    # Cleanup temp files
-    if (alignment.format == "phylip" && file.exists(temp.fa)) {
-      file.remove(temp.fa)
-    }
-    if (file.exists(out.aa.file)) {
-      file.remove(out.aa.file)
+    if (output.format == "phylip") {
+      align.macse = ape::read.FASTA(out.file, type = "DNA")
+      align.mat = tryCatch(as.matrix(align.macse), error = function(e) NULL)
+      if (is.null(align.mat)) {
+        return(fail("MACSE sequences are not all the same length."))
+      }
+      rownames(align.mat) = labels(align.macse)
+      .writePhylipAtomic(align.mat, final.file)
+    } else {
+      file.copy(out.file, final.file, overwrite = TRUE)
     }
     list(status = "success", locus = file.base)
+  }
+
+  results = foreach(i = seq_along(align.files),
+                    .packages = c("Biostrings", "ape")) %dopar% {
+    alignOne(align.files[i])
   }
 
   failures = vapply(results, function(x) identical(x$status, "error"), logical(1))
