@@ -7,6 +7,9 @@
 #' @param alignment.format character string; the format of the input alignments (e.g. "phylip", "fasta").
 #' @param output.format character string; output alignment format. Currently
 #'   used to name the intended output format; PHYLIP output is supported.
+#' @param feature.gene.names character string; optional gene metadata file with
+#'   "marker" and "gene" columns. If given, only markers with a gene are aligned,
+#'   so UCEs and other non-coding markers are skipped.
 #' @param macse.path character string; system path to the directory containing the macse executable. If NULL, searches the system PATH.
 #' @param genetic.code integer; the genetic code table to use (default: 1 for standard nuclear).
 #' @param threads integer; number of threads to use.
@@ -22,6 +25,7 @@ alignMACSE = function(alignment.folder = NULL,
                       output.folder = NULL,
                       alignment.format = "phylip",
                       output.format = "phylip",
+                      feature.gene.names = NULL,
                       macse.path = NULL,
                       genetic.code = 1,
                       threads = 1,
@@ -48,6 +52,16 @@ alignMACSE = function(alignment.folder = NULL,
   }
 
   if (length(align.files) == 0) { stop("No alignments found in the input folder.") }
+
+  # Keeps only the coding markers that have a gene in the metadata
+  if (!is.null(feature.gene.names)) {
+    metadata = .readGeneMetadata(feature.gene.names)
+    exon.markers = metadata$marker[!is.na(metadata$gene) & nzchar(as.character(metadata$gene))]
+    align.files = align.files[.alignmentId(align.files) %in% exon.markers]
+    if (length(align.files) == 0) {
+      stop("No alignment names match a marker with a gene in the gene metadata.")
+    }
+  }
 
   # Sets up foreach loop
   
@@ -118,6 +132,13 @@ alignMACSE = function(alignment.folder = NULL,
                   message = "MACSE did not create a nucleotide alignment."))
     }
     
+    # MACSE marks frameshifts with "!". ape drops that character, which gives
+    # rows of different length, so change it to a gap.
+    macse.lines = readLines(out.file)
+    seq.lines = !startsWith(macse.lines, ">")
+    macse.lines[seq.lines] = gsub("!", "-", macse.lines[seq.lines], fixed = TRUE)
+    writeLines(macse.lines, out.file)
+
     # Format conversion if needed
     if (output.format == "phylip" && file.exists(out.file)) {
       align_macse = ape::read.FASTA(out.file, type = "DNA")

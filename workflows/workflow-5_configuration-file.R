@@ -32,8 +32,9 @@ quiet = TRUE
 
 # MACSE Exon alignment refinement
 #########################
-# TRUE = run MACSE on all no-flank alignments and save separate coding outputs.
-# Use this only when all input targets are coding and in the correct reading frame.
+# TRUE = run MACSE on the no-flank exon alignments and save separate coding outputs.
+# MACSE uses only the markers that have a gene in feature.gene.names, so UCEs
+# and other markers not assigned to a gene are skipped.
 # These outputs do not replace the standard no-flank unlinked dataset.
 run.macse = TRUE
 # The genetic code to use for MACSE (default: 1 for standard nuclear, 2 for vertebrate mitochondrial)

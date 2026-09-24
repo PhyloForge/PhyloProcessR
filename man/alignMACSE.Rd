@@ -9,6 +9,7 @@ alignMACSE(
   output.folder = NULL,
   alignment.format = "phylip",
   output.format = "phylip",
+  feature.gene.names = NULL,
   macse.path = NULL,
   genetic.code = 1,
   threads = 1,
@@ -26,6 +27,10 @@ alignMACSE(
 
 \item{output.format}{character string; output alignment format. Currently
 used to name the intended output format; PHYLIP output is supported.}
+
+\item{feature.gene.names}{character string; optional gene metadata file with
+"marker" and "gene" columns. If given, only markers with a gene are aligned,
+so UCEs and other non-coding markers are skipped.}
 
 \item{macse.path}{character string; system path to the directory containing the macse executable. If NULL, searches the system PATH.}
 

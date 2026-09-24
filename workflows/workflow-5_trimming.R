@@ -36,6 +36,7 @@ if (trim.to.targets == TRUE) {
       output.folder = "data-analysis/alignments/trimmed_exons",
       alignment.format = "phylip",
       output.format = "phylip",
+      feature.gene.names = feature.gene.names,
       macse.path = macse.path,
       genetic.code = macse.genetic.code,
       threads = threads,

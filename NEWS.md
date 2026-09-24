@@ -1,5 +1,14 @@
 # PhyloProcessR (development version)
 
+## Workflow 5 MACSE
+
+- `alignMACSE()` changes the MACSE frameshift mark `!` to a gap. Before this
+  change, an alignment with a frameshift stopped the run with "DNA sequences in
+  list not of the same length".
+- `alignMACSE()` accepts `feature.gene.names`. Workflow 5 uses it so that MACSE
+  aligns only the markers that have a gene. UCEs and other markers without a
+  gene are skipped.
+
 ## Workflow X3 legacy integration
 
 - Workflow X3 now saves all results below the configurable
