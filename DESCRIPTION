@@ -43,6 +43,7 @@ Imports:
 Suggests:
     binr,
     BSgenome,
+    pwalign,
     readxl,
     ShortRead,
     testthat (>= 3.0.0)

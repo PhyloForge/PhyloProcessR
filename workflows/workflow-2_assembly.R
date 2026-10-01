@@ -89,6 +89,7 @@ if (curate.contigs == TRUE) {
     min.match.length = curate.match.length,
     min.match.coverage = curate.match.coverage,
     similarity = curate.similarity,
+    same.copy.identity = curate.same.copy.identity,
     search.method = curate.search.method,
     threads = threads,
     memory = memory,
@@ -180,6 +181,7 @@ if (curate.contigs == TRUE) {
     min.match.length = curate.match.length,
     min.match.coverage = curate.match.coverage,
     similarity = curate.similarity,
+    same.copy.identity = curate.same.copy.identity,
     search.method = curate.search.method,
     threads = threads,
     memory = memory,
@@ -188,6 +190,14 @@ if (curate.contigs == TRUE) {
     cdhit.path = cdhit.path,
     overwrite = overwrite,
     quiet = quiet
+  )
+
+  # Groups redundant targets for annotateTargets in workflow 4
+  findRedundantTargets(
+    log.directory = "logs/sample_logs",
+    output.directory = "data-analysis/redundant-targets",
+    min.samples = redundant.min.samples,
+    min.shared.proportion = redundant.min.shared.proportion
   )
   final.contig.directory = "data-analysis/contigs/3d_curated-contigs"
 } # end curate.contigs

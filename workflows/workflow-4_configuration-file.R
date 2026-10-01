@@ -68,6 +68,13 @@ paralog.action = "exclude"
 paralog.score.ratio = 0.80
 paralog.coverage.ratio = 0.80
 paralog.identity.delta = 5
+# A competing copy that is at least this percent identical to the best copy
+# where the two overlap is the same copy (a fragment or a duplicate contig).
+# It does not cause exclusion. 100 = only identical overlaps are one copy.
+same.copy.identity = 98
+# The table of redundant targets from workflow 2 (findRedundantTargets). Each
+# listed target is renamed to its representative. NULL = no renaming.
+redundant.targets = "data-analysis/redundant-targets/redundant-targets.csv"
 
 # Alignment settings
 #########################

@@ -10,5 +10,9 @@ utils::globalVariables(c(
   "median_rpkm", "new.name", "Pass", "Passes_absolute_filters", "pident",
   "qName", "Sample", "Saved_as_paralog", "Selected_for_primary",
   "Supported_bp", "Target", "Target_coverage", "target_length",
-  "target_marker", "tName", "Value", "Weighted_identity"
+  "target_marker", "tName", "Value", "Weighted_identity",
+  "Belongs_to_target", "Contig", "Contig_best_target", "Group", "Group_size",
+  "Grouped", "Original_target", "Representative", "Same_copy_identity",
+  "Samples_with_target", "score", "Shared_samples", "Target_a", "Target_b",
+  "Total_bitscore", "tEnd", "tStart"
 ))

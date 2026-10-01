@@ -19,6 +19,12 @@
 #' found recursively and added to \code{targets.to.align} before sequences are
 #' grouped and aligned by locus. Default NULL.
 #'
+#' @param redundant.targets path to the \code{redundant-targets.csv} file from
+#' \code{findRedundantTargets}, or NULL. When given, the genome target
+#' sequences of each listed target are renamed to its representative, as
+#' \code{annotateTargets} does for the samples. When a genome then has two
+#' sequences for one locus, the longer one is kept. Default NULL.
+#'
 #' @param output.directory path to the directory where phylip alignments will be saved.
 #' Default "alignments".
 #'
@@ -78,7 +84,8 @@ alignTargets = function(targets.to.align = NULL,
                         overwrite = FALSE,
                         quiet = TRUE,
                         mafft.path = NULL,
-                        additional.sequence.directory = NULL) {
+                        additional.sequence.directory = NULL,
+                        redundant.targets = NULL) {
 
   # #Debug setup
   # setwd("/Users/chutter/Dropbox/SharewithCarl")
@@ -164,6 +171,22 @@ alignTargets = function(targets.to.align = NULL,
         additional.data,
         Biostrings::readDNAStringSet(additional.file)
       )
+    }
+
+    # Rename redundant targets to their representative. A genome that now has
+    # two sequences for one locus keeps the longer one.
+    if (!is.null(redundant.targets)) {
+      if (!file.exists(redundant.targets)) {
+        stop("redundant.targets file not found: ", redundant.targets)
+      }
+      redundant.table = read.csv(redundant.targets, stringsAsFactors = FALSE)
+      locus = sub("_\\|_.*$", "", names(additional.data))
+      genome = substring(names(additional.data), nchar(locus) + 4)
+      renamed = locus %in% redundant.table$Target
+      locus[renamed] = redundant.table$Representative[match(locus[renamed], redundant.table$Target)]
+      names(additional.data) = paste0(locus, "_|_", genome)
+      additional.data = additional.data[order(-Biostrings::width(additional.data))]
+      additional.data = additional.data[!duplicated(names(additional.data))]
     }
 
     duplicate.ids = intersect(names(all.data), names(additional.data))

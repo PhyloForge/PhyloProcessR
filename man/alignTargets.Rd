@@ -20,7 +20,8 @@ alignTargets(
   overwrite = FALSE,
   quiet = TRUE,
   mafft.path = NULL,
-  additional.sequence.directory = NULL
+  additional.sequence.directory = NULL,
+  redundant.targets = NULL
 )
 }
 \arguments{
@@ -72,6 +73,12 @@ is expected to be on the system PATH.}
 \code{extractGenomeTarget()} output directory. Genome target FASTA files are
 found recursively and added to \code{targets.to.align} before sequences are
 grouped and aligned by locus. Default NULL.}
+
+\item{redundant.targets}{path to the \code{redundant-targets.csv} file from
+\code{findRedundantTargets}, or NULL. When given, the genome target
+sequences of each listed target are renamed to its representative, as
+\code{annotateTargets} does for the samples. When a genome then has two
+sequences for one locus, the longer one is kept. Default NULL.}
 }
 \value{
 Writes phylip alignment files and dataset-scoped summary CSV files under

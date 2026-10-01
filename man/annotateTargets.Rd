@@ -16,6 +16,8 @@ annotateTargets(
   paralog.score.ratio = 0.8,
   paralog.coverage.ratio = 0.8,
   paralog.identity.delta = 5,
+  redundant.targets = NULL,
+  same.copy.identity = 98,
   paralog.directory = "paralog-contigs",
   threads = 1,
   memory = 1,
@@ -62,6 +64,16 @@ Default 0.8.}
 
 \item{paralog.identity.delta}{maximum weighted-identity difference, in
 percentage points, between the best and second candidates. Default 5.}
+
+\item{redundant.targets}{path to the \code{redundant-targets.csv} file from
+\code{findRedundantTargets}, or NULL. When given, each listed target is
+renamed to its representative before the candidates are ranked, so all
+samples give a shared region to the same target. Default NULL.}
+
+\item{same.copy.identity}{minimum percent identity in the overlap of two
+candidates for the two to count as one copy (an overlapping fragment or a
+duplicate contig). Such a candidate does not cause paralog exclusion. Use 100
+to treat only identical overlaps as one copy. Default 98.}
 
 \item{paralog.directory}{directory for all qualifying copies from targets
 with more than one candidate. Default \code{"paralog-contigs"}.}
@@ -125,4 +137,13 @@ policy, the sample naming, and the alignment output. Give it contigs that
 \code{curateTargetContigs} has already curated. A secondary candidate is
 competitive only when it passes the absolute filters and the configured
 score, coverage, and identity comparisons with the best candidate.
+
+Two rules stop false paralog calls. First, a contig is a candidate only for
+the target it matches with the highest total bitscore. A contig that
+matches another target better (for example, another gene of the same
+family) is logged as \code{other_target_better}. Second, a competitive
+candidate that is the same copy as the best candidate is not a paralog. Two
+candidates are the same copy when their overlap is at least
+\code{same.copy.identity} percent identical. These are logged as
+\code{same_copy_as_best}.
 }

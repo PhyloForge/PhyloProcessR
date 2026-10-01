@@ -136,6 +136,18 @@ curate.match.coverage = 30
 # higher values preserve more copies but may retain redundant assembly fragments.
 # Values from 0.8 through 1 are supported; 0.9 preserves previous behavior.
 curate.similarity = 0.98
+# Two overlapping pieces of one target that are at least this percent identical
+# where they overlap are one copy. The shorter piece is dropped, because two
+# copies of one sequence split its reads in the variant caller and hide its
+# heterozygous sites.
+curate.same.copy.identity = 98
+# After the last curation step, findRedundantTargets finds targets that have the
+# same best contig in many samples (redundant probes) and gives each group one
+# representative. Workflow 4 reads the result (redundant.targets). Two targets
+# are grouped when they share the best contig in at least this many samples and
+# in at least this proportion of the samples that have both targets.
+redundant.min.samples = 3
+redundant.min.shared.proportion = 0.5
 
 #Assembly settings
 #########################

@@ -1,3 +1,7 @@
+random_dna <- function(length) {
+  paste(sample(c("A", "C", "G", "T"), length, replace = TRUE), collapse = "")
+}
+
 make_copy_mafft <- function(directory) {
   dir.create(directory, recursive = TRUE, showWarnings = FALSE)
   executable <- file.path(directory, "mafft")
@@ -8,6 +12,34 @@ make_copy_mafft <- function(directory) {
   ), executable)
   Sys.chmod(executable, "0755")
   executable
+}
+
+# Writes contigs, targets and a mock LAST that prints the given hits, then runs
+# annotateTargets in root. Returns the primary output and the evidence log.
+run_annotation <- function(root, contigs, targets, hits, ...) {
+  input <- file.path(root, "input")
+  tools <- file.path(root, "tools")
+  dir.create(input, recursive = TRUE)
+  dir.create(tools)
+  Biostrings::writeXStringSet(contigs, file.path(input, "sample.fa"))
+  reference <- file.path(root, "targets.fa")
+  Biostrings::writeXStringSet(targets, reference)
+  writeLines(c("#!/bin/sh", "exit 0"), file.path(tools, "lastdb"))
+  writeLines(c("#!/bin/sh", paste0("printf '%s\\n' ", shQuote(hits))),
+             file.path(tools, "lastal"))
+  Sys.chmod(file.path(tools, c("lastdb", "lastal")), "0755")
+
+  old <- setwd(root)
+  on.exit(setwd(old), add = TRUE)
+  annotateTargets(
+    input, reference, alignment.contig.name = file.path(root, "all"),
+    output.directory = file.path(root, "output"),
+    paralog.directory = file.path(root, "paralogs"),
+    min.match.length = 50, min.match.coverage = 30,
+    paralog.action = "exclude", last.path = tools, overwrite = TRUE, ...)
+  list(primary = Biostrings::readDNAStringSet(file.path(root, "output", "sample.fa")),
+       evidence = read.csv(file.path(root, "logs/sample_logs",
+                                     "sample_target-candidates.csv")))
 }
 
 test_that("alignTargets uses exact locus IDs and diagnoses duplicate references", {
@@ -194,7 +226,10 @@ test_that("annotateTargets separates competitive copies from weak alternatives",
   tools <- file.path(root, "tools")
   dir.create(input, recursive = TRUE)
   dir.create(tools)
-  contigs <- Biostrings::DNAStringSet(rep(strrep("A", 60), 6))
+  # Different sequences, so that the two copies of "close" are not one copy
+  set.seed(4)
+  contigs <- Biostrings::DNAStringSet(vapply(1:6, function(i) random_dna(60),
+                                             character(1)))
   names(contigs) <- paste0("source", seq_along(contigs))
   Biostrings::writeXStringSet(contigs, file.path(input, "sample.fa"))
   reference <- file.path(root, "targets.fa")
@@ -253,4 +288,118 @@ test_that("annotateTargets separates competitive copies from weak alternatives",
   best.primary <- Biostrings::readDNAStringSet(file.path(best, "sample.fa"))
   expect_equal(sort(sub("_\\|_.*", "", names(best.primary))),
                c("clear", "close", "shortbest"))
+})
+
+test_that("annotateTargets gives each contig only to its best target", {
+  set.seed(1)
+  root <- tempfile("workflow4-best-target-")
+  contigs <- Biostrings::DNAStringSet(c(random_dna(200), random_dna(200)))
+  names(contigs) <- c("geneA", "geneB")
+  targets <- Biostrings::DNAStringSet(c(geneA = random_dna(200),
+                                        geneB = random_dna(200)))
+  # Both targets match both contigs. Under the score, coverage and identity
+  # tests alone, each target would see a competitive second copy.
+  hits <- c(
+    "geneA\tcontig_1\t95\t180\t0\t0\t1\t180\t1\t180\t0\t300\t200\t200\t0",
+    "geneA\tcontig_2\t92\t180\t0\t0\t1\t180\t1\t180\t0\t280\t200\t200\t0",
+    "geneB\tcontig_1\t92\t180\t0\t0\t1\t180\t1\t180\t0\t280\t200\t200\t0",
+    "geneB\tcontig_2\t95\t180\t0\t0\t1\t180\t1\t180\t0\t300\t200\t200\t0")
+  result <- run_annotation(root, contigs, targets, hits)
+
+  expect_equal(sort(sub("_\\|_.*", "", names(result$primary))), c("geneA", "geneB"))
+  expect_equal(unname(as.character(result$primary[["geneA_|_sample"]])),
+               unname(as.character(contigs[["geneA"]])))
+  other <- result$evidence[result$evidence$Target == "geneA" &
+                             result$evidence$Contig == "contig_2", ]
+  expect_equal(other$Decision, "other_target_better")
+  expect_equal(other$Contig_best_target, "geneB")
+})
+
+test_that("annotateTargets keeps a target whose competitor is the same copy", {
+  set.seed(2)
+  root <- tempfile("workflow4-same-copy-")
+  # Two overlapping fragments of one copy, and two copies that differ by
+  # about 12 percent (a real paralog pair).
+  locus <- random_dna(300)
+  paralog <- random_dna(250)
+  diverged <- strsplit(paralog, "")[[1]]
+  changed <- seq(5, 250, by = 8)
+  diverged[changed] <- ifelse(diverged[changed] == "A", "C", "A")
+  contigs <- Biostrings::DNAStringSet(c(
+    substr(locus, 1, 250), substr(locus, 51, 300),
+    paralog, paste(diverged, collapse = "")))
+  names(contigs) <- paste0("source", 1:4)
+  targets <- Biostrings::DNAStringSet(c(fragmented = random_dna(300),
+                                        duplicated = random_dna(250)))
+  hits <- c(
+    "fragmented\tcontig_1\t95\t250\t0\t0\t1\t250\t1\t250\t0\t400\t300\t250\t0",
+    "fragmented\tcontig_2\t95\t250\t0\t0\t51\t300\t1\t250\t0\t390\t300\t250\t0",
+    "duplicated\tcontig_3\t95\t250\t0\t0\t1\t250\t1\t250\t0\t400\t250\t250\t0",
+    "duplicated\tcontig_4\t94\t250\t0\t0\t1\t250\t1\t250\t0\t380\t250\t250\t0")
+  result <- run_annotation(root, contigs, targets, hits)
+
+  expect_equal(sub("_\\|_.*", "", names(result$primary)), "fragmented")
+  fragment <- result$evidence[result$evidence$Target == "fragmented" &
+                                result$evidence$Candidate_rank == 2, ]
+  expect_equal(fragment$Decision, "same_copy_as_best")
+  expect_equal(fragment$Same_copy_identity, 100)
+  copy <- result$evidence[result$evidence$Target == "duplicated" &
+                            result$evidence$Candidate_rank == 2, ]
+  expect_equal(copy$Decision, "competitive_paralog")
+  expect_lt(copy$Same_copy_identity, 98)
+})
+
+test_that("annotateTargets renames redundant targets to their representative", {
+  set.seed(3)
+  root <- tempfile("workflow4-redundant-")
+  dir.create(root)
+  contigs <- Biostrings::DNAStringSet(c(source1 = random_dna(200)))
+  targets <- Biostrings::DNAStringSet(c(uce = random_dna(200), busco = random_dna(200)))
+  # Two redundant probes match the same contig with nearly equal scores
+  hits <- c(
+    "uce\tcontig_1\t95\t180\t0\t0\t1\t180\t1\t180\t0\t300\t200\t200\t0",
+    "busco\tcontig_1\t95\t180\t0\t0\t1\t180\t1\t180\t0\t310\t200\t200\t0")
+  map <- file.path(root, "redundant-targets.csv")
+  write.csv(data.frame(Target = c("busco", "uce"), Representative = "uce",
+                       Group_size = 2, Samples_with_target = 5),
+            map, row.names = FALSE)
+  result <- run_annotation(root, contigs, targets, hits, redundant.targets = map)
+
+  expect_equal(names(result$primary), "uce_|_sample")
+  expect_equal(result$evidence$Original_target, "busco")
+  expect_error(annotateTargets(root, map, same.copy.identity = 101),
+               "same.copy.identity")
+})
+
+test_that("alignTargets renames redundant genome targets to their representative", {
+  root <- tempfile("workflow4-genome-redundant-")
+  genomes <- file.path(root, "genomes")
+  dir.create(genomes, recursive = TRUE)
+  tools <- file.path(root, "tools")
+  make_copy_mafft(tools)
+
+  samples <- Biostrings::DNAStringSet(rep(strrep("ACGT", 25), 5))
+  names(samples) <- paste0("uce_|_sample", 1:5)
+  to.align <- file.path(root, "to-align.fa")
+  Biostrings::writeXStringSet(samples, to.align)
+  reference <- file.path(root, "targets.fa")
+  Biostrings::writeXStringSet(Biostrings::DNAStringSet(c(
+    uce = strrep("ACGT", 25), busco = strrep("ACGT", 25))), reference)
+
+  # Both redundant probes extracted the same region from the genome
+  genome <- Biostrings::DNAStringSet(c(strrep("ACGT", 25), strrep("ACGT", 24)))
+  names(genome) <- c("uce_|_genomeA", "busco_|_genomeA")
+  Biostrings::writeXStringSet(genome, file.path(genomes, "genomeA_target-matches.fa"))
+  map <- file.path(root, "redundant-targets.csv")
+  write.csv(data.frame(Target = c("busco", "uce"), Representative = "uce",
+                       Group_size = 2, Samples_with_target = 5),
+            map, row.names = FALSE)
+
+  output <- file.path(root, "alignments")
+  alignTargets(to.align, reference, output.directory = output, min.taxa = 4,
+               additional.sequence.directory = genomes, redundant.targets = map,
+               mafft.path = tools, overwrite = TRUE)
+  expect_equal(list.files(output, pattern = "\\.phy$"), "uce.phy")
+  aligned <- readLines(file.path(output, "uce.phy"))
+  expect_equal(sum(grepl("^genomeA", aligned)), 1)
 })

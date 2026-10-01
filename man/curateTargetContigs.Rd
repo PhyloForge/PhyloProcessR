@@ -12,6 +12,7 @@ curateTargetContigs(
   min.match.length = 50,
   min.match.coverage = 30,
   similarity = 0.98,
+  same.copy.identity = 98,
   search.method = c("last", "blast"),
   threads = 1,
   memory = 1,
@@ -50,6 +51,10 @@ them out. Default: \code{30}.}
 remove redundant contigs before target matching. Lower values collapse
 more similar contigs and can merge recent paralogous copies. Must be from
 \code{0.8} through \code{1}. Default: \code{0.98}.}
+
+\item{same.copy.identity}{minimum percent identity in the overlap of two
+pieces of one target for the two to count as one copy. The shorter piece
+is then dropped. Default: \code{98}.}
 
 \item{search.method}{which program matches the target markers to the contigs.
 \code{"last"} (default) uses LAST, which matches a contig that is up to
@@ -103,4 +108,18 @@ paralog policy, the sample naming, and the alignment output.
 This function does not drop a possible paralog copy, because reads from a
 dropped copy can map to the copy that remains and create false
 heterozygosity. Workflow 4 evaluates the curated copies after variant calling.
+
+Each region of a contig goes to one target. When two targets match the same
+region (their matches overlap by more than half of the shorter match), the
+target with the higher total bitscore keeps the region. Two targets can
+match one region when probes are redundant or when the targets are genes of
+one family. The per-sample match log keeps all matches, so
+\code{findRedundantTargets} can compare the targets across samples.
+
+When the pieces of one target overlap, the function keeps them as separate
+copies only when they differ. A piece that is the same copy as a longer
+piece (see \code{same.copy.identity}) is dropped. Two copies of one
+sequence would split its reads in the variant caller. Each read would then
+have mapping quality 0, and the caller would not call the heterozygous
+sites of that region.
 }

@@ -18,6 +18,20 @@
 #'   dropped copy can map to the copy that remains and create false
 #'   heterozygosity. Workflow 4 evaluates the curated copies after variant calling.
 #'
+#'   Each region of a contig goes to one target. When two targets match the same
+#'   region (their matches overlap by more than half of the shorter match), the
+#'   target with the higher total bitscore keeps the region. Two targets can
+#'   match one region when probes are redundant or when the targets are genes of
+#'   one family. The per-sample match log keeps all matches, so
+#'   \code{findRedundantTargets} can compare the targets across samples.
+#'
+#'   When the pieces of one target overlap, the function keeps them as separate
+#'   copies only when they differ. A piece that is the same copy as a longer
+#'   piece (see \code{same.copy.identity}) is dropped. Two copies of one
+#'   sequence would split its reads in the variant caller. Each read would then
+#'   have mapping quality 0, and the caller would not call the heterozygous
+#'   sites of that region.
+#'
 #' @param assembly.directory path to a directory of per-sample contig files, one
 #'   \code{<sample>.fa} file per sample.
 #'
@@ -45,6 +59,10 @@
 #'   remove redundant contigs before target matching. Lower values collapse
 #'   more similar contigs and can merge recent paralogous copies. Must be from
 #'   \code{0.8} through \code{1}. Default: \code{0.98}.
+#'
+#' @param same.copy.identity minimum percent identity in the overlap of two
+#'   pieces of one target for the two to count as one copy. The shorter piece
+#'   is then dropped. Default: \code{98}.
 #'
 #' @param search.method which program matches the target markers to the contigs.
 #'   \code{"last"} (default) uses LAST, which matches a contig that is up to
@@ -87,6 +105,7 @@ curateTargetContigs = function(assembly.directory = NULL,
                                min.match.length = 50,
                                min.match.coverage = 30,
                                similarity = 0.98,
+                               same.copy.identity = 98,
                                search.method = c("last", "blast"),
                                threads = 1,
                                memory = 1,
@@ -106,6 +125,10 @@ curateTargetContigs = function(assembly.directory = NULL,
   if (!is.numeric(similarity) || length(similarity) != 1 ||
       !is.finite(similarity) || similarity < 0.8 || similarity > 1) {
     stop("similarity must be a finite value from 0.8 through 1.")
+  }
+  if (length(same.copy.identity) != 1 || !is.finite(same.copy.identity) ||
+      same.copy.identity < 0 || same.copy.identity > 100) {
+    stop("same.copy.identity must be one value from 0 through 100.")
   }
 
   if (similarity >= 0.95) {
@@ -296,14 +319,23 @@ curateTargetContigs = function(assembly.directory = NULL,
 
     # Assign every base of a contig to one target. A contig that matches one
     # target keeps both flanks. When non-overlapping targets share a contig, cut
-    # halfway across the gap between them. Overlapping matches do not cut one
-    # another because they can be alternative matches to homologous targets.
+    # halfway across the gap between them.
     contig.target.bounds = list()
     target.spans = filt.data[, .(
       target.start = min(pmin(tStart, tEnd)),
       target.end = max(pmax(tStart, tEnd)),
-      contig.length = tLen[1]
+      contig.length = tLen[1],
+      score = sum(bitscore)
     ), by = .(tName, qName)]
+
+    # When two targets match the same region of a contig (redundant probes, or
+    # genes of one family), only the target with the higher score keeps it.
+    # Otherwise each target writes its own copy of the contig.
+    # The log keeps all matches, because findRedundantTargets reads them.
+    logged.hits = filt.data
+    target.spans = .keepBestTargetPerRegion(target.spans)
+    filt.data = filt.data[paste(tName, qName) %in%
+                            paste(target.spans$tName, target.spans$qName)]
     spans.by.contig = split(target.spans, by = "tName", keep.by = TRUE)
 
     for (contig.name in names(spans.by.contig)) {
@@ -395,6 +427,8 @@ curateTargetContigs = function(assembly.directory = NULL,
       distinct.copies = length(pieces) > 1 && any(starts[-1] - ends[-length(ends)] < -30)
 
       if (distinct.copies) {
+        pieces = .dropSameCopyPieces(pieces, min.identity = same.copy.identity,
+                                     min.columns = min.match.length)
         for (piece in pieces) {
           full.sequence = Biostrings::DNAStringSet(paste0(
             as.character(piece$left.flank), as.character(piece$sequence),
@@ -459,9 +493,11 @@ curateTargetContigs = function(assembly.directory = NULL,
     #------------------------------------------------------
     # Per-sample match log
     #------------------------------------------------------
-    filt.log = as.data.frame(filt.data)[, c("qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+    log.columns = c("qName", "tName", "pident", "matches", "bitscore", "evalue",
+                    "qLen", "tLen", "tStart", "tEnd")
+    filt.log = as.data.frame(logged.hits)[, log.columns]
     filt.log$Sample = sample
-    filt.log = filt.log[, c("Sample", "qName", "tName", "pident", "matches", "bitscore", "evalue", "qLen", "tLen")]
+    filt.log = filt.log[, c("Sample", log.columns)]
     write.csv(filt.log, file = paste0("logs/sample_logs/", sample, "_curation-matches.csv"), row.names = FALSE)
 
     print(paste0(sample, " curation complete. ", length(final.loci), " targets kept."))

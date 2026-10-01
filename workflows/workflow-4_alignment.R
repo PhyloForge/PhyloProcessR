@@ -47,6 +47,8 @@ if (annotate.targets == TRUE) {
     paralog.score.ratio = paralog.score.ratio,
     paralog.coverage.ratio = paralog.coverage.ratio,
     paralog.identity.delta = paralog.identity.delta,
+    same.copy.identity = same.copy.identity,
+    redundant.targets = redundant.targets,
     paralog.directory = "data-analysis/contigs/9_paralog-contigs",
     threads = threads,
     memory = memory,
@@ -71,6 +73,7 @@ if (align.targets == TRUE) {
     } else {
       NULL
     },
+    redundant.targets = redundant.targets,
     output.directory = "data-analysis/alignments/untrimmed_all-markers",
     min.taxa = min.taxa.alignment,
     removal.threshold = removal.threshold,

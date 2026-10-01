@@ -65,6 +65,15 @@
 #'   competitive only when it passes the absolute filters and the configured
 #'   score, coverage, and identity comparisons with the best candidate.
 #'
+#'   Two rules stop false paralog calls. First, a contig is a candidate only for
+#'   the target it matches with the highest total bitscore. A contig that
+#'   matches another target better (for example, another gene of the same
+#'   family) is logged as \code{other_target_better}. Second, a competitive
+#'   candidate that is the same copy as the best candidate is not a paralog. Two
+#'   candidates are the same copy when their overlap is at least
+#'   \code{same.copy.identity} percent identical. These are logged as
+#'   \code{same_copy_as_best}.
+#'
 #' @param assembly.directory path to the directory containing per-sample contig FASTA files
 #' (one file per sample, named \code{sampleName.fa}).
 #'
@@ -100,6 +109,16 @@
 #'
 #' @param paralog.identity.delta maximum weighted-identity difference, in
 #' percentage points, between the best and second candidates. Default 5.
+#'
+#' @param redundant.targets path to the \code{redundant-targets.csv} file from
+#' \code{findRedundantTargets}, or NULL. When given, each listed target is
+#' renamed to its representative before the candidates are ranked, so all
+#' samples give a shared region to the same target. Default NULL.
+#'
+#' @param same.copy.identity minimum percent identity in the overlap of two
+#' candidates for the two to count as one copy (an overlapping fragment or a
+#' duplicate contig). Such a candidate does not cause paralog exclusion. Use 100
+#' to treat only identical overlaps as one copy. Default 98.
 #'
 #' @param paralog.directory directory for all qualifying copies from targets
 #' with more than one candidate. Default \code{"paralog-contigs"}.
@@ -153,6 +172,8 @@ annotateTargets = function(assembly.directory = NULL,
                             paralog.score.ratio = 0.8,
                             paralog.coverage.ratio = 0.8,
                             paralog.identity.delta = 5,
+                            redundant.targets = NULL,
+                            same.copy.identity = 98,
                             paralog.directory = "paralog-contigs",
                             threads = 1,
                             memory = 1,
@@ -175,6 +196,21 @@ annotateTargets = function(assembly.directory = NULL,
   if (length(paralog.identity.delta) != 1 ||
       !is.finite(paralog.identity.delta) || paralog.identity.delta < 0) {
     stop("paralog.identity.delta must be one non-negative finite value.")
+  }
+  if (length(same.copy.identity) != 1 || !is.finite(same.copy.identity) ||
+      same.copy.identity < 0 || same.copy.identity > 100) {
+    stop("same.copy.identity must be one value from 0 through 100.")
+  }
+
+  # Target -> representative, from findRedundantTargets
+  redundant.map = NULL
+  if (!is.null(redundant.targets)) {
+    if (!file.exists(redundant.targets)) {
+      stop("redundant.targets file not found: ", redundant.targets)
+    }
+    redundant.table = read.csv(redundant.targets, stringsAsFactors = FALSE)
+    redundant.map = stats::setNames(redundant.table$Representative,
+                                    redundant.table$Target)
   }
 
   #Initial checks
@@ -304,12 +340,14 @@ annotateTargets = function(assembly.directory = NULL,
                 file.path("logs/sample_logs", paste0(sample, "_target-hits-raw.csv")),
                 row.names = FALSE)
       evidence.columns = c(
-        "Sample", "Target", "Contig", "Source_contig", "Candidate_rank",
+        "Sample", "Target", "Original_target", "Contig", "Source_contig",
+        "Contig_best_target", "Candidate_rank",
         "Search_hit_count", "Supported_bp", "Target_length", "Target_coverage",
         "Weighted_identity", "Total_bitscore", "Best_evalue", "Contig_length",
         "Non_N_length", "IUPAC_count", "IUPAC_proportion",
         "Best_score_ratio", "Best_coverage_ratio", "Identity_difference",
-        "Passes_absolute_filters", "Competitive_with_best",
+        "Same_copy_identity", "Passes_absolute_filters", "Belongs_to_target",
+        "Competitive_with_best",
         "Selected_for_primary", "Saved_as_paralog", "Decision")
       evidence = data.frame(matrix(nrow = 0, ncol = length(evidence.columns)))
       names(evidence) = evidence.columns
@@ -347,10 +385,33 @@ annotateTargets = function(assembly.directory = NULL,
       candidate.rows[[candidate.index]] = candidate
     }
     candidate.data = data.table::rbindlist(candidate.rows, fill = TRUE)
+
+    # Rename redundant targets to their representative. A contig that is now
+    # listed twice under one name keeps the row with the higher score.
+    candidate.data[, Original_target := Target]
+    if (!is.null(redundant.map)) {
+      renamed = candidate.data$Target %in% names(redundant.map)
+      candidate.data$Target[renamed] = redundant.map[candidate.data$Target[renamed]]
+      data.table::setorder(candidate.data, Target, Contig, -Total_bitscore)
+      candidate.data = candidate.data[!duplicated(candidate.data[, .(Target, Contig)])]
+    }
+
     candidate.data[, Passes_absolute_filters :=
       Weighted_identity >= min.match.percent &
       Supported_bp >= min.match.length &
       Target_coverage >= (min.match.coverage / 100)]
+
+    # A contig is a candidate only for the target it matches best. Without
+    # this rule, a contig of one gene also competes for the targets of other
+    # genes in its family, and all of those targets are excluded as paralogs.
+    passing = candidate.data[Passes_absolute_filters == TRUE]
+    data.table::setorder(passing, Contig, -Total_bitscore, Target)
+    best.target = passing[!duplicated(Contig)]
+    candidate.data[, Contig_best_target :=
+      best.target$Target[match(Contig, best.target$Contig)]]
+    candidate.data[, Belongs_to_target :=
+      Passes_absolute_filters & !is.na(Contig_best_target) &
+      Contig_best_target == Target]
 
     candidate.data[, Candidate_rank := NA_integer_]
     candidate.data[, Best_score_ratio := NA_real_]
@@ -359,13 +420,14 @@ annotateTargets = function(assembly.directory = NULL,
     candidate.data[, Competitive_with_best := FALSE]
     candidate.data[, Selected_for_primary := FALSE]
     candidate.data[, Saved_as_paralog := FALSE]
+    candidate.data[, Same_copy_identity := NA_real_]
 
-    qualifying = candidate.data[Passes_absolute_filters == TRUE]
+    qualifying = candidate.data[Belongs_to_target == TRUE]
     ambiguous.targets = character(0)
 
     for (target.name in unique(qualifying$Target)) {
       rows = which(candidate.data$Target == target.name &
-                   candidate.data$Passes_absolute_filters)
+                   candidate.data$Belongs_to_target)
       rows = rows[order(-candidate.data$Total_bitscore[rows],
                         -candidate.data$Target_coverage[rows],
                         -candidate.data$Weighted_identity[rows])]
@@ -388,6 +450,20 @@ annotateTargets = function(assembly.directory = NULL,
           candidate.data$Best_score_ratio[other.rows] >= paralog.score.ratio &
           candidate.data$Best_coverage_ratio[other.rows] >= paralog.coverage.ratio &
           candidate.data$Identity_difference[other.rows] <= paralog.identity.delta
+
+        # A competitor that is the same copy as the best candidate (an
+        # overlapping fragment or a duplicate contig) is not a paralog.
+        best.sequence = all.data[[candidate.data$Contig[best.row]]]
+        for (index in which(competitive)) {
+          other.row = other.rows[index]
+          identity = .overlapIdentity(best.sequence,
+                                      all.data[[candidate.data$Contig[other.row]]],
+                                      min.columns = min.match.length)
+          candidate.data$Same_copy_identity[other.row] = identity
+          if (!is.na(identity) && identity >= same.copy.identity) {
+            competitive[index] = FALSE
+          }
+        }
         candidate.data$Competitive_with_best[other.rows] = competitive
         candidate.data$Saved_as_paralog[rows] = TRUE
         if (any(competitive)) ambiguous.targets = c(ambiguous.targets, target.name)
@@ -399,7 +475,10 @@ annotateTargets = function(assembly.directory = NULL,
     }
 
     candidate.data[, Decision := "weak_match"]
-    candidate.data[Passes_absolute_filters == TRUE, Decision := "secondary_candidate"]
+    candidate.data[Passes_absolute_filters == TRUE, Decision := "other_target_better"]
+    candidate.data[Belongs_to_target == TRUE, Decision := "secondary_candidate"]
+    candidate.data[!is.na(Same_copy_identity) & Same_copy_identity >= same.copy.identity,
+                   Decision := "same_copy_as_best"]
     candidate.data[Competitive_with_best == TRUE, Decision := "competitive_paralog"]
     candidate.data[Selected_for_primary == TRUE, Decision := "selected"]
     if (paralog.action == "exclude" && length(ambiguous.targets) > 0) {
@@ -408,12 +487,14 @@ annotateTargets = function(assembly.directory = NULL,
     }
 
     evidence.columns = c(
-      "Sample", "Target", "Contig", "Source_contig", "Candidate_rank",
+      "Sample", "Target", "Original_target", "Contig", "Source_contig",
+      "Contig_best_target", "Candidate_rank",
       "Search_hit_count", "Supported_bp", "Target_length", "Target_coverage",
       "Weighted_identity", "Total_bitscore", "Best_evalue", "Contig_length",
       "Non_N_length", "IUPAC_count", "IUPAC_proportion",
       "Best_score_ratio", "Best_coverage_ratio", "Identity_difference",
-      "Passes_absolute_filters", "Competitive_with_best",
+      "Same_copy_identity", "Passes_absolute_filters", "Belongs_to_target",
+      "Competitive_with_best",
       "Selected_for_primary", "Saved_as_paralog", "Decision")
     evidence = as.data.frame(candidate.data)[, evidence.columns]
     write.csv(evidence,
