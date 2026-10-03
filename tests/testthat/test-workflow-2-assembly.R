@@ -239,6 +239,21 @@ test_that("read pairs require identical lane keys and ignore sidecars", {
   expect_null(.pairSampleReads(root))
 })
 
+test_that("assembly preserves numeric sample names and separate lanes", {
+  root = tempfile("numeric-read-names-")
+  dir.create(root)
+  reads = c("Test_dataset_1_L001_READ1.fastq.gz",
+            "Test_dataset_1_L001_READ2.fastq.gz",
+            "Test_dataset_1_L002_READ1.fastq.gz",
+            "Test_dataset_1_L002_READ2.fastq.gz")
+  paths = file.path(root, reads)
+  file.create(paths)
+  pair = .pairSampleReads(root)
+  expect_identical(basename(pair$read1), reads[c(1, 3)])
+  expect_identical(basename(pair$read2), reads[c(2, 4)])
+  expect_identical(.readMateNumbers(paths), c(1L, 2L, 1L, 2L))
+})
+
 test_that("an early pipeline failure is reported", {
   expect_error(.runCommand("false | true", quiet = TRUE, task = "test pipeline"),
                "test pipeline.*failed")

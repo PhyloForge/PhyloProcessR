@@ -1,6 +1,16 @@
 # PhyloProcessR (development version)
 
+## Package checks
+
+- The optional barcode interface uses `MitoTrawlR`. Package metadata declares
+  this dependency and its GitHub source.
+- Source package archives exclude private handoff notes and generated test
+  diagnostics.
+
 ## Workflow 5 MACSE
+
+- `trimPreQual()` and `trimTAPER()` are no longer exported. The package provides
+  native trimming functions and the `superTrimmer()` interface.
 
 - `alignMACSE()` changes the MACSE frameshift mark `!` to a gap. Before this
   change, an alignment with a frameshift stopped the run with "DNA sequences in
@@ -16,11 +26,9 @@
 
 - Workflow X3 now saves all results below the configurable
   `output.directory`, which defaults to `data-analysis/legacy-integration`.
-- Workflow 4 can copy the complete integrated X3 alignment set into
-  `untrimmed_all-markers` when `include.legacy = TRUE`. These alignments are
-  then available to workflow 5 trimming and dataset construction.
-- Workflow 4 accepts an optional CSV, TSV, TXT, XLS, or XLSX legacy-name map.
-  It renames legacy samples and merges mapped legacy and sequence-capture rows.
+- Legacy integration runs in workflow X3. Workflow 4 does not expose
+  `include.legacy`, `legacy.alignment.directory`, or `legacy.rename.file`.
+- `integrateLegacy()` is replaced by `addLegacyAlignments()`.
 - Workflow 4 can add per-genome target sequences produced by
   `extractGenomeTarget()` before it aligns each capture locus.
 
@@ -44,6 +52,10 @@
 
 ## Workflow 1 preprocessing
 
+- Explicit `R1`/`R2` and `READ1`/`READ2` labels take priority over numbers in
+  sample names during preprocessing, SPAdes assembly, and binned assembly.
+  Each sequencing lane keeps its own read pair.
+
 ### Breaking changes
 
 - `fastpComplete()` is renamed `fastpClean()`. The new function builds the fastp
@@ -51,7 +63,7 @@
   that is TRUE. It takes `remove.adaptors`, `remove.duplicate.reads`,
   `error.correction`, `quality.trim.reads`, `quality.filter`,
   `low.complexity.filter`, `trim.poly.x` and `min.read.length`. The summary CSV
-  is now `logs/fastpClean_summary.csv`.
+  is `logs/fastp_summary.csv`.
 - The workflow 1 configuration file no longer has `fastp.complete`. Use
   `clean.reads` to run or skip the fastp step. The separate steps are no longer
   a different code path. They are settings on the one fastp command.
@@ -66,7 +78,7 @@
 
 ## Workflow 2 assembly
 
-### Deprecations
+### Breaking changes
 
 - `expandMissingAssembly()` was removed. Use `assembleBinnedTargets()` instead.
   The new function recovers missing

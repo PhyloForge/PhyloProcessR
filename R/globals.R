@@ -14,5 +14,5 @@ utils::globalVariables(c(
   "Belongs_to_target", "Contig", "Contig_best_target", "Group", "Group_size",
   "Grouped", "Original_target", "Representative", "Same_copy_identity",
   "Samples_with_target", "score", "Shared_samples", "Target_a", "Target_b",
-  "Total_bitscore", "tEnd", "tStart"
+  "Total_bitscore", "tEnd", "tLen", "tStart"
 ))

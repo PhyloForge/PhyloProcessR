@@ -49,6 +49,18 @@ test_that("read matching preserves supported names and extensions", {
 })
 
 
+test_that("explicit mate labels take priority over numbers in sample names", {
+  for (sample in c("Test_dataset_1", "Test_dataset_2")) {
+    reads = paste0(sample, "_L001_R", 1:2, ".fastq.gz")
+    expect_identical(PhyloProcessR:::.orderReadPair(rev(reads)), reads)
+  }
+  expect_error(
+    PhyloProcessR:::.orderReadPair(c("sample_R1.fastq", "sample_R1_copy.fastq")),
+    "Expected exactly one READ1 and one READ2"
+  )
+})
+
+
 test_that("relative read paths do not treat directories as regular expressions", {
   base.directory = "/tmp/reads[old]+set"
   paths = file.path(base.directory, c("Sample1_R1.fastq.gz", "Sample1_R2.fastq.gz"))

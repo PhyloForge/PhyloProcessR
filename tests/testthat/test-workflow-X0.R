@@ -1,7 +1,7 @@
 # Regression tests for workflow-X0_read-screening.R. The end-to-end tests
 # run the real workflow with local reads and are skipped when bwa, fastp, or
 # samtools are not on the PATH. Barcode identification is left disabled, so
-# MItoTrawlR is not required.
+# MitoTrawlR is not required.
 
 with_x0_working_directory <- function(path, code) {
   old.directory <- setwd(path)
@@ -12,8 +12,13 @@ with_x0_working_directory <- function(path, code) {
 find_x0_workflow <- function(start = getwd()) {
   directory <- normalizePath(start, mustWork = TRUE)
   repeat {
-    candidate <- file.path(directory, "workflows", "workflow-X0_read-screening.R")
-    if (file.exists(candidate)) return(candidate)
+    candidates <- c(
+      file.path(directory, "workflows", "workflow-X0_read-screening.R"),
+      file.path(directory, "00_pkg_src", "PhyloProcessR", "workflows",
+                "workflow-X0_read-screening.R")
+    )
+    existing <- candidates[file.exists(candidates)]
+    if (length(existing) > 0) return(existing[[1]])
     parent <- dirname(directory)
     if (identical(parent, directory)) return(character())
     directory <- parent
@@ -285,7 +290,7 @@ test_that("X0 fails a sample with an incomplete lane without deleting reads", {
   # Remove one mate of Sample1 lane 2 so the sample has an incomplete pair.
   file.remove(file.path(project$read.directory, "Sample1_L002_READ2.fastq.gz"))
 
-  x0_run(root)
+  expect_warning(x0_run(root), "Sample1 has an incomplete read pair")
 
   final <- read.csv(file.path(root, "logs", "X0_read-screening_FINAL.csv"),
                     stringsAsFactors = FALSE)

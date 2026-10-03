@@ -72,14 +72,14 @@ percentage is too high.
 
 ## Select a name-matching method
 
-Set `name.match` to `"exact"`, `"fuzzy"`, or `"species"`.
+Set `merge` to `"None"`, `"Exact"`, `"Fuzzy"`, `"Species"`, or `"Table"`.
 
 ### Exact matching
 
 Use exact matching when both datasets use identical sample names:
 
 ```r
-name.match = "exact"
+merge = "Exact"
 ```
 
 For example, `MZUTI-2436` matches only `MZUTI-2436`.
@@ -90,7 +90,7 @@ Use fuzzy matching when both datasets use the same voucher but different
 separators:
 
 ```r
-name.match = "fuzzy"
+merge = "Fuzzy"
 ```
 
 The comparison removes hyphens, underscores, periods, and spaces. It also uses
@@ -102,7 +102,7 @@ Use species matching when the datasets contain the same species but different
 voucher identifiers:
 
 ```r
-name.match = "species"
+merge = "Species"
 ```
 
 The comparison removes the last underscore-delimited name field. For example,
@@ -114,21 +114,23 @@ is a voucher identifier.
 
 ## Merge sequences from the same sample
 
-Keep the default value to merge matched capture and legacy sequences:
+Use exact matching to merge rows with identical sample names:
 
 ```r
-combine.same.sample = TRUE
+merge = "Exact"
 ```
 
 The merge examines each alignment column. It uses an available base when the
 other sequence has a gap or `N`. When both sequences have a base, it keeps the
 capture base.
 
-Set `combine.same.sample = FALSE` to keep both sequences as separate rows.
+Set `merge = "None"` to keep both sequences as separate rows. Use
+`merge = "Table"` with `rename.file` to map legacy names to capture names before
+merging. The table has `Legacy_Name` in column 1 and `SeqCap_Name` in column 2.
 
 ## Include unmatched legacy loci
 
-The default behavior skips a legacy locus when BLAST finds no capture target:
+Set this value to skip a legacy locus when BLAST finds no capture target:
 
 ```r
 include.uncaptured.legacy = FALSE

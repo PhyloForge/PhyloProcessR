@@ -44,7 +44,7 @@ summary.fastq = TRUE
 # Full path to the target probe/marker FASTA used for sequence capture
 target.fasta = "/Path/to/probe-set.fa"
 
-# Barcode scan settings  (calls MItoTrawlR::barcodeSampleScan)
+# Barcode scan settings  (calls MitoTrawlR::barcodeSampleScan)
 #########################
 # TRUE = run barcode identification on the reads
 # FALSE = skip barcode identification entirely

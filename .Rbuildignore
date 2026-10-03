@@ -12,3 +12,6 @@
 ^paper$
 ^examples/laptop-example$
 ^scratchpad$
+^.*handoff.*\.md$
+^tests/testthat/testthat-problems\.rds$
+^tests/testthat/logs$

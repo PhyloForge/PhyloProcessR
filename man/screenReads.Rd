@@ -84,7 +84,7 @@ completes.}
 \item{min.read.length}{minimum cleaned read length passed to
 \code{fastpClean}.}
 
-\item{run.barcode.scan}{logical; run MItoTrawlR barcode identification.}
+\item{run.barcode.scan}{logical; run MitoTrawlR barcode identification.}
 
 \item{barcode.fasta}{barcode reference FASTA file.}
 
@@ -126,8 +126,9 @@ Invisibly returns the final sample summary. The function writes the
 summary to \code{logs/X0_read-screening_FINAL.csv}.
 }
 \description{
-Screens raw sequence-capture reads one sample at a time. The function counts
-raw reads, cleans them with fastp, measures capture efficiency, and writes one
-combined sample summary. It can use local reads or download each sample from
-Dropbox. Processing one sample at a time limits temporary disk use.
+Screens raw sequence-capture reads one sample at a time. The
+function counts raw reads, cleans them with fastp, measures capture
+efficiency, and writes one combined sample summary. It can use local reads
+or download each sample from Dropbox. Processing one sample at a time
+limits temporary disk use.
 }

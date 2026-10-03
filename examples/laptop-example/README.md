@@ -37,8 +37,10 @@ Selection tables and preparation details are stored in `provenance/`.
 ## Requirements
 
 Install PhyloProcessR and create its Conda environment as described in the
-main repository documentation. The preprocessing and assembly example uses
-`fastp`, SPAdes, CD-HIT-EST, and BLAST. The alignment example additionally
+main repository documentation. These scripts require the current development
+package or the `PHYLOPROCESSR_SOURCE` checkout shown below. Use scripts from
+the `v1.0.0` tag when testing that release. The preprocessing and assembly example uses
+`fastp`, SPAdes, CD-HIT-EST, BLAST, and LAST. The alignment example additionally
 uses MAFFT. Defaults are two CPU threads and a 4 GB SPAdes memory limit. No
 cluster scheduler, network access, or full FrogCap marker file is required.
 

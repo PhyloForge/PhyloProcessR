@@ -130,6 +130,11 @@ release:
 remotes::install_github("PhyloForge/PhyloProcessR")
 ```
 
+Use the development package with workflows and examples from the current
+`master` branch. To use version 1.0.0, obtain the workflow and example files
+from the `v1.0.0` tag. Script files and the installed package must use the same
+API version.
+
 When working inside the supplied Conda environment or container, its pinned R
 dependencies are already present. Install a local checkout without upgrading
 them:
@@ -143,6 +148,17 @@ Load the package with:
 ```R
 library(PhyloProcessR)
 ```
+
+Optional barcode scans in workflows X0 and X2 require `MitoTrawlR`:
+
+```R
+remotes::install_github("chutter/MitoTrawlR", upgrade = "never",
+                        dependencies = FALSE)
+```
+
+See the [MitoTrawlR installation instructions](https://github.com/chutter/MitoTrawlR)
+for its barcode assembly tools, including BBMap. Barcode scanning is disabled
+by default.
 
 For reproducible analyses, record the installed package version or Git commit
 rather than reinstalling the moving development branch in every script.

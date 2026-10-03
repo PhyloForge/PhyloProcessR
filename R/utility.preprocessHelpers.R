@@ -253,23 +253,29 @@
 }#end .stripReadSuffix
 
 
-# Puts read files in first-mate, second-mate, optional third-read order. Every
-# naming form accepted by the older preprocessing functions remains supported,
-# including extra instrument text around the mate label.
-.orderReadFiles = function(read.files = NULL,
-                           allow.third = TRUE) {
+# Identifies mate labels for preprocessing and assembly.
+.readMateNumbers = function(read.files = NULL) {
 
-  read.files = read.files[grepl("\\.(fastq|fq)(\\.gz)?$", read.files, ignore.case = TRUE)]
   base.names = basename(read.files)
   mate.pattern = function(number) {
-    paste0("((_R", number, "|-R", number, "|_READ", number, "|-READ", number,
-           "|READ", number, ").*|(_", number, "|-", number, ")([_.-].*)?)",
+    paste0("(_R", number, "|-R", number, "|_READ", number, "|-READ", number,
+           "|READ", number, ").*",
            "\\.(fastq|fq)(\\.gz)?$")
   }
   mate.matches = sapply(1:3, function(number) {
     grepl(mate.pattern(number), base.names, ignore.case = TRUE)
   })
   if (length(read.files) == 1) { mate.matches = matrix(mate.matches, nrow = 1) }
+  # Use numeric mate labels only when there is no R or READ label.
+  # Sample names can contain numbers such as Test_dataset_1.
+  numeric.matches = sapply(1:3, function(number) {
+    pattern = paste0("(_", number, "|-", number, ")([_.-].*)?",
+                     "\\.(fastq|fq)(\\.gz)?$")
+    grepl(pattern, base.names, ignore.case = TRUE)
+  })
+  if (length(read.files) == 1) { numeric.matches = matrix(numeric.matches, nrow = 1) }
+  numeric.rows = rowSums(mate.matches) == 0
+  mate.matches[numeric.rows, ] = numeric.matches[numeric.rows, ]
   singleton.pattern = paste0("(_singleton|-singleton|READ-singleton|READ_singleton|",
                              "_READ-singleton|-READ_singleton|-READ-singleton|",
                              "_READ_singleton)")
@@ -278,6 +284,19 @@
   mate.matches[singleton, 3] = TRUE
   mate.number = max.col(mate.matches, ties.method = "first")
   mate.number[rowSums(mate.matches) != 1] = NA_integer_
+
+  return(mate.number)
+}#end .readMateNumbers
+
+
+# Puts read files in first-mate, second-mate, and optional third-read order.
+# Mate labels can include additional instrument text.
+.orderReadFiles = function(read.files = NULL,
+                           allow.third = TRUE) {
+
+  read.files = read.files[grepl("\\.(fastq|fq)(\\.gz)?$", read.files, ignore.case = TRUE)]
+  base.names = basename(read.files)
+  mate.number = .readMateNumbers(read.files)
 
   valid.length = length(read.files) == 2 || (allow.third == TRUE && length(read.files) == 3)
   if (sum(mate.number == 1, na.rm = TRUE) != 1 ||

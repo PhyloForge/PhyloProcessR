@@ -48,10 +48,10 @@ assessCaptureEfficiency(input.reads = read.directory,
 
 # Optional barcode identification on the cleaned reads
 if (run.barcode.scan == TRUE) {
-  if (!requireNamespace("MItoTrawlR", quietly = TRUE)) {
-    stop("run.barcode.scan = TRUE requires the MItoTrawlR package.")
+  if (!requireNamespace("MitoTrawlR", quietly = TRUE)) {
+    stop("run.barcode.scan = TRUE requires the MitoTrawlR package.")
   }
-  MItoTrawlR::barcodeSampleScan(input.reads = read.directory,
+  MitoTrawlR::barcodeSampleScan(input.reads = read.directory,
                                 output.directory = "barcode-assessment",
                                 barcode.fasta = barcode.fasta,
                                 database.fasta = barcode.database.fasta,

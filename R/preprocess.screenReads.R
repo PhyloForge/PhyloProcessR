@@ -320,17 +320,17 @@
 #' @param delete.cleaned.reads logical; delete cleaned reads after a sample
 #'   completes.
 #' @param target.fasta target probe or marker FASTA file.
-#' @param read.length expected read length used by code{fastqStats}.
-#' @param remove.adaptors logical passed to code{fastpClean}.
-#' @param remove.duplicate.reads logical passed to code{fastpClean}.
-#' @param error.correction logical passed to code{fastpClean}.
-#' @param quality.trim.reads logical passed to code{fastpClean}.
-#' @param quality.filter logical passed to code{fastpClean}.
-#' @param low.complexity.filter logical passed to code{fastpClean}.
-#' @param trim.poly.x logical passed to code{fastpClean}.
+#' @param read.length expected read length used by \code{fastqStats}.
+#' @param remove.adaptors logical passed to \code{fastpClean}.
+#' @param remove.duplicate.reads logical passed to \code{fastpClean}.
+#' @param error.correction logical passed to \code{fastpClean}.
+#' @param quality.trim.reads logical passed to \code{fastpClean}.
+#' @param quality.filter logical passed to \code{fastpClean}.
+#' @param low.complexity.filter logical passed to \code{fastpClean}.
+#' @param trim.poly.x logical passed to \code{fastpClean}.
 #' @param min.read.length minimum cleaned read length passed to
-#'   code{fastpClean}.
-#' @param run.barcode.scan logical; run MItoTrawlR barcode identification.
+#'   \code{fastpClean}.
+#' @param run.barcode.scan logical; run MitoTrawlR barcode identification.
 #' @param barcode.fasta barcode reference FASTA file.
 #' @param barcode.database.fasta local barcode database, or NULL for a remote
 #'   search.
@@ -351,7 +351,7 @@
 #' @param quiet logical; hide external program output when TRUE.
 #'
 #' @return Invisibly returns the final sample summary. The function writes the
-#'   summary to code{logs/X0_read-screening_FINAL.csv}.
+#'   summary to \code{logs/X0_read-screening_FINAL.csv}.
 #'
 #' @export
 
@@ -592,11 +592,11 @@ screenReads = function(read.directory = NULL,
     }
 
     if (run.barcode.scan == TRUE) {
-      if (requireNamespace("MItoTrawlR", quietly = TRUE) == FALSE) {
-        stop("run.barcode.scan = TRUE requires the MItoTrawlR package.")
+      if (requireNamespace("MitoTrawlR", quietly = TRUE) == FALSE) {
+        stop("run.barcode.scan = TRUE requires the MitoTrawlR package.")
       }
 
-      MItoTrawlR::barcodeSampleScan(
+      MitoTrawlR::barcodeSampleScan(
         input.reads = cleaned.sample.directory,
         output.directory = "barcode-assessment",
         barcode.fasta = barcode.fasta,

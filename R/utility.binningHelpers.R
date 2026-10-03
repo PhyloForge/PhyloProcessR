@@ -28,19 +28,11 @@
   set.reads = .listFastqFiles(sample.read.dir, recursive = FALSE)
   if (length(set.reads) == 0) return(NULL)
 
-  base.names = basename(set.reads)
-  read.number = rep(NA_integer_, length(set.reads))
-  read.number[grepl("(_R1|-R1|_READ1|-READ1|READ1|_1|-1)([_.-]|$)",
-                    base.names, ignore.case = TRUE)] = 1L
-  read.number[grepl("(_R2|-R2|_READ2|-READ2|READ2|_2|-2)([_.-]|$)",
-                    base.names, ignore.case = TRUE)] = 2L
-  read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3)([_.-]|$)",
-                    base.names, ignore.case = TRUE)] = 3L
-  # Bare numeric tokens end a lane key only at a boundary, so a sample name digit
-  # does not truncate the lane tag and merge lanes.
-  key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]).*$",
-                       "|[_-][123]([_.-].*)?$")
-  lane.key = sub(key.pattern, "", base.names, ignore.case = TRUE)
+  read.number = .readMateNumbers(set.reads)
+  if (any(is.na(read.number))) return(NULL)
+  lane.key = vapply(set.reads, function(path) {
+    basename(.stripReadSuffix(path))
+  }, character(1))
 
   read1.keys = lane.key[read.number == 1]
   read2.keys = lane.key[read.number == 2]

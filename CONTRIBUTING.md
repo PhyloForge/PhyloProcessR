@@ -44,6 +44,18 @@ devtools::document()
 devtools::check(args = c("--no-manual", "--no-build-vignettes"))
 ```
 
+For command-line checks, build the source archive first. `R CMD build` derives
+the author and maintainer fields from `Authors@R`.
+
+```bash
+R CMD build --no-build-vignettes .
+_R_CHECK_FORCE_SUGGESTS_=false R CMD check --no-manual --no-build-vignettes PhyloProcessR_1.0.0.9000.tar.gz
+```
+
+Use the archive name for the version in `DESCRIPTION`. Optional packages can be
+absent with this setting. Tests that require external tools report a skip when
+those tools are not on `PATH`.
+
 ## Pull requests
 
 - Keep each pull request focused on one change.

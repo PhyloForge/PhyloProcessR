@@ -13,7 +13,7 @@ if (nzchar(package_source)) {
 
 source(file.path(example_directory, "configuration.R"), local = TRUE)
 setwd(example_directory)
-required_tools <- c("cd-hit-est", "blastn", "makeblastdb", "mafft")
+required_tools <- c("blastn", "makeblastdb", "mafft", "lastdb", "lastal")
 missing_tools <- required_tools[
   !file.exists(file.path(tool_bin, required_tools))
 ]
@@ -32,14 +32,15 @@ annotateTargets(
   target.file = target_markers,
   alignment.contig.name = annotation_base,
   output.directory = file.path(results_directory, "contigs", "4_annotated-contigs"),
+  paralog.directory = file.path(results_directory, "contigs", "paralog-contigs"),
   min.match.percent = 60,
   min.match.length = 60,
   min.match.coverage = 50,
-  retain.paralogs = FALSE,
+  paralog.action = "exclude",
   threads = threads,
   memory = memory_gb,
   blast.path = tool_bin,
-  cdhit.path = tool_bin,
+  last.path = tool_bin,
   overwrite = overwrite,
   quiet = TRUE
 )
@@ -59,7 +60,7 @@ alignTargets(
   mafft.path = tool_bin
 )
 
-stats <- read.csv(file.path("logs", "alignTargets_locus_summary.csv"),
+stats <- read.csv(file.path(candidate_directory, "logs", "alignTargets_locus_summary.csv"),
                   stringsAsFactors = FALSE)
 passed <- stats[stats$Status == "aligned", ]
 passed <- passed[order(-passed$N_taxa_aligned, passed$Mean_pct_missing,

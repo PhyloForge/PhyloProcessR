@@ -1,7 +1,7 @@
 # Expected results
 
-These reference outputs were generated with two CPU threads and a 4 GB SPAdes
-memory limit. Runtime is not an acceptance criterion.
+These version 1.0.0 reference outputs were generated with two CPU threads and
+a 4 GB SPAdes memory limit. Runtime is not an acceptance criterion.
 
 A successful preprocessing and assembly run should:
 
@@ -26,6 +26,6 @@ samples occur in all 20 final alignments; both original samples occur in the
 two broadly shared loci. See `final_20_qc_summary.tsv` and
 `final_20_sample_occupancy.tsv` for exact values.
 
-Minor sequence and count differences can occur across SPAdes, MAFFT, or other
-dependency versions. The tables and FASTA/PHYLIP files here are review
+Sequence, length, and count differences can occur across package, SPAdes, MAFFT,
+or other dependency versions. The tables and FASTA/PHYLIP files here are review
 references rather than byte-for-byte portability requirements.

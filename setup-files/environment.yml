@@ -24,6 +24,8 @@ dependencies:
   - blast>=2.12.0
   - curl
   - mafft=7.520
+  - iqtree>=2.0
+  - bedtools
   - trimal=1.4.1
   - bioconductor-genomicranges=1.50.0
   - bioconductor-biostrings=2.66.0

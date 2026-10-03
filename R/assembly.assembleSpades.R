@@ -269,25 +269,12 @@ assembleSpades = function(input.reads = NULL,
     save.assem = paste0(output.directory, "/", samples[i])
     dir.create(save.assem, showWarnings = FALSE, recursive = TRUE)
 
-    #Sorts reads
+    # Identify mate labels and keep each lane separate.
     read.base = basename(sample.reads)
-    read.number = rep(NA_integer_, length(sample.reads))
-    read.number[grepl("(_R1|-R1|_READ1|-READ1|READ1|_1|-1)([_.-]|$)", read.base,
-                      ignore.case = TRUE)] = 1L
-    read.number[grepl("(_R2|-R2|_READ2|-READ2|READ2|_2|-2)([_.-]|$)", read.base,
-                      ignore.case = TRUE)] = 2L
-    # The trailing boundary keeps the bare -3/_3 tokens from matching a digit
-    # inside a sample name.
-    read.number[grepl("(_R3|-R3|_READ3|-READ3|READ3|_3|-3|singleton)([_.-]|$)", read.base,
-                      ignore.case = TRUE)] = 3L
-    # Bare numeric tokens match only at a boundary, so a sample name digit does
-    # not truncate the lane key. Letter-bearing tokens keep the trailing .*$.
-    key.pattern = paste0("(_R[123]|-R[123]|_READ[123]|-READ[123]|READ[123]|",
-                         "_singleton|-singleton|READ.singleton).*$",
-                         "|[_-][123]([_.-].*)?$")
-    read.key = sub(key.pattern, "", read.base, ignore.case = TRUE)
-    read.key = sub("\\.(fastq|fq)(\\.gz)?$", "", read.key, ignore.case = TRUE)
-    read.key = sub("[_.-]+$", "", read.key)
+    read.number = .readMateNumbers(sample.reads)
+    read.key = vapply(sample.reads, function(path) {
+      basename(.stripReadSuffix(path))
+    }, character(1))
     if (any(is.na(read.number)) || any(nchar(read.key) == 0)) {
       stop(samples[i], " has FASTQ files without a supported read-number token: ",
            paste(read.base[is.na(read.number) | nchar(read.key) == 0], collapse = ", "))

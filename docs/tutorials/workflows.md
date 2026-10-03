@@ -156,25 +156,21 @@ The principal alignment output is
 `data-analysis/alignments/untrimmed_all-markers/`. A sample sequence with no
 comparable reference positions is removed before the final alignment is saved.
 
-To include legacy samples, first run workflow 4 for the capture-only alignments,
-and then run workflow X3 with `include.all.together = TRUE`. Run workflow 4
-again with `align.targets = FALSE` and `include.legacy = TRUE`. Set
-`legacy.alignment.directory` to the X3 `-all` output. Workflow 4 copies those
-alignments into `untrimmed_all-markers`, where they replace the capture-only
-version of each matching locus. Workflow 5 can then trim the capture and legacy
-samples together.
+To include legacy samples, first run workflow 4 for the capture-only alignments.
+Then run workflow X3 with `include.all.together = TRUE`. X3 writes the complete
+integrated dataset to `data-analysis/legacy-integration/untrimmed_legacy-all`
+and provides its own trimming and dataset-construction steps. Workflow 4 does
+not copy these outputs back into the capture-only alignment directory.
 
-Use `legacy.rename.file` when a legacy sample and its sequence-capture sample
-have different names. CSV, TSV, TXT, XLS, and XLSX files are accepted. Put the
-legacy name in the first column and the sequence-capture name in the second
-column. The preferred headings are `Legacy_Name` and `SeqCap_Name`; workflow 4
-uses the first two columns when the headings differ. When both names are present
-in an alignment, workflow 4 merges the rows and keeps the
-sequence-capture base at conflicting sites. When only the legacy name is
-present, workflow 4 renames that row.
+Use `merge = "Table"` and `rename.file` in the X3 configuration when a legacy
+sample and its sequence-capture sample have different names. CSV, TSV, TXT,
+XLS, and XLSX files are accepted. Put `Legacy_Name` in the first column and
+`SeqCap_Name` in the second column. X3 renames the legacy rows and merges matching
+rows. The merge keeps the sequence-capture base at conflicting sites.
 
 ```r
-legacy.rename.file = "data-analysis/legacy-name-map.tsv"
+merge = "Table"
+rename.file = "data-analysis/legacy-name-map.tsv"
 ```
 
 To add target sequences extracted from genome assemblies, set

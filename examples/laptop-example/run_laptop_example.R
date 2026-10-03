@@ -22,7 +22,8 @@ if (nzchar(package_source)) {
 source(file.path(example_directory, "configuration.R"), local = TRUE)
 setwd(example_directory)
 
-required_tools <- c("fastp", "spades.py", "cd-hit-est", "blastn", "makeblastdb")
+required_tools <- c("fastp", "spades.py", "cd-hit-est", "blastn", "makeblastdb",
+                    "lastdb", "lastal")
 missing_tools <- required_tools[
   !file.exists(file.path(tool_bin, required_tools))
 ]
@@ -124,6 +125,7 @@ run_step(
     target.markers = target_markers,
     output.directory = target_contigs,
     blast.path = tool_bin,
+    last.path = tool_bin,
     memory = memory_gb,
     threads = threads,
     overwrite = overwrite,
@@ -150,7 +152,7 @@ input_pairs <- aggregate(
 names(input_pairs)[2] <- "input_pairs"
 
 cleaning_summary <- read.csv(
-  file.path(example_directory, "logs", "fastpClean_summary.csv")
+  file.path(example_directory, "logs", "fastp_summary.csv")
 )
 cleaned_pairs <- aggregate(
   cleaning_summary$endPairs,

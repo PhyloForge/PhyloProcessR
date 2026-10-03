@@ -73,7 +73,7 @@ fastp.min.read.length = 60
 
 # Barcode scan settings
 #########################
-# TRUE runs MItoTrawlR::barcodeSampleScan after read cleaning.
+# TRUE runs MitoTrawlR::barcodeSampleScan after read cleaning.
 # FALSE = skip barcode identification entirely
 run.barcode.scan = FALSE
 # Full path to a FASTA of barcode reference sequence(s) used to recruit reads

@@ -90,7 +90,7 @@ test_that("alignTargets subsets are disjoint and partial overwrite is scoped", {
   expect_equal(sort(sub("\\.phy$", "", list.files(output, pattern = "\\.phy$"))),
                sort(loci[1:4]))
   sentinel <- file.path(output, "unrelated.phy")
-  writeLines("sentinel", sentinel)
+  writeLines(c("1 4", "sample ACGT"), sentinel)
   alignTargets(input, reference, output, min.taxa = 1, subset.start = 0.5,
                overwrite = TRUE, mafft.path = tools)
   expect_true(file.exists(sentinel))
